@@ -9,20 +9,24 @@
 #include "umka_vm.h"
 
 
-void vmInit(VM *vm, Instruction *code, ErrorFunc error)
+void vmInit(VM *vm, Instruction *code, int stackSize, ErrorFunc error)
 {
-    vm->code = vm->fiber.instr = code;
-    vm->fiber.top = vm->fiber.base = vm->fiber.stack + VM_STACK_SIZE - 1;
+    vm->fiber.code = code;
+    vm->fiber.ip = 0;
+
+    vm->fiber.stack = malloc(stackSize * sizeof(Slot));
+    vm->fiber.top = vm->fiber.base = vm->fiber.stack + stackSize - 1;
     vm->error = error;
 }
 
 
 void vmFree(VM *vm)
 {
+    free(vm->fiber.stack);
 }
 
 
-static void doConvertFormatStringToC(char *formatC, char **format, ErrorFunc error) // "{%d}" -> "%d"
+static void doConvertFormatStringToC(char *formatC, char **format, ErrorFunc error) // "{d}" -> "%d"
 {
     bool leftBraceFound = false, rightBraceFound = false;
     while (**format)
@@ -67,9 +71,9 @@ static void doFprintf(Fiber *fiber, bool console, ErrorFunc error)
     doConvertFormatStringToC(formatC, &format, error);
 
     // Proxy to C fprintf()
-    if (fiber->instr->typeKind == TYPE_VOID)
+    if (fiber->code[fiber->ip].typeKind == TYPE_VOID)
         fprintf(file, formatC);
-    else if (fiber->instr->typeKind == TYPE_REAL || fiber->instr->typeKind == TYPE_REAL32)
+    else if (fiber->code[fiber->ip].typeKind == TYPE_REAL || fiber->code[fiber->ip].typeKind == TYPE_REAL32)
         fprintf(file, formatC, fiber->top->realVal);
     else
         fprintf(file, formatC, fiber->top->intVal);
@@ -88,7 +92,7 @@ static void doFscanf(Fiber *fiber, bool console, ErrorFunc error)
     doConvertFormatStringToC(formatC, &format, error);
 
     // Proxy to C fprintf()
-    if (fiber->instr->typeKind == TYPE_VOID)
+    if (fiber->code[fiber->ip].typeKind == TYPE_VOID)
         fscanf(file, formatC);
     else
         fscanf(file, formatC, *fiber->top);
@@ -100,37 +104,37 @@ static void doFscanf(Fiber *fiber, bool console, ErrorFunc error)
 
 static void doPush(Fiber *fiber)
 {
-    (--fiber->top)->intVal = fiber->instr->operand.intVal;
-    fiber->instr++;
+    (--fiber->top)->intVal = fiber->code[fiber->ip].operand.intVal;
+    fiber->ip++;
 }
 
 
 static void doPushLocalPtr(Fiber *fiber)
 {
     // Local variable addresses are offsets (in bytes) from the stack frame base pointer
-    (--fiber->top)->ptrVal = (int8_t *)fiber->base + fiber->instr->operand.intVal;
-    fiber->instr++;
+    (--fiber->top)->ptrVal = (int8_t *)fiber->base + fiber->code[fiber->ip].operand.intVal;
+    fiber->ip++;
 }
 
 
 static void doPushReg(Fiber *fiber)
 {
-    (--fiber->top)->intVal = fiber->reg[fiber->instr->operand.intVal].intVal;
-    fiber->instr++;
+    (--fiber->top)->intVal = fiber->reg[fiber->code[fiber->ip].operand.intVal].intVal;
+    fiber->ip++;
 }
 
 
 static void doPop(Fiber *fiber)
 {
     fiber->top++;
-    fiber->instr++;
+    fiber->ip++;
 }
 
 
 static void doPopReg(Fiber *fiber)
 {
-    fiber->reg[fiber->instr->operand.intVal].intVal = (fiber->top++)->intVal;
-    fiber->instr++;
+    fiber->reg[fiber->code[fiber->ip].operand.intVal].intVal = (fiber->top++)->intVal;
+    fiber->ip++;
 }
 
 
@@ -138,7 +142,7 @@ static void doDup(Fiber *fiber)
 {
     Slot val = *fiber->top;
     *(--fiber->top) = val;
-    fiber->instr++;
+    fiber->ip++;
 }
 
 
@@ -147,14 +151,14 @@ static void doSwap(Fiber *fiber)
     Slot val = *fiber->top;
     *fiber->top = *(fiber->top + 1);
     *(fiber->top + 1) = val;
-    fiber->instr++;
+    fiber->ip++;
 }
 
 
 static void doDeref(Fiber *fiber)
 {
     void *ptr = fiber->top->ptrVal;
-    switch (fiber->instr->typeKind)
+    switch (fiber->code[fiber->ip].typeKind)
     {
         case TYPE_INT8:   fiber->top->intVal  = *(int8_t   *)ptr; break;
         case TYPE_INT16:  fiber->top->intVal  = *(int16_t  *)ptr; break;
@@ -171,7 +175,7 @@ static void doDeref(Fiber *fiber)
         // Structured types are represented by pointers, so they are not dereferenced
         default:          fiber->top->intVal =   (int64_t   )ptr; break;
     }
-    fiber->instr++;
+    fiber->ip++;
 }
 
 
@@ -179,7 +183,7 @@ static void doAssign(Fiber *fiber, ErrorFunc error)
 {
     Slot rhs = *fiber->top++;
     void *lhs = (fiber->top++)->ptrVal;
-    switch (fiber->instr->typeKind)
+    switch (fiber->code[fiber->ip].typeKind)
     {
         case TYPE_INT8:   *(int8_t   *)lhs = rhs.intVal; break;
         case TYPE_INT16:  *(int16_t  *)lhs = rhs.intVal; break;
@@ -196,20 +200,20 @@ static void doAssign(Fiber *fiber, ErrorFunc error)
         // Structured types are not assigned
         default:          error("Illegal type"); return;
     }
-    fiber->instr++;
+    fiber->ip++;
 }
 
 
 static void doUnary(Fiber *fiber, ErrorFunc error)
 {
-    if (fiber->instr->typeKind == TYPE_REAL || fiber->instr->typeKind == TYPE_REAL32)
-        switch (fiber->instr->tokKind)
+    if (fiber->code[fiber->ip].typeKind == TYPE_REAL || fiber->code[fiber->ip].typeKind == TYPE_REAL32)
+        switch (fiber->code[fiber->ip].tokKind)
         {
             case TOK_MINUS: fiber->top->realVal = -fiber->top->realVal; break;
             default:        error("Illegal instruction"); return;
         }
     else
-        switch (fiber->instr->tokKind)
+        switch (fiber->code[fiber->ip].tokKind)
         {
             case TOK_MINUS:      fiber->top->intVal = -fiber->top->intVal; break;
             case TOK_NOT:        fiber->top->intVal = !fiber->top->intVal; break;
@@ -218,7 +222,7 @@ static void doUnary(Fiber *fiber, ErrorFunc error)
             case TOK_PLUSPLUS:
             {
                 void *ptr = (fiber->top++)->ptrVal;
-                switch (fiber->instr->typeKind)
+                switch (fiber->code[fiber->ip].typeKind)
                 {
                     case TYPE_INT8:   (*(int8_t   *)ptr)++; break;
                     case TYPE_INT16:  (*(int16_t  *)ptr)++; break;
@@ -238,7 +242,7 @@ static void doUnary(Fiber *fiber, ErrorFunc error)
             case TOK_MINUSMINUS:
             {
                 void *ptr = (fiber->top++)->ptrVal;
-                switch (fiber->instr->typeKind)
+                switch (fiber->code[fiber->ip].typeKind)
                 {
                     case TYPE_INT8:   (*(int8_t   *)ptr)--; break;
                     case TYPE_INT16:  (*(int16_t  *)ptr)--; break;
@@ -257,7 +261,7 @@ static void doUnary(Fiber *fiber, ErrorFunc error)
 
             default: error("Illegal instruction"); return;
         }
-    fiber->instr++;
+    fiber->ip++;
 }
 
 
@@ -265,8 +269,8 @@ static void doBinary(Fiber *fiber, ErrorFunc error)
 {
     Slot rhs = *fiber->top++;
 
-    if (fiber->instr->typeKind == TYPE_REAL || fiber->instr->typeKind == TYPE_REAL32)
-        switch (fiber->instr->tokKind)
+    if (fiber->code[fiber->ip].typeKind == TYPE_REAL || fiber->code[fiber->ip].typeKind == TYPE_REAL32)
+        switch (fiber->code[fiber->ip].tokKind)
         {
             case TOK_PLUS:  fiber->top->realVal += rhs.realVal; break;
             case TOK_MINUS: fiber->top->realVal -= rhs.realVal; break;
@@ -292,7 +296,7 @@ static void doBinary(Fiber *fiber, ErrorFunc error)
             default:            error("Illegal instruction"); return;
         }
     else
-        switch (fiber->instr->tokKind)
+        switch (fiber->code[fiber->ip].tokKind)
         {
             case TOK_PLUS:  fiber->top->intVal += rhs.intVal; break;
             case TOK_MINUS: fiber->top->intVal -= rhs.intVal; break;
@@ -331,49 +335,49 @@ static void doBinary(Fiber *fiber, ErrorFunc error)
 
             default:            error("Illegal instruction"); return;
         }
-    fiber->instr++;
+    fiber->ip++;
 }
 
 
 static void doGetArrayPtr(Fiber *fiber)
 {
-    int size = fiber->instr->operand.intVal;
+    int size = fiber->code[fiber->ip].operand.intVal;
     int index = (fiber->top++)->intVal;
     fiber->top->ptrVal += size * index;
-    fiber->instr++;
+    fiber->ip++;
 }
 
 
 static void doGoto(Fiber *fiber)
 {
-    fiber->instr = fiber->instr->operand.ptrVal;
+    fiber->ip = fiber->code[fiber->ip].operand.intVal;
 }
 
 
 static void doGotoIf(Fiber *fiber)
 {
     if ((fiber->top++)->intVal)
-        fiber->instr = fiber->instr->operand.ptrVal;
+        fiber->ip = fiber->code[fiber->ip].operand.intVal;
     else
-        fiber->instr++;
+        fiber->ip++;
 }
 
 
 static void doCall(Fiber *fiber)
 {
     // All calls are indirect, entry point address is below the parameters
-    int numParams = fiber->instr->operand.intVal;
-    Instruction *entryPtr = (fiber->top + numParams)->ptrVal;
+    int numParams = fiber->code[fiber->ip].operand.intVal;
+    int entryOffset = (fiber->top + numParams)->intVal;
 
     // Push return address and go to the entry point
-    (--fiber->top)->ptrVal = fiber->instr + 1;
-    fiber->instr = entryPtr;
+    (--fiber->top)->intVal = fiber->ip + 1;
+    fiber->ip = entryOffset;
 }
 
 
 static void doCallBuiltin(Fiber *fiber, ErrorFunc error)
 {
-    switch (fiber->instr->operand.builtinVal)
+    switch (fiber->code[fiber->ip].operand.builtinVal)
     {
         case BUILTIN_PRINTF:    doFprintf(fiber, true, error); break;
         case BUILTIN_FPRINTF:   doFprintf(fiber, false, error); break;
@@ -409,16 +413,16 @@ static void doCallBuiltin(Fiber *fiber, ErrorFunc error)
             break;
         }
     }
-    fiber->instr++;
+    fiber->ip++;
 }
 
 
 static void doReturn(Fiber *fiber)
 {
     // Pop return address, remove parameters and entry point address from stack and go back
-    Instruction *returnPtr = (fiber->top++)->ptrVal;
-    fiber->top += fiber->instr->operand.intVal + 1;
-    fiber->instr = returnPtr;
+    int returnOffset = (fiber->top++)->intVal;
+    fiber->top += fiber->code[fiber->ip].operand.intVal + 1;
+    fiber->ip = returnOffset;
 }
 
 
@@ -427,13 +431,13 @@ static void doEnterFrame(Fiber *fiber)
     // Push old stack frame base pointer, move new one to stack top, shift stack top by local variables' size
     (--fiber->top)->ptrVal = fiber->base;
     fiber->base = fiber->top;
-    fiber->top = (Slot *)((int8_t *)(fiber->top) - fiber->instr->operand.intVal);
+    fiber->top = (Slot *)((int8_t *)(fiber->top) - fiber->code[fiber->ip].operand.intVal);
 
     // Push I/O registers
     *(--fiber->top) = fiber->reg[VM_IO_FILE_REG];
     *(--fiber->top) = fiber->reg[VM_IO_FORMAT_REG];
 
-    fiber->instr++;
+    fiber->ip++;
 }
 
 
@@ -447,13 +451,13 @@ static void doLeaveFrame(Fiber *fiber)
     fiber->top = fiber->base;
     fiber->base = (fiber->top++)->ptrVal;
 
-    fiber->instr++;
+    fiber->ip++;
 }
 
 
 void fiberStep(Fiber *fiber, ErrorFunc error)
 {
-    switch (fiber->instr->opcode)
+    switch (fiber->code[fiber->ip].opcode)
     {
         case OP_PUSH:           doPush(fiber);              break;
         case OP_PUSH_LOCAL_PTR: doPushLocalPtr(fiber);      break;
@@ -482,6 +486,6 @@ void fiberStep(Fiber *fiber, ErrorFunc error)
 
 void vmRun(VM *vm)
 {
-    while (vm->fiber.instr->opcode != OP_HALT)
+    while (vm->fiber.code[vm->fiber.ip].opcode != OP_HALT)
         fiberStep(&vm->fiber, vm->error);
 }

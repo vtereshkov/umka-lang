@@ -10,13 +10,14 @@
 
 typedef struct
 {
-    Instruction *code, *instr;
-    Instruction *stack[MAX_BLOCK_NESTING];
+    Instruction *code;
+    int ip, capacity;
+    int stack[MAX_BLOCK_NESTING];
     int top;
 } CodeGen;
 
 
-void genInit(CodeGen *gen, int capacity);
+void genInit(CodeGen *gen);
 void genFree(CodeGen *gen);
 
 // Atomic VM instructions
@@ -42,8 +43,8 @@ void genBinary(CodeGen *gen, TokenKind tokKind, TypeKind typeKind);
 
 void genGetArrayPtr(CodeGen *gen, int itemSize);
 
-void genGoto  (CodeGen *gen, Instruction *dest);
-void genGotoIf(CodeGen *gen, Instruction *dest);
+void genGoto  (CodeGen *gen, int dest);
+void genGotoIf(CodeGen *gen, int dest);
 
 void genCall       (CodeGen *gen, int numParams);
 void genCallBuiltin(CodeGen *gen, TypeKind typeKind, BuiltinFunc builtin);
@@ -55,9 +56,6 @@ void genLeaveFrame(CodeGen *gen);
 void genHalt(CodeGen *gen);
 
 // Compound VM instructions
-
-void genSavePos(CodeGen *gen);
-Instruction *genRestorePos(CodeGen *gen);
 
 void genIfCondEpilog(CodeGen *gen);
 void genElseProlog  (CodeGen *gen);

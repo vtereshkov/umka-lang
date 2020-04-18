@@ -8,7 +8,6 @@
 
 enum
 {
-    VM_STACK_SIZE       = 65536,  // Slots
     VM_NUM_REGS         = 64,
 
     // General-purpose registers
@@ -87,23 +86,22 @@ typedef struct
 
 typedef struct
 {
-    Slot stack[VM_STACK_SIZE];
-    Slot *top, *base;
+    Instruction *code;
+    int ip;
+    Slot *stack, *top, *base;
     Slot reg[VM_NUM_REGS];
-    Instruction *instr;
 } Fiber;
 
 
 typedef struct
 {
-    Instruction *code;
     Fiber fiber;
     ErrorFunc error;
 } VM;
 
 
-void vmInit(VM *vm, Instruction *code, ErrorFunc error);
+void vmInit(VM *vm, Instruction *code, int stackSize /* slots */, ErrorFunc error);
 void vmFree(VM *vm);
-void vmRun(VM *vm);
+void vmRun (VM *vm);
 
 #endif // UMKA_VM_H_INCLUDED

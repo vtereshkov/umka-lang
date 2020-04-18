@@ -314,7 +314,7 @@ void parseFnDecl(Compiler *comp)
 
     parseSignature(comp, &fnType->sig);
 
-    Const constant = {.ptrVal = comp->gen.instr};
+    Const constant = {.intVal = comp->gen.ip};
     identAddConst(&comp->idents, &comp->blocks, name, fnType, constant);
     Ident *fn = comp->idents.last;
 

@@ -52,9 +52,9 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    compilerInit    (&comp, argv[1], 1024 * 1024, 1024 * 1024, compileError, runtimeError);
+    compilerInit    (&comp, argv[1], 1024 * 1024, compileError);
     compilerCompile (&comp);
-    compilerRun     (&comp);
+    compilerRun     (&comp, 64 * 1024, runtimeError);
     compilerFree    (&comp);
 
     return 0;

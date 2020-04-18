@@ -71,7 +71,7 @@ static void compilerDeclareBuiltinIdents(Compiler *comp)
 }
 
 
-void compilerInit(Compiler *comp, char *fileName, int codeCapacity, int storageCapacity, ErrorFunc compileError, ErrorFunc runtimeError)
+void compilerInit(Compiler *comp, char *fileName, int storageCapacity, ErrorFunc compileError)
 {
     storageInit (&comp->storage, storageCapacity);
     blocksInit  (&comp->blocks, compileError);
@@ -79,8 +79,7 @@ void compilerInit(Compiler *comp, char *fileName, int codeCapacity, int storageC
     typeInit    (&comp->types, compileError);
     identInit   (&comp->idents, compileError);
     constInit   (&comp->consts, compileError);
-    genInit     (&comp->gen, codeCapacity);
-    vmInit      (&comp->vm, comp->gen.code, runtimeError);
+    genInit     (&comp->gen);
 
     comp->error = compileError;
 
@@ -91,7 +90,6 @@ void compilerInit(Compiler *comp, char *fileName, int codeCapacity, int storageC
 
 void compilerFree(Compiler *comp)
 {
-    vmFree      (&comp->vm);
     genFree     (&comp->gen);
     constFree   (&comp->consts);
     identFree   (&comp->idents, -1);
@@ -109,9 +107,11 @@ void compilerCompile(Compiler *comp)
 }
 
 
-void compilerRun(Compiler *comp)
+void compilerRun(Compiler *comp, int stackSize, ErrorFunc runtimeError)
 {
-    vmRun(&comp->vm);
+    vmInit(&comp->vm, comp->gen.code, stackSize, runtimeError);
+    vmRun (&comp->vm);
+    vmFree(&comp->vm);
 }
 
 

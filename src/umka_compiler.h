@@ -34,9 +34,9 @@ typedef struct
 } Compiler;
 
 
-void compilerInit(Compiler *comp, char *fileName, int codeCapacity, int storageCapacity, ErrorFunc compileError, ErrorFunc runtimeError);
+void compilerInit(Compiler *comp, char *fileName, int storageCapacity, ErrorFunc compileError);
 void compilerFree(Compiler *comp);
 void compilerCompile(Compiler *comp);
-void compilerRun(Compiler *comp);
+void compilerRun(Compiler *comp, int stackSize /* slots */, ErrorFunc runtimeError);
 
 #endif // UMKA_COMPILER_H_INCLUDED
