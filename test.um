@@ -1,0 +1,53 @@
+fn fractal() {
+    const (
+        yMin = -0.2
+        yMax = 0.1
+        xMin = -1.5
+        xMax = -1.1
+        
+        pixels = " .:;+=xX$&"
+    )
+
+    for yPixel := 0; yPixel < 40; yPixel++ {
+      y := (yPixel / 40.0) * (yMax - yMin) + yMin
+      
+      for xPixel := 0; xPixel < 79; xPixel++ {
+        x := (xPixel / 78.0) * (xMax - xMin) + xMin
+        pixel := ' '
+        x0 := x
+        y0 := y        
+        run := true
+        
+        for iter := 0; iter < 80 && run; iter++ {
+          x1 := x0 * x0 - y0 * y0
+          y1 := 2 * x0 * y0
+
+          // Add the seed.
+          x1 = x1 + x
+          y1 = y1 + y
+
+          x0 = x1
+          y0 = y1
+
+          // Stop if the point escaped.
+          d := x0 * x0 + y0 * y0
+          
+          if d > 4 {
+            pixel = pixels[trunc(iter / 8.0)]
+            run = false
+          }
+        }
+
+        printf("{c}", pixel)
+      }
+
+      printf("\n")
+    }
+}
+
+
+fn main() {
+    fractal()
+}
+
+  

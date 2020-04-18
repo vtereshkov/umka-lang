@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="umka" />
+		<Option pch_mode="2" />
+		<Option compiler="gcc" />
+		<Build>
+			<Target title="Debug">
+				<Option output="bin/Debug/umka" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Debug/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Option parameters="test.um" />
+				<Compiler>
+					<Add option="-g" />
+				</Compiler>
+			</Target>
+			<Target title="Release">
+				<Option output="bin/Release/umka" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Release/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Option parameters="test.um" />
+				<Compiler>
+					<Add option="-O2" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+				</Linker>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="-Wall" />
+		</Compiler>
+		<Unit filename="src/umka_common.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/umka_common.h" />
+		<Unit filename="src/umka_compiler.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/umka_compiler.h" />
+		<Unit filename="src/umka_const.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/umka_const.h" />
+		<Unit filename="src/umka_decl.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/umka_decl.h" />
+		<Unit filename="src/umka_expr.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/umka_expr.h" />
+		<Unit filename="src/umka_gen.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/umka_gen.h" />
+		<Unit filename="src/umka_ident.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/umka_ident.h" />
+		<Unit filename="src/umka_lexer.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/umka_lexer.h" />
+		<Unit filename="src/umka_main.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/umka_stmt.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/umka_stmt.h" />
+		<Unit filename="src/umka_types.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/umka_types.h" />
+		<Unit filename="src/umka_vm.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/umka_vm.h" />
+		<Extensions>
+			<lib_finder disable_auto="1" />
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>
