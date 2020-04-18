@@ -59,10 +59,10 @@ void typeFree(Types *types, int startBlock)
             type = type->next;
 
         Type *next = type->next;
-        type->next = NULL;
+        types->last = type;
+        types->last->next = NULL;
         type = next;
     }
-
 
     while (type)
     {

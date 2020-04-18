@@ -287,6 +287,7 @@ static void parseSelectors(Compiler *comp, Type **type, Const *constant, bool *i
                 if ((*type)->kind != TYPE_PTR || (*type)->base->kind != TYPE_PTR || (*type)->base->base->kind == TYPE_VOID)
                     comp->error("Typed pointer expected");
 
+                lexNext(&comp->lex);
                 genDeref(&comp->gen, TYPE_PTR);
                 *type = (*type)->base;
                 *isVar = true;

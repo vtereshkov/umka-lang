@@ -23,7 +23,8 @@ void identFree(Idents *idents, int startBlock)
             ident = ident->next;
 
         Ident *next = ident->next;
-        ident->next = NULL;
+        idents->last = ident;
+        idents->last->next = NULL;
         ident = next;
     }
 
