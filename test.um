@@ -1,25 +1,17 @@
-fn f(n: int): int {
-    if n == 1 {return 1;}
-    return n * f(n - 1)
-}
-
+var i: int = 5
 
 fn main() {
-    var a, b: struct {
-        x, y: real
+    i := 69
+    for i := 0; i < 10; i++ {
+        if i > 5 {break;}
+        
+        for j := 0; j < 10; j++ {
+            if i + j > 7 {break;}            
+            printf("{d}", j)
+        }
+        printf("\n")
     }
-   
-    a.x = 5
-    a.y = 7
-    
-    b = a
-   
-    for i := 1; i < 20; i++ {
-        a := f(i)
-        printf("f({d}) = {lld}\n", i, a)
-    }
-    
-    //printf("{lld}\n", a)
+    printf("{d}", i)
 }
 
   

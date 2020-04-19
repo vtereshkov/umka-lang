@@ -10,6 +10,7 @@ void genInit(CodeGen *gen, ErrorFunc error)
     gen->ip = 0;
     gen->code = malloc(gen->capacity * sizeof(Instruction));
     gen->top = -1;
+    gen->breaks = gen->continues = gen->returns = NULL;
     gen->error = error;
 }
 

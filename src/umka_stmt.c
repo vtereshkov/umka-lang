@@ -138,24 +138,30 @@ void parseIfStmt(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_IF);
 
-    if (comp->lex.tok.kind == TOK_IDENT)
+    // Additional scope embracing shortVarDecl
+    blocksEnter(&comp->blocks, NULL);
+
+    // [shortVarDecl ";"]
+    Lexer lookaheadLex = comp->lex;
+    lexNext(&lookaheadLex);
+
+    if (lookaheadLex.tok.kind == TOK_COLONEQ)
     {
-        Ident *ident = identFind(&comp->idents, &comp->blocks, comp->lex.tok.name);
-        if (!ident)
-        {
-            parseShortVarDecl(comp);
-            lexEat(&comp->lex, TOK_SEMICOLON);
-        }
+        parseShortVarDecl(comp);
+        lexEat(&comp->lex, TOK_SEMICOLON);
     }
 
+    // expr
     Type *type;
     parseExpr(comp, &type, NULL);
     typeAssertCompatible(&comp->types, type, comp->boolType);
 
     genIfCondEpilog(&comp->gen);
 
+    // block
     parseBlock(comp, NULL);
 
+    // ["else" (ifStmt | block)]
     if (comp->lex.tok.kind == TOK_ELSE)
     {
         genElseProlog(&comp->gen);
@@ -166,6 +172,10 @@ void parseIfStmt(Compiler *comp)
         else
             parseBlock(comp, NULL);
     }
+
+    // Additional scope embracing shortVarDecl
+    blocksLeave(&comp->blocks);
+
     genIfElseEpilog(&comp->gen);
 }
 
@@ -175,24 +185,38 @@ void parseForStmt(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_FOR);
 
-    if (comp->lex.tok.kind == TOK_IDENT)
+    // break/continue prologs
+    Gotos breaks, *outerBreaks = comp->gen.breaks;
+    comp->gen.breaks = &breaks;
+    genGotosProlog(&comp->gen, comp->gen.breaks);
+
+    Gotos continues, *outerContinues = comp->gen.continues;
+    comp->gen.continues = &continues;
+    genGotosProlog(&comp->gen, comp->gen.continues);
+
+    // Additional scope embracing shortVarDecl
+    blocksEnter(&comp->blocks, NULL);
+
+    // [shortVarDecl ";"]
+    Lexer lookaheadLex = comp->lex;
+    lexNext(&lookaheadLex);
+
+    if (lookaheadLex.tok.kind == TOK_COLONEQ)
     {
-        Ident *ident = identFind(&comp->idents, &comp->blocks, comp->lex.tok.name);
-        if (!ident)
-        {
-            parseShortVarDecl(comp);
-            lexEat(&comp->lex, TOK_SEMICOLON);
-        }
+        parseShortVarDecl(comp);
+        lexEat(&comp->lex, TOK_SEMICOLON);
     }
 
     genForCondProlog(&comp->gen);
 
+    // expr
     Type *type;
     parseExpr(comp, &type, NULL);
     typeAssertCompatible(&comp->types, type, comp->boolType);
 
     genForCondEpilog(&comp->gen);
 
+    // [";" simpleStmt]
     if (comp->lex.tok.kind == TOK_SEMICOLON)
     {
         lexNext(&comp->lex);
@@ -201,9 +225,43 @@ void parseForStmt(Compiler *comp)
 
     genForPostStmtEpilog(&comp->gen);
 
+    // block
     parseBlock(comp, NULL);
 
+    // Additional scope embracing shortVarDecl
+    blocksLeave(&comp->blocks);
+
+    // continue epilog
+    genGotosEpilog(&comp->gen, comp->gen.continues);
+    comp->gen.continues = outerContinues;
+
     genForEpilog(&comp->gen);
+
+    // break epilog
+    genGotosEpilog(&comp->gen, comp->gen.breaks);
+    comp->gen.breaks = outerBreaks;
+}
+
+
+// breakStmt = "break".
+void parseBreakStmt(Compiler *comp)
+{
+    lexEat(&comp->lex, TOK_BREAK);
+
+    if (!comp->gen.breaks)
+        comp->error("No loop to break");
+    genGotosAddStub(&comp->gen, comp->gen.breaks);
+}
+
+
+// continueStmt = "continue".
+void parseContinueStmt(Compiler *comp)
+{
+    lexEat(&comp->lex, TOK_CONTINUE);
+
+    if (!comp->gen.continues)
+        comp->error("No loop to continue");
+    genGotosAddStub(&comp->gen, comp->gen.continues);
 }
 
 
@@ -241,7 +299,7 @@ void parseReturnStmt(Compiler *comp)
 }
 
 
-// stmt = decl | assignmentStmt | callStmt | ifStmt | forStmt | returnStmt.
+// stmt = decl | assignmentStmt | callStmt | ifStmt | forStmt | breakStmt | continueStmt | returnStmt.
 void parseStmt(Compiler *comp)
 {
     switch (comp->lex.tok.kind)
@@ -249,11 +307,13 @@ void parseStmt(Compiler *comp)
         case TOK_TYPE:
         case TOK_CONST:
         case TOK_VAR:
-        case TOK_FN:        parseDecl(comp);        break;
-        case TOK_IDENT:     parseSimpleStmt(comp);  break;
-        case TOK_IF:        parseIfStmt(comp);      break;
-        case TOK_FOR:       parseForStmt(comp);     break;
-        case TOK_RETURN:    parseReturnStmt(comp);  break;
+        case TOK_FN:        parseDecl(comp);            break;
+        case TOK_IDENT:     parseSimpleStmt(comp);      break;
+        case TOK_IF:        parseIfStmt(comp);          break;
+        case TOK_FOR:       parseForStmt(comp);         break;
+        case TOK_BREAK:     parseBreakStmt(comp);       break;
+        case TOK_CONTINUE:  parseContinueStmt(comp);    break;
+        case TOK_RETURN:    parseReturnStmt(comp);      break;
 
         default: break;
     }
