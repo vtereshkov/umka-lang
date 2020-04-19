@@ -52,5 +52,6 @@ void blocksEnter(Blocks *blocks, struct tagIdent *fn);
 void blocksLeave(Blocks *blocks);
 
 int hash(const char *str);
+int align(int size, int alignment);
 
 #endif // UMKA_COMMON_H_INCLUDED

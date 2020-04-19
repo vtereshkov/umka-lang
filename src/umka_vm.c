@@ -15,6 +15,7 @@ static char *spelling [] =
     "PUSH",
     "PUSH_LOCAL_PTR",
     "PUSH_REG",
+    "PUSH_STRUCT",
     "POP",
     "POP_REG",
     "DUP",
@@ -150,6 +151,18 @@ static void doPushReg(Fiber *fiber)
 }
 
 
+static void doPushStruct(Fiber *fiber)
+{
+    void *src = (fiber->top++)->ptrVal;
+    int size  = fiber->code[fiber->ip].operand.intVal;
+
+    fiber->top -= align(size, sizeof(Slot)) / sizeof(Slot);
+    memcpy(fiber->top, src, size);
+
+    fiber->ip++;
+}
+
+
 static void doPop(Fiber *fiber)
 {
     fiber->top++;
@@ -181,7 +194,7 @@ static void doSwap(Fiber *fiber)
 }
 
 
-static void doDeref(Fiber *fiber)
+static void doDeref(Fiber *fiber, ErrorFunc error)
 {
     void *ptr = fiber->top->ptrVal;
     switch (fiber->code[fiber->ip].typeKind)
@@ -223,7 +236,13 @@ static void doAssign(Fiber *fiber, ErrorFunc error)
         case TYPE_REAL32: *(float    *)lhs = rhs.realVal; break;
         case TYPE_REAL:   *(double   *)lhs = rhs.realVal; break;
         case TYPE_PTR:    *(void *   *)lhs = rhs.ptrVal; break;
-        // Structured types are not assigned
+        case TYPE_ARRAY:
+        case TYPE_STRUCT:
+        {
+            int size = fiber->code[fiber->ip].operand.intVal;
+            memcpy(lhs, rhs.ptrVal, size);
+            break;
+        }
         default:          error("Illegal type"); return;
     }
     fiber->ip++;
@@ -392,8 +411,8 @@ static void doGotoIf(Fiber *fiber)
 static void doCall(Fiber *fiber)
 {
     // All calls are indirect, entry point address is below the parameters
-    int numParams = fiber->code[fiber->ip].operand.intVal;
-    int entryOffset = (fiber->top + numParams)->intVal;
+    int paramSlots = fiber->code[fiber->ip].operand.intVal;
+    int entryOffset = (fiber->top + paramSlots)->intVal;
 
     // Push return address and go to the entry point
     (--fiber->top)->intVal = fiber->ip + 1;
@@ -488,11 +507,12 @@ void fiberStep(Fiber *fiber, ErrorFunc error)
         case OP_PUSH:           doPush(fiber);              break;
         case OP_PUSH_LOCAL_PTR: doPushLocalPtr(fiber);      break;
         case OP_PUSH_REG:       doPushReg(fiber);           break;
+        case OP_PUSH_STRUCT:    doPushStruct(fiber);        break;
         case OP_POP:            doPop(fiber);               break;
         case OP_POP_REG:        doPopReg(fiber);            break;
         case OP_DUP:            doDup(fiber);               break;
         case OP_SWAP:           doSwap(fiber);              break;
-        case OP_DEREF:          doDeref(fiber);             break;
+        case OP_DEREF:          doDeref(fiber, error);      break;
         case OP_ASSIGN:         doAssign(fiber, error);     break;
         case OP_UNARY:          doUnary(fiber, error);      break;
         case OP_BINARY:         doBinary(fiber, error);     break;
@@ -513,7 +533,11 @@ void fiberStep(Fiber *fiber, ErrorFunc error)
 void vmRun(VM *vm)
 {
     while (vm->fiber.code[vm->fiber.ip].opcode != OP_HALT)
+    {
+        //char buf[256];
+        //printf("%s\n", vmAsm(&vm->fiber.code[vm->fiber.ip], buf));
         fiberStep(&vm->fiber, vm->error);
+    }
 }
 
 

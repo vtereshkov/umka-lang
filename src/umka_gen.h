@@ -36,6 +36,7 @@ void genPushRealConst(CodeGen *gen, double realVal);
 void genPushGlobalPtr(CodeGen *gen, void *ptrVal);
 void genPushLocalPtr (CodeGen *gen, int offset);
 void genPushReg      (CodeGen *gen, int regIndex);
+void genPushStruct   (CodeGen *gen, int size);
 
 void genPop   (CodeGen *gen);
 void genPopReg(CodeGen *gen, int regIndex);
@@ -43,7 +44,7 @@ void genDup   (CodeGen *gen);
 void genSwap(CodeGen *gen);
 
 void genDeref (CodeGen *gen, TypeKind typeKind);
-void genAssign(CodeGen *gen, TypeKind typeKind);
+void genAssign(CodeGen *gen, TypeKind typeKind, int structSize);
 
 void genUnary (CodeGen *gen, TokenKind tokKind, TypeKind typeKind);
 void genBinary(CodeGen *gen, TokenKind tokKind, TypeKind typeKind);
@@ -53,7 +54,7 @@ void genGetArrayPtr(CodeGen *gen, int itemSize);
 void genGoto  (CodeGen *gen, int dest);
 void genGotoIf(CodeGen *gen, int dest);
 
-void genCall       (CodeGen *gen, int numParams);
+void genCall       (CodeGen *gen, int paramSlots);
 void genCallBuiltin(CodeGen *gen, TypeKind typeKind, BuiltinFunc builtin);
 void genReturn     (CodeGen *gen, int numParams);
 

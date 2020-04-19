@@ -25,7 +25,7 @@ void parseAssignmentStmt(Compiler *comp, Type *type, bool constExpr)
     doImplicitTypeConv(comp, type->base, &rightType, rightConstant, false);
     typeAssertCompatible(&comp->types, type->base, rightType);
 
-    genAssign(&comp->gen, type->base->kind);
+    genAssign(&comp->gen, type->base->kind, typeSize(&comp->types, type->base));
 }
 
 
@@ -50,7 +50,7 @@ void parseShortAssignmentStmt(Compiler *comp, Type *type, TokenKind op)
     doImplicitTypeConv(comp, leftType, &rightType, NULL, false);
     typeAssertCompatible(&comp->types, leftType, rightType);
 
-    genAssign(&comp->gen, leftType->kind);
+    genAssign(&comp->gen, leftType->kind, typeSize(&comp->types, leftType));
 }
 
 
@@ -72,7 +72,7 @@ void parseDeclAssignment(Compiler *comp, IdentName name, bool constExpr)
 
     doPushVarPtr(comp, ident);
     genSwap(&comp->gen);                        // Assignment requires that the left-hand side comes first
-    genAssign(&comp->gen, rightType->kind);
+    genAssign(&comp->gen, rightType->kind, typeSize(&comp->types, rightType));
 }
 
 
@@ -352,7 +352,7 @@ void parseBlock(Compiler *comp, Ident *fn)
 
         genEnterFrameStub(&comp->gen);
         for (int i = 0; i < fn->type->sig.numParams; i++)
-            identAllocParam(&comp->idents, &comp->blocks, &fn->type->sig, i);
+            identAllocParam(&comp->idents, &comp->types, &comp->blocks, &fn->type->sig, i);
 
         comp->gen.returns = &returns;
         genGotosProlog(&comp->gen, comp->gen.returns);
@@ -368,7 +368,11 @@ void parseBlock(Compiler *comp, Ident *fn)
         if (mainFn)
             genHalt(&comp->gen);
         else
-            genReturn(&comp->gen, fn->type->sig.numParams);
+        {
+            int paramSlots = typeParamSizeTotal(&comp->types, &fn->type->sig) / sizeof(Slot);
+            genReturn(&comp->gen, paramSlots);
+        }
+
     }
 
     identFree(&comp->idents, comp->blocks.item[comp->blocks.top].block);

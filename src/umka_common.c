@@ -63,3 +63,10 @@ int hash(const char *str)
 
     return hash;
 }
+
+
+int align(int size, int alignment)
+{
+    return ((size + (alignment - 1)) / alignment) * alignment;
+}
+

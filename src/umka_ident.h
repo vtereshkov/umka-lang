@@ -55,7 +55,7 @@ void identAddBuiltinFunc(Idents *idents, Blocks *blocks, char *name, Type *type,
 
 int  identAllocStack(Idents *idents, Blocks *blocks, int size);
 void identAllocVar  (Idents *idents, Types *types, Blocks *blocks, char *name, Type *type);
-void identAllocParam(Idents *idents, Blocks *blocks, Signature *sig, int index);
+void identAllocParam(Idents *idents, Types *types, Blocks *blocks, Signature *sig, int index);
 
 
 #endif // UMKA_IDENT_H_INCLUDED

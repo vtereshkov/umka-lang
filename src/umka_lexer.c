@@ -223,8 +223,6 @@ static void lexSingleLineComment(Lexer *lex)
     char ch = lexChar(lex);
     while (ch && ch != '\n')
         ch = lexChar(lex);
-
-    ch = lexChar(lex);
 }
 
 

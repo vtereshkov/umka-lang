@@ -67,6 +67,13 @@ void genPushGlobalPtr(CodeGen *gen, void *ptrVal)
 }
 
 
+void genPushLocalPtr(CodeGen *gen, int offset)
+{
+    const Instruction instr = {.opcode = OP_PUSH_LOCAL_PTR, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = offset};
+    genAddInstr(gen, &instr);
+}
+
+
 void genPushReg(CodeGen *gen, int regIndex)
 {
     const Instruction instr = {.opcode = OP_PUSH_REG, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = regIndex};
@@ -74,9 +81,9 @@ void genPushReg(CodeGen *gen, int regIndex)
 }
 
 
-void genPushLocalPtr(CodeGen *gen, int offset)
+void genPushStruct(CodeGen *gen, int size)
 {
-    const Instruction instr = {.opcode = OP_PUSH_LOCAL_PTR, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = offset};
+    const Instruction instr = {.opcode = OP_PUSH_STRUCT, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = size};
     genAddInstr(gen, &instr);
 }
 
@@ -116,9 +123,9 @@ void genDeref(CodeGen *gen, TypeKind typeKind)
 }
 
 
-void genAssign(CodeGen *gen, TypeKind typeKind)
+void genAssign(CodeGen *gen, TypeKind typeKind, int structSize)
 {
-    const Instruction instr = {.opcode = OP_ASSIGN, .tokKind = TOK_NONE, .typeKind = typeKind, .operand.intVal = 0};
+    const Instruction instr = {.opcode = OP_ASSIGN, .tokKind = TOK_NONE, .typeKind = typeKind, .operand.intVal = structSize};
     genAddInstr(gen, &instr);
 }
 
@@ -158,9 +165,9 @@ void genGotoIf(CodeGen *gen, int dest)
 }
 
 
-void genCall(CodeGen *gen, int numParams)
+void genCall(CodeGen *gen, int paramSlots)
 {
-    const Instruction instr = {.opcode = OP_CALL, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = numParams};
+    const Instruction instr = {.opcode = OP_CALL, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = paramSlots};
     genAddInstr(gen, &instr);
 }
 
@@ -172,9 +179,9 @@ void genCallBuiltin(CodeGen *gen, TypeKind typeKind, BuiltinFunc builtin)
 }
 
 
-void genReturn(CodeGen *gen, int numParams)
+void genReturn(CodeGen *gen, int paramSlots)
 {
-    const Instruction instr = {.opcode = OP_RETURN, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = numParams};
+    const Instruction instr = {.opcode = OP_RETURN, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = paramSlots};
     genAddInstr(gen, &instr);
 }
 

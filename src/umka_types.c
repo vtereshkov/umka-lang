@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "umka_vm.h"
 #include "umka_types.h"
 
 
@@ -436,6 +437,22 @@ void typeAddParam(Types *types, Signature *sig, Type *type, char *name)
     param->type = type;
 
     sig->param[sig->numParams++] = param;
+}
+
+
+int typeParamSizeUpTo(Types *types, Signature *sig, int index)
+{
+    // All parameters are slot-aligned
+    int size = 0;
+    for (int i = 0; i <= index; i++)
+        size += align(typeSize(types, sig->param[i]->type), sizeof(Slot));
+    return size;
+}
+
+
+int typeParamSizeTotal(Types *types, Signature *sig)
+{
+    return typeParamSizeUpTo(types, sig, sig->numParams - 1);
 }
 
 

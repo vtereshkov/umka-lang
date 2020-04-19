@@ -183,10 +183,17 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
             if (i > (*type)->sig.numParams - 1)
                 comp->error("Too many actual parameters");
 
-            Type *paramType;
-            parseExpr(comp, &paramType, constant);
-            doImplicitTypeConv(comp, (*type)->sig.param[i]->type, &paramType, constant, false);
-            typeAssertCompatible(&comp->types, paramType, (*type)->sig.param[i]->type);
+            Type *formalParamType = (*type)->sig.param[i]->type;
+            Type *actualParamType;
+
+            parseExpr(comp, &actualParamType, constant);
+
+            doImplicitTypeConv(comp, formalParamType, &actualParamType, constant, false);
+            typeAssertCompatible(&comp->types, actualParamType, formalParamType);
+
+            // Copy structured parameter if passed by value
+            if (formalParamType->kind == TYPE_ARRAY || formalParamType->kind == TYPE_STRUCT)
+                genPushStruct(&comp->gen, typeSize(&comp->types, formalParamType));
 
             i++;
             if (comp->lex.tok.kind != TOK_COMMA)
@@ -198,7 +205,8 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
     if (i < (*type)->sig.numParams)
         comp->error("Too few actual parameters");
 
-    genCall(&comp->gen, i);
+    int paramSlots = typeParamSizeTotal(&comp->types, &(*type)->sig) / sizeof(Slot);
+    genCall(&comp->gen, paramSlots);
 
     *type = (*type)->sig.resultType[0];
     lexEat(&comp->lex, TOK_RPAR);

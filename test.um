@@ -1,17 +1,18 @@
-var i: int = 5
+fn print(a: int, x: struct {x, y: int; clr: real;}, c: char) {
+    x.y = 9    
+    printf("{d} {d} {d} {8.3f}\n", a, x.x, x.y, x.clr)
+}
 
 fn main() {
-    i := 69
-    for i := 0; i < 10; i++ {
-        if i > 5 {break;}
-        
-        for j := 0; j < 10; j++ {
-            if i + j > 7 {break;}            
-            printf("{d}", j)
-        }
-        printf("\n")
+    var a, b: struct {
+        x, y: int
+        clr: real
     }
-    printf("{d}", i)
+
+    a.x = 5;  a.y = 7;  a.clr = 0.36 // help
+    b = a
+    print(2, b, 's')
+    printf("{d}\n", b.y)
 }
 
   

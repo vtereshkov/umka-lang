@@ -160,10 +160,12 @@ void identAllocVar(Idents *idents, Types *types, Blocks *blocks, char *name, Typ
 }
 
 
-void identAllocParam(Idents *idents, Blocks *blocks, Signature *sig, int index)
+void identAllocParam(Idents *idents, Types *types, Blocks *blocks, Signature *sig, int index)
 {
-        // All parameters are slot-aligned, structured parameters are passed as pointers
-        int offset = (sig->numParams + 1 - index) * sizeof(Slot);
-        identAddLocalVar(idents, blocks, sig->param[index]->name, sig->param[index]->type, offset);
+    int paramSizeUpToIndex = typeParamSizeUpTo(types, sig, index);
+    int paramSizeTotal     = typeParamSizeTotal(types, sig);
+
+    int offset = (paramSizeTotal - paramSizeUpToIndex) + 2 * sizeof(Slot);  // + 2 slots for old base pointer and return address
+    identAddLocalVar(idents, blocks, sig->param[index]->name, sig->param[index]->type, offset);
 }
 

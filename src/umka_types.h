@@ -112,6 +112,9 @@ void typeAddField(Types *types, Type *structType, Type *fieldType, char *name);
 Param *typeFindParam(Signature *sig, char *name);
 void typeAddParam(Types *types, Signature *sig, Type *type, char *name);
 
+int typeParamSizeUpTo(Types *types, Signature *sig, int index);
+int typeParamSizeTotal(Types *types, Signature *sig);
+
 char *typeKindSpelling(TypeKind kind);
 char *typeSpelling(Type *type, char *buf);
 

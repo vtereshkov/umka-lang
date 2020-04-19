@@ -49,9 +49,6 @@ static void parseSignature(Compiler *comp, Signature *sig)
             int numParams = 0;
             parseTypedIdentList(comp, paramNames, MAX_PARAMS, &numParams, &paramType);
 
-            if (paramType->kind == TYPE_ARRAY || paramType->kind == TYPE_STRUCT)
-                comp->error("Array or structure is not allowed, use pointer instead");
-
             for (int i = 0; i < numParams; i++)
                 typeAddParam(&comp->types, sig, paramType, paramNames[i]);
 
