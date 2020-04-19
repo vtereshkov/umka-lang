@@ -31,6 +31,7 @@ typedef struct
          *real32Type, *realType,
          *ptrVoidType,
          *stringType;
+
 } Compiler;
 
 
@@ -38,5 +39,6 @@ void compilerInit(Compiler *comp, char *fileName, int storageCapacity, ErrorFunc
 void compilerFree(Compiler *comp);
 void compilerCompile(Compiler *comp);
 void compilerRun(Compiler *comp, int stackSize /* slots */, ErrorFunc runtimeError);
+void compilerAsm(Compiler *comp, char *buf);
 
 #endif // UMKA_COMPILER_H_INCLUDED

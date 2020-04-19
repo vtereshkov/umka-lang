@@ -7,7 +7,7 @@ void doPushConst(Compiler *comp, Type *type, Const *constant)
 {
     if (type->kind == TYPE_FN)
         genPushIntConst(&comp->gen, (int64_t)constant->ptrVal);
-    if (typeReal(type))
+    else if (typeReal(type))
         genPushRealConst(&comp->gen, constant->realVal);
     else
         genPushIntConst(&comp->gen, constant->intVal);

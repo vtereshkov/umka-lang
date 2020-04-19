@@ -32,14 +32,14 @@ void blocksFree(Blocks *blocks)
 }
 
 
-void blocksEnter(Blocks *blocks, bool isFunc)
+void blocksEnter(Blocks *blocks, struct tagIdent *fn)
 {
     if (blocks->top >= MAX_BLOCK_NESTING)
         blocks->error("Block nesting is too deep");
 
     blocks->top++;
     blocks->item[blocks->top].block = blocks->numBlocks++;
-    blocks->item[blocks->top].isFunc = isFunc;
+    blocks->item[blocks->top].fn = fn;
     blocks->item[blocks->top].localVarSize = 0;
 }
 

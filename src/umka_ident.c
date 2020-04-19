@@ -67,7 +67,7 @@ Ident *identAssertFind(Idents *idents, Blocks *blocks, char *name)
 static void identAdd(Idents *idents, Blocks *blocks, IdentKind kind, char *name, Type *type)
 {
     Ident *ident = identFind(idents, blocks, name);
-    if (ident)
+    if (ident && ident->block == blocks->item[blocks->top].block)
         idents->error("Duplicate identifier %s", name);
 
     ident = malloc(sizeof(Ident));
@@ -131,7 +131,7 @@ int identAllocStack(Idents *idents, Blocks *blocks, int size)
 {
     int *localVarSize = NULL;
     for (int i = blocks->top; i >= 1; i--)
-        if (blocks->item[i].isFunc)
+        if (blocks->item[i].fn)
         {
             localVarSize = &blocks->item[i].localVarSize;
             break;

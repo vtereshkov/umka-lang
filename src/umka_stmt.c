@@ -92,8 +92,12 @@ void parseIncDecStmt(Compiler *comp, Type *type, TokenKind op)
 // callStmt       = designator.
 void parseSimpleStmt(Compiler *comp)
 {
-    Ident *ident = identFind(&comp->idents, &comp->blocks, comp->lex.tok.name);
-    if (ident)
+    Lexer lookaheadLex = comp->lex;
+    lexNext(&lookaheadLex);
+
+    if (lookaheadLex.tok.kind == TOK_COLONEQ)
+        parseShortVarDecl(comp);
+    else
     {
         Type *type;
         bool isVar, isCall;
@@ -126,8 +130,6 @@ void parseSimpleStmt(Compiler *comp)
                 genPop(&comp->gen);  // Manually remove parameter
         }
     }
-    else
-        parseShortVarDecl(comp);
 }
 
 
@@ -209,6 +211,33 @@ void parseForStmt(Compiler *comp)
 void parseReturnStmt(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_RETURN);
+    Type *type;
+
+    if (comp->lex.tok.kind != TOK_SEMICOLON)
+        parseExpr(comp, &type, NULL);
+    else
+    {
+        type = comp->voidType;
+        lexNext(&comp->lex);
+    }
+
+    // Get function result type
+    Type *resultType = NULL;
+    for (int i = comp->blocks.top; i >= 1; i--)
+        if (comp->blocks.item[i].fn)
+        {
+            resultType = comp->blocks.item[i].fn->type->sig.resultType[0];
+            break;
+        }
+
+    if (type->kind != TYPE_VOID)
+    {
+        doImplicitTypeConv(comp, resultType, &type, NULL, false);
+        genPopReg(&comp->gen, VM_RESULT_REG_0);
+    }
+
+    typeAssertCompatible(&comp->types, resultType, type);
+    genGotosAddStub(&comp->gen, comp->gen.returns);
 }
 
 
@@ -248,7 +277,9 @@ void parseStmtList(Compiler *comp)
 void parseBlock(Compiler *comp, Ident *fn)
 {
     lexEat(&comp->lex, TOK_LBRACE);
-    blocksEnter(&comp->blocks, fn != NULL);
+    blocksEnter(&comp->blocks, fn);
+
+    Gotos returns;
 
     bool mainFn = false;
     if (fn)
@@ -262,13 +293,18 @@ void parseBlock(Compiler *comp, Ident *fn)
         genEnterFrameStub(&comp->gen);
         for (int i = 0; i < fn->type->sig.numParams; i++)
             identAllocParam(&comp->idents, &comp->blocks, &fn->type->sig, i);
+
+        comp->gen.returns = &returns;
+        genGotosProlog(&comp->gen, comp->gen.returns);
     }
 
     parseStmtList(comp);
 
     if (fn)
     {
+        genGotosEpilog(&comp->gen, comp->gen.returns);
         genLeaveFrameFixup(&comp->gen, comp->blocks.item[comp->blocks.top].localVarSize);
+
         if (mainFn)
             genHalt(&comp->gen);
         else

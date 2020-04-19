@@ -112,7 +112,8 @@ void typeAddField(Types *types, Type *structType, Type *fieldType, char *name);
 Param *typeFindParam(Signature *sig, char *name);
 void typeAddParam(Types *types, Signature *sig, Type *type, char *name);
 
-char *typeSpelling(Type *type);
+char *typeKindSpelling(TypeKind kind);
+char *typeSpelling(Type *type, char *buf);
 
 
 #endif // UMKA_TYPES_H_INCLUDED

@@ -1,14 +1,25 @@
-fn f(n: int, y: ^[10]real) {
-    for i := 0; i < n; i++ {
-        printf("{8.3f} ", y^[i])
-    }
+fn f(n: int): int {
+    if n == 1 {return 1;}
+    return n * f(n - 1)
 }
 
+
 fn main() {
-    var a: [10]real
-    a[0] = 3; a[1] = 5; a[2] = 7
-    f(3, &a)
-    printf("done.")
+    var a, b: struct {
+        x, y: real
+    }
+   
+    a.x = 5
+    a.y = 7
+    
+    b = a
+   
+    for i := 1; i < 20; i++ {
+        a := f(i)
+        printf("f({d}) = {lld}\n", i, a)
+    }
+    
+    //printf("{lld}\n", a)
 }
 
   

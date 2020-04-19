@@ -131,7 +131,12 @@ int typeSize(Types *types, Type *type)
         }
         case TYPE_FN:       return sizeof(void *);
 
-        default: types->error("Illegal type: %s", typeSpelling(type)); return 0;
+        default:
+            {
+            char buf[DEFAULT_STRING_LEN];
+            types->error("Illegal type %s", typeSpelling(type, buf));
+            return 0;
+            }
     }
 }
 
@@ -273,7 +278,11 @@ bool typeAssertEquivalent(Types *types, Type *left, Type *right)
 {
     bool res = typeEquivalent(left, right);
     if (!res)
-        types->error("Incompatible types %s and %s", typeSpelling(left), typeSpelling(right));
+    {
+        char leftBuf[DEFAULT_STRING_LEN], rightBuf[DEFAULT_STRING_LEN];
+        types->error("Incompatible types %s and %s", typeSpelling(left, leftBuf), typeSpelling(right, rightBuf));
+
+    }
     return res;
 }
 
@@ -297,7 +306,10 @@ bool typeAssertCompatible(Types *types, Type *left, Type *right)
 {
     bool res = typeCompatible(left, right);
     if (!res)
-        types->error("Incompatible types %s and %s", typeSpelling(left), typeSpelling(right));
+    {
+        char leftBuf[DEFAULT_STRING_LEN], rightBuf[DEFAULT_STRING_LEN];
+        types->error("Incompatible types %s and %s", typeSpelling(left, leftBuf), typeSpelling(right, rightBuf));
+    }
     return res;
 }
 
@@ -347,7 +359,10 @@ bool typeAssertValidOperator(Types *types, Type *type, TokenKind op)
 {
     bool res = typeValidOperator(type, op);
     if (!res)
-        types->error("Operator %s is not applicable to %s", lexSpelling(op), typeSpelling(type));
+    {
+        char buf[DEFAULT_STRING_LEN];
+        types->error("Operator %s is not applicable to %s", lexSpelling(op), typeSpelling(type, buf));
+    }
     return res;
 }
 
@@ -424,23 +439,20 @@ void typeAddParam(Types *types, Signature *sig, Type *type, char *name)
 }
 
 
-static char *typeSpellingRecursive(Type *type, char *buf)
+char *typeKindSpelling(TypeKind kind)
 {
-    static char fullSpelling[DEFAULT_STRING_LEN];
-    if (!buf) buf = fullSpelling;
-
-    if (type->kind == TYPE_PTR || type->kind == TYPE_ARRAY)
-    {
-        sprintf(buf, "%s%s", spelling[type->kind], typeSpellingRecursive(type->base, buf + strlen(spelling[type->kind])));
-        return buf;
-    }
-   else
-        return spelling[type->kind];
+    return spelling[kind];
 }
 
 
-char *typeSpelling(Type *type)
+char *typeSpelling(Type *type, char *buf)
 {
-    return typeSpellingRecursive(type, NULL);
+    sprintf(buf, "%s", spelling[type->kind]);
+    if (type->kind == TYPE_PTR || type->kind == TYPE_ARRAY)
+    {
+        char baseBuf[DEFAULT_STRING_LEN];
+        strcat(buf, typeSpelling(type->base, baseBuf));
+    }
+    return buf;
 }
 

@@ -79,7 +79,7 @@ void compilerInit(Compiler *comp, char *fileName, int storageCapacity, ErrorFunc
     typeInit    (&comp->types, compileError);
     identInit   (&comp->idents, compileError);
     constInit   (&comp->consts, compileError);
-    genInit     (&comp->gen);
+    genInit     (&comp->gen, compileError);
 
     comp->error = compileError;
 
@@ -112,6 +112,12 @@ void compilerRun(Compiler *comp, int stackSize, ErrorFunc runtimeError)
     vmInit(&comp->vm, comp->gen.code, stackSize, runtimeError);
     vmRun (&comp->vm);
     vmFree(&comp->vm);
+}
+
+
+void compilerAsm(Compiler *comp, char *buf)
+{
+    genAsm(&comp->gen, buf);
 }
 
 

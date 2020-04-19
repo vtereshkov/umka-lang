@@ -9,6 +9,32 @@
 #include "umka_vm.h"
 
 
+static char *spelling [] =
+{
+    "NOP",
+    "PUSH",
+    "PUSH_LOCAL_PTR",
+    "PUSH_REG",
+    "POP",
+    "POP_REG",
+    "DUP",
+    "SWAP",
+    "DEREF",
+    "ASSIGN",
+    "UNARY",
+    "BINARY",
+    "GET_ARRAY_PTR",
+    "GOTO",
+    "GOTO_IF",
+    "CALL",
+    "CALL_BUILTIN",
+    "RETURN",
+    "ENTER_FRAME",
+    "LEAVE_FRAME",
+    "HALT"
+};
+
+
 void vmInit(VM *vm, Instruction *code, int stackSize, ErrorFunc error)
 {
     vm->fiber.code = code;
@@ -488,4 +514,12 @@ void vmRun(VM *vm)
 {
     while (vm->fiber.code[vm->fiber.ip].opcode != OP_HALT)
         fiberStep(&vm->fiber, vm->error);
+}
+
+
+char *vmAsm(Instruction *instr, char *buf)
+{
+    sprintf(buf, "%16s %10s %8s %08X", spelling[instr->opcode], lexSpelling(instr->tokKind),
+                                       typeKindSpelling(instr->typeKind), (int)instr->operand.intVal);
+    return buf;
 }

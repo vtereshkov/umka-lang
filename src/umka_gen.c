@@ -4,12 +4,13 @@
 #include "umka_gen.h"
 
 
-void genInit(CodeGen *gen)
+void genInit(CodeGen *gen, ErrorFunc error)
 {
     gen->capacity = 1000;
     gen->ip = 0;
     gen->code = malloc(gen->capacity * sizeof(Instruction));
     gen->top = -1;
+    gen->error = error;
 }
 
 
@@ -353,6 +354,43 @@ void genEntryPoint(CodeGen *gen)
 {
     genGoFromTo(gen, 0, gen->ip);
 }
+
+
+void genGotosProlog(CodeGen *gen, Gotos *gotos)
+{
+    gotos->numGotos = 0;
+}
+
+
+void genGotosAddStub(CodeGen *gen, Gotos *gotos)
+{
+    if (gotos->numGotos >= MAX_GOTOS)
+        gen->error("To many break/continue/return statements");
+
+    gotos->start[gotos->numGotos++] = gen->ip;
+    genNop(gen);                                        // Goto block/function end (stub)
+}
+
+
+void genGotosEpilog(CodeGen *gen, Gotos *gotos)
+{
+    for (int i = 0; i < gotos->numGotos; i++)
+        genGoFromTo(gen, gotos->start[i], gen->ip);     // Goto block/function end (fixup)
+}
+
+
+char *genAsm(CodeGen *gen, char *buf)
+{
+    int ip = 0, pos = 0;
+    do
+    {
+        char instrBuf[DEFAULT_STRING_LEN];
+        pos += sprintf(buf + pos, "%08X %s\n", ip, vmAsm(&gen->code[ip], instrBuf));
+    } while (gen->code[ip++].opcode != OP_HALT);
+
+    return buf;
+}
+
 
 
 

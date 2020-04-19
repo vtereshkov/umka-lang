@@ -12,7 +12,8 @@ enum
     MAX_FIELDS          = 100,
     MAX_PARAMS          = 16,
     MAX_RESULTS         = 16,
-    MAX_BLOCK_NESTING   = 100
+    MAX_BLOCK_NESTING   = 100,
+    MAX_GOTOS           = 100
 };
 
 
@@ -22,7 +23,7 @@ typedef void (*ErrorFunc)(const char *format, ...);
 typedef struct
 {
     int block;
-    bool isFunc;
+    struct tagIdent *fn;
     int localVarSize;       // For function blocks only
 } BlockStackSlot;
 
@@ -47,7 +48,7 @@ void storageFree(Storage *storage);
 
 void blocksInit(Blocks *blocks, ErrorFunc error);
 void blocksFree(Blocks *blocks);
-void blocksEnter(Blocks *blocks, bool isFunc);
+void blocksEnter(Blocks *blocks, struct tagIdent *fn);
 void blocksLeave(Blocks *blocks);
 
 int hash(const char *str);

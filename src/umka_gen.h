@@ -5,7 +5,12 @@
 #include "umka_vm.h"
 
 
-
+typedef struct
+{
+    int start[MAX_GOTOS];
+    int numGotos;
+    Type *returnType;
+} Gotos;
 
 
 typedef struct
@@ -14,10 +19,12 @@ typedef struct
     int ip, capacity;
     int stack[MAX_BLOCK_NESTING];
     int top;
+    Gotos *breaks, *continues, *returns;
+    ErrorFunc error;
 } CodeGen;
 
 
-void genInit(CodeGen *gen);
+void genInit(CodeGen *gen, ErrorFunc error);
 void genFree(CodeGen *gen);
 
 // Atomic VM instructions
@@ -73,9 +80,15 @@ void genForEpilog        (CodeGen *gen);
 void genShortCircuitProlog(CodeGen *gen, TokenKind op);
 void genShortCircuitEpilog(CodeGen *gen);
 
-void genEnterFrameStub(CodeGen *gen);
+void genEnterFrameStub (CodeGen *gen);
 void genLeaveFrameFixup(CodeGen *gen, int localVarSize);
 
 void genEntryPoint(CodeGen *gen);
+
+void genGotosProlog (CodeGen *gen, Gotos *gotos);
+void genGotosAddStub(CodeGen *gen, Gotos *gotos);
+void genGotosEpilog (CodeGen *gen, Gotos *gotos);
+
+char *genAsm(CodeGen *gen, char *buf);
 
 #endif // UMKA_GEN_H_INCLUDED

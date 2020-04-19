@@ -103,5 +103,6 @@ typedef struct
 void vmInit(VM *vm, Instruction *code, int stackSize /* slots */, ErrorFunc error);
 void vmFree(VM *vm);
 void vmRun (VM *vm);
+char *vmAsm(Instruction *instr, char *buf);
 
 #endif // UMKA_VM_H_INCLUDED
