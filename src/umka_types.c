@@ -396,6 +396,9 @@ void typeAddField(Types *types, Type *structType, Type *fieldType, char *name)
     if (field)
         types->error("Duplicate field %s", name);
 
+    if (fieldType->kind == TYPE_VOID)
+        types->error("Void field %s", name);
+
     if (structType->numItems > MAX_FIELDS)
         types->error("Too many fields");
 

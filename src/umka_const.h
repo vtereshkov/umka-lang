@@ -13,6 +13,7 @@ typedef struct
 
 void constInit(Consts *consts, ErrorFunc error);
 void constFree(Consts *consts);
+void constAssign(Consts *consts, void *lhs, Const *rhs, TypeKind typeKind, int size);
 void constUnary(Consts *consts, Const *arg, TokenKind tokKind, TypeKind typeKind);
 void constBinary(Consts *consts, Const *lhs, const Const *rhs, TokenKind tokKind, TypeKind typeKind);
 void constCallBuiltin(Consts *consts, Const *arg, BuiltinFunc builtinVal);

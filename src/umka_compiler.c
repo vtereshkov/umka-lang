@@ -43,7 +43,7 @@ static void compilerDeclareBuiltinIdents(Compiler *comp)
     identAddConst(&comp->idents, &comp->blocks, "null",  comp->ptrVoidType, nullConst);
 
     // Types
-    identAddType(&comp->idents, &comp->blocks,  "void",   comp->ptrVoidType);
+    identAddType(&comp->idents, &comp->blocks,  "void",   comp->voidType);
     identAddType(&comp->idents, &comp->blocks,  "int8",   comp->int8Type);
     identAddType(&comp->idents, &comp->blocks,  "int16",  comp->int16Type);
     identAddType(&comp->idents, &comp->blocks,  "int32",  comp->int32Type);

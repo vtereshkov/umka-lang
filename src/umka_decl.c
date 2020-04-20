@@ -250,12 +250,17 @@ static void parseVarDeclItem(Compiler *comp)
             comp->error("Unable to initialize multiple variables");
 
         Ident *ident = comp->idents.last;
-        doPushVarPtr(comp, ident);
+        Type *designatorType = typeAddPtrTo(&comp->types, &comp->blocks, ident->type);
+
+        void *initializedVarPtr = NULL;
+
+        if (comp->blocks.top == 0)          // Globals are initialized with constant expressions
+            initializedVarPtr = ident->ptr;
+        else                                // Locals are assigned to
+            doPushVarPtr(comp, ident);
 
         lexNext(&comp->lex);
-
-        Type *designatorType = typeAddPtrTo(&comp->types, &comp->blocks, ident->type);
-        parseAssignmentStmt(comp, designatorType, comp->blocks.top == 0);
+        parseAssignmentStmt(comp, designatorType, initializedVarPtr);
     }
 }
 
@@ -280,7 +285,7 @@ void parseVarDecl(Compiler *comp)
 }
 
 
-// shortVarDecl = ident ":=" expr.
+// shortVarDecl = declAssignment.
 void parseShortVarDecl(Compiler *comp)
 {
     lexCheck(&comp->lex, TOK_IDENT);
@@ -289,7 +294,7 @@ void parseShortVarDecl(Compiler *comp)
     lexNext(&comp->lex);
     lexEat(&comp->lex, TOK_COLONEQ);
 
-    parseDeclAssignment(comp, name, comp->blocks.top == 0);
+    parseDeclAssignmentStmt(comp, name, comp->blocks.top == 0);
 }
 
 
@@ -327,10 +332,11 @@ void parseDecl(Compiler *comp)
 {
     switch (comp->lex.tok.kind)
     {
-        case TOK_TYPE:   parseTypeDecl(comp); break;
-        case TOK_CONST:  parseConstDecl(comp); break;
-        case TOK_VAR:    parseVarDecl(comp); break;
-        case TOK_FN:     parseFnDecl(comp); break;
+        case TOK_TYPE:   parseTypeDecl(comp);       break;
+        case TOK_CONST:  parseConstDecl(comp);      break;
+        case TOK_VAR:    parseVarDecl(comp);        break;
+        case TOK_IDENT:  parseShortVarDecl(comp);   break;
+        case TOK_FN:     parseFnDecl(comp);         break;
 
         case TOK_EOF:    if (comp->blocks.top == 0)
                              break;

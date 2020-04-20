@@ -306,6 +306,13 @@ static void parseSelectors(Compiler *comp, Type **type, Const *constant, bool *i
             // Array element
             case TOK_LBRACKET:
             {
+                // Implicit dereferencing
+                if ((*type)->kind == TYPE_PTR && (*type)->base->kind == TYPE_PTR)
+                {
+                    genDeref(&comp->gen, TYPE_PTR);
+                    *type = (*type)->base;
+                }
+
                 if ((*type)->kind != TYPE_PTR || (*type)->base->kind != TYPE_ARRAY)
                     comp->error("Array expected");
 
@@ -326,6 +333,13 @@ static void parseSelectors(Compiler *comp, Type **type, Const *constant, bool *i
             // Structure field
             case TOK_PERIOD:
             {
+                // Implicit dereferencing
+                if ((*type)->kind == TYPE_PTR && (*type)->base->kind == TYPE_PTR)
+                {
+                    genDeref(&comp->gen, TYPE_PTR);
+                    *type = (*type)->base;
+                }
+
                 if ((*type)->kind != TYPE_PTR || (*type)->base->kind != TYPE_STRUCT)
                     comp->error("Structure expected");
 
@@ -346,6 +360,13 @@ static void parseSelectors(Compiler *comp, Type **type, Const *constant, bool *i
             // Function call
             case TOK_LPAR:
             {
+                // Implicit dereferencing
+                if ((*type)->kind == TYPE_PTR && (*type)->base->kind == TYPE_FN)
+                {
+                    genDeref(&comp->gen, TYPE_FN);
+                    *type = (*type)->base;
+                }
+
                 if ((*type)->kind != TYPE_FN)
                     comp->error("Function expected");
 

@@ -1,3 +1,4 @@
+#include <string.h>
 #include <math.h>
 
 #include "umka_const.h"
@@ -11,6 +12,35 @@ void constInit(Consts *consts, ErrorFunc error)
 
 void constFree(Consts *consts)
 {
+}
+
+
+void constAssign(Consts *consts, void *lhs, Const *rhs, TypeKind typeKind, int size)
+{
+    switch (typeKind)
+    {
+        case TYPE_INT8:   *(int8_t   *)lhs = rhs->intVal; break;
+        case TYPE_INT16:  *(int16_t  *)lhs = rhs->intVal; break;
+        case TYPE_INT32:  *(int32_t  *)lhs = rhs->intVal; break;
+        case TYPE_INT:    *(int64_t  *)lhs = rhs->intVal; break;
+        case TYPE_UINT8:  *(uint8_t  *)lhs = rhs->intVal; break;
+        case TYPE_UINT16: *(uint16_t *)lhs = rhs->intVal; break;
+        case TYPE_UINT32: *(uint32_t *)lhs = rhs->intVal; break;
+        case TYPE_BOOL:   *(bool     *)lhs = rhs->intVal; break;
+        case TYPE_CHAR:   *(char     *)lhs = rhs->intVal; break;
+        case TYPE_REAL32: *(float    *)lhs = rhs->realVal; break;
+        case TYPE_REAL:   *(double   *)lhs = rhs->realVal; break;
+        case TYPE_PTR:    *(void *   *)lhs = rhs->ptrVal; break;
+        case TYPE_ARRAY:
+        case TYPE_STRUCT:
+        {
+            memcpy(lhs, rhs->ptrVal, size);
+            break;
+        }
+        case TYPE_FN:     *(void *   *)lhs = rhs->ptrVal; break;
+
+        default:          consts->error("Illegal type"); return;
+    }
 }
 
 

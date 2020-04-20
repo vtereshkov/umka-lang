@@ -211,8 +211,11 @@ static void doDeref(Fiber *fiber, ErrorFunc error)
         case TYPE_REAL32: fiber->top->realVal = *(float    *)ptr; break;
         case TYPE_REAL:   fiber->top->realVal = *(double   *)ptr; break;
         case TYPE_PTR:    fiber->top->ptrVal  = *(void *   *)ptr; break;
-        // Structured types are represented by pointers, so they are not dereferenced
-        default:          fiber->top->intVal =   (int64_t   )ptr; break;
+        case TYPE_ARRAY:  fiber->top->intVal =   (int64_t   )ptr; break;  // Always represented by pointer, not dereferenced
+        case TYPE_STRUCT: fiber->top->intVal =   (int64_t   )ptr; break;  // Always represented by pointer, not dereferenced
+        case TYPE_FN:     fiber->top->ptrVal  = *(void *   *)ptr; break;
+
+        default:          error("Illegal type"); return;
     }
     fiber->ip++;
 }
@@ -243,6 +246,8 @@ static void doAssign(Fiber *fiber, ErrorFunc error)
             memcpy(lhs, rhs.ptrVal, size);
             break;
         }
+        case TYPE_FN:     *(void *   *)lhs = rhs.ptrVal; break;
+
         default:          error("Illegal type"); return;
     }
     fiber->ip++;

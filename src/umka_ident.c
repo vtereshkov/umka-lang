@@ -70,6 +70,9 @@ static void identAdd(Idents *idents, Blocks *blocks, IdentKind kind, char *name,
     if (ident && ident->block == blocks->item[blocks->top].block)
         idents->error("Duplicate identifier %s", name);
 
+    if ((kind == IDENT_CONST || kind == IDENT_VAR) && type->kind == TYPE_VOID)
+        idents->error("Void identifier %s", name);
+
     ident = malloc(sizeof(Ident));
     ident->kind = kind;
 

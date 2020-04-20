@@ -4,8 +4,8 @@
 #include "umka_compiler.h"
 
 
-void parseAssignmentStmt(Compiler *comp, Type *type, bool constExpr);
-void parseDeclAssignment(Compiler *comp, IdentName name, bool constExpr);
+void parseAssignmentStmt(Compiler *comp, Type *type, void *initializedVarPtr);
+void parseDeclAssignmentStmt(Compiler *comp, IdentName name, bool constExpr);
 
 void parseBlock(Compiler *comp, Ident *fn);
 

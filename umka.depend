@@ -122,7 +122,7 @@
 	<stdint.h>
 	<stdbool.h>
 
-1587296236 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_compiler.c
+1587340990 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_compiler.c
 	<stddef.h>
 	"umka_compiler.h"
 
@@ -155,15 +155,16 @@
 	"umka_common.h"
 	"umka_vm.h"
 
-1587174382 c:\users\vasiliy\desktop\umka-lang-master\src\umka_const.h
+1587336655 c:\users\vasiliy\desktop\umka-lang-master\src\umka_const.h
 	"umka_lexer.h"
 	"umka_vm.h"
 
-1587174382 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_const.c
+1587338155 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_const.c
+	<string.h>
 	<math.h>
 	"umka_const.h"
 
-1587322249 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_decl.c
+1587339650 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_decl.c
 	<string.h>
 	"umka_expr.h"
 	"umka_stmt.h"
@@ -172,13 +173,13 @@
 1587174382 c:\users\vasiliy\desktop\umka-lang-master\src\umka_expr.h
 	"umka_compiler.h"
 
-1587174382 c:\users\vasiliy\desktop\umka-lang-master\src\umka_stmt.h
+1587339650 c:\users\vasiliy\desktop\umka-lang-master\src\umka_stmt.h
 	"umka_compiler.h"
 
 1587174382 c:\users\vasiliy\desktop\umka-lang-master\src\umka_decl.h
 	"umka_compiler.h"
 
-1587325846 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_expr.c
+1587330573 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_expr.c
 	<string.h>
 	"umka_expr.h"
 
@@ -187,7 +188,7 @@
 	<stdlib.h>
 	"umka_gen.h"
 
-1587325457 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_ident.c
+1587340352 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_ident.c
 	<stdio.h>
 	<stdlib.h>
 	<string.h>
@@ -202,7 +203,7 @@
 	"umka_common.h"
 	"umka_lexer.h"
 
-1587327502 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_main.c
+1587330822 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_main.c
 	<stdio.h>
 	<stdlib.h>
 	<stdarg.h>
@@ -210,20 +211,20 @@
 	"umka_expr.h"
 	"umka_decl.h"
 
-1587325989 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_stmt.c
+1587340128 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_stmt.c
 	<string.h>
 	"umka_stmt.h"
 	"umka_expr.h"
 	"umka_decl.h"
 
-1587325496 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_types.c
+1587340708 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_types.c
 	<stdio.h>
 	<stdlib.h>
 	<string.h>
 	"umka_vm.h"
 	"umka_types.h"
 
-1587329072 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_vm.c
+1587330801 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_vm.c
 	<stdio.h>
 	<stdlib.h>
 	<string.h>

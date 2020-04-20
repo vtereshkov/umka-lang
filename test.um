@@ -3,15 +3,24 @@ fn print(a: int, x: struct {x, y: int; clr: real;}, c: char) {
     printf("{d} {d} {d} {8.3f}\n", a, x.x, x.y, x.clr)
 }
 
+type functype = fn (a: int, x: struct {x, y: int; clr: real;}, c: char);
+
+
+
 fn main() {
     var a, b: struct {
         x, y: int
         clr: real
     }
 
+    var f: functype = print 	
+
+    //f := print     
+
     a.x = 5;  a.y = 7;  a.clr = 0.36 // help
     b = a
-    print(2, b, 's')
+    
+    f(2, b, 's')
     printf("{d}\n", b.y)
 }
 

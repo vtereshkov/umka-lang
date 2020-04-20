@@ -6,7 +6,7 @@
 
 
 // assignmentStmt = designator "=" expr.
-void parseAssignmentStmt(Compiler *comp, Type *type, bool constExpr)
+void parseAssignmentStmt(Compiler *comp, Type *type, void *initializedVarPtr)
 {
     if (type->kind != TYPE_PTR || type->base->kind == TYPE_VOID)
         comp->error("Left side cannot be assigned to");
@@ -14,18 +14,18 @@ void parseAssignmentStmt(Compiler *comp, Type *type, bool constExpr)
     Type *rightType;
     Const rightConstantBuf, *rightConstant = NULL;
 
-    if (constExpr)
+    if (initializedVarPtr)
         rightConstant = &rightConstantBuf;
 
     parseExpr(comp, &rightType, rightConstant);
 
-    if (constExpr)
-        doPushConst(comp, rightType, rightConstant);
-
     doImplicitTypeConv(comp, type->base, &rightType, rightConstant, false);
     typeAssertCompatible(&comp->types, type->base, rightType);
 
-    genAssign(&comp->gen, type->base->kind, typeSize(&comp->types, type->base));
+    if (initializedVarPtr)      // Initialize global variable
+        constAssign(&comp->consts, initializedVarPtr, rightConstant, type->base->kind, typeSize(&comp->types, type->base));
+    else                        // Assign to local variable
+        genAssign(&comp->gen, type->base->kind, typeSize(&comp->types, type->base));
 }
 
 
@@ -54,7 +54,8 @@ void parseShortAssignmentStmt(Compiler *comp, Type *type, TokenKind op)
 }
 
 
-void parseDeclAssignment(Compiler *comp, IdentName name, bool constExpr)
+// declAssignmentStmt = ident ":=" expr.
+void parseDeclAssignmentStmt(Compiler *comp, IdentName name, bool constExpr)
 {
     Type *rightType;
     Const rightConstantBuf, *rightConstant = NULL;
@@ -64,15 +65,17 @@ void parseDeclAssignment(Compiler *comp, IdentName name, bool constExpr)
 
     parseExpr(comp, &rightType, rightConstant);
 
-    if (constExpr)
-        doPushConst(comp, rightType, rightConstant);
-
     identAllocVar(&comp->idents, &comp->types, &comp->blocks, name, rightType);
     Ident *ident = comp->idents.last;
 
-    doPushVarPtr(comp, ident);
-    genSwap(&comp->gen);                        // Assignment requires that the left-hand side comes first
-    genAssign(&comp->gen, rightType->kind, typeSize(&comp->types, rightType));
+    if (constExpr)                              // Initialize global variable
+        constAssign(&comp->consts, ident->ptr, rightConstant, rightType->kind, typeSize(&comp->types, rightType));
+    else                                        // Assign to local variable
+    {
+        doPushVarPtr(comp, ident);
+        genSwap(&comp->gen);                    // Assignment requires that the left-hand side comes first
+        genAssign(&comp->gen, rightType->kind, typeSize(&comp->types, rightType));
+    }
 }
 
 
@@ -112,7 +115,7 @@ void parseSimpleStmt(Compiler *comp)
             lexNext(&comp->lex);
 
             if (op == TOK_EQ)
-                parseAssignmentStmt(comp, type, false);
+                parseAssignmentStmt(comp, type, NULL);
             else
                 parseShortAssignmentStmt(comp, type, op);
         }
@@ -299,7 +302,7 @@ void parseReturnStmt(Compiler *comp)
 }
 
 
-// stmt = decl | assignmentStmt | callStmt | ifStmt | forStmt | breakStmt | continueStmt | returnStmt.
+// stmt = decl | simpleStmt | ifStmt | forStmt | breakStmt | continueStmt | returnStmt.
 void parseStmt(Compiler *comp)
 {
     switch (comp->lex.tok.kind)
