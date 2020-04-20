@@ -94,8 +94,6 @@ bool typeOrdinal(Type *type);
 bool typeReal(Type *type);
 bool typeString(Type *type);
 bool typeDefaultRef(Type *type);
-bool typeAssignable(Type *type);
-bool typeAssertAssignable(Types *types, Type *type);
 
 bool typeEquivalent(Type *left, Type *right);
 bool typeAssertEquivalent(Types *types, Type *left, Type *right);

@@ -1,5 +1,9 @@
 fn main() {
-    for a := 0.0; a < 15; a = a + 1 { 
+    var amin, amax: real
+    scanf("{lf} {lf}", &amin, &amax)
+    printf("{8.3f} {8.3f}\n", amin, amax)
+
+    for a := amin; a < amax; a = a + 1 { 
         switch b := trunc(a); b {
             case 1, 4, 7: printf("{d} in 1, 4, 7\n", b)
             case 2, 5, 8: printf("{d} in 2, 5, 8\n", b)

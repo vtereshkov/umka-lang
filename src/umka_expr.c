@@ -67,14 +67,14 @@ static void parseBuiltinIOCall(Compiler *comp, Type **type, Const *constant, Bui
     if (builtin == BUILTIN_FPRINTF || builtin == BUILTIN_FSCANF)
     {
         parseExpr(comp, type, constant);
-        typeAssertCompatible(&comp->types, *type, comp->ptrVoidType);
+        typeAssertCompatible(&comp->types, comp->ptrVoidType, *type);
         genPopReg(&comp->gen, VM_IO_FILE_REG);
         lexEat(&comp->lex, TOK_COMMA);
     }
 
     // Format string
     parseExpr(comp, type, constant);
-    typeAssertCompatible(&comp->types, *type, comp->stringType);
+    typeAssertCompatible(&comp->types, comp->stringType, *type);
     genPopReg(&comp->gen, VM_IO_FORMAT_REG);
 
     // Values, if any
@@ -96,7 +96,7 @@ static void parseBuiltinIOCall(Compiler *comp, Type **type, Const *constant, Bui
         }
         else  // BUILTIN_SCANF, BUILTIN_FSCANF
         {
-            typeAssertCompatible(&comp->types, *type, comp->ptrVoidType);
+            typeAssertCompatible(&comp->types, comp->ptrVoidType, *type);
 
             if (typeOrdinal((*type)->base) || typeReal((*type)->base))
                 genCallBuiltin(&comp->gen, (*type)->base->kind, builtin);
@@ -124,7 +124,7 @@ static void parseBuiltinMathCall(Compiler *comp, Type **type, Const *constant, B
     lexEat(&comp->lex, TOK_LPAR);
     parseExpr(comp, type, constant);
     doImplicitTypeConv(comp, comp->realType, type, constant, false);
-    typeAssertCompatible(&comp->types, *type, comp->realType);
+    typeAssertCompatible(&comp->types, comp->realType, *type);
 
     if (constant)
         constCallBuiltin(&comp->consts, constant, builtin);
@@ -189,7 +189,7 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
             parseExpr(comp, &actualParamType, constant);
 
             doImplicitTypeConv(comp, formalParamType, &actualParamType, constant, false);
-            typeAssertCompatible(&comp->types, actualParamType, formalParamType);
+            typeAssertCompatible(&comp->types, formalParamType, actualParamType);
 
             // Copy structured parameter if passed by value
             if (formalParamType->kind == TYPE_ARRAY || formalParamType->kind == TYPE_STRUCT)
@@ -320,7 +320,7 @@ static void parseSelectors(Compiler *comp, Type **type, Const *constant, bool *i
                 lexNext(&comp->lex);
                 Type *indexType;
                 parseExpr(comp, &indexType, NULL);
-                typeAssertCompatible(&comp->types, indexType, comp->intType);
+                typeAssertCompatible(&comp->types, comp->intType, indexType);
                 lexEat(&comp->lex, TOK_RBRACKET);
 
                 genGetArrayPtr(&comp->gen, typeSize(&comp->types, (*type)->base->base));

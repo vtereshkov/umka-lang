@@ -173,22 +173,6 @@ bool typeDefaultRef(Type *type)
 }
 
 
-bool typeAssignable(Type *type)
-{
-    return (type->kind == TYPE_PTR && type->base->kind != TYPE_NONE && type->base->kind != TYPE_VOID) ||
-            typeDefaultRef(type);
-}
-
-
-bool typeAssertAssignable(Types *types, Type *type)
-{
-    bool res = typeAssignable(type);
-    if (!res)
-        types->error("Variable reference expected");
-    return res;
-}
-
-
 bool typeEquivalent(Type *left, Type *right)
 {
     if (left == right)
@@ -297,6 +281,9 @@ bool typeCompatible(Type *left, Type *right)
         return true;
 
     if (typeString(left) && typeString(right))
+        return true;
+
+    if (left->kind == TYPE_PTR && left->base->kind == TYPE_VOID && right->kind == TYPE_PTR)
         return true;
 
     return false;

@@ -88,7 +88,7 @@ void parseIncDecStmt(Compiler *comp, Type *type, TokenKind op)
     if (type->kind != TYPE_PTR || type->base->kind == TYPE_VOID)
         comp->error("Left side cannot be assigned to");
 
-    typeAssertCompatible(&comp->types, type->base, comp->intType);
+    typeAssertCompatible(&comp->types, comp->intType, type->base);
     genUnary(&comp->gen, op, type->kind);
     lexNext(&comp->lex);
 }
@@ -160,7 +160,7 @@ void parseIfStmt(Compiler *comp)
     // expr
     Type *type;
     parseExpr(comp, &type, NULL);
-    typeAssertCompatible(&comp->types, type, comp->boolType);
+    typeAssertCompatible(&comp->types, comp->boolType, type);
 
     genIfCondEpilog(&comp->gen);
 
@@ -305,7 +305,7 @@ void parseForStmt(Compiler *comp)
     // expr
     Type *type;
     parseExpr(comp, &type, NULL);
-    typeAssertCompatible(&comp->types, type, comp->boolType);
+    typeAssertCompatible(&comp->types, comp->boolType, type);
 
     genForCondEpilog(&comp->gen);
 

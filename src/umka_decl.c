@@ -88,7 +88,7 @@ static Type *parseArrayType(Compiler *comp)
     Const len;
     Type *indexType;
     parseExpr(comp, &indexType, &len);
-    typeAssertCompatible(&comp->types, indexType, comp->intType);
+    typeAssertCompatible(&comp->types, comp->intType, indexType);
 
     lexEat(&comp->lex, TOK_RBRACKET);
 
