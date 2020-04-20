@@ -1,27 +1,13 @@
-fn print(a: int, x: struct {x, y: int; clr: real;}, c: char) {
-    x.y = 9    
-    printf("{d} {d} {d} {8.3f}\n", a, x.x, x.y, x.clr)
-}
-
-type functype = fn (a: int, x: struct {x, y: int; clr: real;}, c: char);
-
-
-
 fn main() {
-    var a, b: struct {
-        x, y: int
-        clr: real
+    for a := 0.0; a < 15; a = a + 1 { 
+        switch b := trunc(a); b {
+            case 1, 4, 7: printf("{d} in 1, 4, 7\n", b)
+            case 2, 5, 8: printf("{d} in 2, 5, 8\n", b)
+            case 3, 6, 9: printf("{d} in 3, 6, 9\n", b)
+            default     : printf("{d} is something else\n", b)   
+        }
+        printf("next\n")
     }
-
-    var f: functype = print 	
-
-    //f := print     
-
-    a.x = 5;  a.y = 7;  a.clr = 0.36 // help
-    b = a
-    
-    f(2, b, 's')
-    printf("{d}\n", b.y)
 }
 
   

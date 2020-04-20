@@ -261,6 +261,50 @@ void genIfElseEpilog(CodeGen *gen)
 }
 
 
+void genSwitchCondEpilog(CodeGen *gen)
+{
+    genPopReg(gen, VM_COMMON_REG_0);                     // Save switch expression
+    genPushIntConst(gen, 0);                             // Initialize comparison accumulator
+    genPopReg(gen, VM_COMMON_REG_1);
+}
+
+
+void genCaseExprEpilog(CodeGen *gen, Const *constant)
+{
+    genPushReg(gen, VM_COMMON_REG_0);                    // Compare switch expression with case constant
+    genPushIntConst(gen, constant->intVal);
+    genBinary(gen, TOK_EQEQ, TYPE_INT);
+
+    genPushReg(gen, VM_COMMON_REG_1);                    // Update comparison accumulator
+    genBinary(gen, TOK_OR, TYPE_BOOL);
+    genPopReg(gen, VM_COMMON_REG_1);
+}
+
+
+void genCaseBlockProlog(CodeGen *gen)
+{
+    genPushReg(gen, VM_COMMON_REG_1);                    // Push comparison accumulator
+    genGotoIf(gen, gen->ip + 2);                         // Goto "case" block start
+    genSavePos(gen);
+    genNop(gen);                                         // Goto next "case" or "default" (stub)
+}
+
+
+void genCaseBlockEpilog(CodeGen *gen)
+{
+    genGoFromTo(gen, genRestorePos(gen), gen->ip + 1);   // Goto next "case" or "default" (fixup)
+    genSavePos(gen);
+    genNop(gen);                                         // Goto "switch" end (stub)
+}
+
+
+void genSwitchEpilog(CodeGen *gen, int numCases)
+{
+    for (int i = 0; i < numCases; i++)
+        genGoFromTo(gen, genRestorePos(gen), gen->ip);   // Goto "switch" end (fixup)
+}
+
+
 void genWhileCondProlog(CodeGen *gen)
 {
     genSavePos(gen);

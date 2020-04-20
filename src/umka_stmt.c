@@ -5,6 +5,9 @@
 #include "umka_decl.h"
 
 
+void parseStmtList(Compiler *comp);
+
+
 // assignmentStmt = designator "=" expr.
 void parseAssignmentStmt(Compiler *comp, Type *type, void *initializedVarPtr)
 {
@@ -183,6 +186,93 @@ void parseIfStmt(Compiler *comp)
 }
 
 
+// case = "case" expr {"," expr} ":" stmtList.
+void parseCase(Compiler *comp, Type *selectorType)
+{
+    lexEat(&comp->lex, TOK_CASE);
+
+    // expr {"," expr}
+    while (1)
+    {
+        Const constant;
+        Type *type;
+        parseExpr(comp, &type, &constant);
+        typeAssertCompatible(&comp->types, selectorType, type);
+
+        genCaseExprEpilog(&comp->gen, &constant);
+
+        if (comp->lex.tok.kind != TOK_COMMA)
+            break;
+        lexNext(&comp->lex);
+    }
+
+    // ":" stmtList
+    lexEat(&comp->lex, TOK_COLON);
+
+    genCaseBlockProlog(&comp->gen);
+    parseStmtList(comp);
+    genCaseBlockEpilog(&comp->gen);
+}
+
+
+// default = "default" ":" stmtList.
+void parseDefault(Compiler *comp)
+{
+    lexEat(&comp->lex, TOK_DEFAULT);
+    lexEat(&comp->lex, TOK_COLON);
+    parseStmtList(comp);
+}
+
+
+// switchStmt = "switch" [shortVarDecl ";"] expr "{" {case} [default] "}".
+void parseSwitchStmt(Compiler *comp)
+{
+    lexEat(&comp->lex, TOK_SWITCH);
+
+    // Additional scope embracing shortVarDecl
+    blocksEnter(&comp->blocks, NULL);
+
+    // [shortVarDecl ";"]
+    Lexer lookaheadLex = comp->lex;
+    lexNext(&lookaheadLex);
+
+    if (lookaheadLex.tok.kind == TOK_COLONEQ)
+    {
+        parseShortVarDecl(comp);
+        lexEat(&comp->lex, TOK_SEMICOLON);
+    }
+
+    // expr
+    Type *type;
+    parseExpr(comp, &type, NULL);
+    if (!typeOrdinal(type))
+        comp->error("Ordinal type expected");
+
+    genSwitchCondEpilog(&comp->gen);
+
+    // "{" {case} "}"
+    lexEat(&comp->lex, TOK_LBRACE);
+
+    int numCases = 0;
+    while (comp->lex.tok.kind == TOK_CASE)
+    {
+        parseCase(comp, type);
+        numCases++;
+    }
+
+    // [default]
+    if (comp->lex.tok.kind == TOK_DEFAULT)
+        parseDefault(comp);
+
+    lexEat(&comp->lex, TOK_RBRACE);
+
+    // Additional scope embracing shortVarDecl
+    blocksLeave(&comp->blocks);
+
+    genSwitchEpilog(&comp->gen, numCases);
+}
+
+
 // forStmt = "for" [shortVarDecl ";"] expr [";" simpleStmt] block.
 void parseForStmt(Compiler *comp)
 {
@@ -302,7 +392,7 @@ void parseReturnStmt(Compiler *comp)
 }
 
 
-// stmt = decl | simpleStmt | ifStmt | forStmt | breakStmt | continueStmt | returnStmt.
+// stmt = decl | block | simpleStmt | ifStmt | switchStmt | forStmt | breakStmt | continueStmt | returnStmt.
 void parseStmt(Compiler *comp)
 {
     switch (comp->lex.tok.kind)
@@ -311,8 +401,10 @@ void parseStmt(Compiler *comp)
         case TOK_CONST:
         case TOK_VAR:
         case TOK_FN:        parseDecl(comp);            break;
+        case TOK_LBRACE:    parseBlock(comp, NULL);     break;
         case TOK_IDENT:     parseSimpleStmt(comp);      break;
         case TOK_IF:        parseIfStmt(comp);          break;
+        case TOK_SWITCH:    parseSwitchStmt(comp);      break;
         case TOK_FOR:       parseForStmt(comp);         break;
         case TOK_BREAK:     parseBreakStmt(comp);       break;
         case TOK_CONTINUE:  parseContinueStmt(comp);    break;

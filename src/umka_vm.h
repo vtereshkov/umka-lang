@@ -13,6 +13,7 @@ enum
     // General-purpose registers
     VM_RESULT_REG_0     = 0,
     VM_COMMON_REG_0     = 16,
+    VM_COMMON_REG_1     = VM_COMMON_REG_0 + 1,
 
     // Registers for special use by fprintf() / fscanf()
     VM_IO_FILE_REG      = VM_NUM_REGS - 2,

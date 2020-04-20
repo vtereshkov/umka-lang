@@ -142,12 +142,12 @@
 	"umka_common.h"
 	"umka_lexer.h"
 
-1587322738 c:\users\vasiliy\desktop\umka-lang-master\src\umka_vm.h
+1587380745 c:\users\vasiliy\desktop\umka-lang-master\src\umka_vm.h
 	"umka_common.h"
 	"umka_lexer.h"
 	"umka_types.h"
 
-1587325616 c:\users\vasiliy\desktop\umka-lang-master\src\umka_gen.h
+1587390036 c:\users\vasiliy\desktop\umka-lang-master\src\umka_gen.h
 	"umka_common.h"
 	"umka_vm.h"
 
@@ -183,7 +183,7 @@
 	<string.h>
 	"umka_expr.h"
 
-1587326043 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_gen.c
+1587393462 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_gen.c
 	<stdio.h>
 	<stdlib.h>
 	"umka_gen.h"
@@ -211,7 +211,7 @@
 	"umka_expr.h"
 	"umka_decl.h"
 
-1587340128 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_stmt.c
+1587393510 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_stmt.c
 	<string.h>
 	"umka_stmt.h"
 	"umka_expr.h"

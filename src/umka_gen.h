@@ -69,6 +69,12 @@ void genIfCondEpilog(CodeGen *gen);
 void genElseProlog  (CodeGen *gen);
 void genIfElseEpilog(CodeGen *gen);
 
+void genSwitchCondEpilog(CodeGen *gen);
+void genCaseExprEpilog  (CodeGen *gen, Const *constant);
+void genCaseBlockProlog (CodeGen *gen);
+void genCaseBlockEpilog (CodeGen *gen);
+void genSwitchEpilog    (CodeGen *gen, int numCases);
+
 void genWhileCondProlog(CodeGen *gen);
 void genWhileCondEpilog(CodeGen *gen);
 void genWhileEpilog    (CodeGen *gen);
