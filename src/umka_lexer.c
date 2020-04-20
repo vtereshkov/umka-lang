@@ -765,8 +765,12 @@ bool lexCheck(Lexer *lex, TokenKind kind)
 
 void lexEat(Lexer *lex, TokenKind kind)
 {
-    lexCheck(lex, kind);
-    lexNext(lex);
+    // Allow omitting semicolon before ")" or "}"
+    if (!(kind == TOK_SEMICOLON && (lex->tok.kind == TOK_RPAR || lex->tok.kind == TOK_RBRACE)))
+    {
+        lexCheck(lex, kind);
+        lexNext(lex);
+    }
 }
 
 

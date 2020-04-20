@@ -20,6 +20,7 @@ typedef struct
     int stack[MAX_BLOCK_NESTING];
     int top;
     Gotos *breaks, *continues, *returns;
+    bool entryPointDefined;
     ErrorFunc error;
 } CodeGen;
 

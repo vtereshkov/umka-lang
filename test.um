@@ -1,3 +1,11 @@
+const a = 1
+const (x = 1)
+const (c = 1; d = 1)
+const (e = 1; f = 1;)
+const (g = 1
+h = 1
+)
+
 fn main() {
     var amin, amax: real
     scanf("{lf} {lf}", &amin, &amax)
@@ -5,13 +13,18 @@ fn main() {
 
     for a := amin; a < amax; a = a + 1 { 
         switch b := trunc(a); b {
-            case 1, 4, 7: printf("{d} in 1, 4, 7\n", b)
+            case 1, 4, 7: {printf("{d} in 1, 4, 7\n", b)}
             case 2, 5, 8: printf("{d} in 2, 5, 8\n", b)
+                          printf("surprise!\n")
             case 3, 6, 9: printf("{d} in 3, 6, 9\n", b)
             default     : printf("{d} is something else\n", b)   
+        }
+        
+        if trunc(a) > 5 {
+            {printf("{d} > 5\n", trunc(a))}
+        } else {
+            {printf("{d} <=5\n", trunc(a))}
         }
         printf("next\n")
     }
 }
-
-  

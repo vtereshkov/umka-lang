@@ -346,7 +346,7 @@ void parseDecl(Compiler *comp)
 }
 
 
-// decls = {decl ";"}.
+// decls = decl {";" decl}.
 void parseDecls(Compiler *comp)
 {
     while (1)
@@ -364,4 +364,7 @@ void parseModule(Compiler *comp)
 {
     genNop(&comp->gen);     // Entry point stub
     parseDecls(comp);
+
+    if (!comp->gen.entryPointDefined)
+        comp->error("main() is not defined");
 }

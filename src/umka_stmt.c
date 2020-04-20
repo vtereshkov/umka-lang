@@ -364,12 +364,14 @@ void parseReturnStmt(Compiler *comp)
     lexEat(&comp->lex, TOK_RETURN);
     Type *type;
 
-    if (comp->lex.tok.kind != TOK_SEMICOLON)
+    if (comp->lex.tok.kind != TOK_SEMICOLON && comp->lex.tok.kind != TOK_RBRACE)
         parseExpr(comp, &type, NULL);
     else
     {
         type = comp->voidType;
-        lexNext(&comp->lex);
+
+        if (comp->lex.tok.kind == TOK_SEMICOLON)
+            lexNext(&comp->lex);
     }
 
     // Get function result type
@@ -415,7 +417,7 @@ void parseStmt(Compiler *comp)
 }
 
 
-// stmtList = {Stmt ";"}.
+// stmtList = Stmt {";" Stmt}.
 void parseStmtList(Compiler *comp)
 {
     while (1)
