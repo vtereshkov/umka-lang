@@ -308,7 +308,13 @@ static void parseSelectors(Compiler *comp, Type **type, Const *constant, bool *i
             // Array element
             case TOK_LBRACKET:
             {
-                // Implicit dereferencing
+                // Implicit dereferencing: a^[i] == a[i]
+                if ((*type)->kind == TYPE_PTR && (*type)->base->kind == TYPE_PTR)
+                {
+                    genDeref(&comp->gen, TYPE_PTR);
+                    *type = (*type)->base;
+                }
+
                 if ((*type)->kind == TYPE_PTR && ((*type)->base->kind == TYPE_ARRAY || (*type)->base->kind == TYPE_STR))
                 {
                     genDeref(&comp->gen, TYPE_ARRAY);
@@ -339,7 +345,13 @@ static void parseSelectors(Compiler *comp, Type **type, Const *constant, bool *i
             // Structure field
             case TOK_PERIOD:
             {
-                // Implicit dereferencing
+                // Implicit dereferencing: a^.x == a.x
+                if ((*type)->kind == TYPE_PTR && (*type)->base->kind == TYPE_PTR)
+                {
+                    genDeref(&comp->gen, TYPE_PTR);
+                    *type = (*type)->base;
+                }
+
                 if ((*type)->kind == TYPE_PTR && (*type)->base->kind == TYPE_STRUCT)
                 {
                     genDeref(&comp->gen, TYPE_STRUCT);

@@ -164,7 +164,7 @@
 	<math.h>
 	"umka_const.h"
 
-1587444310 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_decl.c
+1587496970 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_decl.c
 	<string.h>
 	"umka_expr.h"
 	"umka_stmt.h"
@@ -179,7 +179,7 @@
 1587444310 c:\users\vasiliy\desktop\umka-lang-master\src\umka_decl.h
 	"umka_compiler.h"
 
-1587493894 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_expr.c
+1587498709 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_expr.c
 	<string.h>
 	"umka_expr.h"
 

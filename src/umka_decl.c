@@ -112,7 +112,7 @@ static Type *parseArrayType(Compiler *comp)
 }
 
 
-// strType = "str" ["(" expr ")"].
+// strType = "str" ["[" expr "]"].
 static Type *parseStrType(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_STR);
@@ -120,7 +120,7 @@ static Type *parseStrType(Compiler *comp)
     Const len;
     Type *indexType;
 
-    if (comp->lex.tok.kind == TOK_LPAR)
+    if (comp->lex.tok.kind == TOK_LBRACKET)
     {
         lexNext(&comp->lex);
         parseExpr(comp, &indexType, &len);
@@ -128,7 +128,7 @@ static Type *parseStrType(Compiler *comp)
         if (len.intVal <= 0)
             comp->error("String length must be positive");
 
-        lexEat(&comp->lex, TOK_RPAR);
+        lexEat(&comp->lex, TOK_RBRACKET);
     }
     else    // Default string
     {
