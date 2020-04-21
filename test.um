@@ -1,3 +1,8 @@
+type st = struct {
+    a: [] int
+}
+
+
 fn print(s: ^[] char) {
     printf("{s}", s)
 }

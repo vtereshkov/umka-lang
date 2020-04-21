@@ -390,7 +390,10 @@ void typeAddField(Types *types, Type *structType, Type *fieldType, char *name)
         types->error("Duplicate field %s", name);
 
     if (fieldType->kind == TYPE_VOID)
-        types->error("Void field %s", name);
+        types->error("Void field %s is not allowed", name);
+
+    if (fieldType->kind == TYPE_ARRAY && fieldType->numItems == 0)
+        types->error("Open array field %s is not allowed", name);
 
     if (structType->numItems > MAX_FIELDS)
         types->error("Too many fields");
