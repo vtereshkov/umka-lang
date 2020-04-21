@@ -8,7 +8,7 @@
 enum
 {
     MAX_IDENT_LEN       = 255,
-    DEFAULT_STRING_LEN  = 255,
+    DEFAULT_STR_LEN  = 255,
     MAX_FIELDS          = 100,
     MAX_PARAMS          = 16,
     MAX_RESULTS         = 16,

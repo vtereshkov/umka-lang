@@ -25,6 +25,7 @@ static const char *spelling [] =
     "if",
     "fn",
     "return",
+    "str",
     "struct",
     "switch",
     "type",

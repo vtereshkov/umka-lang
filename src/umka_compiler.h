@@ -30,7 +30,7 @@ typedef struct
          *charType,
          *real32Type, *realType,
          *ptrVoidType,
-         *stringType;
+         *strType;
 
 } Compiler;
 

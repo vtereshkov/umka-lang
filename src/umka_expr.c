@@ -74,7 +74,7 @@ static void parseBuiltinIOCall(Compiler *comp, Type **type, Const *constant, Bui
 
     // Format string
     parseExpr(comp, type, constant);
-    typeAssertCompatible(&comp->types, comp->stringType, *type);
+    typeAssertCompatible(&comp->types, comp->strType, *type);
     genPopReg(&comp->gen, VM_IO_FORMAT_REG);
 
     // Values, if any
@@ -89,7 +89,7 @@ static void parseBuiltinIOCall(Compiler *comp, Type **type, Const *constant, Bui
                 genCallBuiltin(&comp->gen, TYPE_INT, builtin);
             else if (typeReal(*type))
                 genCallBuiltin(&comp->gen, TYPE_REAL, builtin);
-            else if (typeString(*type))
+            else if ((*type)->kind == TYPE_STR || ((*type)->kind == TYPE_PTR && (*type)->base->kind == TYPE_STR))
                 genCallBuiltin(&comp->gen, TYPE_PTR, builtin);
             else
                 comp->error("Incompatible type in printf()");
@@ -100,7 +100,7 @@ static void parseBuiltinIOCall(Compiler *comp, Type **type, Const *constant, Bui
 
             if (typeOrdinal((*type)->base) || typeReal((*type)->base))
                 genCallBuiltin(&comp->gen, (*type)->base->kind, builtin);
-            else if (typeString((*type)->base))
+            else if ((*type)->base->kind == TYPE_STR)
                 genCallBuiltin(&comp->gen, TYPE_PTR, builtin);
             else
                 comp->error("Incompatible type in scanf()");
@@ -192,7 +192,7 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
             typeAssertCompatible(&comp->types, formalParamType, actualParamType);
 
             // Copy structured parameter if passed by value
-            if (formalParamType->kind == TYPE_ARRAY || formalParamType->kind == TYPE_STRUCT)
+            if (formalParamType->kind == TYPE_ARRAY || formalParamType->kind == TYPE_STR || formalParamType->kind == TYPE_STRUCT)
                 genPushStruct(&comp->gen, typeSize(&comp->types, formalParamType));
 
             i++;
@@ -313,8 +313,8 @@ static void parseSelectors(Compiler *comp, Type **type, Const *constant, bool *i
                     *type = (*type)->base;
                 }
 
-                if ((*type)->kind != TYPE_PTR || (*type)->base->kind != TYPE_ARRAY)
-                    comp->error("Array expected");
+                if ((*type)->kind != TYPE_PTR || ((*type)->base->kind != TYPE_ARRAY && (*type)->base->kind != TYPE_STR))
+                    comp->error("Array or string expected");
 
                 // Index expression
                 lexNext(&comp->lex);
@@ -468,10 +468,9 @@ static void parseFactor(Compiler *comp, Type **type, Const *constant)
                 genPushGlobalPtr(&comp->gen, comp->lex.tok.strVal);
             lexNext(&comp->lex);
 
-            typeAdd(&comp->types, &comp->blocks, TYPE_ARRAY);
-            comp->types.last->base = comp->charType;
-            comp->types.last->numItems = strlen(comp->lex.tok.strVal) + 1;
-            *type = typeAddPtrTo(&comp->types, &comp->blocks, comp->types.last);
+            *type = typeAdd(&comp->types, &comp->blocks, TYPE_STR);
+            (*type)->base = comp->charType;
+            (*type)->numItems = strlen(comp->lex.tok.strVal) + 1;
             break;
         }
 

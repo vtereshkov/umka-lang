@@ -1,16 +1,27 @@
-type st = struct {
-    a: [] int
+fn print(s: str) {
+    printf("{s}\n", s)
 }
 
-
-fn print(s: ^[] char) {
-    printf("{s}", s)
+fn printref(s: ^str) {
+    printf("{s}\n", s)
 }
 
 
 fn main() {
-    var s: [10] char = "Hello"
-    //s = "Hello"
-    print(&s)
-    printf("{s}", &s)
+    var s: str = "Hello"
+    t := "Hallo"
+    
+    const hi = "Hi"
+    
+    print(s)
+    printref(&s)
+    print(t)
+    print(hi)
+    print("Privet")
+    printf("{s}\n", &s)
+    printf("{s}\n", "Salut")
+    
+    scanf("{s}", &s)
+    print(s)
+    printf("{c}\n", s[1])
 }

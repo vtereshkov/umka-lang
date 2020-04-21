@@ -438,7 +438,7 @@ char *genAsm(CodeGen *gen, char *buf)
     int ip = 0, pos = 0;
     do
     {
-        char instrBuf[DEFAULT_STRING_LEN];
+        char instrBuf[DEFAULT_STR_LEN];
         pos += sprintf(buf + pos, "%08X %s\n", ip, vmAsm(&gen->code[ip], instrBuf));
     } while (gen->code[ip++].opcode != OP_HALT);
 

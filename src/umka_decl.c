@@ -112,6 +112,37 @@ static Type *parseArrayType(Compiler *comp)
 }
 
 
+// strType = "str" ["(" expr ")"].
+static Type *parseStrType(Compiler *comp)
+{
+    lexEat(&comp->lex, TOK_STR);
+
+    Const len;
+    Type *indexType;
+
+    if (comp->lex.tok.kind == TOK_LPAR)
+    {
+        lexNext(&comp->lex);
+        parseExpr(comp, &indexType, &len);
+        typeAssertCompatible(&comp->types, comp->intType, indexType);
+        if (len.intVal <= 0)
+            comp->error("String length must be positive");
+
+        lexEat(&comp->lex, TOK_RPAR);
+    }
+    else    // Default string
+    {
+        len.intVal = DEFAULT_STR_LEN;
+        indexType = comp->intType;
+    }
+
+    Type *type = typeAdd(&comp->types, &comp->blocks, TYPE_STR);
+    type->base = comp->charType;
+    type->numItems = len.intVal;
+    return type;
+}
+
+
 // structType = "struct" "{" {typedIdentList ";"} "}"
 static Type *parseStructType(Compiler *comp)
 {
@@ -163,6 +194,7 @@ Type *parseType(Compiler *comp)
         }
         case TOK_CARET:     return parsePtrType(comp);
         case TOK_LBRACKET:  return parseArrayType(comp);
+        case TOK_STR     :  return parseStrType(comp);
         case TOK_STRUCT:    return parseStructType(comp);
         case TOK_FN:        return parseFnType(comp);
 

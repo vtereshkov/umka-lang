@@ -23,11 +23,9 @@ static void compilerDeclareBuiltinTypes(Compiler *comp)
 
     comp->ptrVoidType = typeAddPtrTo(&comp->types, &comp->blocks, comp->voidType);
 
-    // String type
-    Type *type = typeAdd(&comp->types, &comp->blocks, TYPE_ARRAY);
-    type->base = comp->charType;
-    type->numItems = DEFAULT_STRING_LEN;
-    comp->stringType = typeAddPtrTo(&comp->types, &comp->blocks, type);
+    comp->strType = typeAdd(&comp->types, &comp->blocks, TYPE_STR);
+    comp->strType->base = comp->charType;
+    comp->strType->numItems = DEFAULT_STR_LEN;
 }
 
 

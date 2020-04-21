@@ -23,6 +23,7 @@ static char *spelling [] =
     "real",
     "^",
     "[]",
+    "str",
     "struct",
     "fn"
 };
@@ -122,7 +123,8 @@ int typeSize(Types *types, Type *type)
         case TYPE_REAL32:   return sizeof(float);
         case TYPE_REAL:     return sizeof(double);
         case TYPE_PTR:      return sizeof(void *);
-        case TYPE_ARRAY:    return typeSize(types, type->base) * type->numItems;
+        case TYPE_ARRAY:
+        case TYPE_STR:      return type->numItems * typeSize(types, type->base);
         case TYPE_STRUCT:
         {
             int size = 0;
@@ -134,7 +136,7 @@ int typeSize(Types *types, Type *type)
 
         default:
             {
-            char buf[DEFAULT_STRING_LEN];
+            char buf[DEFAULT_STR_LEN];
             types->error("Illegal type %s", typeSpelling(type, buf));
             return 0;
             }
@@ -161,15 +163,9 @@ bool typeReal(Type *type)
 }
 
 
-bool typeString(Type *type)
-{
-    return type->kind == TYPE_PTR && type->base->kind == TYPE_ARRAY && type->base->base->kind == TYPE_CHAR;
-}
-
-
 bool typeDefaultRef(Type *type)
 {
-    return type->kind == TYPE_PTR || type->kind == TYPE_ARRAY || type->kind == TYPE_STRUCT;
+    return type->kind == TYPE_PTR || type->kind == TYPE_ARRAY || type->kind == TYPE_STR || type->kind == TYPE_STRUCT;
 }
 
 
@@ -192,6 +188,16 @@ bool typeEquivalent(Type *left, Type *right)
                 return false;
 
             return typeEquivalent(left->base, right->base);
+        }
+
+        // Strings
+        else if (left->kind == TYPE_STR)
+        {
+            // Number of elements
+            if (left->numItems != right->numItems)
+                return false;
+
+            return true;
         }
 
         // Structures
@@ -264,7 +270,7 @@ bool typeAssertEquivalent(Types *types, Type *left, Type *right)
     bool res = typeEquivalent(left, right);
     if (!res)
     {
-        char leftBuf[DEFAULT_STRING_LEN], rightBuf[DEFAULT_STRING_LEN];
+        char leftBuf[DEFAULT_STR_LEN], rightBuf[DEFAULT_STR_LEN];
         types->error("Incompatible types %s and %s", typeSpelling(left, leftBuf), typeSpelling(right, rightBuf));
 
     }
@@ -280,11 +286,17 @@ bool typeCompatible(Type *left, Type *right)
     if (typeInteger(left) && typeInteger(right))
         return true;
 
-    if (typeString(left) && typeString(right))
+    // Any string can be assigned to any other string
+    if (left->kind == TYPE_STR && right->kind == TYPE_STR)
+        return true;
+
+    if (left->kind  == TYPE_PTR && left->base->kind  == TYPE_STR &&
+        right->kind == TYPE_PTR && right->base->kind == TYPE_STR)
         return true;
 
     // Any pointer can be assigned to an untyped pointer
-    if (left->kind == TYPE_PTR && left->base->kind == TYPE_VOID && right->kind == TYPE_PTR)
+    if (left->kind  == TYPE_PTR && left->base->kind == TYPE_VOID &&
+        right->kind == TYPE_PTR)
         return true;
 
     // Any pointer to array can be assigned to a pointer to open array
@@ -301,7 +313,7 @@ bool typeAssertCompatible(Types *types, Type *left, Type *right)
     bool res = typeCompatible(left, right);
     if (!res)
     {
-        char leftBuf[DEFAULT_STRING_LEN], rightBuf[DEFAULT_STRING_LEN];
+        char leftBuf[DEFAULT_STR_LEN], rightBuf[DEFAULT_STR_LEN];
         types->error("Incompatible types %s and %s", typeSpelling(left, leftBuf), typeSpelling(right, rightBuf));
     }
     return res;
@@ -354,7 +366,7 @@ bool typeAssertValidOperator(Types *types, Type *type, TokenKind op)
     bool res = typeValidOperator(type, op);
     if (!res)
     {
-        char buf[DEFAULT_STRING_LEN];
+        char buf[DEFAULT_STR_LEN];
         types->error("Operator %s is not applicable to %s", lexSpelling(op), typeSpelling(type, buf));
     }
     return res;
@@ -466,7 +478,7 @@ char *typeSpelling(Type *type, char *buf)
     sprintf(buf, "%s", spelling[type->kind]);
     if (type->kind == TYPE_PTR || type->kind == TYPE_ARRAY)
     {
-        char baseBuf[DEFAULT_STRING_LEN];
+        char baseBuf[DEFAULT_STR_LEN];
         strcat(buf, typeSpelling(type->base, baseBuf));
     }
     return buf;

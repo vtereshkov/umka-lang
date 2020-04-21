@@ -21,6 +21,7 @@ typedef enum
     TYPE_REAL,
     TYPE_PTR,
     TYPE_ARRAY,
+    TYPE_STR,
     TYPE_STRUCT,
     TYPE_FN
 } TypeKind;
@@ -92,7 +93,6 @@ int typeSize(Types *types, Type *type);
 bool typeInteger(Type *type);
 bool typeOrdinal(Type *type);
 bool typeReal(Type *type);
-bool typeString(Type *type);
 bool typeDefaultRef(Type *type);
 
 bool typeEquivalent(Type *left, Type *right);
