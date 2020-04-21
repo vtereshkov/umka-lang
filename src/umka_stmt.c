@@ -11,8 +11,12 @@ void parseStmtList(Compiler *comp);
 // assignmentStmt = designator "=" expr.
 void parseAssignmentStmt(Compiler *comp, Type *type, void *initializedVarPtr)
 {
-    if (type->kind != TYPE_PTR || type->base->kind == TYPE_VOID)
-        comp->error("Left side cannot be assigned to");
+    if (!typeStructured(type))
+    {
+        if (type->kind != TYPE_PTR || type->base->kind == TYPE_VOID)
+            comp->error("Left side cannot be assigned to");
+        type = type->base;
+    }
 
     Type *rightType;
     Const rightConstantBuf, *rightConstant = NULL;
@@ -22,39 +26,42 @@ void parseAssignmentStmt(Compiler *comp, Type *type, void *initializedVarPtr)
 
     parseExpr(comp, &rightType, rightConstant);
 
-    doImplicitTypeConv(comp, type->base, &rightType, rightConstant, false);
-    typeAssertCompatible(&comp->types, type->base, rightType);
+    doImplicitTypeConv(comp, type, &rightType, rightConstant, false);
+    typeAssertCompatible(&comp->types, type, rightType);
 
     if (initializedVarPtr)      // Initialize global variable
-        constAssign(&comp->consts, initializedVarPtr, rightConstant, type->base->kind, typeSize(&comp->types, type->base));
+        constAssign(&comp->consts, initializedVarPtr, rightConstant, type->kind, typeSize(&comp->types, type->base));
     else                        // Assign to local variable
-        genAssign(&comp->gen, type->base->kind, typeSize(&comp->types, type->base));
+        genAssign(&comp->gen, type->kind, typeSize(&comp->types, type));
 }
 
 
 // shortAssignmentStmt = designator ("+=" | "-=" | "*=" | "/=" | "%=" | "&=" | "|=" | "~=") expr.
 void parseShortAssignmentStmt(Compiler *comp, Type *type, TokenKind op)
 {
-    if (type->kind != TYPE_PTR || type->base->kind == TYPE_VOID)
-        comp->error("Left side cannot be assigned to");
+    if (!typeStructured(type))
+    {
+        if (type->kind != TYPE_PTR || type->base->kind == TYPE_VOID)
+            comp->error("Left side cannot be assigned to");
+        type = type->base;
+    }
 
     // Duplicate designator and treat it as an expression
-    Type *leftType = type->base;
     genDup(&comp->gen);
-    genDeref(&comp->gen, leftType->kind);
+    genDeref(&comp->gen, type->kind);
 
     // No direct support for 32-bit reals
-    if (leftType->kind == TYPE_REAL32)
-        leftType = comp->realType;
+    if (type->kind == TYPE_REAL32)
+        type = comp->realType;
 
     Type *rightType;
     parseExpr(comp, &rightType, NULL);
 
-    doImplicitTypeConv(comp, leftType, &rightType, NULL, false);
-    typeAssertCompatible(&comp->types, leftType, rightType);
+    doImplicitTypeConv(comp, type, &rightType, NULL, false);
+    typeAssertCompatible(&comp->types, type, rightType);
 
-    genBinary(&comp->gen, lexShortAssignment(op), leftType->kind);
-    genAssign(&comp->gen, leftType->kind, typeSize(&comp->types, leftType));
+    genBinary(&comp->gen, lexShortAssignment(op), type->kind);
+    genAssign(&comp->gen, type->kind, typeSize(&comp->types, type));
 }
 
 
@@ -86,10 +93,14 @@ void parseDeclAssignmentStmt(Compiler *comp, IdentName name, bool constExpr)
 // incDecStmt = designator ("++" | "--").
 void parseIncDecStmt(Compiler *comp, Type *type, TokenKind op)
 {
-    if (type->kind != TYPE_PTR || type->base->kind == TYPE_VOID)
-        comp->error("Left side cannot be assigned to");
+    if (!typeStructured(type))
+    {
+        if (type->kind != TYPE_PTR || type->base->kind == TYPE_VOID)
+            comp->error("Left side cannot be assigned to");
+        type = type->base;
+    }
 
-    typeAssertCompatible(&comp->types, comp->intType, type->base);
+    typeAssertCompatible(&comp->types, comp->intType, type);
     genUnary(&comp->gen, op, type->kind);
     lexNext(&comp->lex);
 }

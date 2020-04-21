@@ -89,19 +89,17 @@ static void parseBuiltinIOCall(Compiler *comp, Type **type, Const *constant, Bui
                 genCallBuiltin(&comp->gen, TYPE_INT, builtin);
             else if (typeReal(*type))
                 genCallBuiltin(&comp->gen, TYPE_REAL, builtin);
-            else if ((*type)->kind == TYPE_STR || ((*type)->kind == TYPE_PTR && (*type)->base->kind == TYPE_STR))
-                genCallBuiltin(&comp->gen, TYPE_PTR, builtin);
+            else if ((*type)->kind == TYPE_STR)
+                genCallBuiltin(&comp->gen, TYPE_STR, builtin);
             else
                 comp->error("Incompatible type in printf()");
         }
         else  // BUILTIN_SCANF, BUILTIN_FSCANF
         {
-            typeAssertCompatible(&comp->types, comp->ptrVoidType, *type);
-
-            if (typeOrdinal((*type)->base) || typeReal((*type)->base))
+            if ((*type)->kind == TYPE_PTR && (typeOrdinal((*type)->base) || typeReal((*type)->base)))
                 genCallBuiltin(&comp->gen, (*type)->base->kind, builtin);
             else if ((*type)->base->kind == TYPE_STR)
-                genCallBuiltin(&comp->gen, TYPE_PTR, builtin);
+                genCallBuiltin(&comp->gen, TYPE_STR, builtin);
             else
                 comp->error("Incompatible type in scanf()");
         }
@@ -192,7 +190,7 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
             typeAssertCompatible(&comp->types, formalParamType, actualParamType);
 
             // Copy structured parameter if passed by value
-            if (formalParamType->kind == TYPE_ARRAY || formalParamType->kind == TYPE_STR || formalParamType->kind == TYPE_STRUCT)
+            if (typeStructured(formalParamType))
                 genPushStruct(&comp->gen, typeSize(&comp->types, formalParamType));
 
             i++;
@@ -242,7 +240,11 @@ static void parsePrimary(Compiler *comp, Type **type, Const *constant, bool *isV
                 comp->error("Constant expected but variable %s found", ident->name);
 
             doPushVarPtr(comp, ident);
-            *type = typeAddPtrTo(&comp->types, &comp->blocks, ident->type);
+
+            if (typeStructured(ident->type))
+                *type = ident->type;
+            else
+                *type = typeAddPtrTo(&comp->types, &comp->blocks, ident->type);
             *isVar = true;
             *isCall = false;
             lexNext(&comp->lex);
@@ -307,13 +309,13 @@ static void parseSelectors(Compiler *comp, Type **type, Const *constant, bool *i
             case TOK_LBRACKET:
             {
                 // Implicit dereferencing
-                if ((*type)->kind == TYPE_PTR && (*type)->base->kind == TYPE_PTR)
+                if ((*type)->kind == TYPE_PTR && ((*type)->base->kind == TYPE_ARRAY || (*type)->base->kind == TYPE_STR))
                 {
-                    genDeref(&comp->gen, TYPE_PTR);
+                    genDeref(&comp->gen, TYPE_ARRAY);
                     *type = (*type)->base;
                 }
 
-                if ((*type)->kind != TYPE_PTR || ((*type)->base->kind != TYPE_ARRAY && (*type)->base->kind != TYPE_STR))
+                if ((*type)->kind != TYPE_ARRAY && (*type)->kind != TYPE_STR)
                     comp->error("Array or string expected");
 
                 // Index expression
@@ -323,8 +325,12 @@ static void parseSelectors(Compiler *comp, Type **type, Const *constant, bool *i
                 typeAssertCompatible(&comp->types, comp->intType, indexType);
                 lexEat(&comp->lex, TOK_RBRACKET);
 
-                genGetArrayPtr(&comp->gen, typeSize(&comp->types, (*type)->base->base));
-                *type = typeAddPtrTo(&comp->types, &comp->blocks, (*type)->base->base);
+                genGetArrayPtr(&comp->gen, typeSize(&comp->types, (*type)->base));
+
+                if (typeStructured((*type)->base))
+                    *type = (*type)->base;
+                else
+                    *type = typeAddPtrTo(&comp->types, &comp->blocks, (*type)->base);
                 *isVar = true;
                 *isCall = false;
                 break;
@@ -334,24 +340,29 @@ static void parseSelectors(Compiler *comp, Type **type, Const *constant, bool *i
             case TOK_PERIOD:
             {
                 // Implicit dereferencing
-                if ((*type)->kind == TYPE_PTR && (*type)->base->kind == TYPE_PTR)
+                if ((*type)->kind == TYPE_PTR && (*type)->base->kind == TYPE_STRUCT)
                 {
-                    genDeref(&comp->gen, TYPE_PTR);
+                    genDeref(&comp->gen, TYPE_STRUCT);
                     *type = (*type)->base;
                 }
 
-                if ((*type)->kind != TYPE_PTR || (*type)->base->kind != TYPE_STRUCT)
+                if ((*type)->kind != TYPE_STRUCT)
                     comp->error("Structure expected");
 
                 // Field
                 lexNext(&comp->lex);
                 lexCheck(&comp->lex, TOK_IDENT);
-                Field *field = typeAssertFindField(&comp->types, (*type)->base, comp->lex.tok.name);
+                Field *field = typeAssertFindField(&comp->types, *type, comp->lex.tok.name);
                 lexNext(&comp->lex);
 
                 genPushIntConst(&comp->gen, field->offset);
                 genBinary(&comp->gen, TOK_PLUS, TYPE_INT);
-                *type = typeAddPtrTo(&comp->types, &comp->blocks, field->type);
+
+                if (typeStructured(field->type))
+                    *type = field->type;
+                else
+                    *type = typeAddPtrTo(&comp->types, &comp->blocks, field->type);
+
                 *isVar = true;
                 *isCall = false;
                 break;
@@ -379,11 +390,8 @@ static void parseSelectors(Compiler *comp, Type **type, Const *constant, bool *i
                 if ((*type)->kind == TYPE_REAL32)
                     *type = comp->realType;
 
-                if (typeDefaultRef(*type))
-                {
-                    *type = typeAddPtrTo(&comp->types, &comp->blocks, *type);
+                if (typeStructured(*type))
                     *isVar = true;
-                }
                 else
                     *isVar = false;
                 *isCall = true;
@@ -412,12 +420,18 @@ static void parseFactor(Compiler *comp, Type **type, Const *constant)
     {
         case TOK_IDENT:
         {
+            // A designator that isVar is always an addressable quantity
+            // (a structured type or a pointer to a value type)
+
             bool isVar, isCall;
             parseDesignator(comp, type, constant, &isVar, &isCall);
             if (isVar)
             {
-                genDeref(&comp->gen, (*type)->base->kind);
-                *type = (*type)->base;
+                if (!typeStructured(*type))
+                {
+                    genDeref(&comp->gen, (*type)->base->kind);
+                    *type = (*type)->base;
+                }
 
                 // No direct support for 32-bit reals
                 if ((*type)->kind == TYPE_REAL32)
@@ -501,9 +515,12 @@ static void parseFactor(Compiler *comp, Type **type, Const *constant)
 
             bool isVar, isCall;
             parseDesignator(comp, type, constant, &isVar, &isCall);
-            if ((*type)->kind != TYPE_PTR || (*type)->base->kind == TYPE_VOID)
-                comp->error("Variable expected");
+            if (!isVar)
+                comp->error("Unable to take address");
 
+            // A value type is already a pointer, a structured type needs to have it added
+            if (typeStructured(*type))
+                *type = typeAddPtrTo(&comp->types, &comp->blocks, *type);
             break;
         }
 

@@ -163,9 +163,9 @@ bool typeReal(Type *type)
 }
 
 
-bool typeDefaultRef(Type *type)
+bool typeStructured(Type *type)
 {
-    return type->kind == TYPE_PTR || type->kind == TYPE_ARRAY || type->kind == TYPE_STR || type->kind == TYPE_STRUCT;
+    return type->kind == TYPE_ARRAY || type->kind == TYPE_STR || type->kind == TYPE_STRUCT;
 }
 
 

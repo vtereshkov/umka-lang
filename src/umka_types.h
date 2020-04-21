@@ -93,7 +93,7 @@ int typeSize(Types *types, Type *type);
 bool typeInteger(Type *type);
 bool typeOrdinal(Type *type);
 bool typeReal(Type *type);
-bool typeDefaultRef(Type *type);
+bool typeStructured(Type *type);
 
 bool typeEquivalent(Type *left, Type *right);
 bool typeAssertEquivalent(Types *types, Type *left, Type *right);
