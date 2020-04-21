@@ -1,0 +1,51 @@
+<?xml version="1.0"?>
+<Scheme>
+	<keyword-classes>
+		<keyword-class name="umka">
+            break case const continue default else for import interface if fn return str struct switch type var
+		</keyword-class>
+		<keyword-class name="ddoxygen">
+		</keyword-class>
+	</keyword-classes>
+
+	<!-- base scheme for C++ style languages -->
+	<language name="umka" title="Umka" folding="true" foldcomments="true" foldcompact="false" foldpreproc="true">
+		<lexer name="d" />
+		<comments line="//" streamStart="/*" streamEnd="*/" blockStart="/**" blockLine=" *" blockEnd=" */" />
+		<use-keywords>
+			<keyword key="0" name="Keywords" class="umka"/>
+			<!-- Comment doc: is this needed??? -->
+			<keyword key="2" name="Doxygen Keywords" class="ddoxygen"/>
+		</use-keywords>
+		
+		<use-styles>
+			<style name="Default" key="32" />
+			<style name="Whitespace" key="0" />
+			<style name="Comment" key="1" class="commentbox"/>
+			<style name="Comment Line" key="2" class="commentline"/>
+			<style name="Comment Doc" key="3" class="commentdoc"/>
+			<style name="Comment Nested" key="4" class="commentbox"/>
+			
+			<style name="Number" key="5" class="number"/>
+			<style name="Keyword" key="6" class="keyword"/>
+			<style name="Keyword" key="7" class="keyword"/>
+			<style name="Keyword" key="8" class="keyword"/>
+			<style name="Keyword" key="9" class="keyword"/>
+			
+			<style name="String" key="10" class="string"/>
+			<style name="End of line string" key="11" fore="000000" back="e0c0e0" eolfilled="true" />
+			
+			<style name="Character" key="12" class="character"/>
+			
+			<style name="Operator" key="13" class="operator"/>
+			<style name="Identifier" key="14" />
+
+			<!-- Comment doc: is this needed??? -->
+			<style name="Comment Line Doc" key="15" class="commentdoc"/>
+			<style name="Comment Doc Keyword" key="16" class="commentdoc" fore="3060a0"/>
+			<style name="Unknown Comment Doc Keyword" key="17" class="commentdoc" fore="804020"/>
+			
+		</use-styles>
+	</language>
+
+</Scheme>
