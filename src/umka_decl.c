@@ -80,15 +80,26 @@ static Type *parsePtrType(Compiler *comp)
 }
 
 
-// arrayType = "[" expr "]" type.
+// arrayType = "[" [expr] "]" type.
 static Type *parseArrayType(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_LBRACKET);
 
     Const len;
     Type *indexType;
-    parseExpr(comp, &indexType, &len);
-    typeAssertCompatible(&comp->types, comp->intType, indexType);
+
+    if (comp->lex.tok.kind != TOK_RBRACKET)
+    {
+        parseExpr(comp, &indexType, &len);
+        typeAssertCompatible(&comp->types, comp->intType, indexType);
+        if (len.intVal <= 0)
+            comp->error("Array length must be positive");
+    }
+    else    // Open array
+    {
+        len.intVal = 0;
+        indexType = comp->intType;
+    }
 
     lexEat(&comp->lex, TOK_RBRACKET);
 

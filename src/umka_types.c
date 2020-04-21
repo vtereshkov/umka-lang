@@ -283,7 +283,13 @@ bool typeCompatible(Type *left, Type *right)
     if (typeString(left) && typeString(right))
         return true;
 
+    // Any pointer can be assigned to an untyped pointer
     if (left->kind == TYPE_PTR && left->base->kind == TYPE_VOID && right->kind == TYPE_PTR)
+        return true;
+
+    // Any pointer to array can be assigned to a pointer to open array
+    if (left->kind  == TYPE_PTR && left->base->kind  == TYPE_ARRAY && left->base->numItems == 0 &&
+        right->kind == TYPE_PTR && right->base->kind == TYPE_ARRAY)
         return true;
 
     return false;

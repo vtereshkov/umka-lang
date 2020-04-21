@@ -70,8 +70,14 @@ static void identAdd(Idents *idents, Blocks *blocks, IdentKind kind, char *name,
     if (ident && ident->block == blocks->item[blocks->top].block)
         idents->error("Duplicate identifier %s", name);
 
-    if ((kind == IDENT_CONST || kind == IDENT_VAR) && type->kind == TYPE_VOID)
-        idents->error("Void identifier %s", name);
+    if (kind == IDENT_CONST || kind == IDENT_VAR)
+    {
+        if (type->kind == TYPE_VOID)
+            idents->error("Void variable or constant %s is not allowed", name);
+
+        if (type->kind == TYPE_ARRAY && type->numItems == 0)
+            idents->error("Open array variable or constant %s is not allowed", name);
+    }
 
     ident = malloc(sizeof(Ident));
     ident->kind = kind;
