@@ -25,7 +25,7 @@ static void compilerDeclareBuiltinTypes(Compiler *comp)
 
     comp->strType = typeAdd(&comp->types, &comp->blocks, TYPE_STR);
     comp->strType->base = comp->charType;
-    comp->strType->numItems = DEFAULT_STR_LEN;
+    comp->strType->numItems = DEFAULT_STR_LEN + 1;
 }
 
 

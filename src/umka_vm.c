@@ -321,7 +321,29 @@ static void doBinary(Fiber *fiber, ErrorFunc error)
 {
     Slot rhs = *fiber->top++;
 
-    if (fiber->code[fiber->ip].typeKind == TYPE_REAL || fiber->code[fiber->ip].typeKind == TYPE_REAL32)
+    if (fiber->code[fiber->ip].typeKind == TYPE_STR)
+        switch (fiber->code[fiber->ip].tokKind)
+        {
+            case TOK_PLUS:
+            {
+                int bufOffset = fiber->code[fiber->ip].operand.intVal;
+                void *buf = (int8_t *)fiber->base + bufOffset;
+                strcpy(buf, fiber->top->ptrVal);
+                strcat(buf, rhs.ptrVal);
+                fiber->top->ptrVal = buf;
+                break;
+            }
+
+            case TOK_EQEQ:      fiber->top->intVal = strcmp(fiber->top->ptrVal, rhs.ptrVal) == 0; break;
+            case TOK_NOTEQ:     fiber->top->intVal = strcmp(fiber->top->ptrVal, rhs.ptrVal) != 0; break;
+            case TOK_GREATER:   fiber->top->intVal = strcmp(fiber->top->ptrVal, rhs.ptrVal)  > 0; break;
+            case TOK_LESS:      fiber->top->intVal = strcmp(fiber->top->ptrVal, rhs.ptrVal)  < 0; break;
+            case TOK_GREATEREQ: fiber->top->intVal = strcmp(fiber->top->ptrVal, rhs.ptrVal) >= 0; break;
+            case TOK_LESSEQ:    fiber->top->intVal = strcmp(fiber->top->ptrVal, rhs.ptrVal) <= 0; break;
+
+            default:            error("Illegal instruction"); return;
+        }
+    else if (fiber->code[fiber->ip].typeKind == TYPE_REAL || fiber->code[fiber->ip].typeKind == TYPE_REAL32)
         switch (fiber->code[fiber->ip].tokKind)
         {
             case TOK_PLUS:  fiber->top->realVal += rhs.realVal; break;

@@ -1,9 +1,9 @@
 fn print(s: str) {
-    printf("{s}\n", s)
+    printf("{s}\n", "> " + s)
 }
 
 fn printref(s: ^str) {
-    printf("{s}\n", s^)
+    printf("{s}\n", "> " + s^)
 }
 
 fn f(a: [3] int16) {
@@ -22,17 +22,26 @@ fn fr(a: ^[3] int16) {
     printf("\n")
 }
 
+fn g(r: struct {x, y: int}): int {
+    return r.x + r.y
+}
+
+var s: str = "Hello" + " World"
 
 fn main() {
-    var s: str = "Hello"
-    t := "Hallo"
+
+    t := "Hallo"    
+    t +=" Welt"
     
     const hi = "Hi"
+    
+    greater := "Hello" <= "Hello"
+    printf("{d}\n", int(greater))
     
     print(s)
     printref(&s)
     print(t)
-    print(hi)
+    print(hi + ", I'm glad to see you")
     print("Privet")
     printf("{s}\n", s)
     printf("{s}\n", "Salut")
@@ -54,6 +63,10 @@ fn main() {
 
     var b: ^int16 = &a[2]
     printf("{d}\n", b^) 
+    
+    var r: struct {x, y: int}
+    r.x = 2;  r.y = 3
+    printf("{d}\n", g(r))
 }
 
 

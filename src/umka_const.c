@@ -62,7 +62,21 @@ void constUnary(Consts *consts, Const *arg, TokenKind tokKind, TypeKind typeKind
 
 void constBinary(Consts *consts, Const *lhs, const Const *rhs, TokenKind tokKind, TypeKind typeKind)
 {
-    if (typeKind == TYPE_REAL || typeKind == TYPE_REAL32)
+    if (typeKind == TYPE_STR)
+        switch (tokKind)
+        {
+            case TOK_PLUS:      strcat(lhs->ptrVal, rhs->ptrVal); break;
+
+            case TOK_EQEQ:      lhs->intVal = strcmp(lhs->ptrVal, rhs->ptrVal) == 0; break;
+            case TOK_NOTEQ:     lhs->intVal = strcmp(lhs->ptrVal, rhs->ptrVal) != 0; break;
+            case TOK_GREATER:   lhs->intVal = strcmp(lhs->ptrVal, rhs->ptrVal) >  0; break;
+            case TOK_LESS:      lhs->intVal = strcmp(lhs->ptrVal, rhs->ptrVal) <  0; break;
+            case TOK_GREATEREQ: lhs->intVal = strcmp(lhs->ptrVal, rhs->ptrVal) >= 0; break;
+            case TOK_LESSEQ:    lhs->intVal = strcmp(lhs->ptrVal, rhs->ptrVal) <= 0; break;
+
+            default:            consts->error("Illegal operator");
+        }
+    else if (typeKind == TYPE_REAL || typeKind == TYPE_REAL32)
         switch (tokKind)
         {
             case TOK_PLUS:  lhs->realVal += rhs->realVal; break;

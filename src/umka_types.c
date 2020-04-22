@@ -136,7 +136,7 @@ int typeSize(Types *types, Type *type)
 
         default:
             {
-            char buf[DEFAULT_STR_LEN];
+            char buf[DEFAULT_STR_LEN + 1];
             types->error("Illegal type %s", typeSpelling(type, buf));
             return 0;
             }
@@ -270,7 +270,7 @@ bool typeAssertEquivalent(Types *types, Type *left, Type *right)
     bool res = typeEquivalent(left, right);
     if (!res)
     {
-        char leftBuf[DEFAULT_STR_LEN], rightBuf[DEFAULT_STR_LEN];
+        char leftBuf[DEFAULT_STR_LEN + 1], rightBuf[DEFAULT_STR_LEN + 1];
         types->error("Incompatible types %s and %s", typeSpelling(left, leftBuf), typeSpelling(right, rightBuf));
 
     }
@@ -313,7 +313,7 @@ bool typeAssertCompatible(Types *types, Type *left, Type *right)
     bool res = typeCompatible(left, right);
     if (!res)
     {
-        char leftBuf[DEFAULT_STR_LEN], rightBuf[DEFAULT_STR_LEN];
+        char leftBuf[DEFAULT_STR_LEN + 1], rightBuf[DEFAULT_STR_LEN + 1];
         types->error("Incompatible types %s and %s", typeSpelling(left, leftBuf), typeSpelling(right, rightBuf));
     }
     return res;
@@ -324,7 +324,7 @@ bool typeValidOperator(Type *type, TokenKind op)
 {
     switch (op)
     {
-        case TOK_PLUS:
+        case TOK_PLUS:      return typeInteger(type) || typeReal(type) || type->kind == TYPE_STR;
         case TOK_MINUS:
         case TOK_MUL:
         case TOK_DIV:       return typeInteger(type) || typeReal(type);
@@ -350,12 +350,12 @@ bool typeValidOperator(Type *type, TokenKind op)
         case TOK_MINUSMINUS:return typeInteger(type);
         case TOK_EQEQ:
         case TOK_LESS:
-        case TOK_GREATER:   return typeOrdinal(type) || typeReal(type);
+        case TOK_GREATER:   return typeOrdinal(type) || typeReal(type) || type->kind == TYPE_STR;
         case TOK_EQ:        return true;
         case TOK_NOT:       return type->kind == TYPE_BOOL;
         case TOK_NOTEQ:
         case TOK_LESSEQ:
-        case TOK_GREATEREQ: return typeOrdinal(type) || typeReal(type);
+        case TOK_GREATEREQ: return typeOrdinal(type) || typeReal(type) || type->kind == TYPE_STR;
         default:            return false;
     }
 }
@@ -366,7 +366,7 @@ bool typeAssertValidOperator(Types *types, Type *type, TokenKind op)
     bool res = typeValidOperator(type, op);
     if (!res)
     {
-        char buf[DEFAULT_STR_LEN];
+        char buf[DEFAULT_STR_LEN + 1];
         types->error("Operator %s is not applicable to %s", lexSpelling(op), typeSpelling(type, buf));
     }
     return res;
@@ -478,7 +478,7 @@ char *typeSpelling(Type *type, char *buf)
     sprintf(buf, "%s", spelling[type->kind]);
     if (type->kind == TYPE_PTR || type->kind == TYPE_ARRAY)
     {
-        char baseBuf[DEFAULT_STR_LEN];
+        char baseBuf[DEFAULT_STR_LEN + 1];
         strcat(buf, typeSpelling(type->base, baseBuf));
     }
     return buf;

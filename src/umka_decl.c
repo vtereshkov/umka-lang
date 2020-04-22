@@ -132,7 +132,7 @@ static Type *parseStrType(Compiler *comp)
     }
     else    // Default string
     {
-        len.intVal = DEFAULT_STR_LEN;
+        len.intVal = DEFAULT_STR_LEN + 1;
         indexType = comp->intType;
     }
 

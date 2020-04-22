@@ -38,20 +38,45 @@ void doImplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant,
 }
 
 
-void doApplyOperator(Compiler *comp, Type **type, Type **rightType, Const *constant, Const *rightConstant, TokenKind op, bool apply)
+static void doApplyStrCat(Compiler *comp, Const *constant, Const *rightConstant)
+{
+    if (constant)
+    {
+        char *buf = &comp->storage.data[comp->storage.len];
+        comp->storage.len += DEFAULT_STR_LEN + 1;
+        strcpy(buf, constant->ptrVal);
+        constant->ptrVal = buf;
+        constBinary(&comp->consts, constant, rightConstant, TOK_PLUS, TYPE_STR);
+    }
+    else
+    {
+        int bufOffset = identAllocStack(&comp->idents, &comp->blocks, DEFAULT_STR_LEN + 1);
+        genBinary(&comp->gen, TOK_PLUS, TYPE_STR, bufOffset);
+    }
+}
+
+
+void doApplyOperator(Compiler *comp, Type **type, Type **rightType, Const *constant, Const *rightConstant, TokenKind op, bool apply, bool convertLhs)
 {
     doImplicitTypeConv(comp, *type, rightType, rightConstant, false);
-    doImplicitTypeConv(comp, *rightType, type, constant, true);
+
+    if (convertLhs)
+        doImplicitTypeConv(comp, *rightType, type, constant, true);
 
     typeAssertCompatible(&comp->types, *type, *rightType);
     typeAssertValidOperator(&comp->types, *type, op);
 
     if (apply)
     {
-        if (constant)
-            constBinary(&comp->consts, constant, rightConstant, op, (*type)->kind);
+        if ((*type)->kind == TYPE_STR && op == TOK_PLUS)
+            doApplyStrCat(comp, constant, rightConstant);
         else
-            genBinary(&comp->gen, op, (*type)->kind);
+        {
+            if (constant)
+                constBinary(&comp->consts, constant, rightConstant, op, (*type)->kind);
+            else
+                genBinary(&comp->gen, op, (*type)->kind, 0);
+        }
     }
 }
 
@@ -368,7 +393,7 @@ static void parseSelectors(Compiler *comp, Type **type, Const *constant, bool *i
                 lexNext(&comp->lex);
 
                 genPushIntConst(&comp->gen, field->offset);
-                genBinary(&comp->gen, TOK_PLUS, TYPE_INT);
+                genBinary(&comp->gen, TOK_PLUS, TYPE_INT, 0);
 
                 if (typeStructured(field->type))
                     *type = field->type;
@@ -568,7 +593,7 @@ static void parseTerm(Compiler *comp, Type **type, Const *constant)
 
         Type *rightType;
         parseFactor(comp, &rightType, rightConstant);
-        doApplyOperator(comp, type, &rightType, constant, rightConstant, op, true);
+        doApplyOperator(comp, type, &rightType, constant, rightConstant, op, true, true);
     }
 }
 
@@ -592,7 +617,7 @@ static void parseRelationTerm(Compiler *comp, Type **type, Const *constant)
 
         Type *rightType;
         parseTerm(comp, &rightType, rightConstant);
-        doApplyOperator(comp, type, &rightType, constant, rightConstant, op, true);
+        doApplyOperator(comp, type, &rightType, constant, rightConstant, op, true, true);
     }
 }
 
@@ -616,7 +641,7 @@ static void parseRelation(Compiler *comp, Type **type, Const *constant)
 
         Type *rightType;
         parseRelationTerm(comp, &rightType, rightConstant);
-        doApplyOperator(comp, type, &rightType, constant, rightConstant, op, true);
+        doApplyOperator(comp, type, &rightType, constant, rightConstant, op, true, true);
 
         *type = comp->boolType;
     }
@@ -641,7 +666,7 @@ static void parseLogicalTerm(Compiler *comp, Type **type, Const *constant)
 
                 Type *rightType;
                 parseRelation(comp, &rightType, rightConstant);
-                doApplyOperator(comp, type, &rightType, constant, rightConstant, op, false);
+                doApplyOperator(comp, type, &rightType, constant, rightConstant, op, false, true);
                 constant->intVal = rightConstant->intVal;
             }
             else
@@ -653,7 +678,7 @@ static void parseLogicalTerm(Compiler *comp, Type **type, Const *constant)
 
             Type *rightType;
             parseRelation(comp, &rightType, NULL);
-            doApplyOperator(comp, type, &rightType, NULL, NULL, op, false);
+            doApplyOperator(comp, type, &rightType, NULL, NULL, op, false, true);
 
             genShortCircuitEpilog(&comp->gen);
         }
@@ -679,7 +704,7 @@ void parseExpr(Compiler *comp, Type **type, Const *constant)
 
                 Type *rightType;
                 parseLogicalTerm(comp, &rightType, rightConstant);
-                doApplyOperator(comp, type, &rightType, constant, rightConstant, op, false);
+                doApplyOperator(comp, type, &rightType, constant, rightConstant, op, false, true);
                 constant->intVal = rightConstant->intVal;
             }
             else
@@ -691,7 +716,7 @@ void parseExpr(Compiler *comp, Type **type, Const *constant)
 
             Type *rightType;
             parseLogicalTerm(comp, &rightType, NULL);
-            doApplyOperator(comp, type, &rightType, NULL, NULL, op, false);
+            doApplyOperator(comp, type, &rightType, NULL, NULL, op, false, true);
 
             genShortCircuitEpilog(&comp->gen);
         }

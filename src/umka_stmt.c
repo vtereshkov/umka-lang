@@ -57,10 +57,7 @@ void parseShortAssignmentStmt(Compiler *comp, Type *type, TokenKind op)
     Type *rightType;
     parseExpr(comp, &rightType, NULL);
 
-    doImplicitTypeConv(comp, type, &rightType, NULL, false);
-    typeAssertCompatible(&comp->types, type, rightType);
-
-    genBinary(&comp->gen, lexShortAssignment(op), type->kind);
+    doApplyOperator(comp, &type, &rightType, NULL, NULL, lexShortAssignment(op), true, false);
     genAssign(&comp->gen, type->kind, typeSize(&comp->types, type));
 }
 

@@ -138,9 +138,9 @@ void genUnary(CodeGen *gen, TokenKind tokKind, TypeKind typeKind)
 }
 
 
-void genBinary(CodeGen *gen, TokenKind tokKind, TypeKind typeKind)
+void genBinary(CodeGen *gen, TokenKind tokKind, TypeKind typeKind, int bufOffset)
 {
-    const Instruction instr = {.opcode = OP_BINARY, .tokKind = tokKind, .typeKind = typeKind, .operand.intVal = 0};
+    const Instruction instr = {.opcode = OP_BINARY, .tokKind = tokKind, .typeKind = typeKind, .operand.intVal = bufOffset};
     genAddInstr(gen, &instr);
 }
 
@@ -274,10 +274,10 @@ void genCaseExprEpilog(CodeGen *gen, Const *constant)
 {
     genPushReg(gen, VM_COMMON_REG_0);                    // Compare switch expression with case constant
     genPushIntConst(gen, constant->intVal);
-    genBinary(gen, TOK_EQEQ, TYPE_INT);
+    genBinary(gen, TOK_EQEQ, TYPE_INT, 0);
 
     genPushReg(gen, VM_COMMON_REG_1);                    // Update comparison accumulator
-    genBinary(gen, TOK_OR, TYPE_BOOL);
+    genBinary(gen, TOK_OR, TYPE_BOOL, 0);
     genPopReg(gen, VM_COMMON_REG_1);
 }
 
@@ -438,7 +438,7 @@ char *genAsm(CodeGen *gen, char *buf)
     int ip = 0, pos = 0;
     do
     {
-        char instrBuf[DEFAULT_STR_LEN];
+        char instrBuf[DEFAULT_STR_LEN + 1];
         pos += sprintf(buf + pos, "%08X %s\n", ip, vmAsm(&gen->code[ip], instrBuf));
     } while (gen->code[ip++].opcode != OP_HALT);
 

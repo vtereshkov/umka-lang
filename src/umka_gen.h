@@ -48,7 +48,7 @@ void genDeref (CodeGen *gen, TypeKind typeKind);
 void genAssign(CodeGen *gen, TypeKind typeKind, int structSize);
 
 void genUnary (CodeGen *gen, TokenKind tokKind, TypeKind typeKind);
-void genBinary(CodeGen *gen, TokenKind tokKind, TypeKind typeKind);
+void genBinary(CodeGen *gen, TokenKind tokKind, TypeKind typeKind, int bufOffset /*bytes*/);
 
 void genGetArrayPtr(CodeGen *gen, int itemSize);
 
