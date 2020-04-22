@@ -194,7 +194,7 @@ Type *parseType(Compiler *comp)
         }
         case TOK_CARET:     return parsePtrType(comp);
         case TOK_LBRACKET:  return parseArrayType(comp);
-        case TOK_STR     :  return parseStrType(comp);
+        case TOK_STR:       return parseStrType(comp);
         case TOK_STRUCT:    return parseStructType(comp);
         case TOK_FN:        return parseFnType(comp);
 

@@ -30,7 +30,7 @@ void parseAssignmentStmt(Compiler *comp, Type *type, void *initializedVarPtr)
     typeAssertCompatible(&comp->types, type, rightType);
 
     if (initializedVarPtr)      // Initialize global variable
-        constAssign(&comp->consts, initializedVarPtr, rightConstant, type->kind, typeSize(&comp->types, type->base));
+        constAssign(&comp->consts, initializedVarPtr, rightConstant, type->kind, typeSize(&comp->types, type));
     else                        // Assign to local variable
         genAssign(&comp->gen, type->kind, typeSize(&comp->types, type));
 }

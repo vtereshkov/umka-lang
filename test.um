@@ -1,3 +1,9 @@
+const
+    (
+    p = 1
+    q = 4
+    )
+
 fn print(s: str) {
     printf("{s}\n", "> " + s)
 }
@@ -28,8 +34,28 @@ fn g(r: struct {x, y: int}): int {
 
 var s: str = "Hello" + " World"
 
-fn main() {
+var a: [3] int16 = [3] int16{1, 4, 7}
 
+fn main() {
+    q := 7
+    b := [3][2] real{[2]real{p,   2.5}, 
+                     [2]real{3.5,   q},
+                     [2]real{5.5, 6.5}}
+
+    for i := 0; i < 3; i++ {
+        for j := 0; j < 2; j++ {
+            printf("{8.3f} ", b[i][j])
+        }
+    }
+    printf("\n")
+    
+    type vec = struct {x, y, z: int}
+    
+    u := 42
+    v := vec{x: u, y: u * 2, z: u * 3}
+    printf("{d} {d} {d}\n", v.x, v.y, v.z)
+
+    
     t := "Hallo"    
     t +=" Welt"
     
@@ -52,17 +78,14 @@ fn main() {
     printf("{c}\n", s[1])
     printf("{c}\n", t[1])
     
-    var a: [3] int16
-    a[0] = 1;  a[1] = 4;  a[2] = 7
-    
     f(a)
     printf("{d}\n", a[1])
     
     fr(&a)
     printf("{d}\n", a[1]) 
 
-    var b: ^int16 = &a[2]
-    printf("{d}\n", b^) 
+    var c: ^int16 = &a[2]
+    printf("{d}\n", c^) 
     
     var r: struct {x, y: int}
     r.x = 2;  r.y = 3
