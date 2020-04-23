@@ -68,6 +68,10 @@ static void parseSignature(Compiler *comp, Signature *sig)
     }
     else
         sig->resultType[sig->numResults++] = comp->voidType;
+
+    // Structured result parameter
+    if (typeStructured(sig->resultType[0]))
+        typeAddParam(&comp->types, sig, typeAddPtrTo(&comp->types, &comp->blocks, sig->resultType[0]), "__result");
 }
 
 

@@ -32,6 +32,16 @@ fn g(r: struct {x, y: int}): int {
     return r.x + r.y
 }
 
+type vec = struct {x, y: int}
+
+fn h(i: int): vec {
+    if i > 0 {
+        return vec{x: 75, y: 86}
+    } else {
+        return vec{x: 15, y: 26}
+    }
+}        
+
 var s: str = "Hello" + " World"
 
 var a: [3] int16 = [3] int16{1, 4, 7}
@@ -90,6 +100,9 @@ fn main() {
     var r: struct {x, y: int}
     r.x = 2;  r.y = 3
     printf("{d}\n", g(r))
+    
+    w := h(-1).x
+    printf("{d}\n", h(1).y)
 }
 
 

@@ -383,22 +383,35 @@ void parseReturnStmt(Compiler *comp)
             lexNext(&comp->lex);
     }
 
-    // Get function result type
-    Type *resultType = NULL;
+    // Get function signature
+    Signature *sig = NULL;
     for (int i = comp->blocks.top; i >= 1; i--)
         if (comp->blocks.item[i].fn)
         {
-            resultType = comp->blocks.item[i].fn->type->sig.resultType[0];
+            sig = &comp->blocks.item[i].fn->type->sig;
             break;
         }
 
-    if (type->kind != TYPE_VOID)
+    doImplicitTypeConv(comp, sig->resultType[0], &type, NULL, false);
+    typeAssertCompatible(&comp->types, sig->resultType[0], type);
+
+    // Copy structure to __result
+    if (typeStructured(sig->resultType[0]))
     {
-        doImplicitTypeConv(comp, resultType, &type, NULL, false);
-        genPopReg(&comp->gen, VM_RESULT_REG_0);
+        Ident *__result = identAssertFind(&comp->idents, &comp->blocks, "__result");
+
+        doPushVarPtr(comp, __result);
+        genDeref(&comp->gen, TYPE_PTR);
+        genSwap(&comp->gen);
+        genAssign(&comp->gen, sig->resultType[0]->kind, typeSize(&comp->types, sig->resultType[0]));
+
+        doPushVarPtr(comp, __result);
+        genDeref(&comp->gen, TYPE_PTR);
     }
 
-    typeAssertCompatible(&comp->types, resultType, type);
+    if (sig->resultType[0]->kind != TYPE_VOID)
+        genPopReg(&comp->gen, VM_RESULT_REG_0);
+
     genGotosAddStub(&comp->gen, comp->gen.returns);
 }
 

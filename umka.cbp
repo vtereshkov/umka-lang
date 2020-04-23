@@ -21,12 +21,13 @@
 				<Option object_output="obj/Release/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="test.um" />
+				<Option parameters="nbody.um" />
 				<Compiler>
 					<Add option="-O2" />
+					<Add option="-pg" />
 				</Compiler>
 				<Linker>
-					<Add option="-s" />
+					<Add option="-pg -lgmon" />
 				</Linker>
 			</Target>
 		</Build>

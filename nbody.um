@@ -120,7 +120,7 @@ fn advance(sys: ^System, len: int, dt: real) {
 
 
 fn main() {
-   n := 1000
+   n := 1000000//50000000//1000
    
    const num = 5
    bodies := [num]Body{sun, jupiter, saturn, uranus, neptune}

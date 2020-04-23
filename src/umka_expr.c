@@ -199,12 +199,18 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
         comp->error("Function is not allowed in constant expressions");
 
     // Actual parameters
+    int numHiddenParams = 0;
+
+    // __result
+    if (typeStructured((*type)->sig.resultType[0]))
+        numHiddenParams++;
+
     int i = 0;
     if (comp->lex.tok.kind != TOK_RPAR)
     {
         while (1)
         {
-            if (i > (*type)->sig.numParams - 1)
+            if (i > (*type)->sig.numParams - numHiddenParams - 1)
                 comp->error("Too many actual parameters");
 
             Type *formalParamType = (*type)->sig.param[i]->type;
@@ -226,8 +232,17 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
         }
     }
 
-    if (i < (*type)->sig.numParams)
+    if (i < (*type)->sig.numParams - numHiddenParams)
         comp->error("Too few actual parameters");
+
+    // Push __result pointer
+    if (typeStructured((*type)->sig.resultType[0]))
+    {
+        int size = typeSize(&comp->types, (*type)->sig.resultType[0]);
+        int offset = identAllocStack(&comp->idents, &comp->blocks, size);
+        genPushLocalPtr(&comp->gen, offset);
+        i++;
+    }
 
     int paramSlots = typeParamSizeTotal(&comp->types, &(*type)->sig) / sizeof(Slot);
     genCall(&comp->gen, paramSlots);
