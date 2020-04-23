@@ -89,12 +89,23 @@ static void parseBuiltinIOCall(Compiler *comp, Type **type, Const *constant, Bui
     if (constant)
         comp->error("Function is not allowed in constant expressions");
 
-    // File pointer
-    if (builtin == BUILTIN_FPRINTF || builtin == BUILTIN_FSCANF)
+    // Count (number of characters for printf(), number of items for scanf())
+    genPushIntConst(&comp->gen, 0);
+    genPopReg(&comp->gen, VM_IO_COUNT_REG);
+
+    // File/string pointer
+    if (builtin == BUILTIN_FPRINTF || builtin == BUILTIN_SPRINTF ||
+        builtin == BUILTIN_FSCANF  || builtin == BUILTIN_SSCANF)
     {
+        Type *expectedType;
+        if (builtin == BUILTIN_FPRINTF || builtin == BUILTIN_FSCANF)
+            expectedType = comp->ptrVoidType;
+        else
+            expectedType = comp->strType;
+
         parseExpr(comp, type, constant);
-        typeAssertCompatible(&comp->types, comp->ptrVoidType, *type);
-        genPopReg(&comp->gen, VM_IO_FILE_REG);
+        typeAssertCompatible(&comp->types, expectedType, *type);
+        genPopReg(&comp->gen, VM_IO_STREAM_REG);
         lexEat(&comp->lex, TOK_COMMA);
     }
 
@@ -109,7 +120,7 @@ static void parseBuiltinIOCall(Compiler *comp, Type **type, Const *constant, Bui
         lexNext(&comp->lex);
         parseExpr(comp, type, constant);
 
-        if (builtin == BUILTIN_PRINTF || builtin == BUILTIN_FPRINTF)
+        if (builtin == BUILTIN_PRINTF || builtin == BUILTIN_FPRINTF || builtin == BUILTIN_SPRINTF)
         {
             if (typeOrdinal(*type))
                 genCallBuiltin(&comp->gen, TYPE_INT, builtin);
@@ -138,7 +149,10 @@ static void parseBuiltinIOCall(Compiler *comp, Type **type, Const *constant, Bui
     genCallBuiltin(&comp->gen, TYPE_VOID, builtin);
     genPop(&comp->gen);  // Manually remove parameter
 
-    *type = comp->voidType;
+    // Result
+    genPushReg(&comp->gen, VM_IO_COUNT_REG);
+
+    *type = comp->intType;
     lexEat(&comp->lex, TOK_RPAR);
 }
 
@@ -171,8 +185,10 @@ static void parseBuiltinCall(Compiler *comp, Type **type, Const *constant, Built
         // I/O functions
         case BUILTIN_PRINTF:
         case BUILTIN_FPRINTF:
+        case BUILTIN_SPRINTF:
         case BUILTIN_SCANF:
-        case BUILTIN_FSCANF:   parseBuiltinIOCall(comp, type, constant, builtin); break;
+        case BUILTIN_FSCANF:
+        case BUILTIN_SSCANF:   parseBuiltinIOCall(comp, type, constant, builtin); break;
 
         // Math functions
         case BUILTIN_ROUND:

@@ -736,6 +736,7 @@ void lexNext(Lexer *lex)
             if (lex->prevTok.kind == TOK_BREAK       ||
                 lex->prevTok.kind == TOK_CONTINUE    ||
                 lex->prevTok.kind == TOK_RETURN      ||
+                lex->prevTok.kind == TOK_STR         ||
                 lex->prevTok.kind == TOK_PLUSPLUS    ||
                 lex->prevTok.kind == TOK_MINUSMINUS  ||
                 lex->prevTok.kind == TOK_RPAR        ||

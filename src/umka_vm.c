@@ -55,17 +55,23 @@ void vmFree(VM *vm)
 
 static void doConvertFormatStringToC(char *formatC, char **format, ErrorFunc error) // "{d}" -> "%d"
 {
-    bool leftBraceFound = false, rightBraceFound = false;
+    bool leftBraceFound = false, rightBraceFound = false, slashFound = false;
     while (**format)
     {
-        if (**format == '{')
+        if (**format == '/' && !slashFound)
+        {
+            slashFound = true;
+            (*format)++;
+        }
+        else if (**format == '{' && !slashFound)
         {
             *formatC = '%';
             leftBraceFound = true;
+            slashFound = false;
             (*format)++;
             formatC++;
         }
-        else if (**format == '}')
+        else if (**format == '}' && !slashFound)
         {
             if (!leftBraceFound)
             {
@@ -73,11 +79,15 @@ static void doConvertFormatStringToC(char *formatC, char **format, ErrorFunc err
                 return;
             }
             rightBraceFound = true;
+            slashFound = false;
             (*format)++;
             break;
         }
         else
+        {
             *formatC++ = *(*format)++;
+            slashFound = false;
+        }
     }
     *formatC = 0;
 
@@ -89,42 +99,68 @@ static void doConvertFormatStringToC(char *formatC, char **format, ErrorFunc err
 }
 
 
-static void doFprintf(Fiber *fiber, bool console, ErrorFunc error)
+static void doPrintf(Fiber *fiber, bool console, bool string, ErrorFunc error)
 {
-    FILE *file    = console ? stdout : fiber->reg[VM_IO_FILE_REG].ptrVal;
-    char *format  = fiber->reg[VM_IO_FORMAT_REG].ptrVal;
+    void *stream = console ? stdout : fiber->reg[VM_IO_STREAM_REG].ptrVal;
+    char *format = fiber->reg[VM_IO_FORMAT_REG].ptrVal;
 
     char *formatC = malloc(strlen(format) + 1);
     doConvertFormatStringToC(formatC, &format, error);
 
-    // Proxy to C fprintf()
+    // Proxy to C fprintf()/sprintf()
+    int len = 0;
     if (fiber->code[fiber->ip].typeKind == TYPE_VOID)
-        fprintf(file, formatC);
+    {
+        if (string) len = sprintf((char *)stream, formatC);
+        else        len = fprintf((FILE *)stream, formatC);
+    }
     else if (fiber->code[fiber->ip].typeKind == TYPE_REAL || fiber->code[fiber->ip].typeKind == TYPE_REAL32)
-        fprintf(file, formatC, fiber->top->realVal);
+    {
+        if (string) len = sprintf((char *)stream, formatC, fiber->top->realVal);
+        else        len = fprintf((FILE *)stream, formatC, fiber->top->realVal);
+    }
     else
-        fprintf(file, formatC, fiber->top->intVal);
+    {
+        if (string) len = sprintf((char *)stream, formatC, fiber->top->intVal);
+        else        len = fprintf((FILE *)stream, formatC, fiber->top->intVal);
+    }
 
     fiber->reg[VM_IO_FORMAT_REG].ptrVal = format;
+    fiber->reg[VM_IO_COUNT_REG].intVal += len;
+    if (string)
+        fiber->reg[VM_IO_STREAM_REG].ptrVal += len;
+
     free(formatC);
 }
 
 
-static void doFscanf(Fiber *fiber, bool console, ErrorFunc error)
+static void doScanf(Fiber *fiber, bool console, bool string, ErrorFunc error)
 {
-    FILE *file    = console ? stdin : fiber->reg[VM_IO_FILE_REG].ptrVal;
-    char *format  = fiber->reg[VM_IO_FORMAT_REG].ptrVal;
+    void *stream = console ? stdin : fiber->reg[VM_IO_STREAM_REG].ptrVal;
+    char *format = fiber->reg[VM_IO_FORMAT_REG].ptrVal;
 
-    char *formatC = malloc(strlen(format) + 1);
+    char *formatC = malloc(strlen(format) + 2 + 1);     // + 2 for "%n"
     doConvertFormatStringToC(formatC, &format, error);
+    strcat(formatC, "%n");
 
-    // Proxy to C fprintf()
+    // Proxy to C fscanf()/sscanf()
+    int len = 0, cnt = 0;
     if (fiber->code[fiber->ip].typeKind == TYPE_VOID)
-        fscanf(file, formatC);
+    {
+        if (string) cnt = sscanf((char *)stream, formatC, &len);
+        else        cnt = fscanf((FILE *)stream, formatC, &len);
+    }
     else
-        fscanf(file, formatC, *fiber->top);
+    {
+        if (string) cnt = sscanf((char *)stream, formatC, fiber->top->ptrVal, &len);
+        else        cnt = fscanf((FILE *)stream, formatC, fiber->top->ptrVal, &len);
+    }
 
     fiber->reg[VM_IO_FORMAT_REG].ptrVal = format;
+    fiber->reg[VM_IO_COUNT_REG].intVal += cnt;
+    if (string)
+        fiber->reg[VM_IO_STREAM_REG].ptrVal += len;
+
     free(formatC);
 }
 
@@ -453,10 +489,13 @@ static void doCallBuiltin(Fiber *fiber, ErrorFunc error)
 {
     switch (fiber->code[fiber->ip].operand.builtinVal)
     {
-        case BUILTIN_PRINTF:    doFprintf(fiber, true, error); break;
-        case BUILTIN_FPRINTF:   doFprintf(fiber, false, error); break;
-        case BUILTIN_SCANF:     doFscanf(fiber, true, error); break;
-        case BUILTIN_FSCANF:    doFscanf(fiber, false, error); break;
+        case BUILTIN_PRINTF:    doPrintf(fiber, true, false, error); break;
+        case BUILTIN_FPRINTF:   doPrintf(fiber, false, false, error); break;
+        case BUILTIN_SPRINTF:   doPrintf(fiber, false, true, error); break;
+        case BUILTIN_SCANF:     doScanf(fiber, true, false, error); break;
+        case BUILTIN_FSCANF:    doScanf(fiber, false, false, error); break;
+        case BUILTIN_SSCANF:    doScanf(fiber, false, true, error); break;
+
         case BUILTIN_REAL:      fiber->top->realVal = fiber->top->intVal; break;
         case BUILTIN_REAL_LHS:  (fiber->top + 1)->realVal = (fiber->top + 1)->intVal; break;
         case BUILTIN_ROUND:     fiber->top->intVal = (int64_t)round(fiber->top->realVal); break;
@@ -508,8 +547,9 @@ static void doEnterFrame(Fiber *fiber)
     fiber->top = (Slot *)((int8_t *)(fiber->top) - fiber->code[fiber->ip].operand.intVal);
 
     // Push I/O registers
-    *(--fiber->top) = fiber->reg[VM_IO_FILE_REG];
+    *(--fiber->top) = fiber->reg[VM_IO_STREAM_REG];
     *(--fiber->top) = fiber->reg[VM_IO_FORMAT_REG];
+    *(--fiber->top) = fiber->reg[VM_IO_COUNT_REG];
 
     fiber->ip++;
 }
@@ -518,8 +558,9 @@ static void doEnterFrame(Fiber *fiber)
 static void doLeaveFrame(Fiber *fiber)
 {
     // Pop I/O registers
+    fiber->reg[VM_IO_COUNT_REG]  = *(fiber->top++);
     fiber->reg[VM_IO_FORMAT_REG] = *(fiber->top++);
-    fiber->reg[VM_IO_FILE_REG]   = *(fiber->top++);
+    fiber->reg[VM_IO_STREAM_REG] = *(fiber->top++);
 
     // Restore stack top, pop old stack frame base pointer
     fiber->top = fiber->base;

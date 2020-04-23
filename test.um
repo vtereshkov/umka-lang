@@ -3,6 +3,20 @@ const
     p = 1
     q = 4
     )
+    
+fn atof(s: str): real {
+    var x: real
+    sscanf(s, "{lf}", &x)
+    return x
+}
+
+
+fn ftoa(x: real, dec: int): str {
+    var fmt, s: str
+    sprintf(fmt, "/{.{d}lf/}", dec)
+    sprintf(s, fmt, x)
+    return s
+}
 
 fn print(s: str) {
     printf("{s}\n", "> " + s)
@@ -103,6 +117,32 @@ fn main() {
     
     w := h(-1).x
     printf("{d}\n", h(1).y)
+    
+    num := "2.356"
+    val := 0.0
+    sscanf(num, "{lf}", &val)
+    printf("{8.3f}\n", val)
+    
+    var sss: str = "HHH"
+    sprintf(sss, "The numbers are {d} and {d}\n", 3, 5)
+    printf("{s}", sss)
+    
+    xx := 3.14
+    ss := "Number is " + ftoa(xx, 3) + " - ok."
+    yy := atof(ftoa(xx, 3))
+    printf("x = {.3f}  y = {.3f}  s = {s}\n", xx, yy, ss)
+    
+    tt := ""
+    var (i1, i2, i3: int; st: str)
+    scanf("{s}", &st)
+    printf("st = {s}\n", st)
+    len1 := sscanf(st, "{d},{d},{d}", &i1, &i2, &i3)
+    len2 := printf("i = {d},{d},{d}  {d} : OK\n", i1, i2, i3, 7)
+    printf("len1 = {d}  len2 = {d}\n", len1, len2)
+
+    scanf("{d} {d} {d}", &i1, &i2, &i3)
+    printf("i = {d} {d} {d} : OK\n", i1, i2, i3)  
+        
 }
 
 

@@ -15,9 +15,10 @@ enum
     VM_COMMON_REG_0     = 16,
     VM_COMMON_REG_1     = VM_COMMON_REG_0 + 1,
 
-    // Registers for special use by fprintf() / fscanf()
-    VM_IO_FILE_REG      = VM_NUM_REGS - 2,
-    VM_IO_FORMAT_REG    = VM_NUM_REGS - 1,
+    // Registers for special use by printf() / scanf()
+    VM_IO_STREAM_REG    = VM_NUM_REGS - 3,
+    VM_IO_FORMAT_REG    = VM_NUM_REGS - 2,
+    VM_IO_COUNT_REG     = VM_NUM_REGS - 1,
 };
 
 
@@ -52,8 +53,10 @@ typedef enum
 {
     BUILTIN_PRINTF,
     BUILTIN_FPRINTF,
+    BUILTIN_SPRINTF,
     BUILTIN_SCANF,
     BUILTIN_FSCANF,
+    BUILTIN_SSCANF,
     BUILTIN_REAL,           // Integer to real at stack top (right operand)
     BUILTIN_REAL_LHS,       // Integer to real at stack top + 1 (left operand)
     BUILTIN_ROUND,

@@ -55,10 +55,12 @@ static void compilerDeclareBuiltinIdents(Compiler *comp)
     identAddType(&comp->idents, &comp->blocks,  "real",   comp->realType);
 
     // Built-in functions
-    identAddBuiltinFunc(&comp->idents, &comp->blocks, "printf",  comp->voidType, BUILTIN_PRINTF);
-    identAddBuiltinFunc(&comp->idents, &comp->blocks, "fprintf", comp->voidType, BUILTIN_FPRINTF);
-    identAddBuiltinFunc(&comp->idents, &comp->blocks, "scanf",   comp->voidType, BUILTIN_SCANF);
-    identAddBuiltinFunc(&comp->idents, &comp->blocks, "fscanf",  comp->voidType, BUILTIN_FSCANF);
+    identAddBuiltinFunc(&comp->idents, &comp->blocks, "printf",  comp->intType, BUILTIN_PRINTF);
+    identAddBuiltinFunc(&comp->idents, &comp->blocks, "fprintf", comp->intType, BUILTIN_FPRINTF);
+    identAddBuiltinFunc(&comp->idents, &comp->blocks, "sprintf", comp->intType, BUILTIN_SPRINTF);
+    identAddBuiltinFunc(&comp->idents, &comp->blocks, "scanf",   comp->intType, BUILTIN_SCANF);
+    identAddBuiltinFunc(&comp->idents, &comp->blocks, "fscanf",  comp->intType, BUILTIN_FSCANF);
+    identAddBuiltinFunc(&comp->idents, &comp->blocks, "sscanf",  comp->intType, BUILTIN_SSCANF);
     identAddBuiltinFunc(&comp->idents, &comp->blocks, "round",   comp->intType,  BUILTIN_ROUND);
     identAddBuiltinFunc(&comp->idents, &comp->blocks, "trunc",   comp->intType,  BUILTIN_TRUNC);
     identAddBuiltinFunc(&comp->idents, &comp->blocks, "fabs",    comp->realType, BUILTIN_FABS);
