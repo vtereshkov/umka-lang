@@ -122,7 +122,7 @@
 	<stdint.h>
 	<stdbool.h>
 
-1587674290 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_compiler.c
+1587681312 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_compiler.c
 	<stddef.h>
 	"umka_compiler.h"
 
@@ -164,7 +164,7 @@
 	<math.h>
 	"umka_const.h"
 
-1587638829 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_decl.c
+1587681360 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_decl.c
 	<string.h>
 	"umka_expr.h"
 	"umka_stmt.h"
@@ -176,7 +176,7 @@
 1587444310 c:\users\vasiliy\desktop\umka-lang-master\src\umka_stmt.h
 	"umka_compiler.h"
 
-1587444310 c:\users\vasiliy\desktop\umka-lang-master\src\umka_decl.h
+1587681388 c:\users\vasiliy\desktop\umka-lang-master\src\umka_decl.h
 	"umka_compiler.h"
 
 1587674261 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_expr.c
@@ -225,7 +225,7 @@
 	"umka_vm.h"
 	"umka_types.h"
 
-1587673940 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_vm.c
+1587676087 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_vm.c
 	<stdio.h>
 	<stdlib.h>
 	<string.h>

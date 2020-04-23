@@ -7,6 +7,7 @@
 Type *parseType(Compiler *comp);
 void parseShortVarDecl(Compiler *comp);
 void parseDecl(Compiler *comp);
+void parseProgram(Compiler *comp);
 
 
 #endif // UMKA_DECL_H_INCLUDED

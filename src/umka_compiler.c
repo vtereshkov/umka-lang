@@ -3,7 +3,7 @@
 #include "umka_compiler.h"
 
 
-void parseModule(Compiler *comp);
+void parseProgram(Compiler *comp);
 
 
 static void compilerDeclareBuiltinTypes(Compiler *comp)
@@ -104,8 +104,7 @@ void compilerFree(Compiler *comp)
 
 void compilerCompile(Compiler *comp)
 {
-    lexNext(&comp->lex);
-    parseModule(comp);
+    parseProgram(comp);
 }
 
 

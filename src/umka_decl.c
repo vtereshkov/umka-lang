@@ -5,6 +5,9 @@
 #include "umka_decl.h"
 
 
+static void parseModule(Compiler *comp);
+
+
 // identList = ident {"," ident}.
 void parseIdentList(Compiler *comp, IdentName *names, int capacity, int *num)
 {
@@ -406,11 +409,62 @@ void parseDecls(Compiler *comp)
 }
 
 
-// module = decls.
-void parseModule(Compiler *comp)
+// importItem = stringLiteral.
+static void parseImportItem(Compiler *comp)
+{
+    lexCheck(&comp->lex, TOK_STRLITERAL);
+
+    Lexer oldLex = comp->lex;
+    lexInit(&comp->lex, comp->lex.tok.strVal, &comp->storage, comp->error);
+
+    lexNext(&comp->lex);
+    parseModule(comp);
+
+    lexFree(&comp->lex);
+    comp->lex = oldLex;
+    lexNext(&comp->lex);
+}
+
+
+// import = "import" (importItem | "(" {importItem ";"} ")").
+static void parseImport(Compiler *comp)
+{
+    lexEat(&comp->lex, TOK_IMPORT);
+
+    if (comp->lex.tok.kind == TOK_LPAR)
+    {
+        lexNext(&comp->lex);
+        while (comp->lex.tok.kind == TOK_STRLITERAL)
+        {
+            parseImportItem(comp);
+            lexEat(&comp->lex, TOK_SEMICOLON);
+        }
+        lexEat(&comp->lex, TOK_RPAR);
+    }
+    else
+        parseImportItem(comp);
+}
+
+
+// module = [import ";"] decls.
+static void parseModule(Compiler *comp)
+{
+    if (comp->lex.tok.kind == TOK_IMPORT)
+    {
+        parseImport(comp);
+        lexEat(&comp->lex, TOK_SEMICOLON);
+    }
+    parseDecls(comp);
+}
+
+
+// program = module.
+void parseProgram(Compiler *comp)
 {
     genNop(&comp->gen);     // Entry point stub
-    parseDecls(comp);
+
+    lexNext(&comp->lex);
+    parseModule(comp);
 
     if (!comp->gen.entryPointDefined)
         comp->error("main() is not defined");

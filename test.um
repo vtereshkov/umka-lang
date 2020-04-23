@@ -1,31 +1,14 @@
+import (
+    "conv.um"
+    "prnt.um"
+)
+    
 const
     (
     p = 1
     q = 4
     )
     
-fn atof(s: str): real {
-    var x: real
-    sscanf(s, "{lf}", &x)
-    return x
-}
-
-
-fn ftoa(x: real, dec: int): str {
-    var fmt, s: str
-    sprintf(fmt, "/{.{d}lf/}", dec)
-    sprintf(s, fmt, x)
-    return s
-}
-
-fn print(s: str) {
-    printf("{s}\n", "> " + s)
-}
-
-fn printref(s: ^str) {
-    printf("{s}\n", "> " + s^)
-}
-
 fn f(a: [3] int16) {
     a[1] = 47
     for i := 0; i < 3; i++ {
@@ -142,6 +125,10 @@ fn main() {
 
     scanf("{d} {d} {d}", &i1, &i2, &i3)
     printf("i = {d} {d} {d} : OK\n", i1, i2, i3)  
+    
+//    for i := 0; i < 10000000; i++ {
+//        printf("i = {d} {d} {d} : OK\n", 10, 11, 12)
+//    }
         
 }
 

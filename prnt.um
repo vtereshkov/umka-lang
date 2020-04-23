@@ -1,0 +1,9 @@
+import "strtype.um"
+
+fn print(s: strt) {
+    printf("{s}\n", "> " + s)
+}
+
+fn printref(s: ^strt) {
+    printf("{s}\n", "> " + s^)
+}

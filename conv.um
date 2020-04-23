@@ -1,0 +1,13 @@
+fn atof(s: str): real {
+    var x: real
+    sscanf(s, "{lf}", &x)
+    return x
+}
+
+
+fn ftoa(x: real, dec: int): str {
+    var fmt, s: str
+    sprintf(fmt, "/{.{d}lf/}", dec)
+    sprintf(s, fmt, x)
+    return s
+}
