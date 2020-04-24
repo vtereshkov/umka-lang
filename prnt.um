@@ -3,10 +3,10 @@ import (
     "strtype.um"
 )
 
-fn print(s: strtype.strt) {
+fn print*(s: strtype.strt) {
     printf("{s}\n", "> " + s + " " + conv.ftoa(2.71, 3))
 }
 
-fn printref(s: ^strtype.strt) {
+fn printref*(s: ^strtype.strt) {
     printf("{s}\n", "> " + s^)
 }

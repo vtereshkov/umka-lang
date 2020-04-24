@@ -49,7 +49,7 @@ Ident *identAssertFind  (Idents *idents, Modules *modules, Blocks *blocks, int m
 
 void identAddConst      (Idents *idents, Modules *modules, Blocks *blocks, char *name, Type *type, bool exported, Const constant);
 void identAddGlobalVar  (Idents *idents, Modules *modules, Blocks *blocks, char *name, Type *type, bool exported, void *ptr);
-void identAddLocalVar   (Idents *idents, Modules *modules, Blocks *blocks, char *name, Type *type, int offset);
+void identAddLocalVar   (Idents *idents, Modules *modules, Blocks *blocks, char *name, Type *type, bool exported, int offset);
 void identAddType       (Idents *idents, Modules *modules, Blocks *blocks, char *name, Type *type, bool exported);
 void identAddBuiltinFunc(Idents *idents, Modules *modules, Blocks *blocks, char *name, Type *type, BuiltinFunc builtin);
 

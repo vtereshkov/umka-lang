@@ -1,1 +1,2 @@
-type strt = str
+type strt* = str
+zz* := 451

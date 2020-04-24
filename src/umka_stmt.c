@@ -63,7 +63,7 @@ void parseShortAssignmentStmt(Compiler *comp, Type *type, TokenKind op)
 
 
 // declAssignmentStmt = ident ":=" expr.
-void parseDeclAssignmentStmt(Compiler *comp, IdentName name, bool constExpr)
+void parseDeclAssignmentStmt(Compiler *comp, IdentName name, bool constExpr, bool exported)
 {
     Type *rightType;
     Const rightConstantBuf, *rightConstant = NULL;
@@ -73,7 +73,7 @@ void parseDeclAssignmentStmt(Compiler *comp, IdentName name, bool constExpr)
 
     parseExpr(comp, &rightType, rightConstant);
 
-    identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, name, rightType, true);
+    identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, name, rightType, exported);
     Ident *ident = comp->idents.last;
 
     if (constExpr)                              // Initialize global variable

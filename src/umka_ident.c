@@ -74,8 +74,12 @@ Ident *identAssertFind(Idents *idents, Modules *modules, Blocks *blocks, int mod
 static void identAdd(Idents *idents, Modules *modules, Blocks *blocks, IdentKind kind, char *name, Type *type, bool exported)
 {
     Ident *ident = identFind(idents, modules, blocks, blocks->module, name);
+
     if (ident && ident->block == blocks->item[blocks->top].block)
         idents->error("Duplicate identifier %s", name);
+
+    if (exported && blocks->top != 0)
+        idents->error("Local identifier %s cannot be exported", name);
 
     if (kind == IDENT_CONST || kind == IDENT_VAR)
     {
@@ -125,9 +129,9 @@ void identAddGlobalVar(Idents *idents, Modules *modules, Blocks *blocks, char *n
 }
 
 
-void identAddLocalVar(Idents *idents, Modules *modules, Blocks *blocks, char *name, Type *type, int offset)
+void identAddLocalVar(Idents *idents, Modules *modules, Blocks *blocks, char *name, Type *type, bool exported, int offset)
 {
-    identAdd(idents, modules, blocks, IDENT_VAR, name, type, false);
+    identAdd(idents, modules, blocks, IDENT_VAR, name, type, exported);
     idents->last->offset = offset;
 }
 
@@ -173,7 +177,7 @@ void identAllocVar(Idents *idents, Types *types, Modules *modules, Blocks *block
     else                        // Local
     {
         int offset = identAllocStack(idents, blocks, typeSize(types, type));
-        identAddLocalVar(idents, modules, blocks, name, type, offset);
+        identAddLocalVar(idents, modules, blocks, name, type, exported, offset);
     }
 }
 
@@ -184,6 +188,6 @@ void identAllocParam(Idents *idents, Types *types, Modules *modules, Blocks *blo
     int paramSizeTotal     = typeParamSizeTotal(types, sig);
 
     int offset = (paramSizeTotal - paramSizeUpToIndex) + 2 * sizeof(Slot);  // + 2 slots for old base pointer and return address
-    identAddLocalVar(idents, modules, blocks, sig->param[index]->name, sig->param[index]->type, offset);
+    identAddLocalVar(idents, modules, blocks, sig->param[index]->name, sig->param[index]->type, false, offset);
 }
 

@@ -1,6 +1,7 @@
 import (
     "conv.um"
-    "prnt.um"
+    "strtype.um"
+    "prnt.um"    
 )
     
 const
@@ -106,7 +107,7 @@ fn main() {
     sscanf(num, "{lf}", &val)
     printf("{8.3f}\n", val)
     
-    var sss: str = "HHH"
+    var sss*: str = "HHH"
     sprintf(sss, "The numbers are {d} and {d}\n", 3, 5)
     printf("{s}", sss)
     
@@ -114,6 +115,8 @@ fn main() {
     ss := "Number is " + conv.ftoa(xx, 3) + " - ok."
     yy := conv.atof(conv.ftoa(xx, 3))
     printf("x = {.3f}  y = {.3f}  s = {s}\n", xx, yy, ss)
+    
+    printf("{d}", strtype.zz)
     
     tt := ""
     var (i1, i2, i3: int; st: str)

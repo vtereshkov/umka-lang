@@ -8,17 +8,33 @@
 static int parseModule(Compiler *comp);
 
 
-// identList = ident {"," ident}.
-void parseIdentList(Compiler *comp, IdentName *names, int capacity, int *num)
+// exportMark = ["*"].
+static bool parseExportMark(Compiler *comp)
+{
+    if (comp->lex.tok.kind == TOK_MUL)
+    {
+        lexNext(&comp->lex);
+        return true;
+    }
+    return false;
+}
+
+
+// identList = ident exportMark {"," ident exportMark}.
+static void parseIdentList(Compiler *comp, IdentName *names, bool *exported, int capacity, int *num)
 {
     *num = 0;
     while (1)
     {
-        lexEat(&comp->lex, TOK_IDENT);
+        lexCheck(&comp->lex, TOK_IDENT);
 
         if (*num >= capacity)
             comp->error("Too many identifiers");
-        strcpy(names[(*num)++], comp->lex.tok.name);
+        strcpy(names[*num], comp->lex.tok.name);
+
+        lexNext(&comp->lex);
+        exported[*num] = parseExportMark(comp);
+        (*num)++;
 
         if (comp->lex.tok.kind != TOK_COMMA)
             break;
@@ -28,9 +44,9 @@ void parseIdentList(Compiler *comp, IdentName *names, int capacity, int *num)
 
 
 // typedIdentList = identList ":" type.
-void parseTypedIdentList(Compiler *comp, IdentName *names, int capacity, int *num, Type **type)
+static void parseTypedIdentList(Compiler *comp, IdentName *names, bool *exported, int capacity, int *num, Type **type)
 {
-    parseIdentList(comp, names, capacity, num);
+    parseIdentList(comp, names, exported, capacity, num);
     lexEat(&comp->lex, TOK_COLON);
     *type = parseType(comp, NULL);
 }
@@ -48,12 +64,17 @@ static void parseSignature(Compiler *comp, Signature *sig)
         while (1)
         {
             IdentName paramNames[MAX_PARAMS];
+            bool paramExported[MAX_PARAMS];
             Type *paramType;
             int numParams = 0;
-            parseTypedIdentList(comp, paramNames, MAX_PARAMS, &numParams, &paramType);
+            parseTypedIdentList(comp, paramNames, paramExported, MAX_PARAMS, &numParams, &paramType);
 
             for (int i = 0; i < numParams; i++)
+            {
                 typeAddParam(&comp->types, sig, paramType, paramNames[i]);
+                if (paramExported[i])
+                    comp->error("Parameter %s cannot be exported", paramNames[i]);
+            }
 
             if (comp->lex.tok.kind != TOK_COMMA)
                 break;
@@ -162,12 +183,17 @@ static Type *parseStructType(Compiler *comp)
     while (comp->lex.tok.kind == TOK_IDENT)
     {
         IdentName fieldNames[MAX_FIELDS];
+        bool fieldExported[MAX_FIELDS];
         Type *fieldType;
         int numFields = 0;
-        parseTypedIdentList(comp, fieldNames, MAX_FIELDS, &numFields, &fieldType);
+        parseTypedIdentList(comp, fieldNames, fieldExported, MAX_FIELDS, &numFields, &fieldType);
 
         for (int i = 0; i < numFields; i++)
+        {
             typeAddField(&comp->types, type, fieldType, fieldNames[i]);
+            if (fieldExported[i])
+                comp->error("Field %s cannot be exported", fieldNames[i]);
+        }
 
         lexEat(&comp->lex, TOK_SEMICOLON);
     }
@@ -211,18 +237,20 @@ Type *parseType(Compiler *comp, Ident *ident)
 }
 
 
-// typeDeclItem = ident "=" type.
+// typeDeclItem = ident exportMark "=" type.
 static void parseTypeDeclItem(Compiler *comp)
 {
     lexCheck(&comp->lex, TOK_IDENT);
     IdentName name;
     strcpy(name, comp->lex.tok.name);
+
     lexNext(&comp->lex);
+    bool exported = parseExportMark(comp);
 
     lexEat(&comp->lex, TOK_EQ);
     Type *type = parseType(comp, NULL);
 
-    identAddType(&comp->idents, &comp->modules, &comp->blocks, name, type, true);
+    identAddType(&comp->idents, &comp->modules, &comp->blocks, name, type, exported);
 }
 
 
@@ -246,20 +274,22 @@ void parseTypeDecl(Compiler *comp)
 }
 
 
-// constDeclItem = ident "=" expr.
+// constDeclItem = ident exportMark "=" expr.
 static void parseConstDeclItem(Compiler *comp)
 {
     lexCheck(&comp->lex, TOK_IDENT);
     IdentName name;
     strcpy(name, comp->lex.tok.name);
+
     lexNext(&comp->lex);
+    bool exported = parseExportMark(comp);
 
     lexEat(&comp->lex, TOK_EQ);
     Type *type;
     Const constant;
     parseExpr(comp, &type, &constant);
 
-    identAddConst(&comp->idents, &comp->modules, &comp->blocks, name, type, true, constant);
+    identAddConst(&comp->idents, &comp->modules, &comp->blocks, name, type, exported, constant);
 }
 
 
@@ -287,12 +317,13 @@ void parseConstDecl(Compiler *comp)
 static void parseVarDeclItem(Compiler *comp)
 {
     IdentName varNames[MAX_FIELDS];
+    bool varExported[MAX_FIELDS];
     int numVars = 0;
     Type *varType;
-    parseTypedIdentList(comp, varNames, MAX_FIELDS, &numVars, &varType);
+    parseTypedIdentList(comp, varNames, varExported, MAX_FIELDS, &numVars, &varType);
 
     for (int i = 0; i < numVars; i++)
-        identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, varNames[i], varType, true);
+        identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, varNames[i], varType, varExported[i]);
 
     // Initializer
     if (comp->lex.tok.kind == TOK_EQ)
@@ -342,14 +373,17 @@ void parseShortVarDecl(Compiler *comp)
     lexCheck(&comp->lex, TOK_IDENT);
     IdentName name;
     strcpy(name, comp->lex.tok.name);
+
     lexNext(&comp->lex);
+    bool exported = parseExportMark(comp);
+
     lexEat(&comp->lex, TOK_COLONEQ);
 
-    parseDeclAssignmentStmt(comp, name, comp->blocks.top == 0);
+    parseDeclAssignmentStmt(comp, name, comp->blocks.top == 0, exported);
 }
 
 
-// fnDecl = "fn" ident signature [block].
+// fnDecl = "fn" ident exportMark signature [block].
 void parseFnDecl(Compiler *comp)
 {
     if (comp->blocks.top != 0)
@@ -360,7 +394,9 @@ void parseFnDecl(Compiler *comp)
     lexCheck(&comp->lex, TOK_IDENT);
     IdentName name;
     strcpy(name, comp->lex.tok.name);
+
     lexNext(&comp->lex);
+    bool exported = parseExportMark(comp);
 
     typeAdd(&comp->types, &comp->blocks, TYPE_FN);
     Type *fnType = comp->types.last;
@@ -368,7 +404,7 @@ void parseFnDecl(Compiler *comp)
     parseSignature(comp, &fnType->sig);
 
     Const constant = {.intVal = comp->gen.ip};
-    identAddConst(&comp->idents, &comp->modules, &comp->blocks, name, fnType, true, constant);
+    identAddConst(&comp->idents, &comp->modules, &comp->blocks, name, fnType, exported, constant);
     Ident *fn = comp->idents.last;
 
     if (comp->lex.tok.kind == TOK_LBRACE)

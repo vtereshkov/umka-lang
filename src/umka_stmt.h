@@ -5,7 +5,7 @@
 
 
 void parseAssignmentStmt(Compiler *comp, Type *type, void *initializedVarPtr);
-void parseDeclAssignmentStmt(Compiler *comp, IdentName name, bool constExpr);
+void parseDeclAssignmentStmt(Compiler *comp, IdentName name, bool constExpr, bool exported);
 
 void parseBlock(Compiler *comp, Ident *fn);
 
