@@ -36,46 +36,47 @@ static void compilerDeclareBuiltinIdents(Compiler *comp)
     Const falseConst = {.intVal = false};
     Const nullConst  = {.ptrVal = NULL};
 
-    identAddConst(&comp->idents, &comp->blocks, "true",  comp->boolType, trueConst);
-    identAddConst(&comp->idents, &comp->blocks, "false", comp->boolType, falseConst);
-    identAddConst(&comp->idents, &comp->blocks, "null",  comp->ptrVoidType, nullConst);
+    identAddConst(&comp->idents, &comp->modules, &comp->blocks, "true",  comp->boolType,    true, trueConst);
+    identAddConst(&comp->idents, &comp->modules, &comp->blocks, "false", comp->boolType,    true, falseConst);
+    identAddConst(&comp->idents, &comp->modules, &comp->blocks, "null",  comp->ptrVoidType, true, nullConst);
 
     // Types
-    identAddType(&comp->idents, &comp->blocks,  "void",   comp->voidType);
-    identAddType(&comp->idents, &comp->blocks,  "int8",   comp->int8Type);
-    identAddType(&comp->idents, &comp->blocks,  "int16",  comp->int16Type);
-    identAddType(&comp->idents, &comp->blocks,  "int32",  comp->int32Type);
-    identAddType(&comp->idents, &comp->blocks,  "int",    comp->intType);
-    identAddType(&comp->idents, &comp->blocks,  "uint8",  comp->uint8Type);
-    identAddType(&comp->idents, &comp->blocks,  "uint16", comp->uint16Type);
-    identAddType(&comp->idents, &comp->blocks,  "uint32", comp->uint32Type);
-    identAddType(&comp->idents, &comp->blocks,  "bool",   comp->boolType);
-    identAddType(&comp->idents, &comp->blocks,  "char",   comp->charType);
-    identAddType(&comp->idents, &comp->blocks,  "real32", comp->real32Type);
-    identAddType(&comp->idents, &comp->blocks,  "real",   comp->realType);
+    identAddType(&comp->idents, &comp->modules, &comp->blocks,  "void",     comp->voidType,    true);
+    identAddType(&comp->idents, &comp->modules, &comp->blocks,  "int8",     comp->int8Type,    true);
+    identAddType(&comp->idents, &comp->modules, &comp->blocks,  "int16",    comp->int16Type,   true);
+    identAddType(&comp->idents, &comp->modules, &comp->blocks,  "int32",    comp->int32Type,   true);
+    identAddType(&comp->idents, &comp->modules, &comp->blocks,  "int",      comp->intType,     true);
+    identAddType(&comp->idents, &comp->modules, &comp->blocks,  "uint8",    comp->uint8Type,   true);
+    identAddType(&comp->idents, &comp->modules, &comp->blocks,  "uint16",   comp->uint16Type,  true);
+    identAddType(&comp->idents, &comp->modules, &comp->blocks,  "uint32",   comp->uint32Type,  true);
+    identAddType(&comp->idents, &comp->modules, &comp->blocks,  "bool",     comp->boolType,    true);
+    identAddType(&comp->idents, &comp->modules, &comp->blocks,  "char",     comp->charType,    true);
+    identAddType(&comp->idents, &comp->modules, &comp->blocks,  "real32",   comp->real32Type,  true);
+    identAddType(&comp->idents, &comp->modules, &comp->blocks,  "real",     comp->realType,    true);
 
     // Built-in functions
-    identAddBuiltinFunc(&comp->idents, &comp->blocks, "printf",  comp->intType, BUILTIN_PRINTF);
-    identAddBuiltinFunc(&comp->idents, &comp->blocks, "fprintf", comp->intType, BUILTIN_FPRINTF);
-    identAddBuiltinFunc(&comp->idents, &comp->blocks, "sprintf", comp->intType, BUILTIN_SPRINTF);
-    identAddBuiltinFunc(&comp->idents, &comp->blocks, "scanf",   comp->intType, BUILTIN_SCANF);
-    identAddBuiltinFunc(&comp->idents, &comp->blocks, "fscanf",  comp->intType, BUILTIN_FSCANF);
-    identAddBuiltinFunc(&comp->idents, &comp->blocks, "sscanf",  comp->intType, BUILTIN_SSCANF);
-    identAddBuiltinFunc(&comp->idents, &comp->blocks, "round",   comp->intType,  BUILTIN_ROUND);
-    identAddBuiltinFunc(&comp->idents, &comp->blocks, "trunc",   comp->intType,  BUILTIN_TRUNC);
-    identAddBuiltinFunc(&comp->idents, &comp->blocks, "fabs",    comp->realType, BUILTIN_FABS);
-    identAddBuiltinFunc(&comp->idents, &comp->blocks, "sqrt",    comp->realType, BUILTIN_SQRT);
-    identAddBuiltinFunc(&comp->idents, &comp->blocks, "sin",     comp->realType, BUILTIN_SIN);
-    identAddBuiltinFunc(&comp->idents, &comp->blocks, "cos",     comp->realType, BUILTIN_COS);
-    identAddBuiltinFunc(&comp->idents, &comp->blocks, "atan",    comp->realType, BUILTIN_ATAN);
-    identAddBuiltinFunc(&comp->idents, &comp->blocks, "exp",     comp->realType, BUILTIN_EXP);
-    identAddBuiltinFunc(&comp->idents, &comp->blocks, "log",     comp->realType, BUILTIN_LOG);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "printf",  comp->intType, BUILTIN_PRINTF);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "fprintf", comp->intType, BUILTIN_FPRINTF);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "sprintf", comp->intType, BUILTIN_SPRINTF);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "scanf",   comp->intType, BUILTIN_SCANF);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "fscanf",  comp->intType, BUILTIN_FSCANF);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "sscanf",  comp->intType, BUILTIN_SSCANF);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "round",   comp->intType,  BUILTIN_ROUND);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "trunc",   comp->intType,  BUILTIN_TRUNC);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "fabs",    comp->realType, BUILTIN_FABS);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "sqrt",    comp->realType, BUILTIN_SQRT);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "sin",     comp->realType, BUILTIN_SIN);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "cos",     comp->realType, BUILTIN_COS);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "atan",    comp->realType, BUILTIN_ATAN);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "exp",     comp->realType, BUILTIN_EXP);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "log",     comp->realType, BUILTIN_LOG);
 }
 
 
 void compilerInit(Compiler *comp, char *fileName, int storageCapacity, ErrorFunc compileError)
 {
     storageInit (&comp->storage, storageCapacity);
+    moduleInit  (&comp->modules, compileError);
     blocksInit  (&comp->blocks, compileError);
     lexInit     (&comp->lex, fileName, &comp->storage, compileError);
     typeInit    (&comp->types, compileError);
@@ -84,9 +85,6 @@ void compilerInit(Compiler *comp, char *fileName, int storageCapacity, ErrorFunc
     genInit     (&comp->gen, compileError);
 
     comp->error = compileError;
-
-    compilerDeclareBuiltinTypes(comp);
-    compilerDeclareBuiltinIdents(comp);
 }
 
 
@@ -98,12 +96,19 @@ void compilerFree(Compiler *comp)
     typeFree    (&comp->types, -1);
     lexFree     (&comp->lex);
     blocksFree  (&comp->blocks);
+    moduleFree  (&comp->modules);
     storageFree (&comp->storage);
 }
 
 
 void compilerCompile(Compiler *comp)
 {
+    moduleAdd(&comp->modules, "__universe");
+    comp->blocks.module = 0;
+
+    compilerDeclareBuiltinTypes(comp);
+    compilerDeclareBuiltinIdents(comp);
+
     parseProgram(comp);
 }
 

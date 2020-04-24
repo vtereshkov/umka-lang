@@ -13,6 +13,7 @@
 typedef struct
 {
     Storage storage;
+    Modules modules;
     Blocks blocks;
     Lexer lex;
     Types types;

@@ -1,9 +1,12 @@
-import "strtype.um"
+import (
+    "conv.um"
+    "strtype.um"
+)
 
-fn print(s: strt) {
-    printf("{s}\n", "> " + s)
+fn print(s: strtype.strt) {
+    printf("{s}\n", "> " + s + " " + conv.ftoa(2.71, 3))
 }
 
-fn printref(s: ^strt) {
+fn printref(s: ^strtype.strt) {
     printf("{s}\n", "> " + s^)
 }

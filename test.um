@@ -71,11 +71,11 @@ fn main() {
     greater := "Hello" <= "Hello"
     printf("{d}\n", int(greater))
     
-    print(s)
-    printref(&s)
-    print(t)
-    print(hi + ", I'm glad to see you")
-    print("Privet")
+    prnt.print(s)
+    prnt.printref(&s)
+    prnt.print(t)
+    prnt.print(hi + ", I'm glad to see you")
+    prnt.print("Privet")
     printf("{s}\n", s)
     printf("{s}\n", "Salut")
     
@@ -111,25 +111,24 @@ fn main() {
     printf("{s}", sss)
     
     xx := 3.14
-    ss := "Number is " + ftoa(xx, 3) + " - ok."
-    yy := atof(ftoa(xx, 3))
+    ss := "Number is " + conv.ftoa(xx, 3) + " - ok."
+    yy := conv.atof(conv.ftoa(xx, 3))
     printf("x = {.3f}  y = {.3f}  s = {s}\n", xx, yy, ss)
     
     tt := ""
     var (i1, i2, i3: int; st: str)
-    scanf("{s}", &st)
+    /*scanf("{s}", &st)
     printf("st = {s}\n", st)
     len1 := sscanf(st, "{d},{d},{d}", &i1, &i2, &i3)
     len2 := printf("i = {d},{d},{d}  {d} : OK\n", i1, i2, i3, 7)
     printf("len1 = {d}  len2 = {d}\n", len1, len2)
 
     scanf("{d} {d} {d}", &i1, &i2, &i3)
-    printf("i = {d} {d} {d} : OK\n", i1, i2, i3)  
+    printf("i = {d} {d} {d} : OK\n", i1, i2, i3) */ 
     
 //    for i := 0; i < 10000000; i++ {
 //        printf("i = {d} {d} {d} : OK\n", 10, 11, 12)
-//    }
-        
+//    }        
 }
 
 

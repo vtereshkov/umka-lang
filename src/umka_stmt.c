@@ -73,7 +73,7 @@ void parseDeclAssignmentStmt(Compiler *comp, IdentName name, bool constExpr)
 
     parseExpr(comp, &rightType, rightConstant);
 
-    identAllocVar(&comp->idents, &comp->types, &comp->blocks, name, rightType);
+    identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, name, rightType, true);
     Ident *ident = comp->idents.last;
 
     if (constExpr)                              // Initialize global variable
@@ -114,9 +114,10 @@ void parseSimpleStmt(Compiler *comp)
         parseShortVarDecl(comp);
     else
     {
+        Ident *ident = parseQualIdent(comp);
         Type *type;
         bool isVar, isCall;
-        parseDesignator(comp, &type, NULL, &isVar, &isCall);
+        parseDesignator(comp, ident, &type, NULL, &isVar, &isCall);
 
         TokenKind op = comp->lex.tok.kind;
         if (op == TOK_EQ || lexShortAssignment(op) != TOK_NONE)
@@ -398,7 +399,7 @@ void parseReturnStmt(Compiler *comp)
     // Copy structure to __result
     if (typeStructured(sig->resultType[0]))
     {
-        Ident *__result = identAssertFind(&comp->idents, &comp->blocks, "__result");
+        Ident *__result = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, "__result");
 
         doPushVarPtr(comp, __result);
         genDeref(&comp->gen, TYPE_PTR);
@@ -471,7 +472,7 @@ void parseBlock(Compiler *comp, Ident *fn)
 
         genEnterFrameStub(&comp->gen);
         for (int i = 0; i < fn->type->sig.numParams; i++)
-            identAllocParam(&comp->idents, &comp->types, &comp->blocks, &fn->type->sig, i);
+            identAllocParam(&comp->idents, &comp->types, &comp->modules, &comp->blocks, &fn->type->sig, i);
 
         comp->gen.returns = &returns;
         genGotosProlog(&comp->gen, comp->gen.returns);

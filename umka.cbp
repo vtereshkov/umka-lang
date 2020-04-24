@@ -21,7 +21,7 @@
 				<Option object_output="obj/Release/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="nbody.um" />
+				<Option parameters="test.um" />
 				<Compiler>
 					<Add option="-O2" />
 					<Add option="-pg" />

@@ -5,7 +5,7 @@
 #include "umka_decl.h"
 
 
-static void parseModule(Compiler *comp);
+static int parseModule(Compiler *comp);
 
 
 // identList = ident {"," ident}.
@@ -32,7 +32,7 @@ void parseTypedIdentList(Compiler *comp, IdentName *names, int capacity, int *nu
 {
     parseIdentList(comp, names, capacity, num);
     lexEat(&comp->lex, TOK_COLON);
-    *type = parseType(comp);
+    *type = parseType(comp, NULL);
 }
 
 
@@ -67,7 +67,7 @@ static void parseSignature(Compiler *comp, Signature *sig)
     if (comp->lex.tok.kind == TOK_COLON)
     {
         lexNext(&comp->lex);
-        sig->resultType[sig->numResults++] = parseType(comp);
+        sig->resultType[sig->numResults++] = parseType(comp, NULL);
     }
     else
         sig->resultType[sig->numResults++] = comp->voidType;
@@ -82,7 +82,7 @@ static void parseSignature(Compiler *comp, Signature *sig)
 static Type *parsePtrType(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_CARET);
-    Type *type = parseType(comp);
+    Type *type = parseType(comp, NULL);
     return typeAddPtrTo(&comp->types, &comp->blocks, type);
 }
 
@@ -110,7 +110,7 @@ static Type *parseArrayType(Compiler *comp)
 
     lexEat(&comp->lex, TOK_RBRACKET);
 
-    Type *baseType = parseType(comp);
+    Type *baseType = parseType(comp, NULL);
 
     Type *type = typeAdd(&comp->types, &comp->blocks, TYPE_ARRAY);
     type->base = baseType;
@@ -186,19 +186,20 @@ static Type *parseFnType(Compiler *comp)
 }
 
 
-// type = ident | ptrType | arrayType | structType | fnType.
-Type *parseType(Compiler *comp)
+// type = qualIdent | ptrType | arrayType | structType | fnType.
+Type *parseType(Compiler *comp, Ident *ident)
 {
+    if (ident)
+    {
+        if (ident->kind != IDENT_TYPE)
+            comp->error("Type expected");
+        lexNext(&comp->lex);
+        return ident->type;
+    }
+
     switch (comp->lex.tok.kind)
     {
-        case TOK_IDENT:
-        {
-            Ident *ident = identAssertFind(&comp->idents, &comp->blocks, comp->lex.tok.name);
-            if (ident->kind != IDENT_TYPE)
-                comp->error("Type expected");
-            lexNext(&comp->lex);
-            return ident->type;
-        }
+        case TOK_IDENT:     return parseType(comp, parseQualIdent(comp));
         case TOK_CARET:     return parsePtrType(comp);
         case TOK_LBRACKET:  return parseArrayType(comp);
         case TOK_STR:       return parseStrType(comp);
@@ -219,9 +220,9 @@ static void parseTypeDeclItem(Compiler *comp)
     lexNext(&comp->lex);
 
     lexEat(&comp->lex, TOK_EQ);
-    Type *type = parseType(comp);
+    Type *type = parseType(comp, NULL);
 
-    identAddType(&comp->idents, &comp->blocks, name, type);
+    identAddType(&comp->idents, &comp->modules, &comp->blocks, name, type, true);
 }
 
 
@@ -258,7 +259,7 @@ static void parseConstDeclItem(Compiler *comp)
     Const constant;
     parseExpr(comp, &type, &constant);
 
-    identAddConst(&comp->idents, &comp->blocks, name, type, constant);
+    identAddConst(&comp->idents, &comp->modules, &comp->blocks, name, type, true, constant);
 }
 
 
@@ -291,7 +292,7 @@ static void parseVarDeclItem(Compiler *comp)
     parseTypedIdentList(comp, varNames, MAX_FIELDS, &numVars, &varType);
 
     for (int i = 0; i < numVars; i++)
-        identAllocVar(&comp->idents, &comp->types, &comp->blocks, varNames[i], varType);
+        identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, varNames[i], varType, true);
 
     // Initializer
     if (comp->lex.tok.kind == TOK_EQ)
@@ -367,7 +368,7 @@ void parseFnDecl(Compiler *comp)
     parseSignature(comp, &fnType->sig);
 
     Const constant = {.intVal = comp->gen.ip};
-    identAddConst(&comp->idents, &comp->blocks, name, fnType, constant);
+    identAddConst(&comp->idents, &comp->modules, &comp->blocks, name, fnType, true, constant);
     Ident *fn = comp->idents.last;
 
     if (comp->lex.tok.kind == TOK_LBRACE)
@@ -414,14 +415,24 @@ static void parseImportItem(Compiler *comp)
 {
     lexCheck(&comp->lex, TOK_STRLITERAL);
 
-    Lexer oldLex = comp->lex;
-    lexInit(&comp->lex, comp->lex.tok.strVal, &comp->storage, comp->error);
+    int importedModule = moduleFindByPath(&comp->modules, comp->lex.tok.strVal);
+    if (importedModule < 0)
+    {
+        // Save context
+        int currentModule = comp->blocks.module;
+        Lexer currentLex = comp->lex;
+        lexInit(&comp->lex, comp->lex.tok.strVal, &comp->storage, comp->error);
 
-    lexNext(&comp->lex);
-    parseModule(comp);
+        lexNext(&comp->lex);
+        importedModule = parseModule(comp);
 
-    lexFree(&comp->lex);
-    comp->lex = oldLex;
+        // Restore context
+        lexFree(&comp->lex);
+        comp->lex = currentLex;
+        comp->blocks.module = currentModule;
+    }
+
+    comp->modules.module[comp->blocks.module]->imports[importedModule] = true;
     lexNext(&comp->lex);
 }
 
@@ -447,14 +458,19 @@ static void parseImport(Compiler *comp)
 
 
 // module = [import ";"] decls.
-static void parseModule(Compiler *comp)
+static int parseModule(Compiler *comp)
 {
+    moduleAdd(&comp->modules, comp->lex.fileName);
+    comp->blocks.module = comp->modules.numModules - 1;
+
     if (comp->lex.tok.kind == TOK_IMPORT)
     {
+
         parseImport(comp);
         lexEat(&comp->lex, TOK_SEMICOLON);
     }
     parseDecls(comp);
+    return comp->blocks.module;
 }
 
 

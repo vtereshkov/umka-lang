@@ -82,6 +82,24 @@ void doApplyOperator(Compiler *comp, Type **type, Type **rightType, Const *const
 }
 
 
+// qualIdent = [ident "."] ident.
+Ident *parseQualIdent(Compiler *comp)
+{
+    lexCheck(&comp->lex, TOK_IDENT);
+    int module = moduleFind(&comp->modules, comp->lex.tok.name);
+    if (module >= 0)
+    {
+        lexNext(&comp->lex);
+        lexEat(&comp->lex, TOK_PERIOD);
+        lexCheck(&comp->lex, TOK_IDENT);
+    }
+    else
+        module = comp->blocks.module;
+
+    return identAssertFind(&comp->idents, &comp->modules, &comp->blocks, module, comp->lex.tok.name);
+}
+
+
 static void parseBuiltinIOCall(Compiler *comp, Type **type, Const *constant, BuiltinFunc builtin)
 {
     lexEat(&comp->lex, TOK_LPAR);
@@ -177,7 +195,7 @@ static void parseBuiltinMathCall(Compiler *comp, Type **type, Const *constant, B
 }
 
 
-// builtinCall = ident "(" [expr {"," expr}] ")".
+// builtinCall = qualIdent "(" [expr {"," expr}] ")".
 static void parseBuiltinCall(Compiler *comp, Type **type, Const *constant, BuiltinFunc builtin)
 {
     switch (builtin)
@@ -268,12 +286,9 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
 }
 
 
-// primary     = ident | builtinCall.
-static void parsePrimary(Compiler *comp, Type **type, Const *constant, bool *isVar, bool *isCall)
+// primary = qualIdent | builtinCall.
+static void parsePrimary(Compiler *comp, Ident *ident, Type **type, Const *constant, bool *isVar, bool *isCall)
 {
-    lexCheck(&comp->lex, TOK_IDENT);
-    Ident *ident = identAssertFind(&comp->idents, &comp->blocks, comp->lex.tok.name);
-
     switch (ident->kind)
     {
         case IDENT_CONST:
@@ -460,9 +475,9 @@ static void parseSelectors(Compiler *comp, Type **type, Const *constant, bool *i
 
 
 // designator = primary selectors.
-void parseDesignator(Compiler *comp, Type **type, Const *constant, bool *isVar, bool *isCall)
+void parseDesignator(Compiler *comp, Ident *ident, Type **type, Const *constant, bool *isVar, bool *isCall)
 {
-    parsePrimary(comp, type, constant, isVar, isCall);
+    parsePrimary(comp, ident, type, constant, isVar, isCall);
     parseSelectors(comp, type, constant, isVar, isCall);
 }
 
@@ -544,9 +559,9 @@ void parseCompositeLiteral(Compiler *comp, Type **type, Const *constant)
 
 
 // typeCast = type "(" expr ")".
-static void parseTypeCastOrCompositeLiteral(Compiler *comp, Type **type, Const *constant)
+static void parseTypeCastOrCompositeLiteral(Compiler *comp, Ident *ident, Type **type, Const *constant)
 {
-    *type = parseType(comp);
+    *type = parseType(comp, ident);
 
     if (comp->lex.tok.kind == TOK_LPAR)
     {
@@ -570,16 +585,16 @@ static void parseFactor(Compiler *comp, Type **type, Const *constant)
     {
         case TOK_IDENT:
         {
-            Ident *ident = identAssertFind(&comp->idents, &comp->blocks, comp->lex.tok.name);
+            Ident *ident = parseQualIdent(comp);
             if (ident->kind == IDENT_TYPE)
-                parseTypeCastOrCompositeLiteral(comp, type, constant);
+                parseTypeCastOrCompositeLiteral(comp, ident, type, constant);
             else
             {
                 // A designator that isVar is always an addressable quantity
                 // (a structured type or a pointer to a value type)
 
                 bool isVar, isCall;
-                parseDesignator(comp, type, constant, &isVar, &isCall);
+                parseDesignator(comp, ident, type, constant, &isVar, &isCall);
                 if (isVar)
                 {
                     if (!typeStructured(*type))
@@ -646,7 +661,7 @@ static void parseFactor(Compiler *comp, Type **type, Const *constant)
         case TOK_CARET:
         case TOK_LBRACKET:
         {
-            parseTypeCastOrCompositeLiteral(comp, type, constant);
+            parseTypeCastOrCompositeLiteral(comp, NULL, type, constant);
             break;
         }
 
@@ -675,8 +690,9 @@ static void parseFactor(Compiler *comp, Type **type, Const *constant)
 
             lexNext(&comp->lex);
 
+            Ident *ident = parseQualIdent(comp);
             bool isVar, isCall;
-            parseDesignator(comp, type, constant, &isVar, &isCall);
+            parseDesignator(comp, ident, type, constant, &isVar, &isCall);
             if (!isVar)
                 comp->error("Unable to take address");
 
