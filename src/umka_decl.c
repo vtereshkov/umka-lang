@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <string.h>
 
 #include "umka_expr.h"
@@ -451,13 +452,17 @@ static void parseImportItem(Compiler *comp)
 {
     lexCheck(&comp->lex, TOK_STRLITERAL);
 
-    int importedModule = moduleFindByPath(&comp->modules, comp->lex.tok.strVal);
+    char path[DEFAULT_STR_LEN + 1];
+    char *folder = comp->modules.module[comp->blocks.module]->folder;
+    sprintf(path, "%s%s", folder, comp->lex.tok.strVal);
+
+    int importedModule = moduleFindByPath(&comp->modules, path);
     if (importedModule < 0)
     {
         // Save context
         int currentModule = comp->blocks.module;
         Lexer currentLex = comp->lex;
-        lexInit(&comp->lex, comp->lex.tok.strVal, &comp->storage, comp->error);
+        lexInit(&comp->lex, path, &comp->storage, comp->error);
 
         lexNext(&comp->lex);
         importedModule = parseModule(comp);

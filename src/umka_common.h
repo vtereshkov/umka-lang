@@ -30,7 +30,7 @@ typedef struct
 
 typedef struct
 {
-    char name[DEFAULT_STR_LEN + 1], path[DEFAULT_STR_LEN + 1];
+    char path[DEFAULT_STR_LEN + 1], folder[DEFAULT_STR_LEN + 1], name[DEFAULT_STR_LEN + 1];
     int hash, pathHash;
     bool imports[MAX_MODULES];
 } Module;
@@ -69,7 +69,6 @@ void moduleFree         (Modules *modules);
 int  moduleFind         (Modules *modules, char *name);
 int  moduleAssertFind   (Modules *modules, char *name);
 int  moduleFindByPath   (Modules *modules, char *path);
-void moduleNameFromPath (Modules *modules, char *path, char *name);
 void moduleAdd          (Modules *modules, char *path);
 
 void blocksInit (Blocks *blocks, ErrorFunc error);

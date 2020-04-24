@@ -64,7 +64,7 @@ int moduleFindByPath(Modules *modules, char *path)
 }
 
 
-void moduleNameFromPath(Modules *modules, char *path, char *name)
+static void moduleNameFromPath(Modules *modules, char *path, char *folder, char *name)
 {
     char *slash = strrchr(path, '/');
     char *start = slash ? (slash + 1) : path;
@@ -75,14 +75,17 @@ void moduleNameFromPath(Modules *modules, char *path, char *name)
     if (stop <= start)
         modules->error("Illegal module path %s", path);
 
+    strncpy(folder, path, start - path);
     strncpy(name, start, stop - start);
 }
 
 
 void moduleAdd(Modules *modules, char *path)
 {
-    char name[DEFAULT_STR_LEN + 1];
-    moduleNameFromPath(modules, path, name);
+    char folder[DEFAULT_STR_LEN + 1] = "";
+    char name  [DEFAULT_STR_LEN + 1] = "";
+
+    moduleNameFromPath(modules, path, folder, name);
 
     int res = moduleFind(modules, name);
     if (res >= 0)
@@ -90,8 +93,9 @@ void moduleAdd(Modules *modules, char *path)
 
     Module *module = malloc(sizeof(Module));
 
-    strcpy(module->name, name);
     strcpy(module->path, path);
+    strcpy(module->folder, folder);
+    strcpy(module->name, name);
 
     module->hash = hash(name);
     module->pathHash = hash(path);

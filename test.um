@@ -107,7 +107,7 @@ fn main() {
     sscanf(num, "{lf}", &val)
     printf("{8.3f}\n", val)
     
-    var sss*: str = "HHH"
+    var sss: str = "HHH"
     sprintf(sss, "The numbers are {d} and {d}\n", 3, 5)
     printf("{s}", sss)
     
