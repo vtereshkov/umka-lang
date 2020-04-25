@@ -118,6 +118,21 @@ fn main() {
     
     printf("{d}", strtype.zz)
     
+    type (
+        point = ^pointrec
+        pt = ^point
+        
+        pointrec = struct {
+            x, y: int
+            next: point
+        }
+    )
+    
+    qq := pointrec{x: 24, y: 25, next: point(0)}
+    p := pointrec{x: 56, y: 57, next: &qq}
+    
+    prnt.print("\nnext is " + conv.ftoa(p.next.x, 0) + ", " + conv.ftoa(p.next.y, 0) + "\n")
+    
     tt := ""
     var (i1, i2, i3: int; st: str)
     /*scanf("{s}", &st)

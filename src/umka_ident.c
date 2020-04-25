@@ -76,13 +76,28 @@ static void identAdd(Idents *idents, Modules *modules, Blocks *blocks, IdentKind
     Ident *ident = identFind(idents, modules, blocks, blocks->module, name);
 
     if (ident && ident->block == blocks->item[blocks->top].block)
+    {
+        // Forward declaration resolution
+        if (ident->kind == IDENT_TYPE && ident->type->kind == TYPE_FORWARD &&
+            kind == IDENT_TYPE && type->kind != TYPE_FORWARD &&
+            ident->exported == exported &&
+            strcmp(ident->type->forwardIdent->name, name) == 0)
+        {
+            *ident->type = *type;
+            return;
+        }
+
         idents->error("Duplicate identifier %s", name);
+    }
 
     if (exported && blocks->top != 0)
         idents->error("Local identifier %s cannot be exported", name);
 
     if (kind == IDENT_CONST || kind == IDENT_VAR)
     {
+        if (type->kind == TYPE_FORWARD)
+            idents->error("Unresolved forward type declaration for %s", name);
+
         if (type->kind == TYPE_VOID)
             idents->error("Void variable or constant %s is not allowed", name);
 

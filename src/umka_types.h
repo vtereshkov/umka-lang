@@ -4,9 +4,11 @@
 #include "umka_common.h"
 #include "umka_lexer.h"
 
+
 typedef enum
 {
     TYPE_NONE,
+    TYPE_FORWARD,
     TYPE_VOID,
     TYPE_INT8,
     TYPE_INT16,
@@ -71,6 +73,7 @@ typedef struct tagType
     {
         Field *field[MAX_FIELDS];
         Signature sig;
+        struct tagIdent *forwardIdent;
     };
     struct tagType *next;
 } Type;
@@ -102,6 +105,8 @@ bool typeAssertCompatible(Types *types, Type *left, Type *right);
 
 bool typeValidOperator(Type *type, TokenKind op);
 bool typeAssertValidOperator(Types *types, Type *type, TokenKind op);
+
+bool typeAssertForwardResolved(Types *types);
 
 Field *typeFindField(Type *structType, char *name);
 Field *typeAssertFindField(Types *types, Type *structType, char *name);

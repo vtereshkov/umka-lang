@@ -104,7 +104,37 @@ static void parseSignature(Compiler *comp, Signature *sig)
 static Type *parsePtrType(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_CARET);
-    Type *type = parseType(comp, NULL);
+    Type *type;
+
+    // Forward declaration
+    bool forward = false;
+    if (comp->lex.tok.kind == TOK_IDENT)
+    {
+        int module = moduleFind(&comp->modules, comp->lex.tok.name);
+        if (module < 0)
+        {
+            Ident *ident = identFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, comp->lex.tok.name);
+            if (!ident)
+            {
+                IdentName name;
+                strcpy(name, comp->lex.tok.name);
+
+                lexNext(&comp->lex);
+                bool exported = parseExportMark(comp);
+
+                type = typeAdd(&comp->types, &comp->blocks, TYPE_FORWARD);
+                identAddType(&comp->idents, &comp->modules, &comp->blocks, name, type, exported);
+                type->forwardIdent = comp->idents.last;
+
+                forward = true;
+            }
+        }
+    }
+
+    // Conventional declaration
+    if (!forward)
+        type = parseType(comp, NULL);
+
     return typeAddPtrTo(&comp->types, &comp->blocks, type);
 }
 
@@ -272,6 +302,8 @@ void parseTypeDecl(Compiler *comp)
     }
     else
         parseTypeDeclItem(comp);
+
+    typeAssertForwardResolved(&comp->types);
 }
 
 

@@ -4,11 +4,13 @@
 
 #include "umka_vm.h"
 #include "umka_types.h"
+#include "umka_ident.h"
 
 
 static char *spelling [] =
 {
     "none",
+    "forward",
     "void",
     "int8",
     "int16",
@@ -80,11 +82,12 @@ Type *typeAdd(Types *types, Blocks *blocks, TypeKind kind)
 {
     Type *type = malloc(sizeof(Type));
 
-    type->kind     = kind;
-    type->block    = blocks->item[blocks->top].block;
-    type->base     = NULL;
-    type->numItems = 0;
-    type->next     = NULL;
+    type->kind          = kind;
+    type->block         = blocks->item[blocks->top].block;
+    type->base          = NULL;
+    type->numItems      = 0;
+    type->forwardIdent  = NULL;
+    type->next          = NULL;
 
     // Add to list
     if (!types->first)
@@ -373,6 +376,18 @@ bool typeAssertValidOperator(Types *types, Type *type, TokenKind op)
 }
 
 
+bool typeAssertForwardResolved(Types *types)
+{
+    for (Type *type = types->first; type; type = type->next)
+        if (type->kind == TYPE_FORWARD)
+        {
+            types->error("Unresolved forward declaration of %s", (Ident *)(type->forwardIdent)->name);
+            return false;
+        }
+    return true;
+}
+
+
 Field *typeFindField(Type *structType, char *name)
 {
     if (structType->kind == TYPE_STRUCT)
@@ -400,6 +415,9 @@ void typeAddField(Types *types, Type *structType, Type *fieldType, char *name)
     Field *field = typeFindField(structType, name);
     if (field)
         types->error("Duplicate field %s", name);
+
+    if (fieldType->kind == TYPE_FORWARD)
+        types->error("Unresolved forward type declaration for field %s", name);
 
     if (fieldType->kind == TYPE_VOID)
         types->error("Void field %s is not allowed", name);
