@@ -148,6 +148,8 @@ fn main() {
     
     printf("{d}\n", year2)
     
+    std.println("First is " + std.itoa(std.atoi("2") + 2) + ", second is " + std.ftoa(sqrt(std.atof("2.56")), 3) + ".")
+    
 /*
     tt := ""
     var (i1, i2, i3: int; st: str)
@@ -163,6 +165,15 @@ fn main() {
 //    for i := 0; i < 10000000; i++ {
 //        printf("i = {d} {d} {d} : OK\n", 10, 11, 12)
 //    } 
+
+    for i := 0; i < 10; i++ {
+        std.println("Time = " + std.itoa(std.time()))
+    }
+
+    std.srand(std.time())
+    for i := 0; i < 10; i++ {
+        std.println("Random = " + std.itoa(std.rand()))
+    }
       
 }
 

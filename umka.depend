@@ -123,7 +123,7 @@
 	<stdint.h>
 	<stdbool.h>
 
-1587854056 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_compiler.c
+1587858640 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_compiler.c
 	<stddef.h>
 	<stdio.h>
 	"umka_compiler.h"
@@ -238,10 +238,11 @@
 	<math.h>
 	"umka_vm.h"
 
-1587854014 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_runtime.c
+1587858592 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_runtime.c
 	<stdio.h>
+	<time.h>
 	"umka_runtime.h"
 
-1587854027 c:\users\vasiliy\desktop\umka-lang-master\src\umka_runtime.h
+1587858619 c:\users\vasiliy\desktop\umka-lang-master\src\umka_runtime.h
 	"umka_vm.h"
 

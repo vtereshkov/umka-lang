@@ -82,6 +82,7 @@ static void compilerDeclareExternalFuncs(Compiler *comp)
     externalAdd(&comp->externals, "rtlfwrite",  &rtlfwrite);
     externalAdd(&comp->externals, "rtlfseek",   &rtlfseek);
     externalAdd(&comp->externals, "rtlremove",  &rtlremove);
+    externalAdd(&comp->externals, "rtltime",    &rtltime);
 }
 
 

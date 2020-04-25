@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <time.h>
 
 #include "umka_runtime.h"
 
@@ -61,5 +62,11 @@ void rtlremove(Slot *params, Slot *result)
 {
     char *name = params[0].ptrVal;
     result->intVal = remove(name);
+}
+
+
+void rtltime(Slot *params, Slot *result)
+{
+    result->intVal = time(NULL);
 }
 

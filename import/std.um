@@ -1,6 +1,7 @@
 // Umka standard library
 
-// I/O
+// File I/O
+
 type file* = ^void
 
 const (
@@ -26,3 +27,51 @@ fn fseek*    (f: file, offset, origin: int): int {return rtlfseek(f, offset, ori
 
 fn rtlremove (name: ^str): int
 fn remove*   (name: str): int {return rtlremove(&name)}
+
+// I/O utilities
+
+fn println*(s: str): int {return printf("{s}\n", s)}
+fn fprintln*(f: file, s: str): int {return fprintf(f, "{s}\n", s)}
+
+// Conversions
+
+fn atoi*(s: str): int {
+    var x: int
+    sscanf(s, "{lld}", &x)
+    return x
+}
+
+fn atof*(s: str): real {
+    var x: real
+    sscanf(s, "{lf}", &x)
+    return x
+}
+
+fn itoa*(x: int): str {
+    var s: str
+    sprintf(s, "{lld}", x)
+    return s
+}
+
+fn ftoa*(x: real, decimals: int): str {
+    var fmt, s: str
+    sprintf(fmt, "/{.{d}lf/}", decimals)
+    sprintf(s, fmt, x)
+    return s
+}
+
+// Random numbers
+
+randSeed := 0
+
+fn srand*(seed: int) {randSeed = seed}
+
+fn rand*(): int {
+    randSeed = ((randSeed * 1103515245) + 12345) & 0x7FFFFFFF
+    return randSeed
+}
+
+// Timer
+
+fn rtltime(): int
+fn time*(): int {return rtltime()}
