@@ -123,8 +123,7 @@ static Type *parsePtrType(Compiler *comp)
                 bool exported = parseExportMark(comp);
 
                 type = typeAdd(&comp->types, &comp->blocks, TYPE_FORWARD);
-                identAddType(&comp->idents, &comp->modules, &comp->blocks, name, type, exported);
-                type->forwardIdent = comp->idents.last;
+                type->forwardIdent = identAddType(&comp->idents, &comp->modules, &comp->blocks, name, type, exported);
 
                 forward = true;
             }
@@ -355,8 +354,9 @@ static void parseVarDeclItem(Compiler *comp)
     Type *varType;
     parseTypedIdentList(comp, varNames, varExported, MAX_FIELDS, &numVars, &varType);
 
+    Ident *var;
     for (int i = 0; i < numVars; i++)
-        identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, varNames[i], varType, varExported[i]);
+        var = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, varNames[i], varType, varExported[i]);
 
     // Initializer
     if (comp->lex.tok.kind == TOK_EQ)
@@ -364,15 +364,14 @@ static void parseVarDeclItem(Compiler *comp)
         if (numVars != 1)
             comp->error("Unable to initialize multiple variables");
 
-        Ident *ident = comp->idents.last;
-        Type *designatorType = typeAddPtrTo(&comp->types, &comp->blocks, ident->type);
+        Type *designatorType = typeAddPtrTo(&comp->types, &comp->blocks, var->type);
 
         void *initializedVarPtr = NULL;
 
         if (comp->blocks.top == 0)          // Globals are initialized with constant expressions
-            initializedVarPtr = ident->ptr;
+            initializedVarPtr = var->ptr;
         else                                // Locals are assigned to
-            doPushVarPtr(comp, ident);
+            doPushVarPtr(comp, var);
 
         lexNext(&comp->lex);
         parseAssignmentStmt(comp, designatorType, initializedVarPtr);
@@ -437,13 +436,12 @@ void parseFnDecl(Compiler *comp)
     parseSignature(comp, &fnType->sig);
 
     Const constant = {.intVal = comp->gen.ip};
-    identAddConst(&comp->idents, &comp->modules, &comp->blocks, name, fnType, exported, constant);
-    Ident *fn = comp->idents.last;
+    Ident *fn = identAddConst(&comp->idents, &comp->modules, &comp->blocks, name, fnType, exported, constant);
 
     if (comp->lex.tok.kind == TOK_LBRACE)
         parseBlock(comp, fn);
     else
-        fn->forward = true;
+        parsePrototype(comp, fn);
 }
 
 
@@ -533,8 +531,7 @@ static void parseImport(Compiler *comp)
 // module = [import ";"] decls.
 static int parseModule(Compiler *comp)
 {
-    moduleAdd(&comp->modules, comp->lex.fileName);
-    comp->blocks.module = comp->modules.numModules - 1;
+    comp->blocks.module = moduleAdd(&comp->modules, comp->lex.fileName);
 
     if (comp->lex.tok.kind == TOK_IMPORT)
     {
@@ -555,6 +552,8 @@ void parseProgram(Compiler *comp)
     lexNext(&comp->lex);
     parseModule(comp);
 
-    if (!comp->gen.entryPointDefined)
+    identAssertPrototypesResolved(&comp->idents);
+
+    if (!comp->gen.mainDefined)
         comp->error("main() is not defined");
 }

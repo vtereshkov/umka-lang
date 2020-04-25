@@ -20,7 +20,7 @@ typedef struct
     int stack[MAX_BLOCK_NESTING];
     int top;
     Gotos *breaks, *continues, *returns;
-    bool entryPointDefined;
+    bool mainDefined;
     ErrorFunc error;
 } CodeGen;
 
@@ -91,7 +91,7 @@ void genShortCircuitEpilog(CodeGen *gen);
 void genEnterFrameStub (CodeGen *gen);
 void genLeaveFrameFixup(CodeGen *gen, int localVarSize);
 
-void genEntryPoint(CodeGen *gen);
+void genEntryPoint(CodeGen *gen, int start);
 
 void genGotosProlog (CodeGen *gen, Gotos *gotos);
 void genGotosAddStub(CodeGen *gen, Gotos *gotos);

@@ -466,8 +466,13 @@ void parseBlock(Compiler *comp, Ident *fn)
     {
         if (strcmp(fn->name, "main") == 0)
         {
-            genEntryPoint(&comp->gen);
+            genEntryPoint(&comp->gen, 0);
             mainFn = true;
+        }
+        else if (fn->prototypeOffset >= 0)
+        {
+            genEntryPoint(&comp->gen, fn->prototypeOffset);
+            fn->prototypeOffset = -1;
         }
 
         genEnterFrameStub(&comp->gen);
@@ -502,7 +507,12 @@ void parseBlock(Compiler *comp, Ident *fn)
 }
 
 
-
+// prototype = .
+void parsePrototype(Compiler *comp, Ident *fn)
+{
+    fn->prototypeOffset = fn->offset;
+    genNop(&comp->gen);
+}
 
 
 

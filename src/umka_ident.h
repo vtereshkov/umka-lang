@@ -22,12 +22,13 @@ typedef struct tagIdent
     int hash;
     Type *type;
     int module, block;                  // Global identifiers are in block 0
-    bool forward, exported, inHeap;
+    bool exported, inHeap;
+    int prototypeOffset;                // For function prototypes
     union
     {
         BuiltinFunc builtin;            // For built-in functions
-        void *ptr;                      // For functions and global variables
-        int offset;                     // For local variables
+        void *ptr;                      // For global variables
+        int offset;                     // For functions (code offset) or local variables (stack offset)
         Const constant;                 // For constants
     };
     struct tagIdent *next;
@@ -44,18 +45,19 @@ typedef struct
 void identInit(Idents *idents, ErrorFunc error);
 void identFree(Idents *idents, int startBlock /* < 0 to free in all blocks*/);
 
-Ident *identFind        (Idents *idents, Modules *modules, Blocks *blocks, int module, char *name);
-Ident *identAssertFind  (Idents *idents, Modules *modules, Blocks *blocks, int module, char *name);
+Ident *identFind          (Idents *idents, Modules *modules, Blocks *blocks, int module, char *name);
+Ident *identAssertFind    (Idents *idents, Modules *modules, Blocks *blocks, int module, char *name);
 
-void identAddConst      (Idents *idents, Modules *modules, Blocks *blocks, char *name, Type *type, bool exported, Const constant);
-void identAddGlobalVar  (Idents *idents, Modules *modules, Blocks *blocks, char *name, Type *type, bool exported, void *ptr);
-void identAddLocalVar   (Idents *idents, Modules *modules, Blocks *blocks, char *name, Type *type, bool exported, int offset);
-void identAddType       (Idents *idents, Modules *modules, Blocks *blocks, char *name, Type *type, bool exported);
-void identAddBuiltinFunc(Idents *idents, Modules *modules, Blocks *blocks, char *name, Type *type, BuiltinFunc builtin);
+Ident *identAddConst      (Idents *idents, Modules *modules, Blocks *blocks, char *name, Type *type, bool exported, Const constant);
+Ident *identAddGlobalVar  (Idents *idents, Modules *modules, Blocks *blocks, char *name, Type *type, bool exported, void *ptr);
+Ident *identAddLocalVar   (Idents *idents, Modules *modules, Blocks *blocks, char *name, Type *type, bool exported, int offset);
+Ident *identAddType       (Idents *idents, Modules *modules, Blocks *blocks, char *name, Type *type, bool exported);
+Ident *identAddBuiltinFunc(Idents *idents, Modules *modules, Blocks *blocks, char *name, Type *type, BuiltinFunc builtin);
 
-int  identAllocStack    (Idents *idents, Blocks *blocks, int size);
-void identAllocVar      (Idents *idents, Types *types, Modules *modules, Blocks *blocks, char *name, Type *type, bool exported);
-void identAllocParam    (Idents *idents, Types *types, Modules *modules, Blocks *blocks, Signature *sig, int index);
+int    identAllocStack    (Idents *idents, Blocks *blocks, int size);
+Ident *identAllocVar      (Idents *idents, Types *types, Modules *modules, Blocks *blocks, char *name, Type *type, bool exported);
+Ident *identAllocParam    (Idents *idents, Types *types, Modules *modules, Blocks *blocks, Signature *sig, int index);
 
+bool identAssertPrototypesResolved(Idents *idents);
 
 #endif // UMKA_IDENT_H_INCLUDED

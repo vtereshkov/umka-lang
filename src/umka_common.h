@@ -69,7 +69,7 @@ void moduleFree         (Modules *modules);
 int  moduleFind         (Modules *modules, char *name);
 int  moduleAssertFind   (Modules *modules, char *name);
 int  moduleFindByPath   (Modules *modules, char *path);
-void moduleAdd          (Modules *modules, char *path);
+int  moduleAdd          (Modules *modules, char *path);
 
 void blocksInit (Blocks *blocks, ErrorFunc error);
 void blocksFree (Blocks *blocks);

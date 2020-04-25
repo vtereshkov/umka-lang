@@ -80,7 +80,7 @@ static void moduleNameFromPath(Modules *modules, char *path, char *folder, char 
 }
 
 
-void moduleAdd(Modules *modules, char *path)
+int moduleAdd(Modules *modules, char *path)
 {
     char folder[DEFAULT_STR_LEN + 1] = "";
     char name  [DEFAULT_STR_LEN + 1] = "";
@@ -103,7 +103,8 @@ void moduleAdd(Modules *modules, char *path)
     for (int i = 0; i < MAX_MODULES; i++)
         module->imports[i] = false;
 
-    modules->module[modules->numModules++] = module;
+    modules->module[modules->numModules] = module;
+    return modules->numModules++;
 }
 
 

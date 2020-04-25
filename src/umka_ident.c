@@ -71,20 +71,31 @@ Ident *identAssertFind(Idents *idents, Modules *modules, Blocks *blocks, int mod
 }
 
 
-static void identAdd(Idents *idents, Modules *modules, Blocks *blocks, IdentKind kind, char *name, Type *type, bool exported)
+static Ident *identAdd(Idents *idents, Modules *modules, Blocks *blocks, IdentKind kind, char *name, Type *type, bool exported)
 {
     Ident *ident = identFind(idents, modules, blocks, blocks->module, name);
 
     if (ident && ident->block == blocks->item[blocks->top].block)
     {
-        // Forward declaration resolution
+        // Forward type declaration resolution
         if (ident->kind == IDENT_TYPE && ident->type->kind == TYPE_FORWARD &&
             kind == IDENT_TYPE && type->kind != TYPE_FORWARD &&
             ident->exported == exported &&
             strcmp(ident->type->forwardIdent->name, name) == 0)
         {
             *ident->type = *type;
-            return;
+            return ident;
+        }
+
+        // Function prototype resolution
+        if (ident->kind == IDENT_CONST && ident->type->kind == TYPE_FN &&
+            kind == IDENT_CONST && type->kind == TYPE_FN &&
+            ident->exported == exported &&
+            strcmp(ident->name, name) == 0 &&
+            typeCompatible(ident->type, type) &&
+            ident->prototypeOffset >= 0)
+        {
+            return ident;
         }
 
         idents->error("Duplicate identifier %s", name);
@@ -111,13 +122,13 @@ static void identAdd(Idents *idents, Modules *modules, Blocks *blocks, IdentKind
     strcpy(ident->name, name);
     ident->hash = hash(name);
 
-    ident->type = type;
-    ident->module = blocks->module;
-    ident->block = blocks->item[blocks->top].block;
-    ident->forward = false;
-    ident->exported = exported;
-    ident->inHeap = false;
-    ident->next = NULL;
+    ident->type             = type;
+    ident->module           = blocks->module;
+    ident->block            = blocks->item[blocks->top].block;
+    ident->exported         = exported;
+    ident->inHeap           = false;
+    ident->prototypeOffset  = -1;
+    ident->next             = NULL;
 
     // Add to list
     if (!idents->first)
@@ -127,40 +138,46 @@ static void identAdd(Idents *idents, Modules *modules, Blocks *blocks, IdentKind
         idents->last->next = ident;
         idents->last = ident;
     }
+
+    return idents->last;
 }
 
 
-void identAddConst(Idents *idents, Modules *modules, Blocks *blocks, char *name, Type *type, bool exported, Const constant)
+Ident *identAddConst(Idents *idents, Modules *modules, Blocks *blocks, char *name, Type *type, bool exported, Const constant)
 {
-    identAdd(idents, modules, blocks, IDENT_CONST, name, type, exported);
-    idents->last->constant = constant;
+    Ident *ident = identAdd(idents, modules, blocks, IDENT_CONST, name, type, exported);
+    ident->constant = constant;
+    return ident;
 }
 
 
-void identAddGlobalVar(Idents *idents, Modules *modules, Blocks *blocks, char *name, Type *type, bool exported, void *ptr)
+Ident *identAddGlobalVar(Idents *idents, Modules *modules, Blocks *blocks, char *name, Type *type, bool exported, void *ptr)
 {
-    identAdd(idents, modules, blocks, IDENT_VAR, name, type, exported);
-    idents->last->ptr = ptr;
+    Ident *ident = identAdd(idents, modules, blocks, IDENT_VAR, name, type, exported);
+    ident->ptr = ptr;
+    return ident;
 }
 
 
-void identAddLocalVar(Idents *idents, Modules *modules, Blocks *blocks, char *name, Type *type, bool exported, int offset)
+Ident *identAddLocalVar(Idents *idents, Modules *modules, Blocks *blocks, char *name, Type *type, bool exported, int offset)
 {
-    identAdd(idents, modules, blocks, IDENT_VAR, name, type, exported);
-    idents->last->offset = offset;
+    Ident *ident = identAdd(idents, modules, blocks, IDENT_VAR, name, type, exported);
+    ident->offset = offset;
+    return ident;
 }
 
 
-void identAddType(Idents *idents, Modules *modules, Blocks *blocks, char *name, Type *type, bool exported)
+Ident *identAddType(Idents *idents, Modules *modules, Blocks *blocks, char *name, Type *type, bool exported)
 {
-    identAdd(idents, modules, blocks, IDENT_TYPE, name, type, exported);
+    return identAdd(idents, modules, blocks, IDENT_TYPE, name, type, exported);
 }
 
 
-void identAddBuiltinFunc(Idents *idents, Modules *modules, Blocks *blocks, char *name, Type *type, BuiltinFunc builtin)
+Ident *identAddBuiltinFunc(Idents *idents, Modules *modules, Blocks *blocks, char *name, Type *type, BuiltinFunc builtin)
 {
-    identAdd(idents, modules, blocks, IDENT_BUILTIN_FN, name, type, false);
-    idents->last->builtin = builtin;
+    Ident *ident = identAdd(idents, modules, blocks, IDENT_BUILTIN_FN, name, type, false);
+    ident->builtin = builtin;
+    return ident;
 }
 
 
@@ -181,28 +198,42 @@ int identAllocStack(Idents *idents, Blocks *blocks, int size)
 }
 
 
-void identAllocVar(Idents *idents, Types *types, Modules *modules, Blocks *blocks, char *name, Type *type, bool exported)
+Ident *identAllocVar(Idents *idents, Types *types, Modules *modules, Blocks *blocks, char *name, Type *type, bool exported)
 {
+    Ident *ident;
     if (blocks->top == 0)       // Global
     {
         void *ptr = malloc(typeSize(types, type));
-        identAddGlobalVar(idents, modules, blocks, name, type, exported, ptr);
-        idents->last->inHeap = true;
+        ident = identAddGlobalVar(idents, modules, blocks, name, type, exported, ptr);
+        ident->inHeap = true;
     }
     else                        // Local
     {
         int offset = identAllocStack(idents, blocks, typeSize(types, type));
-        identAddLocalVar(idents, modules, blocks, name, type, exported, offset);
+        ident = identAddLocalVar(idents, modules, blocks, name, type, exported, offset);
     }
+    return ident;
 }
 
 
-void identAllocParam(Idents *idents, Types *types, Modules *modules, Blocks *blocks, Signature *sig, int index)
+Ident *identAllocParam(Idents *idents, Types *types, Modules *modules, Blocks *blocks, Signature *sig, int index)
 {
     int paramSizeUpToIndex = typeParamSizeUpTo(types, sig, index);
     int paramSizeTotal     = typeParamSizeTotal(types, sig);
 
     int offset = (paramSizeTotal - paramSizeUpToIndex) + 2 * sizeof(Slot);  // + 2 slots for old base pointer and return address
-    identAddLocalVar(idents, modules, blocks, sig->param[index]->name, sig->param[index]->type, false, offset);
+    return identAddLocalVar(idents, modules, blocks, sig->param[index]->name, sig->param[index]->type, false, offset);
+}
+
+
+bool identAssertPrototypesResolved(Idents *idents)
+{
+    for (Ident *ident = idents->first; ident; ident = ident->next)
+        if (ident->prototypeOffset >= 0)
+        {
+            idents->error("Unresolved prototype of %s", ident->name);
+            return false;
+        }
+    return true;
 }
 

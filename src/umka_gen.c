@@ -11,7 +11,7 @@ void genInit(CodeGen *gen, ErrorFunc error)
     gen->code = malloc(gen->capacity * sizeof(Instruction));
     gen->top = -1;
     gen->breaks = gen->continues = gen->returns = NULL;
-    gen->entryPointDefined = false;
+    gen->mainDefined = false;
     gen->error = error;
 }
 
@@ -403,10 +403,11 @@ void genLeaveFrameFixup(CodeGen *gen, int localVarSize)
 }
 
 
-void genEntryPoint(CodeGen *gen)
+void genEntryPoint(CodeGen *gen, int start)
 {
-    genGoFromTo(gen, 0, gen->ip);
-    gen->entryPointDefined = true;
+    genGoFromTo(gen, start, gen->ip);
+    if (start == 0)
+        gen->mainDefined = true;
 }
 
 
