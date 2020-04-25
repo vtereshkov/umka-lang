@@ -99,7 +99,7 @@ typedef struct
 } Fiber;
 
 
-typedef void (*ExternFunc)(Slot *params);
+typedef void (*ExternFunc)(Slot *params, Slot *result);
 
 
 typedef struct

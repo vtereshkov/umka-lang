@@ -1,0 +1,28 @@
+// Umka standard library
+
+// I/O
+type file* = ^void
+
+const (
+    seekBegin* = 0
+    seekCur*   = 1
+    seekEnd*   = 2
+)    
+
+fn rtlfopen  (name: ^str, mode: ^str): file;  
+fn fopen*    (name: str, mode: str): file {return rtlfopen(&name, &mode)}
+
+fn rtlfclose (f: file): int
+fn fclose*   (f: file): int {return rtlfclose(f)}
+
+fn rtlfread  (buf: ^void, size, cnt: int, f: file): int
+fn fread*    (f: file, buf: ^void, size: int): int {return rtlfread(buf, size, 1, f)}
+
+fn rtlfwrite (buf: ^void, size, cnt: int, f: file): int
+fn fwrite*   (f: file, buf: ^void, size: int): int {return rtlfwrite(buf, size, 1, f)}
+
+fn rtlfseek  (f: file, offset, origin: int): int
+fn fseek*    (f: file, offset, origin: int): int {return rtlfseek(f, offset, origin)}
+
+fn rtlremove (name: ^str): int
+fn remove*   (name: str): int {return rtlremove(&name)}

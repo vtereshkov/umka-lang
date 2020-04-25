@@ -74,6 +74,17 @@ static void compilerDeclareBuiltinIdents(Compiler *comp)
 }
 
 
+static void compilerDeclareExternalFuncs(Compiler *comp)
+{
+    externalAdd(&comp->externals, "rtlfopen",   &rtlfopen);
+    externalAdd(&comp->externals, "rtlfclose",  &rtlfclose);
+    externalAdd(&comp->externals, "rtlfread",   &rtlfread);
+    externalAdd(&comp->externals, "rtlfwrite",  &rtlfwrite);
+    externalAdd(&comp->externals, "rtlfseek",   &rtlfseek);
+    externalAdd(&comp->externals, "rtlremove",  &rtlremove);
+}
+
+
 void compilerInit(Compiler *comp, char *fileName, int storageCapacity, ErrorFunc compileError)
 {
     storageInit  (&comp->storage, storageCapacity);
@@ -104,23 +115,13 @@ void compilerFree(Compiler *comp)
 }
 
 
-
-void extfn(Slot *params)
-{
-    int x = params->intVal;
-    printf("External call: %d\n", x);
-}
-
-
-
 void compilerCompile(Compiler *comp)
 {
     comp->blocks.module = moduleAdd(&comp->modules, "__universe");
 
-    compilerDeclareBuiltinTypes(comp);
+    compilerDeclareBuiltinTypes (comp);
     compilerDeclareBuiltinIdents(comp);
-
-    externalAdd(&comp->externals, "extfn", &extfn);
+    compilerDeclareExternalFuncs(comp);
 
     parseProgram(comp);
 }

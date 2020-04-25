@@ -489,7 +489,7 @@ static void doCall(Fiber *fiber)
 static void doCallExtern(Fiber *fiber)
 {
     ExternFunc fn = fiber->code[fiber->ip].operand.ptrVal;
-    fn(fiber->top + 1);     // + 1 for return address
+    fn(fiber->top + 1, &fiber->reg[VM_RESULT_REG_0]);       // + 1 for return address
     fiber->ip++;
 }
 

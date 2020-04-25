@@ -1,7 +1,8 @@
 import (
     "conv.um"
     "strtype.um"
-    "prnt.um"    
+    "prnt.um" 
+    "import/std.um"
 )
     
 const
@@ -37,10 +38,6 @@ fn h(i: int): vec {
 var s: str = "Hello" + " World"
 
 var a: [3] int16 = [3] int16{1, 4, 7}
-
-
-fn extfn(x: int)
-
 
 fn main() {
     q := 7
@@ -131,10 +128,27 @@ fn main() {
     
     prnt.print("\nnext is " + conv.ftoa(p.next.x, 0) + ", " + conv.ftoa(p.next.y, 0) + "\n")
     
-    for i := 0; i < 10; i++ {
-        extfn(512 + i)
-    }
+    year := 1986
     
+    dat := std.fopen("test.txt", "wb")
+    std.fwrite(dat, &year, 8)
+    
+    year++
+    std.fwrite(dat, &year, 8)
+    std.fclose(dat)
+    
+    year2 := 0
+    
+    dat2 := std.fopen("test.txt", "rb")
+    std.fseek(dat2, 8, std.seekBegin)
+    std.fread(dat2, &year2, 8)
+    std.fclose(dat2)
+    
+    std.remove("test.txt")
+    
+    printf("{d}\n", year2)
+    
+/*
     tt := ""
     var (i1, i2, i3: int; st: str)
     /*scanf("{s}", &st)
@@ -148,7 +162,8 @@ fn main() {
     
 //    for i := 0; i < 10000000; i++ {
 //        printf("i = {d} {d} {d} : OK\n", 10, 11, 12)
-//    }        
+//    } 
+      
 }
 
 
