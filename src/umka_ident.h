@@ -58,6 +58,4 @@ int    identAllocStack    (Idents *idents, Blocks *blocks, int size);
 Ident *identAllocVar      (Idents *idents, Types *types, Modules *modules, Blocks *blocks, char *name, Type *type, bool exported);
 Ident *identAllocParam    (Idents *idents, Types *types, Modules *modules, Blocks *blocks, Signature *sig, int index);
 
-bool identAssertPrototypesResolved(Idents *idents);
-
 #endif // UMKA_IDENT_H_INCLUDED

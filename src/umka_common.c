@@ -4,6 +4,8 @@
 #include "umka_common.h"
 
 
+// Storage
+
 void storageInit(Storage *storage, int capacity)
 {
     storage->data = malloc(capacity);
@@ -17,6 +19,8 @@ void storageFree(Storage *storage)
     free(storage->data);
 }
 
+
+// Modules
 
 void moduleInit(Modules *modules, ErrorFunc error)
 {
@@ -108,6 +112,8 @@ int moduleAdd(Modules *modules, char *path)
 }
 
 
+// Blocks
+
 void blocksInit(Blocks *blocks, ErrorFunc error)
 {
     blocks->numBlocks = 0;
@@ -144,9 +150,66 @@ void blocksLeave(Blocks *blocks)
 }
 
 
-// djb2 hash
+// Externals
+
+void externalInit(Externals *externals)
+{
+    externals->first = externals->last = NULL;
+}
+
+
+void externalFree(Externals *externals)
+{
+    External *external = externals->first;
+    while (external)
+    {
+        External *next = external->next;
+        free(external);
+        external = next;
+    }
+}
+
+
+External *externalFind(Externals *externals, char *name)
+{
+    int nameHash = hash(name);
+
+    for (External *external = externals->first; external; external = external->next)
+        if (external->hash == nameHash && strcmp(external->name, name) == 0)
+            return external;
+
+    return NULL;
+}
+
+
+External *externalAdd(Externals *externals, char *name, void *entry)
+{
+    External *external = malloc(sizeof(External));
+
+    external->entry = entry;
+
+    strcpy(external->name, name);
+    external->hash = hash(name);
+
+    external->next = NULL;
+
+    // Add to list
+    if (!externals->first)
+        externals->first = externals->last = external;
+    else
+    {
+        externals->last->next = external;
+        externals->last = external;
+    }
+    return externals->last;
+}
+
+
+// Miscellaneous
+
 int hash(const char *str)
 {
+    // djb2 hash
     int hash = 5381;
     char ch;
 

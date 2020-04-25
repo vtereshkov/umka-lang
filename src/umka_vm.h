@@ -41,6 +41,7 @@ typedef enum
     OP_GOTO,
     OP_GOTO_IF,
     OP_CALL,
+    OP_CALL_EXTERN,
     OP_CALL_BUILTIN,
     OP_RETURN,
     OP_ENTER_FRAME,
@@ -96,6 +97,9 @@ typedef struct
     Slot *stack, *top, *base;
     Slot reg[VM_NUM_REGS];
 } Fiber;
+
+
+typedef void (*ExternFunc)(Slot *params);
 
 
 typedef struct

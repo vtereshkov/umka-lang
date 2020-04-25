@@ -173,6 +173,13 @@ void genCall(CodeGen *gen, int paramSlots)
 }
 
 
+void genCallExtern(CodeGen *gen, void *entry)
+{
+    const Instruction instr = {.opcode = OP_CALL_EXTERN, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.ptrVal = entry};
+    genAddInstr(gen, &instr);
+}
+
+
 void genCallBuiltin(CodeGen *gen, TypeKind typeKind, BuiltinFunc builtin)
 {
     const Instruction instr = {.opcode = OP_CALL_BUILTIN, .tokKind = TOK_NONE, .typeKind = typeKind, .operand.builtinVal = builtin};

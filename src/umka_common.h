@@ -61,6 +61,21 @@ typedef struct
 } Blocks;
 
 
+typedef struct tagExternal
+{
+    char name[DEFAULT_STR_LEN + 1];
+    int hash;
+    void *entry;
+    struct tagExternal *next;
+} External;
+
+
+typedef struct
+{
+    External *first, *last;
+} Externals;
+
+
 void storageInit(Storage *storage, int capacity);
 void storageFree(Storage *storage);
 
@@ -75,6 +90,11 @@ void blocksInit (Blocks *blocks, ErrorFunc error);
 void blocksFree (Blocks *blocks);
 void blocksEnter(Blocks *blocks, struct tagIdent *fn);
 void blocksLeave(Blocks *blocks);
+
+void externalInit       (Externals *externals);
+void externalFree       (Externals *externals);
+External *externalFind  (Externals *externals, char *name);
+External *externalAdd   (Externals *externals, char *name, void *entry);
 
 int hash(const char *str);
 int align(int size, int alignment);

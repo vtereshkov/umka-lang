@@ -12,16 +12,17 @@
 
 typedef struct
 {
-    Storage storage;
-    Modules modules;
-    Blocks blocks;
-    Lexer lex;
-    Types types;
-    Idents idents;
-    Consts consts;
-    CodeGen gen;
-    VM vm;
-    ErrorFunc error;
+    Storage     storage;
+    Modules     modules;
+    Blocks      blocks;
+    Externals   externals;
+    Lexer       lex;
+    Types       types;
+    Idents      idents;
+    Consts      consts;
+    CodeGen     gen;
+    VM          vm;
+    ErrorFunc   error;
 
     // Pointers to built-in types
     Type *voidType,

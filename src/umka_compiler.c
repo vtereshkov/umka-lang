@@ -1,4 +1,5 @@
 #include <stddef.h>
+#include <stdio.h>
 
 #include "umka_compiler.h"
 
@@ -75,14 +76,15 @@ static void compilerDeclareBuiltinIdents(Compiler *comp)
 
 void compilerInit(Compiler *comp, char *fileName, int storageCapacity, ErrorFunc compileError)
 {
-    storageInit (&comp->storage, storageCapacity);
-    moduleInit  (&comp->modules, compileError);
-    blocksInit  (&comp->blocks, compileError);
-    lexInit     (&comp->lex, fileName, &comp->storage, compileError);
-    typeInit    (&comp->types, compileError);
-    identInit   (&comp->idents, compileError);
-    constInit   (&comp->consts, compileError);
-    genInit     (&comp->gen, compileError);
+    storageInit  (&comp->storage, storageCapacity);
+    moduleInit   (&comp->modules, compileError);
+    blocksInit   (&comp->blocks, compileError);
+    externalInit (&comp->externals);
+    lexInit      (&comp->lex, fileName, &comp->storage, compileError);
+    typeInit     (&comp->types, compileError);
+    identInit    (&comp->idents, compileError);
+    constInit    (&comp->consts, compileError);
+    genInit      (&comp->gen, compileError);
 
     comp->error = compileError;
 }
@@ -90,24 +92,35 @@ void compilerInit(Compiler *comp, char *fileName, int storageCapacity, ErrorFunc
 
 void compilerFree(Compiler *comp)
 {
-    genFree     (&comp->gen);
-    constFree   (&comp->consts);
-    identFree   (&comp->idents, -1);
-    typeFree    (&comp->types, -1);
-    lexFree     (&comp->lex);
-    blocksFree  (&comp->blocks);
-    moduleFree  (&comp->modules);
-    storageFree (&comp->storage);
+    genFree      (&comp->gen);
+    constFree    (&comp->consts);
+    identFree    (&comp->idents, -1);
+    typeFree     (&comp->types, -1);
+    lexFree      (&comp->lex);
+    externalFree (&comp->externals);
+    blocksFree   (&comp->blocks);
+    moduleFree   (&comp->modules);
+    storageFree  (&comp->storage);
 }
+
+
+
+void extfn(Slot *params)
+{
+    int x = params->intVal;
+    printf("External call: %d\n", x);
+}
+
 
 
 void compilerCompile(Compiler *comp)
 {
-    moduleAdd(&comp->modules, "__universe");
-    comp->blocks.module = 0;
+    comp->blocks.module = moduleAdd(&comp->modules, "__universe");
 
     compilerDeclareBuiltinTypes(comp);
     compilerDeclareBuiltinIdents(comp);
+
+    externalAdd(&comp->externals, "extfn", &extfn);
 
     parseProgram(comp);
 }

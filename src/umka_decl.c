@@ -535,7 +535,6 @@ static int parseModule(Compiler *comp)
 
     if (comp->lex.tok.kind == TOK_IMPORT)
     {
-
         parseImport(comp);
         lexEat(&comp->lex, TOK_SEMICOLON);
     }
@@ -551,8 +550,7 @@ void parseProgram(Compiler *comp)
 
     lexNext(&comp->lex);
     parseModule(comp);
-
-    identAssertPrototypesResolved(&comp->idents);
+    doResolveExtern(comp);
 
     if (!comp->gen.mainDefined)
         comp->error("main() is not defined");

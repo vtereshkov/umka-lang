@@ -42,7 +42,7 @@ void genPushStruct   (CodeGen *gen, int size);
 void genPop   (CodeGen *gen);
 void genPopReg(CodeGen *gen, int regIndex);
 void genDup   (CodeGen *gen);
-void genSwap(CodeGen *gen);
+void genSwap  (CodeGen *gen);
 
 void genDeref (CodeGen *gen, TypeKind typeKind);
 void genAssign(CodeGen *gen, TypeKind typeKind, int structSize);
@@ -56,6 +56,7 @@ void genGoto  (CodeGen *gen, int dest);
 void genGotoIf(CodeGen *gen, int dest);
 
 void genCall       (CodeGen *gen, int paramSlots);
+void genCallExtern (CodeGen *gen, void *entry);
 void genCallBuiltin(CodeGen *gen, TypeKind typeKind, BuiltinFunc builtin);
 void genReturn     (CodeGen *gen, int numParams);
 

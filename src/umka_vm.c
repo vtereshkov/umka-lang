@@ -28,6 +28,7 @@ static char *spelling [] =
     "GOTO",
     "GOTO_IF",
     "CALL",
+    "CALL_EXTERN",
     "CALL_BUILTIN",
     "RETURN",
     "ENTER_FRAME",
@@ -485,6 +486,14 @@ static void doCall(Fiber *fiber)
 }
 
 
+static void doCallExtern(Fiber *fiber)
+{
+    ExternFunc fn = fiber->code[fiber->ip].operand.ptrVal;
+    fn(fiber->top + 1);     // + 1 for return address
+    fiber->ip++;
+}
+
+
 static void doCallBuiltin(Fiber *fiber, ErrorFunc error)
 {
     switch (fiber->code[fiber->ip].operand.builtinVal)
@@ -590,6 +599,7 @@ void fiberStep(Fiber *fiber, ErrorFunc error)
         case OP_GOTO:           doGoto(fiber);              break;
         case OP_GOTO_IF:        doGotoIf(fiber);            break;
         case OP_CALL:           doCall(fiber);              break;
+        case OP_CALL_EXTERN:    doCallExtern(fiber);        break;
         case OP_CALL_BUILTIN:   doCallBuiltin(fiber, error);break;
         case OP_RETURN:         doReturn(fiber);            break;
         case OP_ENTER_FRAME:    doEnterFrame(fiber);        break;

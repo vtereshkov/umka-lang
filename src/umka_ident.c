@@ -225,15 +225,3 @@ Ident *identAllocParam(Idents *idents, Types *types, Modules *modules, Blocks *b
     return identAddLocalVar(idents, modules, blocks, sig->param[index]->name, sig->param[index]->type, false, offset);
 }
 
-
-bool identAssertPrototypesResolved(Idents *idents)
-{
-    for (Ident *ident = idents->first; ident; ident = ident->next)
-        if (ident->prototypeOffset >= 0)
-        {
-            idents->error("Unresolved prototype of %s", ident->name);
-            return false;
-        }
-    return true;
-}
-

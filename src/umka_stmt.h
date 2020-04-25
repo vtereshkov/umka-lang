@@ -4,6 +4,8 @@
 #include "umka_compiler.h"
 
 
+void doResolveExtern(Compiler *comp);
+
 void parseAssignmentStmt(Compiler *comp, Type *type, void *initializedVarPtr);
 void parseDeclAssignmentStmt(Compiler *comp, IdentName name, bool constExpr, bool exported);
 

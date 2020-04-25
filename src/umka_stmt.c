@@ -8,6 +8,26 @@
 void parseStmtList(Compiler *comp);
 
 
+void doResolveExtern(Compiler *comp)
+{
+    for (Ident *ident = comp->idents.first; ident; ident = ident->next)
+        if (ident->prototypeOffset >= 0)
+        {
+            External *external = externalFind(&comp->externals, ident->name);
+            if (external)
+            {
+                int paramSlots = typeParamSizeTotal(&comp->types, &ident->type->sig) / sizeof(Slot);
+
+                genEntryPoint(&comp->gen, ident->prototypeOffset);
+                genCallExtern(&comp->gen, external->entry);
+                genReturn(&comp->gen, paramSlots);
+            }
+            else
+                comp->error("Unresolved prototype of %s", ident->name);
+        }
+}
+
+
 // assignmentStmt = designator "=" expr.
 void parseAssignmentStmt(Compiler *comp, Type *type, void *initializedVarPtr)
 {
