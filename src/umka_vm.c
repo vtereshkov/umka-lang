@@ -534,6 +534,7 @@ static void doCallBuiltin(Fiber *fiber, ErrorFunc error)
             fiber->top->realVal = sqrt(fiber->top->realVal);
             break;
         }
+        case BUILTIN_SIZEOF:    error("Illegal instruction");
     }
     fiber->ip++;
 }

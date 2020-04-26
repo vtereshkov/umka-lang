@@ -131,17 +131,17 @@ fn main() {
     year := 1986
     
     dat := std.fopen("test.txt", "wb")
-    std.fwrite(dat, &year, 8)
+    std.fwrite(dat, &year, sizeof(year))
     
     year++
-    std.fwrite(dat, &year, 8)
+    std.fwrite(dat, &year, sizeof(year))
     std.fclose(dat)
     
     year2 := 0
     
     dat2 := std.fopen("test.txt", "rb")
-    std.fseek(dat2, 8, std.seekBegin)
-    std.fread(dat2, &year2, 8)
+    std.fseek(dat2, sizeof(year), std.seekBegin)
+    std.fread(dat2, &year2, sizeof(year2))
     std.fclose(dat2)
     
     std.remove("test.txt")
@@ -166,14 +166,17 @@ fn main() {
 //        printf("i = {d} {d} {d} : OK\n", 10, 11, 12)
 //    } 
 
-    for i := 0; i < 10; i++ {
+    for i := 0; i < 3; i++ {
         std.println("Time = " + std.itoa(std.time()))
     }
 
     std.srand(std.time())
-    for i := 0; i < 10; i++ {
+    for i := 0; i < 3; i++ {
         std.println("Random = " + std.itoa(std.rand()))
     }
+    
+    var d: uint16
+    std.println("sizeof = " + std.itoa(sizeof(d)))
       
 }
 

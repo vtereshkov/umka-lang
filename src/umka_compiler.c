@@ -56,12 +56,12 @@ static void compilerDeclareBuiltinIdents(Compiler *comp)
     identAddType(&comp->idents, &comp->modules, &comp->blocks,  "real",     comp->realType,    true);
 
     // Built-in functions
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "printf",  comp->intType, BUILTIN_PRINTF);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "fprintf", comp->intType, BUILTIN_FPRINTF);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "sprintf", comp->intType, BUILTIN_SPRINTF);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "scanf",   comp->intType, BUILTIN_SCANF);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "fscanf",  comp->intType, BUILTIN_FSCANF);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "sscanf",  comp->intType, BUILTIN_SSCANF);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "printf",  comp->intType,  BUILTIN_PRINTF);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "fprintf", comp->intType,  BUILTIN_FPRINTF);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "sprintf", comp->intType,  BUILTIN_SPRINTF);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "scanf",   comp->intType,  BUILTIN_SCANF);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "fscanf",  comp->intType,  BUILTIN_FSCANF);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "sscanf",  comp->intType,  BUILTIN_SSCANF);
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "round",   comp->intType,  BUILTIN_ROUND);
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "trunc",   comp->intType,  BUILTIN_TRUNC);
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "fabs",    comp->realType, BUILTIN_FABS);
@@ -71,6 +71,7 @@ static void compilerDeclareBuiltinIdents(Compiler *comp)
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "atan",    comp->realType, BUILTIN_ATAN);
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "exp",     comp->realType, BUILTIN_EXP);
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "log",     comp->realType, BUILTIN_LOG);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "sizeof",  comp->intType,  BUILTIN_SIZEOF);
 }
 
 

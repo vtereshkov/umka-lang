@@ -195,6 +195,25 @@ static void parseBuiltinMathCall(Compiler *comp, Type **type, Const *constant, B
 }
 
 
+static void parseBuiltinSizeofCall(Compiler *comp, Type **type, Const *constant)
+{
+    lexEat(&comp->lex, TOK_LPAR);
+    parseExpr(comp, type, constant);
+    int size = typeSize(&comp->types, *type);
+
+    if (constant)
+        constant->intVal = size;
+    else
+    {
+        genPop(&comp->gen);
+        genPushIntConst(&comp->gen, size);
+    }
+
+    *type = comp->intType;
+    lexEat(&comp->lex, TOK_RPAR);
+}
+
+
 // builtinCall = qualIdent "(" [expr {"," expr}] ")".
 static void parseBuiltinCall(Compiler *comp, Type **type, Const *constant, BuiltinFunc builtin)
 {
@@ -218,6 +237,8 @@ static void parseBuiltinCall(Compiler *comp, Type **type, Const *constant, Built
         case BUILTIN_ATAN:
         case BUILTIN_EXP:
         case BUILTIN_LOG:      parseBuiltinMathCall(comp, type, constant, builtin); break;
+
+        case BUILTIN_SIZEOF:   parseBuiltinSizeofCall(comp, type, constant); break;
 
         default: comp->error("Illegal built-in function");
     }

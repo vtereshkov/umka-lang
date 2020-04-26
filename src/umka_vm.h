@@ -68,7 +68,8 @@ typedef enum
     BUILTIN_COS,
     BUILTIN_ATAN,
     BUILTIN_EXP,
-    BUILTIN_LOG
+    BUILTIN_LOG,
+    BUILTIN_SIZEOF,
 } BuiltinFunc;
 
 
