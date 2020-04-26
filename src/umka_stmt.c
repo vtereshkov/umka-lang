@@ -419,7 +419,7 @@ void parseReturnStmt(Compiler *comp)
     // Copy structure to __result
     if (typeStructured(sig->resultType[0]))
     {
-        Ident *__result = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, "__result");
+        Ident *__result = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, "__result", NULL);
 
         doPushVarPtr(comp, __result);
         genDeref(&comp->gen, TYPE_PTR);

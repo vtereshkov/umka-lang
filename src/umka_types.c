@@ -89,6 +89,13 @@ Type *typeAdd(Types *types, Blocks *blocks, TypeKind kind)
     type->forwardIdent  = NULL;
     type->next          = NULL;
 
+    if (kind == TYPE_FN)
+    {
+        type->sig.method     = false;
+        type->sig.numParams  = 0;
+        type->sig.numResults = 0;
+    }
+
     // Add to list
     if (!types->first)
         types->first = types->last = type;
@@ -229,6 +236,10 @@ bool typeEquivalent(Type *left, Type *right)
         {
             // Number of parameters
             if (left->sig.numParams != right->sig.numParams)
+                return false;
+
+            // Method flag
+            if (left->sig.method != right->sig.method)
                 return false;
 
             // Parameters

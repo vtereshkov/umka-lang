@@ -1,0 +1,19 @@
+import "import/std.um"
+
+type vec = struct {
+    x, y: int
+}
+
+fn (u: ^vec) add(v: vec): vec {
+    return vec{x: u.x + v.x, y: u.y + v.y}
+}
+
+fn (v: ^vec) print() {
+    std.println("vec(" + std.itoa(v.x) + ", " + std.itoa(v.y) + ")")
+}
+
+fn main() {
+    a := vec{x: 3, y: 5}
+    b := vec{x: 6, y: 2}
+    a.add(b).add(b).print()
+} 

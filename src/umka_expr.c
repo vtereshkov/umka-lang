@@ -6,9 +6,7 @@
 
 void doPushConst(Compiler *comp, Type *type, Const *constant)
 {
-    if (type->kind == TYPE_FN)
-        genPushIntConst(&comp->gen, (int64_t)constant->ptrVal);
-    else if (typeReal(type))
+    if (typeReal(type))
         genPushRealConst(&comp->gen, constant->realVal);
     else
         genPushIntConst(&comp->gen, constant->intVal);
@@ -96,7 +94,7 @@ Ident *parseQualIdent(Compiler *comp)
     else
         module = comp->blocks.module;
 
-    return identAssertFind(&comp->idents, &comp->modules, &comp->blocks, module, comp->lex.tok.name);
+    return identAssertFind(&comp->idents, &comp->modules, &comp->blocks, module, comp->lex.tok.name, NULL);
 }
 
 
@@ -254,18 +252,25 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
         comp->error("Function is not allowed in constant expressions");
 
     // Actual parameters
-    int numHiddenParams = 0;
+    int numExplicitParams = 0, numHiddenParams = 0, i = 0;
+
+    // Method receiver
+    if ((*type)->sig.method)
+    {
+        genSwap(&comp->gen);    // Method entry point should come first, then comes receiver
+        numHiddenParams++;
+        i++;
+    }
 
     // __result
     if (typeStructured((*type)->sig.resultType[0]))
         numHiddenParams++;
 
-    int i = 0;
     if (comp->lex.tok.kind != TOK_RPAR)
     {
         while (1)
         {
-            if (i > (*type)->sig.numParams - numHiddenParams - 1)
+            if (numExplicitParams + numHiddenParams > (*type)->sig.numParams - 1)
                 comp->error("Too many actual parameters");
 
             Type *formalParamType = (*type)->sig.param[i]->type;
@@ -280,14 +285,16 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
             if (typeStructured(formalParamType))
                 genPushStruct(&comp->gen, typeSize(&comp->types, formalParamType));
 
+            numExplicitParams++;
             i++;
+
             if (comp->lex.tok.kind != TOK_COMMA)
                 break;
             lexNext(&comp->lex);
         }
     }
 
-    if (i < (*type)->sig.numParams - numHiddenParams)
+    if (numExplicitParams + numHiddenParams < (*type)->sig.numParams)
         comp->error("Too few actual parameters");
 
     // Push __result pointer
@@ -440,22 +447,41 @@ static void parseSelectors(Compiler *comp, Type **type, Const *constant, bool *i
                 if ((*type)->kind != TYPE_STRUCT)
                     comp->error("Structure expected");
 
-                // Field
                 lexNext(&comp->lex);
                 lexCheck(&comp->lex, TOK_IDENT);
-                Field *field = typeAssertFindField(&comp->types, *type, comp->lex.tok.name);
-                lexNext(&comp->lex);
 
-                genPushIntConst(&comp->gen, field->offset);
-                genBinary(&comp->gen, TOK_PLUS, TYPE_INT, 0);
+                Type *rcvType = typeAddPtrTo(&comp->types, &comp->blocks, *type);
 
-                if (typeStructured(field->type))
-                    *type = field->type;
+                Ident *method = identFind(&comp->idents, &comp->modules, &comp->blocks,
+                                           comp->blocks.module, comp->lex.tok.name, rcvType);
+                if (method)
+                {
+                    // Method
+                    lexNext(&comp->lex);
+                    doPushConst(comp, method->type, &method->constant);
+                    *type = method->type;
+
+                    *isVar = false;
+                    *isCall = false;
+                }
                 else
-                    *type = typeAddPtrTo(&comp->types, &comp->blocks, field->type);
+                {
+                    // Field
+                    Field *field = typeAssertFindField(&comp->types, *type, comp->lex.tok.name);
+                    lexNext(&comp->lex);
 
-                *isVar = true;
-                *isCall = false;
+                    genPushIntConst(&comp->gen, field->offset);
+                    genBinary(&comp->gen, TOK_PLUS, TYPE_INT, 0);
+
+                    if (typeStructured(field->type))
+                        *type = field->type;
+                    else
+                        *type = typeAddPtrTo(&comp->types, &comp->blocks, field->type);
+
+                    *isVar = true;
+                    *isCall = false;
+                }
+
                 break;
             }
 

@@ -42,7 +42,7 @@ void identFree(Idents *idents, int startBlock)
 }
 
 
-Ident *identFind(Idents *idents, Modules *modules, Blocks *blocks, int module, char *name)
+Ident *identFind(Idents *idents, Modules *modules, Blocks *blocks, int module, char *name, Type *rcvType)
 {
     int nameHash = hash(name);
 
@@ -55,16 +55,19 @@ Ident *identFind(Idents *idents, Modules *modules, Blocks *blocks, int module, c
                (ident->exported && modules->module[blocks->module]->imports[ident->module])))) &&
 
                 ident->block == blocks->item[i].block)
-
-                return ident;
+                {
+                   bool lookForMethod = rcvType && ident->type->kind == TYPE_FN && ident->type->sig.method;
+                   if (!lookForMethod || typeEquivalent(ident->type->sig.param[0]->type, rcvType))
+                        return ident;
+                }
 
     return NULL;
 }
 
 
-Ident *identAssertFind(Idents *idents, Modules *modules, Blocks *blocks, int module, char *name)
+Ident *identAssertFind(Idents *idents, Modules *modules, Blocks *blocks, int module, char *name, Type *rcvType)
 {
-    Ident *res = identFind(idents, modules, blocks, module, name);
+    Ident *res = identFind(idents, modules, blocks, module, name, rcvType);
     if (!res)
         idents->error("Unknown identifier %s", name);
     return res;
@@ -73,7 +76,11 @@ Ident *identAssertFind(Idents *idents, Modules *modules, Blocks *blocks, int mod
 
 static Ident *identAdd(Idents *idents, Modules *modules, Blocks *blocks, IdentKind kind, char *name, Type *type, bool exported)
 {
-    Ident *ident = identFind(idents, modules, blocks, blocks->module, name);
+    Type *rcvType = NULL;
+    if (type->kind == TYPE_FN && type->sig.method)
+        rcvType = type->sig.param[0]->type;
+
+    Ident *ident = identFind(idents, modules, blocks, blocks->module, name, rcvType);
 
     if (ident && ident->block == blocks->item[blocks->top].block)
     {

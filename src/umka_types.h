@@ -58,6 +58,7 @@ typedef struct
 typedef struct
 {
     int numParams, numResults;
+    bool method;
     Param *param[MAX_PARAMS];
     struct tagType *resultType[MAX_RESULTS];
 } Signature;

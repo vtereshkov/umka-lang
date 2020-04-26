@@ -53,11 +53,29 @@ static void parseTypedIdentList(Compiler *comp, IdentName *names, bool *exported
 }
 
 
+// rcvSignature = "(" ident ":" type ")".
+static void parseRcvSignature(Compiler *comp, Signature *sig)
+{
+    lexEat(&comp->lex, TOK_LPAR);
+    lexEat(&comp->lex, TOK_IDENT);
+
+    IdentName rcvName;
+    strcpy(rcvName, comp->lex.tok.name);
+
+    lexEat(&comp->lex, TOK_COLON);
+    Type *rcvType = parseType(comp, NULL);
+
+    sig->method = true;
+    typeAddParam(&comp->types, sig, rcvType, rcvName);
+
+    lexEat(&comp->lex, TOK_RPAR);
+}
+
+
 // signature = "(" [typedIdentList {"," typedIdentList}] ")" [":" type].
 static void parseSignature(Compiler *comp, Signature *sig)
 {
     // Formal parameter list
-    sig->numParams = 0;
     lexEat(&comp->lex, TOK_LPAR);
 
     if (comp->lex.tok.kind == TOK_IDENT)
@@ -113,7 +131,7 @@ static Type *parsePtrType(Compiler *comp)
         int module = moduleFind(&comp->modules, comp->lex.tok.name);
         if (module < 0)
         {
-            Ident *ident = identFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, comp->lex.tok.name);
+            Ident *ident = identFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, comp->lex.tok.name, NULL);
             if (!ident)
             {
                 IdentName name;
@@ -415,23 +433,32 @@ void parseShortVarDecl(Compiler *comp)
 }
 
 
-// fnDecl = "fn" ident exportMark signature [block].
+// fnDecl = "fn" [rcvSignature] ident exportMark signature [block].
 void parseFnDecl(Compiler *comp)
 {
     if (comp->blocks.top != 0)
         comp->error("Nested functions are not allowed");
 
     lexEat(&comp->lex, TOK_FN);
+    Type *fnType = typeAdd(&comp->types, &comp->blocks, TYPE_FN);
+
+    if (comp->lex.tok.kind == TOK_LPAR)
+        parseRcvSignature(comp, &fnType->sig);
 
     lexCheck(&comp->lex, TOK_IDENT);
     IdentName name;
     strcpy(name, comp->lex.tok.name);
 
+    // Check for method/field name collision
+    if (fnType->sig.method && fnType->sig.param[0]->type->kind == TYPE_STRUCT)
+    {
+        Field *field = typeFindField(fnType->sig.param[0]->type, name);
+        if (field)
+            comp->error("Structure already has field %s", name);
+    }
+
     lexNext(&comp->lex);
     bool exported = parseExportMark(comp);
-
-    typeAdd(&comp->types, &comp->blocks, TYPE_FN);
-    Type *fnType = comp->types.last;
 
     parseSignature(comp, &fnType->sig);
 

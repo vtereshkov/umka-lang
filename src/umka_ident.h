@@ -45,8 +45,8 @@ typedef struct
 void identInit(Idents *idents, ErrorFunc error);
 void identFree(Idents *idents, int startBlock /* < 0 to free in all blocks*/);
 
-Ident *identFind          (Idents *idents, Modules *modules, Blocks *blocks, int module, char *name);
-Ident *identAssertFind    (Idents *idents, Modules *modules, Blocks *blocks, int module, char *name);
+Ident *identFind          (Idents *idents, Modules *modules, Blocks *blocks, int module, char *name, Type *rcvType);
+Ident *identAssertFind    (Idents *idents, Modules *modules, Blocks *blocks, int module, char *name, Type *rcvType);
 
 Ident *identAddConst      (Idents *idents, Modules *modules, Blocks *blocks, char *name, Type *type, bool exported, Const constant);
 Ident *identAddGlobalVar  (Idents *idents, Modules *modules, Blocks *blocks, char *name, Type *type, bool exported, void *ptr);

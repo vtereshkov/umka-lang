@@ -69,6 +69,10 @@
 		<Unit filename="src/umka_main.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="src/umka_runtime.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="src/umka_runtime.h" />
 		<Unit filename="src/umka_stmt.c">
 			<Option compilerVar="CC" />
 		</Unit>
