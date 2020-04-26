@@ -253,6 +253,36 @@ static Type *parseStructType(Compiler *comp)
 }
 
 
+// interfaceType = "interface" "{" {ident signature ";"} "}"
+static Type *parseInterfaceType(Compiler *comp)
+{
+    lexEat(&comp->lex, TOK_INTERFACE);
+    lexEat(&comp->lex, TOK_LBRACE);
+
+    Type *type = typeAdd(&comp->types, &comp->blocks, TYPE_INTERFACE);
+    type->numItems = 0;
+
+    // __self
+    typeAddField(&comp->types, type, comp->ptrVoidType, "__self");
+
+    // Methods
+    while (comp->lex.tok.kind == TOK_IDENT)
+    {
+        IdentName methodName;
+        strcpy(methodName, comp->lex.tok.name);
+        lexNext(&comp->lex);
+
+        Type *methodType = typeAdd(&comp->types, &comp->blocks, TYPE_FN);
+        parseSignature(comp, &methodType->sig);
+        typeAddField(&comp->types, type, methodType, methodName);
+
+        lexEat(&comp->lex, TOK_SEMICOLON);
+    }
+    lexEat(&comp->lex, TOK_RBRACE);
+    return type;
+}
+
+
 // fnType = "fn" signature.
 static Type *parseFnType(Compiler *comp)
 {
@@ -281,6 +311,7 @@ Type *parseType(Compiler *comp, Ident *ident)
         case TOK_LBRACKET:  return parseArrayType(comp);
         case TOK_STR:       return parseStrType(comp);
         case TOK_STRUCT:    return parseStructType(comp);
+        case TOK_INTERFACE: return parseInterfaceType(comp);
         case TOK_FN:        return parseFnType(comp);
 
         default:            comp->error("Type expected"); return NULL;

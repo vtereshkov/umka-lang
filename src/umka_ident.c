@@ -96,7 +96,7 @@ static Ident *identAdd(Idents *idents, Modules *modules, Blocks *blocks, IdentKi
             ident->exported == exported &&
             strcmp(ident->type->forwardIdent->name, name) == 0)
         {
-            *ident->type = *type;
+            typeDeepCopy(ident->type, type);
             return ident;
         }
 

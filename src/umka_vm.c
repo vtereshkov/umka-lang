@@ -236,24 +236,25 @@ static void doDeref(Fiber *fiber, ErrorFunc error)
     void *ptr = fiber->top->ptrVal;
     switch (fiber->code[fiber->ip].typeKind)
     {
-        case TYPE_INT8:   fiber->top->intVal  = *(int8_t   *)ptr; break;
-        case TYPE_INT16:  fiber->top->intVal  = *(int16_t  *)ptr; break;
-        case TYPE_INT32:  fiber->top->intVal  = *(int32_t  *)ptr; break;
-        case TYPE_INT:    fiber->top->intVal  = *(int64_t  *)ptr; break;
-        case TYPE_UINT8:  fiber->top->intVal  = *(uint8_t  *)ptr; break;
-        case TYPE_UINT16: fiber->top->intVal  = *(uint16_t *)ptr; break;
-        case TYPE_UINT32: fiber->top->intVal  = *(uint32_t *)ptr; break;
-        case TYPE_BOOL:   fiber->top->intVal  = *(bool     *)ptr; break;
-        case TYPE_CHAR:   fiber->top->intVal  = *(char     *)ptr; break;
-        case TYPE_REAL32: fiber->top->realVal = *(float    *)ptr; break;
-        case TYPE_REAL:   fiber->top->realVal = *(double   *)ptr; break;
-        case TYPE_PTR:    fiber->top->ptrVal  = *(void *   *)ptr; break;
-        case TYPE_ARRAY:  fiber->top->intVal =   (int64_t   )ptr; break;  // Always represented by pointer, not dereferenced
-        case TYPE_STR:    fiber->top->intVal =   (int64_t   )ptr; break;  // Always represented by pointer, not dereferenced
-        case TYPE_STRUCT: fiber->top->intVal =   (int64_t   )ptr; break;  // Always represented by pointer, not dereferenced
-        case TYPE_FN:     fiber->top->ptrVal  = *(void *   *)ptr; break;
+        case TYPE_INT8:         fiber->top->intVal  = *(int8_t   *)ptr; break;
+        case TYPE_INT16:        fiber->top->intVal  = *(int16_t  *)ptr; break;
+        case TYPE_INT32:        fiber->top->intVal  = *(int32_t  *)ptr; break;
+        case TYPE_INT:          fiber->top->intVal  = *(int64_t  *)ptr; break;
+        case TYPE_UINT8:        fiber->top->intVal  = *(uint8_t  *)ptr; break;
+        case TYPE_UINT16:       fiber->top->intVal  = *(uint16_t *)ptr; break;
+        case TYPE_UINT32:       fiber->top->intVal  = *(uint32_t *)ptr; break;
+        case TYPE_BOOL:         fiber->top->intVal  = *(bool     *)ptr; break;
+        case TYPE_CHAR:         fiber->top->intVal  = *(char     *)ptr; break;
+        case TYPE_REAL32:       fiber->top->realVal = *(float    *)ptr; break;
+        case TYPE_REAL:         fiber->top->realVal = *(double   *)ptr; break;
+        case TYPE_PTR:          fiber->top->ptrVal  = *(void *   *)ptr; break;
+        case TYPE_ARRAY:
+        case TYPE_STR:
+        case TYPE_STRUCT:
+        case TYPE_INTERFACE:    fiber->top->intVal =   (int64_t   )ptr; break;  // Always represented by pointer, not dereferenced
+        case TYPE_FN:           fiber->top->ptrVal  = *(void *   *)ptr; break;
 
-        default:          error("Illegal type"); return;
+        default:                error("Illegal type"); return;
     }
     fiber->ip++;
 }
@@ -279,6 +280,7 @@ static void doAssign(Fiber *fiber, ErrorFunc error)
         case TYPE_PTR:    *(void *   *)lhs = rhs.ptrVal; break;
         case TYPE_ARRAY:
         case TYPE_STRUCT:
+        case TYPE_INTERFACE:
         {
             int size = fiber->code[fiber->ip].operand.intVal;
             memcpy(lhs, rhs.ptrVal, size);

@@ -27,6 +27,7 @@ static char *spelling [] =
     "[]",
     "str",
     "struct",
+    "interface",
     "fn"
 };
 
@@ -40,13 +41,11 @@ void typeInit(Types *types, ErrorFunc error)
 
 void typeFreeFieldsAndParams(Type *type)
 {
-    // Fields
-    if (type->kind == TYPE_STRUCT)
+    if (type->kind == TYPE_STRUCT || type->kind == TYPE_INTERFACE)
         for (int i = 0; i < type->numItems; i++)
             free(type->field[i]);
 
-    // Parameters
-    if (type->kind == TYPE_FN)
+    else if (type->kind == TYPE_FN)
         for (int i = 0; i < type->sig.numParams; i++)
             free(type->sig.param[i]);
 }
@@ -108,6 +107,30 @@ Type *typeAdd(Types *types, Blocks *blocks, TypeKind kind)
 }
 
 
+void typeDeepCopy(Type *dest, Type *src)
+{
+    typeFreeFieldsAndParams(dest);
+
+    Type *next = dest->next;
+    *dest = *src;
+    dest->next = next;
+
+    if (dest->kind == TYPE_STRUCT || dest->kind == TYPE_INTERFACE)
+        for (int i = 0; i < dest->numItems; i++)
+        {
+            dest->field[i] = malloc(sizeof(Field));
+            *(dest->field[i]) = *(src->field[i]);
+        }
+
+    else if (dest->kind == TYPE_FN)
+        for (int i = 0; i < dest->sig.numParams; i++)
+        {
+            dest->sig.param[i] = malloc(sizeof(Param));
+            *(dest->sig.param[i]) = *(src->sig.param[i]);
+        }
+}
+
+
 Type *typeAddPtrTo(Types *types, Blocks *blocks, Type *type)
 {
     typeAdd(types, blocks, TYPE_PTR);
@@ -136,6 +159,7 @@ int typeSize(Types *types, Type *type)
         case TYPE_ARRAY:
         case TYPE_STR:      return type->numItems * typeSize(types, type->base);
         case TYPE_STRUCT:
+        case TYPE_INTERFACE:
         {
             int size = 0;
             for (int i = 0; i < type->numItems; i++)
@@ -175,7 +199,7 @@ bool typeReal(Type *type)
 
 bool typeStructured(Type *type)
 {
-    return type->kind == TYPE_ARRAY || type->kind == TYPE_STR || type->kind == TYPE_STRUCT;
+    return type->kind == TYPE_ARRAY || type->kind == TYPE_STR || type->kind == TYPE_STRUCT || type->kind == TYPE_INTERFACE;
 }
 
 
@@ -186,7 +210,7 @@ bool typeEquivalent(Type *left, Type *right)
 
     if (left->kind == right->kind)
     {
-        // References
+        // Pointers
         if (left->kind == TYPE_PTR)
             return typeEquivalent(left->base, right->base);
 
@@ -210,8 +234,8 @@ bool typeEquivalent(Type *left, Type *right)
             return true;
         }
 
-        // Structures
-        else if (left->kind == TYPE_STRUCT)
+        // Structures or interfaces
+        else if (left->kind == TYPE_STRUCT || left->kind == TYPE_INTERFACE)
         {
             // Number of fields
             if (left->numItems != right->numItems)
@@ -401,7 +425,7 @@ bool typeAssertForwardResolved(Types *types)
 
 Field *typeFindField(Type *structType, char *name)
 {
-    if (structType->kind == TYPE_STRUCT)
+    if (structType->kind == TYPE_STRUCT || structType->kind == TYPE_INTERFACE)
     {
         int nameHash = hash(name);
         for (int i = 0; i < structType->numItems; i++)

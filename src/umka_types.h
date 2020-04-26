@@ -25,6 +25,7 @@ typedef enum
     TYPE_ARRAY,
     TYPE_STR,
     TYPE_STRUCT,
+    TYPE_INTERFACE,
     TYPE_FN
 } TypeKind;
 
@@ -91,6 +92,7 @@ void typeInit(Types *types, ErrorFunc error);
 void typeFree(Types *types, int startBlock /* < 0 to free in all blocks*/);
 
 Type *typeAdd(Types *types, Blocks *blocks, TypeKind kind);
+void typeDeepCopy(Type *dest, Type *src);
 Type *typeAddPtrTo(Types *types, Blocks *blocks, Type *type);
 int typeSize(Types *types, Type *type);
 
