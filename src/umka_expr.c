@@ -402,10 +402,7 @@ static void parseSelectors(Compiler *comp, Type **type, Const *constant, bool *i
                 }
 
                 if ((*type)->kind == TYPE_PTR && ((*type)->base->kind == TYPE_ARRAY || (*type)->base->kind == TYPE_STR))
-                {
-                    genDeref(&comp->gen, TYPE_ARRAY);
                     *type = (*type)->base;
-                }
 
                 if ((*type)->kind != TYPE_ARRAY && (*type)->kind != TYPE_STR)
                     comp->error("Array or string expected");
@@ -428,7 +425,7 @@ static void parseSelectors(Compiler *comp, Type **type, Const *constant, bool *i
                 break;
             }
 
-            // Structure field
+            // Method or field
             case TOK_PERIOD:
             {
                 // Implicit dereferencing: a^.x == a.x
@@ -438,14 +435,8 @@ static void parseSelectors(Compiler *comp, Type **type, Const *constant, bool *i
                     *type = (*type)->base;
                 }
 
-                if ((*type)->kind == TYPE_PTR && (*type)->base->kind == TYPE_STRUCT)
-                {
-                    genDeref(&comp->gen, TYPE_STRUCT);
+                if ((*type)->kind == TYPE_PTR && typeStructured((*type)->base))
                     *type = (*type)->base;
-                }
-
-                if ((*type)->kind != TYPE_STRUCT)
-                    comp->error("Structure expected");
 
                 lexNext(&comp->lex);
                 lexCheck(&comp->lex, TOK_IDENT);
@@ -467,6 +458,9 @@ static void parseSelectors(Compiler *comp, Type **type, Const *constant, bool *i
                 else
                 {
                     // Field
+                    if ((*type)->kind != TYPE_STRUCT)
+                        comp->error("Structure expected");
+
                     Field *field = typeAssertFindField(&comp->types, *type, comp->lex.tok.name);
                     lexNext(&comp->lex);
 

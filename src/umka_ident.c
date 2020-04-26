@@ -48,16 +48,22 @@ Ident *identFind(Idents *idents, Modules *modules, Blocks *blocks, int module, c
 
     for (int i = blocks->top; i >= 0; i--)
         for (Ident *ident = idents->first; ident; ident = ident->next)
-            if (ident->hash == nameHash && strcmp(ident->name, name) == 0 &&
+            if (ident->hash == nameHash && strcmp(ident->name, name) == 0 && ident->block == blocks->item[i].block &&
 
-               (ident->module == 0 ||
-               (ident->module == module && (blocks->module == module ||
-               (ident->exported && modules->module[blocks->module]->imports[ident->module])))) &&
-
-                ident->block == blocks->item[i].block)
+               // What we found has correct name and block scope, check module scope
+               (ident->module == 0 ||                                                               // Universe module
+               (ident->module == module && (blocks->module == module ||                             // Current module
+               (ident->exported && modules->module[blocks->module]->imports[ident->module])))))     // Imported module
                 {
-                   bool lookForMethod = rcvType && ident->type->kind == TYPE_FN && ident->type->sig.method;
-                   if (!lookForMethod || typeEquivalent(ident->type->sig.param[0]->type, rcvType))
+                    bool method = ident->type->kind == TYPE_FN && ident->type->sig.method;
+
+                    // We don't need a method and what we found is not a method
+                    if (!rcvType && !method)
+                        return ident;
+
+                    // We need a method and what we found is a method
+                    if (rcvType && method && (typeCompatible(ident->type->sig.param[0]->type, rcvType) ||
+                                              typeCompatible(rcvType, ident->type->sig.param[0]->type)))
                         return ident;
                 }
 

@@ -316,7 +316,7 @@ bool typeCompatible(Type *left, Type *right)
     // Any pointer to array can be assigned to a pointer to open array
     if (left->kind  == TYPE_PTR && left->base->kind  == TYPE_ARRAY && left->base->numItems == 0 &&
         right->kind == TYPE_PTR && right->base->kind == TYPE_ARRAY)
-        return true;
+        return typeEquivalent(left->base->base, right->base->base);
 
     return false;
 }

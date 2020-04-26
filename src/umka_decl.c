@@ -65,6 +65,9 @@ static void parseRcvSignature(Compiler *comp, Signature *sig)
     lexEat(&comp->lex, TOK_COLON);
     Type *rcvType = parseType(comp, NULL);
 
+    if (rcvType->kind != TYPE_PTR || !typeStructured(rcvType->base))
+        comp->error("Receiver should be a pointer to a structured type");
+
     sig->method = true;
     typeAddParam(&comp->types, sig, rcvType, rcvName);
 

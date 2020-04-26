@@ -1,19 +1,41 @@
 import "import/std.um"
 
-type vec = struct {
-    x, y: int
-}
+type (
+    vec = struct {x, y: int}
+    arr = [2]int
+    rarr = [2]real
+)
 
-fn (u: ^vec) add(v: vec): vec {
-    return vec{x: u.x + v.x, y: u.y + v.y}
-}
+fn (u: ^vec) add(v: vec): vec {return vec{x: u.x + v.x, y: u.y + v.y}}
+fn (u: ^arr) add(v: arr): arr {return arr{u[0] + v[0], u[1] + v[1]}}
 
-fn (v: ^vec) print() {
-    std.println("vec(" + std.itoa(v.x) + ", " + std.itoa(v.y) + ")")
-}
+fn (v: ^vec) print() {std.println("vec(" + std.itoa(v.x) + ", " + std.itoa(v.y) + ")")}
+fn (v: ^arr) print() {std.println("arr(" + std.itoa(v[0]) + ", " + std.itoa(v[1]) + ")")}
+fn (v: ^rarr) print() {std.println("rarr(" + std.ftoa(v[0], 3) + ", " + std.ftoa(v[1], 3) + ")")}
+
+fn (s: ^str) print() {std.println(s^)}
+
+//fn (v: ^[]int) print() {}
+fn (v: ^[4]real) print() {}
+fn (v: ^[4]int) print() {}
+
+fn print() {std.println("OK")}
 
 fn main() {
     a := vec{x: 3, y: 5}
     b := vec{x: 6, y: 2}
     a.add(b).add(b).print()
+    
+    c := arr{1, 2}
+    d := arr{3, 4}
+    c.add(d).add(d).print()
+    
+    e := rarr{8, 3}
+    e.print()
+    
+    s := "Hello World!"
+    s[1] = 'a'
+    s.print()
+    
+    print()
 } 
