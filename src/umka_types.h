@@ -58,7 +58,7 @@ typedef struct
 
 typedef struct
 {
-    int numParams, numResults;
+    int numParams, numDefaultParams, numResults;
     bool method;
     int offsetFromSelf;                     // For interface methods
     Param *param[MAX_PARAMS];
@@ -92,38 +92,38 @@ typedef struct
 void typeInit(Types *types, ErrorFunc error);
 void typeFree(Types *types, int startBlock /* < 0 to free in all blocks*/);
 
-Type *typeAdd(Types *types, Blocks *blocks, TypeKind kind);
-void typeDeepCopy(Type *dest, Type *src);
-Type *typeAddPtrTo(Types *types, Blocks *blocks, Type *type);
-int typeSize(Types *types, Type *type);
+Type *typeAdd       (Types *types, Blocks *blocks, TypeKind kind);
+void typeDeepCopy   (Type *dest, Type *src);
+Type *typeAddPtrTo  (Types *types, Blocks *blocks, Type *type);
+int typeSize        (Types *types, Type *type);
 
-bool typeInteger(Type *type);
-bool typeOrdinal(Type *type);
-bool typeReal(Type *type);
-bool typeStructured(Type *type);
+bool typeInteger    (Type *type);
+bool typeOrdinal    (Type *type);
+bool typeReal       (Type *type);
+bool typeStructured (Type *type);
 
-bool typeEquivalent(Type *left, Type *right);
-bool typeAssertEquivalent(Types *types, Type *left, Type *right);
-bool typeCompatible(Type *left, Type *right);
-bool typeAssertCompatible(Types *types, Type *left, Type *right);
+bool typeEquivalent         (Type *left, Type *right);
+bool typeAssertEquivalent   (Types *types, Type *left, Type *right);
+bool typeCompatible         (Type *left, Type *right);
+bool typeAssertCompatible   (Types *types, Type *left, Type *right);
 
-bool typeValidOperator(Type *type, TokenKind op);
+bool typeValidOperator      (Type *type, TokenKind op);
 bool typeAssertValidOperator(Types *types, Type *type, TokenKind op);
 
 bool typeAssertForwardResolved(Types *types);
 
-Field *typeFindField(Type *structType, char *name);
-Field *typeAssertFindField(Types *types, Type *structType, char *name);
-Field *typeAddField(Types *types, Type *structType, Type *fieldType, char *name);
+Field *typeFindField        (Type *structType, char *name);
+Field *typeAssertFindField  (Types *types, Type *structType, char *name);
+Field *typeAddField         (Types *types, Type *structType, Type *fieldType, char *name);
 
-Param *typeFindParam(Signature *sig, char *name);
-void typeAddParam(Types *types, Signature *sig, Type *type, char *name);
+Param *typeFindParam        (Signature *sig, char *name);
+Param *typeAddParam         (Types *types, Signature *sig, Type *type, char *name);
 
-int typeParamSizeUpTo(Types *types, Signature *sig, int index);
-int typeParamSizeTotal(Types *types, Signature *sig);
+int typeParamSizeUpTo   (Types *types, Signature *sig, int index);
+int typeParamSizeTotal  (Types *types, Signature *sig);
 
-char *typeKindSpelling(TypeKind kind);
-char *typeSpelling(Type *type, char *buf);
+char *typeKindSpelling  (TypeKind kind);
+char *typeSpelling      (Type *type, char *buf);
 
 
 #endif // UMKA_TYPES_H_INCLUDED

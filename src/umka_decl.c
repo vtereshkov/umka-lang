@@ -75,11 +75,12 @@ static void parseRcvSignature(Compiler *comp, Signature *sig)
 }
 
 
-// signature = "(" [typedIdentList {"," typedIdentList}] ")" [":" type].
+// signature = "(" [typedIdentList ["=" expr] {"," typedIdentList ["=" expr]}] ")" [":" type].
 static void parseSignature(Compiler *comp, Signature *sig)
 {
     // Formal parameter list
     lexEat(&comp->lex, TOK_LPAR);
+    int numDefaultParams = 0;
 
     if (comp->lex.tok.kind == TOK_IDENT)
     {
@@ -91,11 +92,39 @@ static void parseSignature(Compiler *comp, Signature *sig)
             int numParams = 0;
             parseTypedIdentList(comp, paramNames, paramExported, MAX_PARAMS, &numParams, &paramType);
 
+            // ["=" expr]
+            Const defaultConstant;
+            if (comp->lex.tok.kind == TOK_EQ)
+            {
+                if (numParams != 1)
+                    comp->error("Parameter list cannot have common default value");
+
+                lexNext(&comp->lex);
+
+                Type *defaultType;
+                parseExpr(comp, &defaultType, &defaultConstant);
+
+                if (typeStructured(defaultType))
+                    comp->error("Structured default values are not allowed");
+
+                doImplicitTypeConv(comp, paramType, &defaultType, &defaultConstant, false);
+                typeAssertCompatible(&comp->types, paramType, defaultType);
+                numDefaultParams++;
+            }
+            else
+            {
+                if (numDefaultParams != 0)
+                    comp->error("Parameters with default values should be the last ones");
+            }
+
             for (int i = 0; i < numParams; i++)
             {
-                typeAddParam(&comp->types, sig, paramType, paramNames[i]);
                 if (paramExported[i])
                     comp->error("Parameter %s cannot be exported", paramNames[i]);
+
+                Param *param = typeAddParam(&comp->types, sig, paramType, paramNames[i]);
+                if (numDefaultParams > 0)
+                    param->defaultVal = defaultConstant;
             }
 
             if (comp->lex.tok.kind != TOK_COMMA)
@@ -104,6 +133,7 @@ static void parseSignature(Compiler *comp, Signature *sig)
         }
     }
     lexEat(&comp->lex, TOK_RPAR);
+    sig->numDefaultParams = numDefaultParams;
 
     // Result type
     sig->numResults = 0;

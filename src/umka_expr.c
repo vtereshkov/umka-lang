@@ -340,25 +340,26 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
         comp->error("Function is not allowed in constant expressions");
 
     // Actual parameters: [__self,] param1, param2 ...[__result]
-    int numExplicitParams = 0, numHiddenParams = 0, i = 0;
+    int numExplicitParams = 0, numPreHiddenParams = 0, numPostHiddenParams = 0;
+    int i = 0;
 
     // Method receiver
     if ((*type)->sig.method)
     {
         genPushReg(&comp->gen, VM_SELF_REG);
-        numHiddenParams++;
+        numPreHiddenParams++;
         i++;
     }
 
     // __result
     if (typeStructured((*type)->sig.resultType[0]))
-        numHiddenParams++;
+        numPostHiddenParams++;
 
     if (comp->lex.tok.kind != TOK_RPAR)
     {
         while (1)
         {
-            if (numExplicitParams + numHiddenParams > (*type)->sig.numParams - 1)
+            if (numPreHiddenParams + numExplicitParams + numPostHiddenParams > (*type)->sig.numParams - 1)
                 comp->error("Too many actual parameters");
 
             Type *formalParamType = (*type)->sig.param[i]->type;
@@ -382,8 +383,15 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
         }
     }
 
-    if (numExplicitParams + numHiddenParams < (*type)->sig.numParams)
+    if (numPreHiddenParams + numExplicitParams + numPostHiddenParams + (*type)->sig.numDefaultParams < (*type)->sig.numParams)
         comp->error("Too few actual parameters");
+
+    // Push default parameters, if not specified explicitly
+    while (i < (*type)->sig.numParams - numPostHiddenParams)
+    {
+        doPushConst(comp, (*type)->sig.param[i]->type, &((*type)->sig.param[i]->defaultVal));
+        i++;
+    }
 
     // Push __result pointer
     if (typeStructured((*type)->sig.resultType[0]))

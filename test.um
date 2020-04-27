@@ -39,7 +39,22 @@ var s: str = "Hello" + " World"
 
 var a: [3] int16 = [3] int16{1, 4, 7}
 
+fn def(x, y: int, z: int = 14, w: real = 3.18): [3] int {
+    std.println("def: " + std.itoa(x) + " " + std.itoa(y) + " " + std.itoa(z) + " " + std.ftoa(w, 2))
+    return [3] int {x, y, z}
+}
+
 fn main() {
+    defarr := def(1, 2)
+    std.println("z = " + std.itoa(defarr[2]))
+    
+    defarr = def(1, 2, 3)
+    std.println("z = " + std.itoa(defarr[2]))
+
+    defarr = def(1, 2, 3, 4)
+    std.println("z = " + std.itoa(defarr[2]))    
+    
+
     q := 7
     b := [3][2] real{[2]real{p,   2.5}, 
                      [2]real{3.5,   q},

@@ -93,6 +93,7 @@ Type *typeAdd(Types *types, Blocks *blocks, TypeKind kind)
         type->sig.method            = false;
         type->sig.offsetFromSelf    = 0;
         type->sig.numParams         = 0;
+        type->sig.numDefaultParams  = 0;
         type->sig.numResults        = 0;
     }
 
@@ -488,7 +489,7 @@ Param *typeFindParam(Signature *sig, char *name)
 }
 
 
-void typeAddParam(Types *types, Signature *sig, Type *type, char *name)
+Param *typeAddParam(Types *types, Signature *sig, Type *type, char *name)
 {
     Param *param = typeFindParam(sig, name);
     if (param)
@@ -505,6 +506,7 @@ void typeAddParam(Types *types, Signature *sig, Type *type, char *name)
     param->defaultVal.intVal = 0;
 
     sig->param[sig->numParams++] = param;
+    return param;
 }
 
 
