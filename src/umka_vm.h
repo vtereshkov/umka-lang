@@ -20,6 +20,8 @@ enum
     VM_IO_STREAM_REG    = VM_NUM_REGS - 3,
     VM_IO_FORMAT_REG    = VM_NUM_REGS - 2,
     VM_IO_COUNT_REG     = VM_NUM_REGS - 1,
+
+    VM_MIN_STACK_SIZE   = 1024  // Slots
 };
 
 

@@ -596,6 +596,9 @@ static void doLeaveFrame(Fiber *fiber)
 
 void fiberStep(Fiber *fiber, ErrorFunc error)
 {
+    if (fiber->top - fiber->stack < VM_MIN_STACK_SIZE)
+        error("Stack overflow");
+
     switch (fiber->code[fiber->ip].opcode)
     {
         case OP_PUSH:           doPush(fiber);              break;

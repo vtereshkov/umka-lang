@@ -59,7 +59,7 @@ int main(int argc, char **argv)
     compilerAsm(&comp, assembly);
     printf("%s", assembly);
 */
-    compilerRun     (&comp, 64 * 1024, runtimeError);
+    compilerRun     (&comp, 1024 * 1024, runtimeError);
     compilerFree    (&comp);
 
     return 0;

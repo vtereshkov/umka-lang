@@ -33,6 +33,12 @@ fn remove*   (name: str): int {return rtlremove(&name)}
 fn println*(s: str): int {return printf("{s}\n", s)}
 fn fprintln*(f: file, s: str): int {return fprintf(f, "{s}\n", s)}
 
+fn getchar*(): char {
+    var c: char
+    scanf("{c}", &c)
+    return c
+}
+
 // Conversions
 
 fn atoi*(s: str): int {

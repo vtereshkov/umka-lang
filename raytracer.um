@@ -211,18 +211,12 @@ fn main() {
     const (width = 640; height = 480)
     const focal = 500
     const antialiasing = 1.0
+    
+    var buf: [height][width][3] uint8
 
     var rays: int
-    printf("Raytracer demo\n\n")
-    printf("Rays per pixel (recommended 1 to 100): ")
-    scanf("{d}", &rays)
-    std.println("")
-
-    // Open output file
-    const fileName = "scene.ppm"
-    f := std.fopen(fileName, "wb")
-
-    fprintf(f, "P3\n{d} {d}\n255\n", width, height)
+    printf("Raytracer demo\n")
+    printf("Rays per pixel (recommended 1 to 100): ");  scanf("{d}", &rays)
 
     // Render scene
     startTime := std.time()
@@ -244,17 +238,21 @@ fn main() {
             }
             color = color.mul(255.0 / rays)
 
-            fprintf(f, "{d} {d} {d} ", round(color[0]), round(color[1]), round(color[2]))
+            buf[i][j] = [3]uint8 {round(color[0]), round(color[1]), round(color[2])}
         }
-        std.fprintln(f, "")
         printf("{3d}//{3d}\n", i + 1, height)
     }
 
     endTime := std.time()
-
+    printf("Rendering time = {d} s\n", endTime - startTime)
+    
+    // Write output file
+    const fileName = "scene.ppm"
+    f := std.fopen(fileName, "wb")
+    fprintf(f, "P6\n{d} {d}\n255\n", width, height)
+    std.fwrite(f, &buf, sizeof(buf))
     std.fclose(f)
-
-    printf("\nRendering time = {d}\n", endTime - startTime)
     std.println("Done. See " + fileName)
-    scanf("\n")
+    std.getchar()
+    std.getchar()
 }
