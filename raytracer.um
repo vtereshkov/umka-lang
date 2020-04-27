@@ -1,0 +1,260 @@
+// Raytracer demo in Umka
+
+import "import/std.um"
+
+type Vec = [3]real
+
+fn (u: ^Vec) add(v: Vec): Vec         { return Vec{u[0] + v[0], u[1] + v[1], u[2] + v[2]} }
+fn (u: ^Vec) sub(v: Vec): Vec         { return Vec{u[0] - v[0], u[1] - v[1], u[2] - v[2]} }
+fn (u: ^Vec) dot(v: Vec): real        { return u[0]*v[0] + u[1]*v[1] + u[2]*v[2] }
+fn (u: ^Vec) mul(a: real): Vec        { return Vec{u[0] * a, u[1] * a, u[2] * a} }
+fn (u: ^Vec) elementwise(v: Vec): Vec { return Vec{u[0] * v[0], u[1] * v[1], u[2] * v[2]} }
+fn norm(v: Vec): real                 { return sqrt(v.dot(v)) }
+fn normalize(v: Vec): Vec             { return v.mul(1.0 / norm(v)) }
+fn randn(): Vec                       { return Vec{std.frand() - 0.5, std.frand() - 0.5, std.frand() - 0.5} }
+
+type Color = Vec
+
+type Ray = struct {
+    origin, dir: Vec
+}
+
+type GenericBody = struct {
+    center:      Vec
+    color:       Color
+    diffuseness: real
+    isLamp:      bool
+}
+
+fn (b: ^GenericBody) lambertFactor(lambert: real): real {
+    return 1.0 - (1.0 - lambert) * b.diffuseness
+}
+
+type Body = interface {
+    get(): ^GenericBody
+    intersect(ray: ^Ray, point, normal: ^Vec): bool
+}
+
+type Box = struct {
+    body: GenericBody
+    halfsize: Vec
+}
+
+fn (b: ^Box) get(): ^GenericBody { return &b.body }
+
+fn within(x, y, xmin, ymin, xmax, ymax: real): bool {
+    return (x > xmin) && (x < xmax) && (y > ymin) && (y < ymax)
+}
+
+fn (b: ^Box) intersectFace(ray: ^Ray, point, normal: ^Vec, i, j, k: int): bool {
+    if fabs(ray.dir[k]) > 1e-9 {
+        side := 1.0
+        if ray.dir[k] > 0.0 {
+            side = -1.0
+        }
+
+        if factor := (b.body.center[k] + side * b.halfsize[k] - ray.origin[k]) / ray.dir[k]; factor > 0.1 {
+            point^ = ray.origin.add(ray.dir.mul(factor))
+            if within(
+                point[i], point[j],
+                b.body.center[i] - b.halfsize[i], b.body.center[j] - b.halfsize[j],
+                b.body.center[i] + b.halfsize[i], b.body.center[j] + b.halfsize[j]) {
+
+                normal[i] = 0
+                normal[j] = 0
+                normal[k] = side
+                return true
+            }
+        }
+    }
+    return false
+}
+
+fn (b: ^Box) intersect(ray: ^Ray, point, normal: ^Vec): bool {
+    return b.intersectFace(ray, point, normal, 0, 1, 2) || 
+           b.intersectFace(ray, point, normal, 2, 0, 1) || 
+           b.intersectFace(ray, point, normal, 1, 2, 0)
+}
+
+type Sphere = struct {
+    body: GenericBody
+    radius: real
+}
+
+fn (s: ^Sphere) get(): ^GenericBody { return &s.body }
+
+fn (s: ^Sphere) intersect(ray: ^Ray, point, normal: ^Vec): bool {
+    displacement := s.body.center.sub(ray.origin)
+    proj := displacement.dot(ray.dir)
+    discr := s.radius * s.radius + proj * proj - displacement.dot(displacement)
+
+    if discr > 0 {
+        factor := proj - sqrt(discr)
+        if factor > 0.1 {
+            point^ = ray.origin.add(ray.dir.mul(factor))
+            normal^ = point.sub(s.body.center).mul(1.0 / s.radius)
+            return true
+        }
+    }
+    return false
+}
+
+type Scene = struct {
+    ambientColor: Color
+    body:         ^[]Body
+    numBodies:    int
+}
+
+fn (sc: ^Scene) trace(ray: ^Ray, depth: int): Color {
+    if depth > 3 {
+        return sc.ambientColor
+    }
+
+    // Find nearest intersection
+    bestDist := 1e9
+    bestIndex := -1
+    var bestPoint, bestNormal: Vec
+
+    for i := 0; i < sc.numBodies; i++ {
+        b := sc.body[i]
+        var point, normal: Vec
+        
+        if found := b.intersect(ray, &point, &normal); found {
+            dist := norm(point.sub(ray.origin))
+            if dist < bestDist {
+                bestDist = dist
+                bestIndex = i
+                bestPoint = point
+                bestNormal = normal
+            }
+        }
+    }
+
+    // Reflect rays
+    if bestIndex >= 0 {
+        bestBody := sc.body[bestIndex].get()
+
+        if bestBody.isLamp {
+            return bestBody.color
+        }
+
+        specularDir := ray.dir.sub(bestNormal.mul(2.0 * (ray.dir.dot(bestNormal))))
+        diffuseDir := normalize(specularDir.add(randn().mul(2.0 * bestBody.diffuseness)))
+
+        lambert := diffuseDir.dot(bestNormal)
+        if lambert < 0 {
+            diffuseDir = diffuseDir.sub(bestNormal.mul(2.0 * lambert))
+            lambert = -lambert
+        }
+
+        diffuseRay := Ray{origin: bestPoint, dir: diffuseDir}
+
+        return sc.trace(&diffuseRay, depth + 1).mul(bestBody.lambertFactor(lambert)).elementwise(bestBody.color)
+    }
+
+    return sc.ambientColor
+}
+
+fn main() {
+    // Define scene
+    const numBodies = 5
+    
+    body := [numBodies]Body {
+        Box {
+            body: GenericBody {
+                center: Vec{500, -100, 1200},
+                color: Color{0.4, 0.7, 1.0},
+                diffuseness: 0.1,
+                isLamp: false},
+            halfsize: Vec{400 / 2.0, 600 / 2.0, 300 / 2.0}},
+            
+        Box {
+            body: GenericBody {
+                center: Vec{550, 210, 1100},
+                color: Color{0.9, 1.0, 0.6},
+                diffuseness: 0.3,
+                isLamp: false},
+            halfsize: Vec{1000 / 2.0, 20 / 2.0, 1000 / 2.0}},            
+
+        Sphere {
+            body: GenericBody{
+                center: Vec{600, 0, 700},
+                color: Color{1.0, 0.4, 0.6},
+                diffuseness: 0.2,
+                isLamp: false},
+            radius: 200},
+            
+        Sphere {
+            body: GenericBody{
+                center: Vec{330, 150, 700},
+                color: Color{1.0, 1.0, 0.3},
+                diffuseness: 0.15,
+                isLamp: false},
+            radius: 50},
+            
+        // Define light
+        Sphere {
+            body: GenericBody{
+                center: Vec{500, -1000, -700},
+                color: Color{1.0, 1.0, 1.0},
+                diffuseness: 1.0,
+                isLamp: true},
+            radius: 800}}
+            
+    scene := Scene{ambientColor: Color{0.2, 0.2, 0.2}, body: &body, numBodies: numBodies}            
+
+    // Define eye
+    pos := Vec{0, 0, 0}
+    const azimuth = 30.0 * std.pi / 180.0
+    sinAz := sin(azimuth); cosAz := cos(azimuth)
+    
+    const (width = 640; height = 480)
+    const focal = 500
+    const antialiasing = 1.0
+
+    var rays: int
+    printf("Raytracer demo\n\n")
+    printf("Rays per pixel (recommended 1 to 100): ")
+    scanf("{d}", &rays)
+    std.println("")
+
+    // Open output file
+    const fileName = "scene.ppm"
+    f := std.fopen(fileName, "wb")
+
+    fprintf(f, "P3\n{d} {d}\n255\n", width, height)
+
+    // Render scene
+    startTime := std.time()
+
+    for i := 0; i < height; i++ {
+        for j := 0; j < width; j++ {
+            dir := Vec{j - width/2, i - height/2, focal}
+
+            rotDir := Vec{
+                 dir[0]*cosAz + dir[2]*sinAz,
+                 dir[1],
+                -dir[0]*sinAz + dir[2]*cosAz}
+
+            color := Color{0, 0, 0}
+            for r := 0; r < rays; r++ {
+                randomDir := rotDir.add(randn().mul(antialiasing))
+                ray := Ray{origin: pos, dir: normalize(randomDir)}
+                color = color.add(scene.trace(&ray, 0))
+            }
+            color = color.mul(255.0 / rays)
+
+            fprintf(f, "{d} {d} {d} ", round(color[0]), round(color[1]), round(color[2]))
+        }
+        std.fprintln(f, "")
+        printf("{3d}//{3d}\n", i + 1, height)
+    }
+
+    endTime := std.time()
+
+    std.fclose(f)
+
+    printf("\nRendering time = {d}\n", endTime - startTime)
+    std.println("Done. See " + fileName)
+    scanf("\n")
+}

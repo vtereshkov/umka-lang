@@ -32,17 +32,21 @@ fn proc_fooable_barable(fb: fooable_barable) {
     std.println("proc_fooable_barable:")
     fb.foo(9)
     fb.bar(11)
+    proc_fooable(fb)
 }
 
 fn main() {
     v := vec{x: 3, y: 5}
-    var fb: fooable_barable = v
+    var (fb: fooable_barable = v; f: fooable = v)
     
     proc_fooable(v)
     proc_fooable_barable(v)
     
     proc_fooable(fb)
     proc_fooable_barable(fb) 
+    
+    proc_fooable(f)
+    //proc_fooable_barable(f) 
 }
     
 
