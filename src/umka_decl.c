@@ -273,6 +273,8 @@ static Type *parseInterfaceType(Compiler *comp)
         lexNext(&comp->lex);
 
         Type *methodType = typeAdd(&comp->types, &comp->blocks, TYPE_FN);
+
+        typeAddParam(&comp->types, &methodType->sig, comp->ptrVoidType, "__self");
         parseSignature(comp, &methodType->sig);
 
         Field *method = typeAddField(&comp->types, type, methodType, methodName);

@@ -12,7 +12,8 @@ enum
 
     // General-purpose registers
     VM_RESULT_REG_0     = 0,
-    VM_COMMON_REG_0     = 16,
+    VM_SELF_REG         = 31,
+    VM_COMMON_REG_0     = 32,
     VM_COMMON_REG_1     = VM_COMMON_REG_0 + 1,
 
     // Registers for special use by printf() / scanf()

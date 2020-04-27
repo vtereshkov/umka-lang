@@ -294,16 +294,7 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
     // Method receiver
     if ((*type)->sig.method)
     {
-        if ((*type)->sig.offsetFromSelf == 0)   // Concrete method
-            genSwap(&comp->gen);                // Method entry point should come first, then comes receiver
-        else                                    // Interface method
-        {
-            genDup(&comp->gen);
-            genPushIntConst(&comp->gen, (*type)->sig.offsetFromSelf);
-            genBinary(&comp->gen, TOK_MINUS, TYPE_INT, 0);
-            genDeref(&comp->gen, TYPE_PTR);
-        }
-
+        genPushReg(&comp->gen, VM_SELF_REG);
         numHiddenParams++;
         i++;
     }
@@ -495,9 +486,12 @@ static void parseSelectors(Compiler *comp, Type **type, Const *constant, bool *i
                 {
                     // Method
                     lexNext(&comp->lex);
-                    doPushConst(comp, method->type, &method->constant);
-                    *type = method->type;
 
+                    // Save concrete method's receiver to dedicated register and push method's entry point
+                    genPopReg(&comp->gen, VM_SELF_REG);
+                    doPushConst(comp, method->type, &method->constant);
+
+                    *type = method->type;
                     *isVar = false;
                     *isCall = false;
                 }
@@ -512,6 +506,16 @@ static void parseSelectors(Compiler *comp, Type **type, Const *constant, bool *i
 
                     genPushIntConst(&comp->gen, field->offset);
                     genBinary(&comp->gen, TOK_PLUS, TYPE_INT, 0);
+
+                    // Save interface method's receiver to dedicated register and push method's entry point
+                    if (field->type->kind == TYPE_FN && field->type->sig.method && field->type->sig.offsetFromSelf != 0)
+                    {
+                        genDup(&comp->gen);
+                        genPushIntConst(&comp->gen, field->type->sig.offsetFromSelf);
+                        genBinary(&comp->gen, TOK_MINUS, TYPE_INT, 0);
+                        genDeref(&comp->gen, TYPE_PTR);
+                        genPopReg(&comp->gen, VM_SELF_REG);
+                    }
 
                     if (typeStructured(field->type))
                         *type = field->type;

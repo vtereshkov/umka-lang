@@ -54,11 +54,11 @@ int main(int argc, char **argv)
 
     compilerInit    (&comp, argv[1], 1024 * 1024, compileError);
     compilerCompile (&comp);
-
+/*
     char assembly[100000];
     compilerAsm(&comp, assembly);
     printf("%s", assembly);
-
+*/
     compilerRun     (&comp, 64 * 1024, runtimeError);
     compilerFree    (&comp);
 
