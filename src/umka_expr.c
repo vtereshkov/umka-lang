@@ -22,18 +22,55 @@ void doPushVarPtr(Compiler *comp, Ident *ident)
 }
 
 
+void doIntToRealConv(Compiler *comp, Type *dest, Type **src, Const *constant, bool lhs)
+{
+    BuiltinFunc builtin = lhs ? BUILTIN_REAL_LHS : BUILTIN_REAL;
+    if (constant)
+        constCallBuiltin(&comp->consts, constant, builtin);
+    else
+        genCallBuiltin(&comp->gen, TYPE_INT, builtin);
+
+    *src = dest;
+}
+
+
+void doConcreteToInterfaceConv(Compiler *comp, Type *dest, Type **src, Const *constant)
+{
+    if (constant)
+        comp->error("Conversion to interface is not allowed in constant expressions");
+
+    int destSize = typeSize(&comp->types, dest);
+    int destOffset = identAllocStack(&comp->idents, &comp->blocks, destSize);
+
+    // Assign __self (offset 0)
+    genPushLocalPtr(&comp->gen, destOffset);                // Push dest pointer
+    genSwap(&comp->gen);                                    // For assignment, dest should come first
+    genAssignOfs(&comp->gen, 0);                            // Assign to dest with zero offset
+
+    // Assign methods
+    for (int i = 1; i < dest->numItems; i++)
+    {
+        char *name = dest->field[i]->name;
+        Type *rcvType = typeAddPtrTo(&comp->types, &comp->blocks, *src);
+        Ident *srcMethod = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, name, rcvType);
+
+        genPushLocalPtr(&comp->gen, destOffset);            // Push dest pointer
+        genPushIntConst(&comp->gen, srcMethod->offset);     // Push src value
+        genAssignOfs(&comp->gen, dest->field[i]->offset);   // Assign to dest with non-zero offset
+    }
+
+    genPushLocalPtr(&comp->gen, destOffset);
+    *src = dest;
+}
+
+
 void doImplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant, bool lhs)
 {
-    if (dest->kind == TYPE_REAL && typeInteger(*src))
-    {
-        BuiltinFunc builtin = lhs ? BUILTIN_REAL_LHS : BUILTIN_REAL;
-        if (constant)
-            constCallBuiltin(&comp->consts, constant, builtin);
-        else
-            genCallBuiltin(&comp->gen, TYPE_INT, builtin);
+    if (dest->kind == TYPE_INTERFACE && typeStructured(*src) && (*src)->kind != TYPE_INTERFACE)
+        doConcreteToInterfaceConv(comp, dest, src, constant);
 
-        *src = dest;
-    }
+    else if (dest->kind == TYPE_REAL && typeInteger(*src))
+        doIntToRealConv(comp, dest, src, constant, lhs);
 }
 
 
@@ -257,7 +294,16 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
     // Method receiver
     if ((*type)->sig.method)
     {
-        genSwap(&comp->gen);    // Method entry point should come first, then comes receiver
+        if ((*type)->sig.offsetFromSelf == 0)   // Concrete method
+            genSwap(&comp->gen);                // Method entry point should come first, then comes receiver
+        else                                    // Interface method
+        {
+            genDup(&comp->gen);
+            genPushIntConst(&comp->gen, (*type)->sig.offsetFromSelf);
+            genBinary(&comp->gen, TOK_MINUS, TYPE_INT, 0);
+            genDeref(&comp->gen, TYPE_PTR);
+        }
+
         numHiddenParams++;
         i++;
     }
@@ -458,7 +504,7 @@ static void parseSelectors(Compiler *comp, Type **type, Const *constant, bool *i
                 else
                 {
                     // Field
-                    if ((*type)->kind != TYPE_STRUCT)
+                    if ((*type)->kind != TYPE_STRUCT && (*type)->kind != TYPE_INTERFACE)
                         comp->error("Structure expected");
 
                     Field *field = typeAssertFindField(&comp->types, *type, comp->lex.tok.name);

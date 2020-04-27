@@ -274,7 +274,10 @@ static Type *parseInterfaceType(Compiler *comp)
 
         Type *methodType = typeAdd(&comp->types, &comp->blocks, TYPE_FN);
         parseSignature(comp, &methodType->sig);
-        typeAddField(&comp->types, type, methodType, methodName);
+
+        Field *method = typeAddField(&comp->types, type, methodType, methodName);
+        methodType->sig.method = true;
+        methodType->sig.offsetFromSelf = method->offset;
 
         lexEat(&comp->lex, TOK_SEMICOLON);
     }

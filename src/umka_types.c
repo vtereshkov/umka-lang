@@ -90,9 +90,10 @@ Type *typeAdd(Types *types, Blocks *blocks, TypeKind kind)
 
     if (kind == TYPE_FN)
     {
-        type->sig.method     = false;
-        type->sig.numParams  = 0;
-        type->sig.numResults = 0;
+        type->sig.method            = false;
+        type->sig.offsetFromSelf    = 0;
+        type->sig.numParams         = 0;
+        type->sig.numResults        = 0;
     }
 
     // Add to list
@@ -445,7 +446,7 @@ Field *typeAssertFindField(Types *types, Type *structType, char *name)
 }
 
 
-void typeAddField(Types *types, Type *structType, Type *fieldType, char *name)
+Field *typeAddField(Types *types, Type *structType, Type *fieldType, char *name)
 {
     Field *field = typeFindField(structType, name);
     if (field)
@@ -471,6 +472,7 @@ void typeAddField(Types *types, Type *structType, Type *fieldType, char *name)
     field->offset = typeSize(types, structType);
 
     structType->field[structType->numItems++] = field;
+    return field;
 }
 
 

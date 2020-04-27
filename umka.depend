@@ -141,16 +141,16 @@
 1587444310 c:\users\vasiliy\desktop\umka-lang-master\src\umka_lexer.h
 	"umka_common.h"
 
-1587937337 c:\users\vasiliy\desktop\umka-lang-master\src\umka_types.h
+1587948549 c:\users\vasiliy\desktop\umka-lang-master\src\umka_types.h
 	"umka_common.h"
 	"umka_lexer.h"
 
-1587859696 c:\users\vasiliy\desktop\umka-lang-master\src\umka_vm.h
+1587943232 c:\users\vasiliy\desktop\umka-lang-master\src\umka_vm.h
 	"umka_common.h"
 	"umka_lexer.h"
 	"umka_types.h"
 
-1587841159 c:\users\vasiliy\desktop\umka-lang-master\src\umka_gen.h
+1587943765 c:\users\vasiliy\desktop\umka-lang-master\src\umka_gen.h
 	"umka_common.h"
 	"umka_vm.h"
 
@@ -167,7 +167,7 @@
 	<math.h>
 	"umka_const.h"
 
-1587925649 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_decl.c
+1587949222 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_decl.c
 	<stdio.h>
 	<string.h>
 	"umka_expr.h"
@@ -183,12 +183,12 @@
 1587740205 c:\users\vasiliy\desktop\umka-lang-master\src\umka_decl.h
 	"umka_compiler.h"
 
-1587908491 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_expr.c
+1587949028 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_expr.c
 	<string.h>
 	"umka_expr.h"
 	"umka_decl.h"
 
-1587841118 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_gen.c
+1587943772 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_gen.c
 	<stdio.h>
 	<stdlib.h>
 	"umka_gen.h"
@@ -208,7 +208,7 @@
 	"umka_common.h"
 	"umka_lexer.h"
 
-1587589141 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_main.c
+1587946811 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_main.c
 	<stdio.h>
 	<stdlib.h>
 	<stdarg.h>
@@ -222,7 +222,7 @@
 	"umka_expr.h"
 	"umka_decl.h"
 
-1587937189 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_types.c
+1587948514 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_types.c
 	<stdio.h>
 	<stdlib.h>
 	<string.h>
@@ -230,7 +230,7 @@
 	"umka_types.h"
 	"umka_ident.h"
 
-1587924437 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_vm.c
+1587943613 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_vm.c
 	<stdio.h>
 	<stdlib.h>
 	<string.h>

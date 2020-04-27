@@ -1,11 +1,11 @@
-import "import/std.um"
+//import "import/std.um"
 
 type (
     vec = struct {x, y: int}
     arr = [2]int
     rarr = [2]real
 )
-
+/*
 fn (u: ^vec) add(v: vec): vec {return vec{x: u.x + v.x, y: u.y + v.y}}
 fn (u: ^arr) add(v: arr): arr {return arr{u[0] + v[0], u[1] + v[1]}}
 
@@ -20,30 +20,18 @@ fn (s: ^str) print() {std.println(s^)}
 fn (v: ^[4]int) print() {}
 
 fn print() {std.println("OK")}
+*/
+
+fn (v: ^vec) print() {printf("{d}", v.x)}
 
 type printable = interface {
     print()
 }
 
-type (
-    printstruct = struct {
-        prompt: str
-        print: fn (p: ^printstruct, s: str)
-    }
-)
 
-fn printfunc(p: ^printstruct, s: str) {
-    std.println(p.prompt + s)
-}
-
-
-
-fn main() {
-    ps := printstruct{prompt: "This is ps", print: printfunc}
-    ps.print(&ps, " - very cool!")
-    
+fn main() {   
     a := vec{x: 3, y: 5}
-    b := vec{x: 6, y: 2}
+/*    b := vec{x: 6, y: 2}
     a.add(b).add(b).print()
     
     c := arr{1, 2}
@@ -57,5 +45,9 @@ fn main() {
     s[1] = 'a'
     s.print()
     
-    print()
+    print()*/
+    
+    // interfaces
+    var p: printable = a
+    p.print()
 } 

@@ -35,6 +35,7 @@ typedef enum
     OP_SWAP,
     OP_DEREF,
     OP_ASSIGN,
+    OP_ASSIGN_OFS,
     OP_UNARY,
     OP_BINARY,
     OP_GET_ARRAY_PTR,

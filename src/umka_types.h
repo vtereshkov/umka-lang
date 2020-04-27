@@ -60,6 +60,7 @@ typedef struct
 {
     int numParams, numResults;
     bool method;
+    int offsetFromSelf;                     // For interface methods
     Param *param[MAX_PARAMS];
     struct tagType *resultType[MAX_RESULTS];
 } Signature;
@@ -69,13 +70,13 @@ typedef struct tagType
 {
     TypeKind kind;
     int block;
-    struct tagType *base;
-    int numItems;
+    struct tagType *base;                   // For pointers and arrays
+    int numItems;                           // For arrays, structures and interfaces
     union
     {
-        Field *field[MAX_FIELDS];
-        Signature sig;
-        struct tagIdent *forwardIdent;
+        Field *field[MAX_FIELDS];           // For structures and interfaces
+        Signature sig;                      // For functions, including methods
+        struct tagIdent *forwardIdent;      // For forward-declared types
     };
     struct tagType *next;
 } Type;
@@ -113,7 +114,7 @@ bool typeAssertForwardResolved(Types *types);
 
 Field *typeFindField(Type *structType, char *name);
 Field *typeAssertFindField(Types *types, Type *structType, char *name);
-void typeAddField(Types *types, Type *structType, Type *fieldType, char *name);
+Field *typeAddField(Types *types, Type *structType, Type *fieldType, char *name);
 
 Param *typeFindParam(Signature *sig, char *name);
 void typeAddParam(Types *types, Signature *sig, Type *type, char *name);

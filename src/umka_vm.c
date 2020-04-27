@@ -22,6 +22,7 @@ static char *spelling [] =
     "SWAP",
     "DEREF",
     "ASSIGN",
+    "ASSIGN_OFS",
     "UNARY",
     "BINARY",
     "GET_ARRAY_PTR",
@@ -291,6 +292,17 @@ static void doAssign(Fiber *fiber, ErrorFunc error)
 
         default:          error("Illegal type"); return;
     }
+    fiber->ip++;
+}
+
+
+static void doAssignOfs(Fiber *fiber)
+{
+    Slot rhs = *fiber->top++;
+    void *lhs = (fiber->top++)->ptrVal;
+    int offset = fiber->code[fiber->ip].operand.intVal;
+
+    *(Slot *)(lhs + offset) = rhs;
     fiber->ip++;
 }
 
@@ -596,6 +608,7 @@ void fiberStep(Fiber *fiber, ErrorFunc error)
         case OP_SWAP:           doSwap(fiber);              break;
         case OP_DEREF:          doDeref(fiber, error);      break;
         case OP_ASSIGN:         doAssign(fiber, error);     break;
+        case OP_ASSIGN_OFS:     doAssignOfs(fiber);         break;
         case OP_UNARY:          doUnary(fiber, error);      break;
         case OP_BINARY:         doBinary(fiber, error);     break;
         case OP_GET_ARRAY_PTR:  doGetArrayPtr(fiber);       break;

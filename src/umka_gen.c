@@ -131,6 +131,13 @@ void genAssign(CodeGen *gen, TypeKind typeKind, int structSize)
 }
 
 
+void genAssignOfs(CodeGen *gen, int offset)
+{
+    const Instruction instr = {.opcode = OP_ASSIGN_OFS, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = offset};
+    genAddInstr(gen, &instr);
+}
+
+
 void genUnary(CodeGen *gen, TokenKind tokKind, TypeKind typeKind)
 {
     const Instruction instr = {.opcode = OP_UNARY, .tokKind = tokKind, .typeKind = typeKind, .operand.intVal = 0};
