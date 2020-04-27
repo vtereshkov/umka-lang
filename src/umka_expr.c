@@ -22,7 +22,7 @@ void doPushVarPtr(Compiler *comp, Ident *ident)
 }
 
 
-void doIntToRealConv(Compiler *comp, Type *dest, Type **src, Const *constant, bool lhs)
+static void doIntToRealConv(Compiler *comp, Type *dest, Type **src, Const *constant, bool lhs)
 {
     BuiltinFunc builtin = lhs ? BUILTIN_REAL_LHS : BUILTIN_REAL;
     if (constant)
@@ -34,7 +34,7 @@ void doIntToRealConv(Compiler *comp, Type *dest, Type **src, Const *constant, bo
 }
 
 
-void doConcreteToInterfaceConv(Compiler *comp, Type *dest, Type **src, Const *constant)
+static void doConcreteToInterfaceConv(Compiler *comp, Type *dest, Type **src, Const *constant)
 {
     if (constant)
         comp->error("Conversion to interface is not allowed in constant expressions");
@@ -52,7 +52,11 @@ void doConcreteToInterfaceConv(Compiler *comp, Type *dest, Type **src, Const *co
     {
         char *name = dest->field[i]->name;
         Type *rcvType = typeAddPtrTo(&comp->types, &comp->blocks, *src);
-        Ident *srcMethod = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, name, rcvType);
+        Ident *srcMethod = identFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, name, rcvType);
+        if (!srcMethod)
+            comp->error("Method %s is not implemented", name);
+
+        typeAssertCompatible(&comp->types, dest->field[i]->type, srcMethod->type);
 
         genPushLocalPtr(&comp->gen, destOffset);            // Push dest pointer
         genPushIntConst(&comp->gen, srcMethod->offset);     // Push src value
@@ -64,11 +68,58 @@ void doConcreteToInterfaceConv(Compiler *comp, Type *dest, Type **src, Const *co
 }
 
 
+static void doInterfaceToInterfaceConv(Compiler *comp, Type *dest, Type **src, Const *constant)
+{
+    if (constant)
+        comp->error("Conversion to interface is not allowed in constant expressions");
+
+    int destSize = typeSize(&comp->types, dest);
+    int destOffset = identAllocStack(&comp->idents, &comp->blocks, destSize);
+
+    // Assign __self (offset 0)
+    genDup(&comp->gen);                                     // Duplicate src pointer
+    genDeref(&comp->gen, TYPE_PTR);                         // Get __self value
+    genPushLocalPtr(&comp->gen, destOffset);                // Push dest pointer
+    genSwap(&comp->gen);                                    // For assignment, dest should come first
+    genAssignOfs(&comp->gen, 0);                            // Assign to dest with zero offset
+
+    // Assign methods
+    for (int i = 1; i < dest->numItems; i++)
+    {
+        char *name = dest->field[i]->name;
+        Field *srcMethod = typeFindField(*src, name);
+        if (!srcMethod)
+            comp->error("Method %s is not implemented", name);
+
+        typeAssertCompatible(&comp->types, dest->field[i]->type, srcMethod->type);
+
+        genDup(&comp->gen);                                 // Duplicate src pointer
+        genPushIntConst(&comp->gen, srcMethod->offset);     // Push src method offset
+        genBinary(&comp->gen, TOK_PLUS, TYPE_INT, 0);       // Add src method offset
+        genDeref(&comp->gen, TYPE_PTR);                     // Get method entry point
+        genPushLocalPtr(&comp->gen, destOffset);            // Push dest pointer
+        genSwap(&comp->gen);                                // For assignment, dest should come first
+        genAssignOfs(&comp->gen, dest->field[i]->offset);   // Assign to dest with non-zero offset
+    }
+
+    genPop(&comp->gen);                                     // Remove src pointer
+    genPushLocalPtr(&comp->gen, destOffset);
+    *src = dest;
+}
+
+
 void doImplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant, bool lhs)
 {
-    if (dest->kind == TYPE_INTERFACE && typeStructured(*src) && (*src)->kind != TYPE_INTERFACE)
-        doConcreteToInterfaceConv(comp, dest, src, constant);
-
+    if (dest->kind == TYPE_INTERFACE && typeStructured(*src))
+    {
+        if ((*src)->kind == TYPE_INTERFACE)
+        {
+            if (!typeEquivalent(dest, *src))
+                doInterfaceToInterfaceConv(comp, dest, src, constant);
+        }
+        else
+            doConcreteToInterfaceConv(comp, dest, src, constant);
+    }
     else if (dest->kind == TYPE_REAL && typeInteger(*src))
         doIntToRealConv(comp, dest, src, constant, lhs);
 }
@@ -288,7 +339,7 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
     if (constant)
         comp->error("Function is not allowed in constant expressions");
 
-    // Actual parameters
+    // Actual parameters: [__self,] param1, param2 ...[__result]
     int numExplicitParams = 0, numHiddenParams = 0, i = 0;
 
     // Method receiver

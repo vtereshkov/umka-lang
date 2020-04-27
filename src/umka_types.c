@@ -267,8 +267,9 @@ bool typeEquivalent(Type *left, Type *right)
             if (left->sig.method != right->sig.method)
                 return false;
 
-            // Parameters
-            for (int i = 0; i < left->sig.numParams; i++)
+            // Parameters (skip interface method receiver)
+            int iStart = left->sig.offsetFromSelf == 0 ? 0 : 1;
+            for (int i = iStart; i < left->sig.numParams; i++)
             {
                 // Name
                 if (left->sig.param[i]->hash != right->sig.param[i]->hash ||
@@ -501,6 +502,7 @@ void typeAddParam(Types *types, Signature *sig, Type *type, char *name)
     strcpy(param->name, name);
     param->hash = hash(name);
     param->type = type;
+    param->defaultVal.intVal = 0;
 
     sig->param[sig->numParams++] = param;
 }

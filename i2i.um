@@ -1,0 +1,50 @@
+import "import/std.um"
+
+type (
+    vec = struct {
+        x, y: int
+    }
+    
+    fooable = interface {
+        foo(z: int)
+    }
+    
+    fooable_barable = interface {
+        foo(z: int)
+        bar(z: int)
+    }
+)
+
+fn (v: ^vec) foo(z: int) {
+    std.println("   foo: " + std.itoa(v.x) + ", " + std.itoa(v.y) + ", " + std.itoa(z))
+}
+
+fn (v: ^vec) bar(z: int) {
+    std.println("   bar: " + std.itoa(v.x) + ", " + std.itoa(v.y) + ", " + std.itoa(z))
+}
+
+fn proc_fooable(f: fooable) {
+    std.println("proc_fooable:")
+    f.foo(7)
+}
+
+fn proc_fooable_barable(fb: fooable_barable) {
+    std.println("proc_fooable_barable:")
+    fb.foo(9)
+    fb.bar(11)
+}
+
+fn main() {
+    v := vec{x: 3, y: 5}
+    var fb: fooable_barable = v
+    
+    proc_fooable(v)
+    proc_fooable_barable(v)
+    
+    proc_fooable(fb)
+    proc_fooable_barable(fb) 
+}
+    
+
+
+
