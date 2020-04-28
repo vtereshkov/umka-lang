@@ -40,18 +40,23 @@ static char *spelling [] =
 
 void vmInit(VM *vm, Instruction *code, int stackSize, ErrorFunc error)
 {
-    vm->fiber.code = code;
-    vm->fiber.ip = 0;
+    vm->fiber = malloc(sizeof(Fiber));
 
-    vm->fiber.stack = malloc(stackSize * sizeof(Slot));
-    vm->fiber.top = vm->fiber.base = vm->fiber.stack + stackSize - 1;
+    vm->fiber->code = code;
+    vm->fiber->ip = 0;
+
+    vm->fiber->stack = malloc(stackSize * sizeof(Slot));
+    vm->fiber->top = vm->fiber->base = vm->fiber->stack + stackSize - 1;
+    vm->fiber->stackSize = stackSize;
+
     vm->error = error;
 }
 
 
 void vmFree(VM *vm)
 {
-    free(vm->fiber.stack);
+    free(vm->fiber->stack);
+    free(vm->fiber);
 }
 
 
@@ -508,10 +513,11 @@ static void doCallExtern(Fiber *fiber)
 }
 
 
-static void doCallBuiltin(Fiber *fiber, ErrorFunc error)
+static void doCallBuiltin(Fiber *fiber, Fiber **newFiber, ErrorFunc error)
 {
     switch (fiber->code[fiber->ip].operand.builtinVal)
     {
+        // I/O
         case BUILTIN_PRINTF:    doPrintf(fiber, true, false, error); break;
         case BUILTIN_FPRINTF:   doPrintf(fiber, false, false, error); break;
         case BUILTIN_SPRINTF:   doPrintf(fiber, false, true, error); break;
@@ -519,6 +525,7 @@ static void doCallBuiltin(Fiber *fiber, ErrorFunc error)
         case BUILTIN_FSCANF:    doScanf(fiber, false, false, error); break;
         case BUILTIN_SSCANF:    doScanf(fiber, false, true, error); break;
 
+        // Math
         case BUILTIN_REAL:      fiber->top->realVal = fiber->top->intVal; break;
         case BUILTIN_REAL_LHS:  (fiber->top + 1)->realVal = (fiber->top + 1)->intVal; break;
         case BUILTIN_ROUND:     fiber->top->intVal = (int64_t)round(fiber->top->realVal); break;
@@ -548,7 +555,42 @@ static void doCallBuiltin(Fiber *fiber, ErrorFunc error)
             fiber->top->realVal = sqrt(fiber->top->realVal);
             break;
         }
-        case BUILTIN_SIZEOF:    error("Illegal instruction");
+
+        // sizeof (does not produce VM instructions)
+        case BUILTIN_SIZEOF:    error("Illegal instruction"); return;
+
+        // Fibers
+        case BUILTIN_FIBERSPAWN:
+        {
+            int childEntryOffset = (fiber->top++)->intVal;
+
+            // Copy whole fiber context
+            Fiber *child = malloc(sizeof(Fiber));
+            *child = *fiber;
+
+            child->stack = malloc(fiber->stackSize * sizeof(Slot));
+            *(child->stack) = *(fiber->stack);
+
+            child->top  = child->stack + (fiber->top  - fiber->stack);
+            child->base = child->stack + (fiber->base - fiber->stack);
+
+            // Pass parent fiber pointer to child fiber function and call it
+            (--child->top)->ptrVal = fiber;                                      // Parent fiber pointer
+            (--child->top)->intVal = fiber->ip + 1;                              // Return address
+            child->ip = childEntryOffset;                                        // Call
+
+            // Return child fiber pointer to parent fiber as result
+            (--fiber->top)->ptrVal = child;
+            break;
+        }
+        case BUILTIN_FIBERFREE:
+        {
+            Fiber *ptr = (fiber->top++)->ptrVal;
+            free(ptr->stack);
+            free(ptr);
+            break;
+        }
+        case BUILTIN_FIBERCALL:  *newFiber = (fiber->top++)->ptrVal; break;
     }
     fiber->ip++;
 }
@@ -594,35 +636,35 @@ static void doLeaveFrame(Fiber *fiber)
 }
 
 
-void fiberStep(Fiber *fiber, ErrorFunc error)
+void fiberStep(Fiber *fiber, Fiber **newFiber, ErrorFunc error)
 {
     if (fiber->top - fiber->stack < VM_MIN_STACK_SIZE)
         error("Stack overflow");
 
     switch (fiber->code[fiber->ip].opcode)
     {
-        case OP_PUSH:           doPush(fiber);              break;
-        case OP_PUSH_LOCAL_PTR: doPushLocalPtr(fiber);      break;
-        case OP_PUSH_REG:       doPushReg(fiber);           break;
-        case OP_PUSH_STRUCT:    doPushStruct(fiber);        break;
-        case OP_POP:            doPop(fiber);               break;
-        case OP_POP_REG:        doPopReg(fiber);            break;
-        case OP_DUP:            doDup(fiber);               break;
-        case OP_SWAP:           doSwap(fiber);              break;
-        case OP_DEREF:          doDeref(fiber, error);      break;
-        case OP_ASSIGN:         doAssign(fiber, error);     break;
-        case OP_ASSIGN_OFS:     doAssignOfs(fiber);         break;
-        case OP_UNARY:          doUnary(fiber, error);      break;
-        case OP_BINARY:         doBinary(fiber, error);     break;
-        case OP_GET_ARRAY_PTR:  doGetArrayPtr(fiber);       break;
-        case OP_GOTO:           doGoto(fiber);              break;
-        case OP_GOTO_IF:        doGotoIf(fiber);            break;
-        case OP_CALL:           doCall(fiber);              break;
-        case OP_CALL_EXTERN:    doCallExtern(fiber);        break;
-        case OP_CALL_BUILTIN:   doCallBuiltin(fiber, error);break;
-        case OP_RETURN:         doReturn(fiber);            break;
-        case OP_ENTER_FRAME:    doEnterFrame(fiber);        break;
-        case OP_LEAVE_FRAME:    doLeaveFrame(fiber);        break;
+        case OP_PUSH:           doPush(fiber);                          break;
+        case OP_PUSH_LOCAL_PTR: doPushLocalPtr(fiber);                  break;
+        case OP_PUSH_REG:       doPushReg(fiber);                       break;
+        case OP_PUSH_STRUCT:    doPushStruct(fiber);                    break;
+        case OP_POP:            doPop(fiber);                           break;
+        case OP_POP_REG:        doPopReg(fiber);                        break;
+        case OP_DUP:            doDup(fiber);                           break;
+        case OP_SWAP:           doSwap(fiber);                          break;
+        case OP_DEREF:          doDeref(fiber, error);                  break;
+        case OP_ASSIGN:         doAssign(fiber, error);                 break;
+        case OP_ASSIGN_OFS:     doAssignOfs(fiber);                     break;
+        case OP_UNARY:          doUnary(fiber, error);                  break;
+        case OP_BINARY:         doBinary(fiber, error);                 break;
+        case OP_GET_ARRAY_PTR:  doGetArrayPtr(fiber);                   break;
+        case OP_GOTO:           doGoto(fiber);                          break;
+        case OP_GOTO_IF:        doGotoIf(fiber);                        break;
+        case OP_CALL:           doCall(fiber);                          break;
+        case OP_CALL_EXTERN:    doCallExtern(fiber);                    break;
+        case OP_CALL_BUILTIN:   doCallBuiltin(fiber, newFiber, error);  break;
+        case OP_RETURN:         doReturn(fiber);                        break;
+        case OP_ENTER_FRAME:    doEnterFrame(fiber);                    break;
+        case OP_LEAVE_FRAME:    doLeaveFrame(fiber);                    break;
 
         default: error("Illegal instruction"); return;
     } // switch
@@ -631,11 +673,15 @@ void fiberStep(Fiber *fiber, ErrorFunc error)
 
 void vmRun(VM *vm)
 {
-    while (vm->fiber.code[vm->fiber.ip].opcode != OP_HALT)
+    while (vm->fiber->code[vm->fiber->ip].opcode != OP_HALT)
     {
         //char buf[256];
         //printf("%s\n", vmAsm(&vm->fiber.code[vm->fiber.ip], buf));
-        fiberStep(&vm->fiber, vm->error);
+
+        Fiber *newFiber = NULL;
+        fiberStep(vm->fiber, &newFiber, vm->error);
+        if (newFiber)
+            vm->fiber = newFiber;
     }
 }
 

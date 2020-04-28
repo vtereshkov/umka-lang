@@ -1,0 +1,18 @@
+type fiber = ^void
+
+fn f(parent: fiber) {
+    for i := 0; i < 10; i++ {
+        printf("From fiber: {d}\n", i)
+        fibercall(parent)
+    }
+}
+
+fn main() {
+    child := fiberspawn(f)
+    
+    fibercall(child)    
+    fibercall(child)
+    fibercall(child)
+    
+    fiberfree(child)
+}   

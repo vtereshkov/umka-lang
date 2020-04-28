@@ -56,12 +56,15 @@ typedef enum
 
 typedef enum
 {
+    // I/O
     BUILTIN_PRINTF,
     BUILTIN_FPRINTF,
     BUILTIN_SPRINTF,
     BUILTIN_SCANF,
     BUILTIN_FSCANF,
     BUILTIN_SSCANF,
+
+    // Math
     BUILTIN_REAL,           // Integer to real at stack top (right operand)
     BUILTIN_REAL_LHS,       // Integer to real at stack top + 1 (left operand)
     BUILTIN_ROUND,
@@ -73,7 +76,14 @@ typedef enum
     BUILTIN_ATAN,
     BUILTIN_EXP,
     BUILTIN_LOG,
+
+    // sizeof
     BUILTIN_SIZEOF,
+
+    // Fibers
+    BUILTIN_FIBERSPAWN,
+    BUILTIN_FIBERFREE,
+    BUILTIN_FIBERCALL
 } BuiltinFunc;
 
 
@@ -100,6 +110,7 @@ typedef struct
     Instruction *code;
     int ip;
     Slot *stack, *top, *base;
+    int stackSize;
     Slot reg[VM_NUM_REGS];
 } Fiber;
 
@@ -109,7 +120,7 @@ typedef void (*ExternFunc)(Slot *params, Slot *result);
 
 typedef struct
 {
-    Fiber fiber;
+    Fiber *fiber;
     ErrorFunc error;
 } VM;
 

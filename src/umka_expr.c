@@ -300,20 +300,45 @@ static void parseBuiltinSizeofCall(Compiler *comp, Type **type, Const *constant)
 }
 
 
+static void parseBuiltinFiberCall(Compiler *comp, Type **type, Const *constant, BuiltinFunc builtin)
+{
+    lexEat(&comp->lex, TOK_LPAR);
+
+    if (constant)
+        comp->error("Function is not allowed in constant expressions");
+
+    if (builtin == BUILTIN_FIBERSPAWN)
+    {
+        parseExpr(comp, type, constant);
+        *type = comp->ptrVoidType;
+    }
+    else    // BUILTIN_FIBERFREE, BUILTIN_FIBERSPAWN
+    {
+        parseExpr(comp, type, constant);
+        doImplicitTypeConv(comp, comp->ptrVoidType, type, constant, false);
+        typeAssertCompatible(&comp->types, comp->ptrVoidType, *type);
+        *type = comp->voidType;
+    }
+
+    genCallBuiltin(&comp->gen, TYPE_NONE, builtin);
+    lexEat(&comp->lex, TOK_RPAR);
+}
+
+
 // builtinCall = qualIdent "(" [expr {"," expr}] ")".
 static void parseBuiltinCall(Compiler *comp, Type **type, Const *constant, BuiltinFunc builtin)
 {
     switch (builtin)
     {
-        // I/O functions
+        // I/O
         case BUILTIN_PRINTF:
         case BUILTIN_FPRINTF:
         case BUILTIN_SPRINTF:
         case BUILTIN_SCANF:
         case BUILTIN_FSCANF:
-        case BUILTIN_SSCANF:   parseBuiltinIOCall(comp, type, constant, builtin); break;
+        case BUILTIN_SSCANF:        parseBuiltinIOCall(comp, type, constant, builtin); break;
 
-        // Math functions
+        // Math
         case BUILTIN_ROUND:
         case BUILTIN_TRUNC:
         case BUILTIN_FABS:
@@ -322,9 +347,15 @@ static void parseBuiltinCall(Compiler *comp, Type **type, Const *constant, Built
         case BUILTIN_COS:
         case BUILTIN_ATAN:
         case BUILTIN_EXP:
-        case BUILTIN_LOG:      parseBuiltinMathCall(comp, type, constant, builtin); break;
+        case BUILTIN_LOG:           parseBuiltinMathCall(comp, type, constant, builtin); break;
 
-        case BUILTIN_SIZEOF:   parseBuiltinSizeofCall(comp, type, constant); break;
+        // sizeof
+        case BUILTIN_SIZEOF:        parseBuiltinSizeofCall(comp, type, constant); break;
+
+        // Fibers
+        case BUILTIN_FIBERSPAWN:
+        case BUILTIN_FIBERFREE:
+        case BUILTIN_FIBERCALL:     parseBuiltinFiberCall(comp, type, constant, builtin); break;
 
         default: comp->error("Illegal built-in function");
     }

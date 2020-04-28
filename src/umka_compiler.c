@@ -56,22 +56,32 @@ static void compilerDeclareBuiltinIdents(Compiler *comp)
     identAddType(&comp->idents, &comp->modules, &comp->blocks,  "real",     comp->realType,    true);
 
     // Built-in functions
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "printf",  comp->intType,  BUILTIN_PRINTF);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "fprintf", comp->intType,  BUILTIN_FPRINTF);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "sprintf", comp->intType,  BUILTIN_SPRINTF);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "scanf",   comp->intType,  BUILTIN_SCANF);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "fscanf",  comp->intType,  BUILTIN_FSCANF);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "sscanf",  comp->intType,  BUILTIN_SSCANF);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "round",   comp->intType,  BUILTIN_ROUND);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "trunc",   comp->intType,  BUILTIN_TRUNC);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "fabs",    comp->realType, BUILTIN_FABS);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "sqrt",    comp->realType, BUILTIN_SQRT);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "sin",     comp->realType, BUILTIN_SIN);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "cos",     comp->realType, BUILTIN_COS);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "atan",    comp->realType, BUILTIN_ATAN);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "exp",     comp->realType, BUILTIN_EXP);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "log",     comp->realType, BUILTIN_LOG);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "sizeof",  comp->intType,  BUILTIN_SIZEOF);
+    // I/O
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "printf",     comp->intType,     BUILTIN_PRINTF);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "fprintf",    comp->intType,     BUILTIN_FPRINTF);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "sprintf",    comp->intType,     BUILTIN_SPRINTF);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "scanf",      comp->intType,     BUILTIN_SCANF);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "fscanf",     comp->intType,     BUILTIN_FSCANF);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "sscanf",     comp->intType,     BUILTIN_SSCANF);
+
+    // Math
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "round",      comp->intType,     BUILTIN_ROUND);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "trunc",      comp->intType,     BUILTIN_TRUNC);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "fabs",       comp->realType,    BUILTIN_FABS);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "sqrt",       comp->realType,    BUILTIN_SQRT);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "sin",        comp->realType,    BUILTIN_SIN);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "cos",        comp->realType,    BUILTIN_COS);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "atan",       comp->realType,    BUILTIN_ATAN);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "exp",        comp->realType,    BUILTIN_EXP);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "log",        comp->realType,    BUILTIN_LOG);
+
+    // sizeof
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "sizeof",     comp->intType,     BUILTIN_SIZEOF);
+
+    // Fibers
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "fiberspawn", comp->ptrVoidType, BUILTIN_FIBERSPAWN);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "fiberfree",  comp->voidType,    BUILTIN_FIBERFREE);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "fibercall",  comp->voidType,    BUILTIN_FIBERCALL);
 }
 
 
@@ -130,11 +140,11 @@ void compilerCompile(Compiler *comp)
     compilerDeclareExternalFuncs(comp);
 
     // Command-line-arguments
-    Ident *__argc = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "rtlargc", comp->intType, true);
-    Ident *__argv = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "rtlargv", comp->ptrVoidType, true);
+    Ident *rtlargc = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "rtlargc", comp->intType, true);
+    Ident *rtlargv = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "rtlargv", comp->ptrVoidType, true);
 
-    *(int64_t *)(__argc->ptr) = comp->argc;
-    *(void *  *)(__argv->ptr) = comp->argv;
+    *(int64_t *)(rtlargc->ptr) = comp->argc;
+    *(void *  *)(rtlargv->ptr) = comp->argv;
 
     parseProgram(comp);
 }
