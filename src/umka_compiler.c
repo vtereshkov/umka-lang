@@ -84,10 +84,12 @@ static void compilerDeclareExternalFuncs(Compiler *comp)
     externalAdd(&comp->externals, "rtlfseek",   &rtlfseek);
     externalAdd(&comp->externals, "rtlremove",  &rtlremove);
     externalAdd(&comp->externals, "rtltime",    &rtltime);
+    externalAdd(&comp->externals, "rtlmalloc",  &rtlmalloc);
+    externalAdd(&comp->externals, "rtlfree",    &rtlfree);
 }
 
 
-void compilerInit(Compiler *comp, char *fileName, int storageCapacity, ErrorFunc compileError)
+void compilerInit(Compiler *comp, char *fileName, int storageCapacity, int argc, char **argv, ErrorFunc compileError)
 {
     storageInit  (&comp->storage, storageCapacity);
     moduleInit   (&comp->modules, compileError);
@@ -99,6 +101,8 @@ void compilerInit(Compiler *comp, char *fileName, int storageCapacity, ErrorFunc
     constInit    (&comp->consts, compileError);
     genInit      (&comp->gen, compileError);
 
+    comp->argc  = argc;
+    comp->argv  = argv;
     comp->error = compileError;
 }
 
@@ -124,6 +128,13 @@ void compilerCompile(Compiler *comp)
     compilerDeclareBuiltinTypes (comp);
     compilerDeclareBuiltinIdents(comp);
     compilerDeclareExternalFuncs(comp);
+
+    // Command-line-arguments
+    Ident *__argc = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "rtlargc", comp->intType, true);
+    Ident *__argv = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "rtlargv", comp->ptrVoidType, true);
+
+    *(int64_t *)(__argc->ptr) = comp->argc;
+    *(void *  *)(__argv->ptr) = comp->argv;
 
     parseProgram(comp);
 }

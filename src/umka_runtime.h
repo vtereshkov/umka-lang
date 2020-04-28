@@ -11,6 +11,8 @@ void rtlfwrite (Slot *params, Slot *result);
 void rtlfseek  (Slot *params, Slot *result);
 void rtlremove (Slot *params, Slot *result);
 void rtltime   (Slot *params, Slot *result);
+void rtlmalloc (Slot *params, Slot *result);
+void rtlfree   (Slot *params, Slot *result);
 
 
 #endif // UMKA_RUNTIME_H_INCLUDED

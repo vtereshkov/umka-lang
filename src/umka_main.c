@@ -52,7 +52,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    compilerInit    (&comp, argv[1], 1024 * 1024, compileError);
+    compilerInit    (&comp, argv[1], 1024 * 1024, argc, argv, compileError);
     compilerCompile (&comp);
 /*
     char assembly[100000];

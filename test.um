@@ -195,7 +195,15 @@ fn main() {
     
     k := real(3) / 2
     std.println(std.ftoa(k, 2))
-      
+    
+    for i := 0; i < std.argc(); i++ {
+        std.println(std.itoa(i) + ": " + std.argv(i))
+    }
+    
+    ptr := ^int(std.malloc(300))
+    ptr^ = 254
+    std.println(std.itoa(ptr^))
+    std.free(ptr) 
 }
 
 

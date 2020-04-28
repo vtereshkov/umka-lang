@@ -88,3 +88,21 @@ fn frand*(): real {return real(rand()) / randMax}
 
 fn rtltime(): int
 fn time*(): int {return rtltime()}
+
+// Command line
+
+fn argc*(): int {return rtlargc}
+
+fn argv*(i: int): str {
+    s := ^[]^str(rtlargv)
+    return s[i]^
+}
+    
+// Memory management
+
+fn rtlmalloc (size: int): ^void
+fn malloc*   (size: int): ^void {return rtlmalloc(size)}
+
+fn rtlfree   (ptr: ^void)
+fn free*     (ptr: ^void) {rtlfree(ptr)}
+

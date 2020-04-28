@@ -642,7 +642,8 @@ static int parseModule(Compiler *comp)
 // program = module.
 void parseProgram(Compiler *comp)
 {
-    genNop(&comp->gen);     // Entry point stub
+    // Entry point stub
+    genNop(&comp->gen);
 
     lexNext(&comp->lex);
     parseModule(comp);

@@ -35,10 +35,14 @@ typedef struct
          *ptrVoidType,
          *strType;
 
+    // Command-line arguments
+    int argc;
+    char **argv;
+
 } Compiler;
 
 
-void compilerInit(Compiler *comp, char *fileName, int storageCapacity, ErrorFunc compileError);
+void compilerInit(Compiler *comp, char *fileName, int storageCapacity, int argc, char **argv, ErrorFunc compileError);
 void compilerFree(Compiler *comp);
 void compilerCompile(Compiler *comp);
 void compilerRun(Compiler *comp, int stackSize /* slots */, ErrorFunc runtimeError);
