@@ -37,13 +37,16 @@ fn proc_fooable_barable(fb: fooable_barable) {
 
 fn main() {
     v := vec{x: 3, y: 5}
-    var (fb: fooable_barable = v; f: fooable = v)
+    var fb: fooable_barable = v
     
     proc_fooable(v)
     proc_fooable_barable(v)
     
     proc_fooable(fb)
-    proc_fooable_barable(fb) 
+    proc_fooable_barable(fb)
+
+    f := fooable(v)
+    //fb2 := fooable_barable(f)
     
     proc_fooable(f)
     //proc_fooable_barable(f) 

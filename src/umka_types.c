@@ -193,6 +193,12 @@ bool typeOrdinal(Type *type)
 }
 
 
+bool typeCastable(Type *type)
+{
+    return typeOrdinal(type) || type->kind == TYPE_BOOL;
+}
+
+
 bool typeReal(Type *type)
 {
     return type->kind == TYPE_REAL32 || type->kind == TYPE_REAL;

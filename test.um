@@ -138,7 +138,7 @@ fn main() {
         }
     )
     
-    qq := pointrec{x: 24, y: 25, next: point(0)}
+    qq := pointrec{x: 24, y: 25, next: point(null)}
     p := pointrec{x: 56, y: 57, next: &qq}
     
     prnt.print("\nnext is " + conv.ftoa(p.next.x, 0) + ", " + conv.ftoa(p.next.y, 0) + "\n")
@@ -192,6 +192,9 @@ fn main() {
     
     var d: uint16
     std.println("sizeof = " + std.itoa(sizeof(d)))
+    
+    k := real(3) / 2
+    std.println(std.ftoa(k, 2))
       
 }
 

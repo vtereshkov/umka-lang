@@ -632,10 +632,28 @@ void parseDesignator(Compiler *comp, Ident *ident, Type **type, Const *constant,
 }
 
 
+// typeCast = type "(" expr ")".
+static void parseTypeCast(Compiler *comp, Type **type, Const *constant)
+{
+    lexEat(&comp->lex, TOK_LPAR);
+
+    Type *originalType;
+    parseExpr(comp, &originalType, constant);
+    doImplicitTypeConv(comp, *type, &originalType, constant, false);
+
+    if (!typeEquivalent(*type, originalType) &&
+        !(typeCastable(*type) && typeCastable(originalType)) &&
+        !((*type)->kind == TYPE_PTR && originalType->kind == TYPE_PTR))
+        comp->error("Invalid type cast");
+
+    lexEat(&comp->lex, TOK_RPAR);
+}
+
+
 // compositeLiteral = arrayLiteral | structLiteral.
 // arrayLiteral     = "{" [expr {"," expr}] "}".
 // structLiteral    = "{" [ident ":" expr {"," ident ":" expr}] "}".
-void parseCompositeLiteral(Compiler *comp, Type **type, Const *constant)
+static void parseCompositeLiteral(Compiler *comp, Type **type, Const *constant)
 {
     lexEat(&comp->lex, TOK_LBRACE);
 
@@ -708,18 +726,12 @@ void parseCompositeLiteral(Compiler *comp, Type **type, Const *constant)
 }
 
 
-// typeCast = type "(" expr ")".
 static void parseTypeCastOrCompositeLiteral(Compiler *comp, Ident *ident, Type **type, Const *constant)
 {
     *type = parseType(comp, ident);
 
     if (comp->lex.tok.kind == TOK_LPAR)
-    {
-        lexNext(&comp->lex);
-        Type *originalType;
-        parseExpr(comp, &originalType, constant);
-        lexEat(&comp->lex, TOK_RPAR);
-    }
+        parseTypeCast(comp, type, constant);
     else if (comp->lex.tok.kind == TOK_LBRACE)
         parseCompositeLiteral(comp, type, constant);
     else

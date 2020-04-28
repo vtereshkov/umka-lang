@@ -82,7 +82,7 @@ fn rand*(): int {
     return randSeed
 }
 
-fn frand*(): real {return (1.0 * rand()) / randMax}
+fn frand*(): real {return real(rand()) / randMax}
 
 // Timer
 

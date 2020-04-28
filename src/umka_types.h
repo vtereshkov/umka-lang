@@ -99,6 +99,7 @@ int typeSize        (Types *types, Type *type);
 
 bool typeInteger    (Type *type);
 bool typeOrdinal    (Type *type);
+bool typeCastable   (Type *type);
 bool typeReal       (Type *type);
 bool typeStructured (Type *type);
 
