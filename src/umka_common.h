@@ -103,9 +103,6 @@ void externalFree       (Externals *externals);
 External *externalFind  (Externals *externals, char *name);
 External *externalAdd   (Externals *externals, char *name, void *entry);
 
-void debugInit(DebugInfo *debug);
-void debugFree(DebugInfo *debug);
-
 int hash(const char *str);
 int align(int size, int alignment);
 
