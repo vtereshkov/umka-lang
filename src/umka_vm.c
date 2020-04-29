@@ -253,12 +253,16 @@ static void doPushReg(Fiber *fiber)
 }
 
 
-static void doPushStruct(Fiber *fiber)
+static void doPushStruct(Fiber *fiber, ErrorFunc error)
 {
     void *src = (fiber->top++)->ptrVal;
     int size  = fiber->code[fiber->ip].operand.intVal;
+    int slots = align(size, sizeof(Slot)) / sizeof(Slot);
 
-    fiber->top -= align(size, sizeof(Slot)) / sizeof(Slot);
+    if (fiber->top - slots - fiber->stack < VM_MIN_FREE_STACK)
+        error("Stack overflow");
+
+    fiber->top -= slots;
     memcpy(fiber->top, src, size);
 
     fiber->ip++;
@@ -528,11 +532,16 @@ static void doBinary(Fiber *fiber, ErrorFunc error)
 }
 
 
-static void doGetArrayPtr(Fiber *fiber)
+static void doGetArrayPtr(Fiber *fiber, ErrorFunc error)
 {
-    int size = fiber->code[fiber->ip].operand.intVal;
+    int itemSize = fiber->code[fiber->ip].operand.intVal;
+    int len = (fiber->top++)->intVal;
     int index = (fiber->top++)->intVal;
-    fiber->top->ptrVal += size * index;
+
+    if (index < 0 || index > len - 1)
+        error("Index is out of range");
+
+    fiber->top->ptrVal += itemSize * index;
     fiber->ip++;
 }
 
@@ -649,12 +658,18 @@ static void doReturn(Fiber *fiber, Fiber **newFiber)
 }
 
 
-static void doEnterFrame(Fiber *fiber)
+static void doEnterFrame(Fiber *fiber, ErrorFunc error)
 {
     // Push old stack frame base pointer, move new one to stack top, shift stack top by local variables' size
+    int size = fiber->code[fiber->ip].operand.intVal;
+    int slots = align(size, sizeof(Slot)) / sizeof(Slot);
+
+    if (fiber->top - slots - fiber->stack < VM_MIN_FREE_STACK)
+        error("Stack overflow");
+
     (--fiber->top)->ptrVal = fiber->base;
     fiber->base = fiber->top;
-    fiber->top = (Slot *)((int8_t *)(fiber->top) - fiber->code[fiber->ip].operand.intVal);
+    fiber->top -= slots;
 
     // Push I/O registers
     *(--fiber->top) = fiber->reg[VM_IO_STREAM_REG];
@@ -682,7 +697,7 @@ static void doLeaveFrame(Fiber *fiber)
 
 void fiberStep(Fiber *fiber, Fiber **newFiber, ErrorFunc error)
 {
-    if (fiber->top - fiber->stack < VM_MIN_STACK_SIZE)
+    if (fiber->top - fiber->stack < VM_MIN_FREE_STACK)
         error("Stack overflow");
 
     switch (fiber->code[fiber->ip].opcode)
@@ -690,7 +705,7 @@ void fiberStep(Fiber *fiber, Fiber **newFiber, ErrorFunc error)
         case OP_PUSH:           doPush(fiber);                          break;
         case OP_PUSH_LOCAL_PTR: doPushLocalPtr(fiber);                  break;
         case OP_PUSH_REG:       doPushReg(fiber);                       break;
-        case OP_PUSH_STRUCT:    doPushStruct(fiber);                    break;
+        case OP_PUSH_STRUCT:    doPushStruct(fiber, error);             break;
         case OP_POP:            doPop(fiber);                           break;
         case OP_POP_REG:        doPopReg(fiber);                        break;
         case OP_DUP:            doDup(fiber);                           break;
@@ -700,14 +715,14 @@ void fiberStep(Fiber *fiber, Fiber **newFiber, ErrorFunc error)
         case OP_ASSIGN_OFS:     doAssignOfs(fiber);                     break;
         case OP_UNARY:          doUnary(fiber, error);                  break;
         case OP_BINARY:         doBinary(fiber, error);                 break;
-        case OP_GET_ARRAY_PTR:  doGetArrayPtr(fiber);                   break;
+        case OP_GET_ARRAY_PTR:  doGetArrayPtr(fiber, error);            break;
         case OP_GOTO:           doGoto(fiber);                          break;
         case OP_GOTO_IF:        doGotoIf(fiber);                        break;
         case OP_CALL:           doCall(fiber);                          break;
         case OP_CALL_EXTERN:    doCallExtern(fiber);                    break;
         case OP_CALL_BUILTIN:   doCallBuiltin(fiber, newFiber, error);  break;
         case OP_RETURN:         doReturn(fiber, newFiber);              break;
-        case OP_ENTER_FRAME:    doEnterFrame(fiber);                    break;
+        case OP_ENTER_FRAME:    doEnterFrame(fiber, error);             break;
         case OP_LEAVE_FRAME:    doLeaveFrame(fiber);                    break;
 
         default: error("Illegal instruction"); return;

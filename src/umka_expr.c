@@ -1,4 +1,5 @@
 #include <string.h>
+#include <limits.h>
 
 #include "umka_expr.h"
 #include "umka_decl.h"
@@ -554,12 +555,18 @@ static void parseSelectors(Compiler *comp, Type **type, Const *constant, bool *i
                 if ((*type)->kind != TYPE_ARRAY && (*type)->kind != TYPE_STR)
                     comp->error("Array or string expected");
 
-                // Index expression
+                // Index
                 lexNext(&comp->lex);
                 Type *indexType;
                 parseExpr(comp, &indexType, NULL);
                 typeAssertCompatible(&comp->types, comp->intType, indexType);
                 lexEat(&comp->lex, TOK_RBRACKET);
+
+                // Length (for range checking)
+                int len = (*type)->numItems;
+                if (len == 0)
+                    len = INT_MAX;
+                genPushIntConst(&comp->gen, len);
 
                 genGetArrayPtr(&comp->gen, typeSize(&comp->types, (*type)->base));
 

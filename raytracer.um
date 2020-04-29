@@ -248,7 +248,7 @@ fn main() {
 
     var rays: int
     printf("Raytracer demo\n")
-    printf("Rays per pixel (recommended 1 to 100): ");  scanf("{d}", &rays)
+    printf("Rays per pixel (recommended 1 to 20): ");  scanf("{d}", &rays)
     
     // Define fibers
     const numFibers = 4
