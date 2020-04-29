@@ -155,6 +155,47 @@ fn (sc: ^Scene) trace(ray: ^Ray, depth: int): Color {
     return sc.ambientColor
 }
 
+const (width = 640; height = 480)
+
+type RenderData = struct {
+    startHeight:  int
+    stopHeight:   int
+    pos:          Vec
+    azimuth:      real
+    focal:        real
+    antialiasing: real
+    rays:         int
+    scene:        ^Scene
+    pixels:       ^[][width][3] uint8
+}
+
+fn render(parent: std.Fiber, buf: ^RenderData) {
+    sinAz := sin(buf.azimuth); cosAz := cos(buf.azimuth)
+    
+    for i := buf.startHeight; i < buf.stopHeight; i++ {
+        for j := 0; j < width; j++ {
+            dir := Vec{j - width / 2, i - height / 2, buf.focal}
+
+            rotDir := Vec{
+                 dir[0]*cosAz + dir[2]*sinAz,
+                 dir[1],
+                -dir[0]*sinAz + dir[2]*cosAz}
+
+            color := Color{0, 0, 0}
+            for r := 0; r < buf.rays; r++ {
+                randomDir := rotDir.add(randn().mul(buf.antialiasing))
+                ray := Ray{origin: buf.pos, dir: normalize(randomDir)}
+                color = color.add(buf.scene.trace(&ray, 0))
+            }
+            color = color.mul(255.0 / buf.rays)
+
+            buf.pixels[i][j] = [3]uint8 {round(color[0]), round(color[1]), round(color[2])}
+        }
+        printf("{3d}//{3d}\n", i + 1, height)
+        fibercall(parent)
+    }
+}
+
 fn main() {
     // Define scene
     const numBodies = 5
@@ -201,56 +242,64 @@ fn main() {
                 isLamp: true},
             radius: 800}}
             
-    scene := Scene{ambientColor: Color{0.2, 0.2, 0.2}, body: &body, numBodies: numBodies}            
-
-    // Define eye
-    pos := Vec{0, 0, 0}
-    const azimuth = 30.0 * std.pi / 180.0
-    sinAz := sin(azimuth); cosAz := cos(azimuth)
+    scene := Scene{ambientColor: Color{0.2, 0.2, 0.2}, body: &body, numBodies: numBodies}
     
-    const (width = 640; height = 480)
-    const focal = 500
-    const antialiasing = 1.0
-    
-    var buf: [height][width][3] uint8
+    var pixels: [height][width][3] uint8            
 
     var rays: int
     printf("Raytracer demo\n")
     printf("Rays per pixel (recommended 1 to 100): ");  scanf("{d}", &rays)
+    
+    // Define fibers
+    const numFibers = 4
+    var fiber: [numFibers] std.Fiber
+    var renderData: [numFibers] RenderData
+    
+    for i := 0; i < numFibers; i++ {
+        // Define eye
+        renderData[i] = RenderData {
+            startHeight:  height / numFibers * i,
+            stopHeight:   height / numFibers * (i + 1),
+            pos:          Vec{0, 0, 0},
+            azimuth:      30.0 * std.pi / 180.0,
+            focal:        500,
+            antialiasing: 1.0,
+            rays:         rays,
+            scene:        &scene,
+            pixels:       &pixels}
+        
+        // Spawn fiber
+        fiber[i] = fiberspawn(render, &renderData[i])
+    }    
 
     // Render scene
     startTime := std.time()
-
-    for i := 0; i < height; i++ {
-        for j := 0; j < width; j++ {
-            dir := Vec{j - width/2, i - height/2, focal}
-
-            rotDir := Vec{
-                 dir[0]*cosAz + dir[2]*sinAz,
-                 dir[1],
-                -dir[0]*sinAz + dir[2]*cosAz}
-
-            color := Color{0, 0, 0}
-            for r := 0; r < rays; r++ {
-                randomDir := rotDir.add(randn().mul(antialiasing))
-                ray := Ray{origin: pos, dir: normalize(randomDir)}
-                color = color.add(scene.trace(&ray, 0))
+    
+    for true {
+        working := false
+        for i := 0; i < numFibers; i++ {
+            fiberWorking := fiberalive(fiber[i]) 
+            if fiberWorking {
+                fibercall(fiber[i])
             }
-            color = color.mul(255.0 / rays)
-
-            buf[i][j] = [3]uint8 {round(color[0]), round(color[1]), round(color[2])}
+            working = working || fiberWorking
         }
-        printf("{3d}//{3d}\n", i + 1, height)
-    }
-
-    endTime := std.time()
+        if !working {break}
+    }    
+        
+    endTime := std.time()    
     printf("Rendering time = {d} s\n", endTime - startTime)
+    
+    // Free fibers
+    for i := 0; i < numFibers; i++ {
+        fiberfree(fiber[i])
+    }
     
     // Write output file
     const fileName = "scene.ppm"
     f := std.fopen(fileName, "wb")
     fprintf(f, "P6\n{d} {d}\n255\n", width, height)
-    std.fwrite(f, &buf, sizeof(buf))
+    std.fwrite(f, &pixels, sizeof(pixels))
     std.fclose(f)
     std.println("Done. See " + fileName)
     std.getchar()

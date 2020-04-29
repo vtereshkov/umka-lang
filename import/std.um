@@ -2,7 +2,7 @@
 
 // File I/O
 
-type file* = ^void
+type File* = ^void
 
 const (
     seekBegin* = 0
@@ -10,20 +10,20 @@ const (
     seekEnd*   = 2
 )    
 
-fn rtlfopen  (name: ^str, mode: ^str): file;  
-fn fopen*    (name: str, mode: str): file {return rtlfopen(&name, &mode)}
+fn rtlfopen  (name: ^str, mode: ^str): File;  
+fn fopen*    (name: str, mode: str): File {return rtlfopen(&name, &mode)}
 
-fn rtlfclose (f: file): int
-fn fclose*   (f: file): int {return rtlfclose(f)}
+fn rtlfclose (f: File): int
+fn fclose*   (f: File): int {return rtlfclose(f)}
 
-fn rtlfread  (buf: ^void, size, cnt: int, f: file): int
-fn fread*    (f: file, buf: ^void, size: int): int {return rtlfread(buf, size, 1, f)}
+fn rtlfread  (buf: ^void, size, cnt: int, f: File): int
+fn fread*    (f: File, buf: ^void, size: int): int {return rtlfread(buf, size, 1, f)}
 
-fn rtlfwrite (buf: ^void, size, cnt: int, f: file): int
-fn fwrite*   (f: file, buf: ^void, size: int): int {return rtlfwrite(buf, size, 1, f)}
+fn rtlfwrite (buf: ^void, size, cnt: int, f: File): int
+fn fwrite*   (f: File, buf: ^void, size: int): int {return rtlfwrite(buf, size, 1, f)}
 
-fn rtlfseek  (f: file, offset, origin: int): int
-fn fseek*    (f: file, offset, origin: int): int {return rtlfseek(f, offset, origin)}
+fn rtlfseek  (f: File, offset, origin: int): int
+fn fseek*    (f: File, offset, origin: int): int {return rtlfseek(f, offset, origin)}
 
 fn rtlremove (name: ^str): int
 fn remove*   (name: str): int {return rtlremove(&name)}
@@ -31,7 +31,7 @@ fn remove*   (name: str): int {return rtlremove(&name)}
 // I/O utilities
 
 fn println*(s: str): int {return printf("{s}\n", s)}
-fn fprintln*(f: file, s: str): int {return fprintf(f, "{s}\n", s)}
+fn fprintln*(f: File, s: str): int {return fprintf(f, "{s}\n", s)}
 
 fn getchar*(): char {
     var c: char
@@ -108,4 +108,4 @@ fn free*     (ptr: ^void) {rtlfree(ptr)}
 
 // Fibers
 
-type fiber* = ^void
+type Fiber* = ^void
