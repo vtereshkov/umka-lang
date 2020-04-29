@@ -102,6 +102,7 @@ bool typeOrdinal    (Type *type);
 bool typeCastable   (Type *type);
 bool typeReal       (Type *type);
 bool typeStructured (Type *type);
+bool typeFiberFunc  (Type *type);
 
 bool typeEquivalent         (Type *left, Type *right);
 bool typeAssertEquivalent   (Types *types, Type *left, Type *right);

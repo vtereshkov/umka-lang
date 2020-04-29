@@ -309,7 +309,18 @@ static void parseBuiltinFiberCall(Compiler *comp, Type **type, Const *constant, 
 
     if (builtin == BUILTIN_FIBERSPAWN)
     {
+        // Parent fiber pointer
         parseExpr(comp, type, constant);
+        if (!typeFiberFunc(*type))
+            comp->error("Incompatible function type in fiberspawn()");
+
+        lexEat(&comp->lex, TOK_COMMA);
+
+        // Arbitrary pointer parameter
+        parseExpr(comp, type, constant);
+        doImplicitTypeConv(comp, comp->ptrVoidType, type, constant, false);
+        typeAssertCompatible(&comp->types, comp->ptrVoidType, *type);
+
         *type = comp->ptrVoidType;
     }
     else    // BUILTIN_FIBERFREE, BUILTIN_FIBERSPAWN

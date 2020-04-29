@@ -211,6 +211,21 @@ bool typeStructured(Type *type)
 }
 
 
+bool typeFiberFunc(Type *type)
+{
+    return type->kind                            == TYPE_FN   &&
+           type->sig.numParams                   == 2         &&
+           type->sig.numDefaultParams            == 0         &&
+           type->sig.param[0]->type->kind        == TYPE_PTR  &&
+           type->sig.param[0]->type->base->kind  == TYPE_VOID &&
+           type->sig.param[1]->type->kind        == TYPE_PTR  &&
+           type->sig.param[1]->type->base->kind  != TYPE_VOID &&
+           type->sig.numResults                  == 1         &&
+           type->sig.resultType[0]->kind         == TYPE_VOID &&
+           !type->sig.method;
+}
+
+
 bool typeEquivalent(Type *left, Type *right)
 {
     if (left == right)

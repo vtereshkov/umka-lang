@@ -562,6 +562,7 @@ static void doCallBuiltin(Fiber *fiber, Fiber **newFiber, ErrorFunc error)
         // Fibers
         case BUILTIN_FIBERSPAWN:
         {
+            void *anyParam = (fiber->top++)->ptrVal;
             int childEntryOffset = (fiber->top++)->intVal;
 
             // Copy whole fiber context
@@ -574,10 +575,11 @@ static void doCallBuiltin(Fiber *fiber, Fiber **newFiber, ErrorFunc error)
             child->top  = child->stack + (fiber->top  - fiber->stack);
             child->base = child->stack + (fiber->base - fiber->stack);
 
-            // Pass parent fiber pointer to child fiber function and call it
-            (--child->top)->ptrVal = fiber;                                      // Parent fiber pointer
-            (--child->top)->intVal = fiber->ip + 1;                              // Return address
-            child->ip = childEntryOffset;                                        // Call
+            // Call child fiber function
+            (--child->top)->ptrVal = fiber;                  // Push parent fiber pointer
+            (--child->top)->ptrVal = anyParam;               // Push arbitrary pointer parameter
+            (--child->top)->intVal = fiber->ip + 1;          // Push return address
+            child->ip = childEntryOffset;                    // Call
 
             // Return child fiber pointer to parent fiber as result
             (--fiber->top)->ptrVal = child;

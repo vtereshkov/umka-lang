@@ -1,18 +1,22 @@
-type fiber = ^void
+import "import/std.um"
 
-fn f(parent: fiber) {
-    for i := 0; i < 10; i++ {
-        printf("From fiber: {d}\n", i)
+fn childFunc(parent: std.fiber, buf: ^[2]real) {
+    for i := 0; true; i++ {
+        std.println("Child  fiber: i = " + std.itoa(i) + "   buf = " + std.ftoa(buf[0], 2))
+        buf[1] = i * 3
         fibercall(parent)
     }
 }
 
 fn main() {
-    child := fiberspawn(f)
+    buf := [2]real {0, 0}
+    child := fiberspawn(childFunc, &buf)
     
-    fibercall(child)    
-    fibercall(child)
-    fibercall(child)
+    for i := 0; i < 10; i++ {
+        std.println("Parent fiber: i = " + std.itoa(i) + "   buf = " + std.ftoa(buf[1], 2))
+        buf[0] = i * 7
+        fibercall(child)
+    }
     
     fiberfree(child)
 }   
