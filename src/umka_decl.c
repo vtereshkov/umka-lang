@@ -441,7 +441,7 @@ static void parseVarDeclItem(Compiler *comp)
     Type *varType;
     parseTypedIdentList(comp, varNames, varExported, MAX_FIELDS, &numVars, &varType);
 
-    Ident *var;
+    Ident *var = NULL;
     for (int i = 0; i < numVars; i++)
         var = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, varNames[i], varType, varExported[i]);
 
