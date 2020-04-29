@@ -586,17 +586,19 @@ static void parseImportItem(Compiler *comp)
     if (importedModule < 0)
     {
         // Save context
-        int currentModule = comp->blocks.module;
-        Lexer currentLex = comp->lex;
-        lexInit(&comp->lex, path, &comp->storage, comp->error);
+        int currentModule       = comp->blocks.module;
+        DebugInfo currentDebug  = comp->debug;
+        Lexer currentLex        = comp->lex;
+        lexInit(&comp->lex, &comp->storage, &comp->debug, path, comp->error);
 
         lexNext(&comp->lex);
         importedModule = parseModule(comp);
 
         // Restore context
         lexFree(&comp->lex);
-        comp->lex = currentLex;
-        comp->blocks.module = currentModule;
+        comp->lex               = currentLex;
+        comp->debug             = currentDebug;
+        comp->blocks.module     = currentModule;
     }
 
     comp->modules.module[comp->blocks.module]->imports[importedModule] = true;

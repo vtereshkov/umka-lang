@@ -23,6 +23,7 @@ typedef struct
     Consts      consts;
     CodeGen     gen;
     VM          vm;
+    DebugInfo   debug;
     ErrorFunc   error;
 
     // Pointers to built-in types

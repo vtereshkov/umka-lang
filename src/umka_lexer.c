@@ -98,15 +98,19 @@ enum
 static int keywordHash[NUM_KEYWORDS];
 
 
-int lexInit(Lexer *lex, const char *fileName, Storage *storage, ErrorFunc error)
+int lexInit(Lexer *lex, Storage *storage, DebugInfo *debug, const char *fileName, ErrorFunc error)
 {
     // Fill keyword hashes
     for (int i = 0; i < NUM_KEYWORDS; i++)
         keywordHash[i] = hash(spelling[TOK_BREAK + i]);
 
     // Initialize lexer
-    lex->fileName = malloc(strlen(fileName) + 1);
-    strcpy(lex->fileName, fileName);
+    if (storage->len + strlen(fileName) + 1 > storage->capacity)
+        error("Storage overflow");
+
+    strcpy(&storage->data[storage->len], fileName);
+    lex->fileName = &storage->data[storage->len];
+    storage->len += strlen(fileName) + 1;
 
     lex->buf = NULL;
     lex->bufPos = 0;
@@ -116,6 +120,9 @@ int lexInit(Lexer *lex, const char *fileName, Storage *storage, ErrorFunc error)
     lex->tok.strVal = NULL;
     lex->prevTok = lex->tok;
     lex->storage = storage;
+    lex->debug = debug;
+    lex->debug->fileName = lex->fileName;
+    lex->debug->line = lex->line;
     lex->error = error;
 
     FILE *file = fopen(lex->fileName, "rb");
@@ -148,7 +155,6 @@ void lexFree(Lexer *lex)
 {
     if (lex->buf)
     {
-        free(lex->fileName);
         free(lex->buf);
         lex->fileName = NULL;
         lex->buf = NULL;
@@ -166,6 +172,7 @@ static char lexChar(Lexer *lex)
         if (ch == '\n')
         {
             lex->line++;
+            lex->debug->line++;
             lex->pos = 1;
         }
     }

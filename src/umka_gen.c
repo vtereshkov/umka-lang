@@ -4,7 +4,7 @@
 #include "umka_gen.h"
 
 
-void genInit(CodeGen *gen, ErrorFunc error)
+void genInit(CodeGen *gen, DebugInfo *debug, ErrorFunc error)
 {
     gen->capacity = 1000;
     gen->ip = 0;
@@ -12,6 +12,7 @@ void genInit(CodeGen *gen, ErrorFunc error)
     gen->top = -1;
     gen->breaks = gen->continues = gen->returns = NULL;
     gen->mainDefined = false;
+    gen->debug = debug;
     gen->error = error;
 }
 
@@ -34,7 +35,9 @@ static void genAddInstr(CodeGen *gen, const Instruction *instr)
     if (gen->ip >= gen->capacity)
         genRealloc(gen);
 
-    gen->code[gen->ip++] = *instr;
+    gen->code[gen->ip] = *instr;
+    gen->code[gen->ip].debug = *gen->debug;
+    gen->ip++;
 }
 
 

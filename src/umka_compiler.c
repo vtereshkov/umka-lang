@@ -106,11 +106,11 @@ void compilerInit(Compiler *comp, char *fileName, int storageCapacity, int argc,
     moduleInit   (&comp->modules, compileError);
     blocksInit   (&comp->blocks, compileError);
     externalInit (&comp->externals);
-    lexInit      (&comp->lex, fileName, &comp->storage, compileError);
+    lexInit      (&comp->lex, &comp->storage, &comp->debug, fileName, compileError);
     typeInit     (&comp->types, compileError);
     identInit    (&comp->idents, compileError);
     constInit    (&comp->consts, compileError);
-    genInit      (&comp->gen, compileError);
+    genInit      (&comp->gen, &comp->debug, compileError);
 
     comp->argc  = argc;
     comp->argv  = argv;

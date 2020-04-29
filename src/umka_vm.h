@@ -23,7 +23,7 @@ enum
 
     VM_MIN_FREE_STACK    = 1024,  // Slots
 
-    VM_FIBER_KILL_SIGNAL = -1
+    VM_FIBER_KILL_SIGNAL = -1     // Used instead of return address in fiber function calls
 };
 
 
@@ -105,6 +105,7 @@ typedef struct
     TokenKind tokKind;  // Unary/binary operation token
     TypeKind typeKind;  // Slot type kind
     Slot operand;
+    DebugInfo debug;
 } Instruction;
 
 

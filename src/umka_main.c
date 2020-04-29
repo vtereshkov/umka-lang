@@ -35,7 +35,9 @@ void runtimeError(const char *format, ...)
 
     char msg[256];
     vsprintf(msg, format, args);
-    printf("Runtime error: %s\n", msg);
+
+    Instruction *instr = &comp.vm.fiber->code[comp.vm.fiber->ip];
+    printf("Runtime error %s (%d): %s\n", instr->debug.fileName, instr->debug.line, msg);
 
     compilerFree(&comp);
     exit(1);

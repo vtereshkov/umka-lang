@@ -113,11 +113,12 @@ typedef struct
     int bufPos, line, pos;
     Token tok, prevTok;
     Storage *storage;
+    DebugInfo *debug;
     ErrorFunc error;
 } Lexer;
 
 
-int lexInit(Lexer *lex, const char *fileName, Storage *storage, ErrorFunc error);
+int lexInit(Lexer *lex, Storage *storage, DebugInfo *debug, const char *fileName, ErrorFunc error);
 void lexFree(Lexer *lex);
 void lexNext(Lexer *lex);
 bool lexCheck(Lexer *lex, TokenKind kind);
