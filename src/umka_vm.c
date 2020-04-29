@@ -49,6 +49,7 @@ void vmInit(VM *vm, Instruction *code, int stackSize, ErrorFunc error)
     vm->fiber->top = vm->fiber->base = vm->fiber->stack + stackSize - 1;
     vm->fiber->stackSize = stackSize;
 
+    vm->fiber->alive = true;
     vm->error = error;
 }
 
@@ -169,6 +170,64 @@ static void doScanf(Fiber *fiber, bool console, bool string, ErrorFunc error)
         fiber->reg[VM_IO_STREAM_REG].ptrVal += len;
 
     free(formatC);
+}
+
+
+static void doFiberBuiltin(Fiber *fiber, Fiber **newFiber, BuiltinFunc builtin, ErrorFunc error)
+{
+    switch (builtin)
+    {
+        case BUILTIN_FIBERSPAWN:
+        {
+            // type FiberFunc = fn(parent: ^void, anyParam: ^type)
+            // fn fiberspawn(childFunc: FiberFunc, anyParam: ^type)
+
+            void *anyParam = (fiber->top++)->ptrVal;
+            int childEntryOffset = (fiber->top++)->intVal;
+
+            // Copy whole fiber context
+            Fiber *child = malloc(sizeof(Fiber));
+            *child = *fiber;
+
+            child->stack = malloc(fiber->stackSize * sizeof(Slot));
+            *(child->stack) = *(fiber->stack);
+
+            child->top  = child->stack + (fiber->top  - fiber->stack);
+            child->base = child->stack + (fiber->base - fiber->stack);
+
+            // Call child fiber function
+            (--child->top)->ptrVal = fiber;                  // Push parent fiber pointer
+            (--child->top)->ptrVal = anyParam;               // Push arbitrary pointer parameter
+            (--child->top)->intVal = VM_FIBER_KILL_SIGNAL;   // Push fiber kill signal instead of return address
+            child->ip = childEntryOffset;                    // Call
+
+            // Return child fiber pointer to parent fiber as result
+            (--fiber->top)->ptrVal = child;
+            break;
+        }
+        case BUILTIN_FIBERFREE:
+        {
+            Fiber *ptr = (fiber->top++)->ptrVal;
+            free(ptr->stack);
+            free(ptr);
+            break;
+        }
+        case BUILTIN_FIBERCALL:
+        {
+            *newFiber = (fiber->top++)->ptrVal;
+            if (!(*newFiber)->alive)
+                error("Fiber is dead");
+            break;
+        }
+        case BUILTIN_FIBERALIVE:
+        {
+            Fiber *child = fiber->top->ptrVal;
+            fiber->top->intVal = child->alive;
+            break;
+        }
+        default: error("Illegal instruction"); return;
+
+    }
 }
 
 
@@ -515,22 +574,23 @@ static void doCallExtern(Fiber *fiber)
 
 static void doCallBuiltin(Fiber *fiber, Fiber **newFiber, ErrorFunc error)
 {
-    switch (fiber->code[fiber->ip].operand.builtinVal)
+    BuiltinFunc builtin = fiber->code[fiber->ip].operand.builtinVal;
+    switch (builtin)
     {
         // I/O
-        case BUILTIN_PRINTF:    doPrintf(fiber, true, false, error); break;
-        case BUILTIN_FPRINTF:   doPrintf(fiber, false, false, error); break;
-        case BUILTIN_SPRINTF:   doPrintf(fiber, false, true, error); break;
-        case BUILTIN_SCANF:     doScanf(fiber, true, false, error); break;
-        case BUILTIN_FSCANF:    doScanf(fiber, false, false, error); break;
-        case BUILTIN_SSCANF:    doScanf(fiber, false, true, error); break;
+        case BUILTIN_PRINTF:        doPrintf(fiber, true, false, error); break;
+        case BUILTIN_FPRINTF:       doPrintf(fiber, false, false, error); break;
+        case BUILTIN_SPRINTF:       doPrintf(fiber, false, true, error); break;
+        case BUILTIN_SCANF:         doScanf(fiber, true, false, error); break;
+        case BUILTIN_FSCANF:        doScanf(fiber, false, false, error); break;
+        case BUILTIN_SSCANF:        doScanf(fiber, false, true, error); break;
 
         // Math
-        case BUILTIN_REAL:      fiber->top->realVal = fiber->top->intVal; break;
-        case BUILTIN_REAL_LHS:  (fiber->top + 1)->realVal = (fiber->top + 1)->intVal; break;
-        case BUILTIN_ROUND:     fiber->top->intVal = (int64_t)round(fiber->top->realVal); break;
-        case BUILTIN_TRUNC:     fiber->top->intVal = (int64_t)trunc(fiber->top->realVal); break;
-        case BUILTIN_FABS:      fiber->top->realVal = fabs(fiber->top->realVal); break;
+        case BUILTIN_REAL:          fiber->top->realVal = fiber->top->intVal; break;
+        case BUILTIN_REAL_LHS:      (fiber->top + 1)->realVal = (fiber->top + 1)->intVal; break;
+        case BUILTIN_ROUND:         fiber->top->intVal = (int64_t)round(fiber->top->realVal); break;
+        case BUILTIN_TRUNC:         fiber->top->intVal = (int64_t)trunc(fiber->top->realVal); break;
+        case BUILTIN_FABS:          fiber->top->realVal = fabs(fiber->top->realVal); break;
         case BUILTIN_SQRT:
         {
             if (fiber->top->realVal < 0)
@@ -541,10 +601,10 @@ static void doCallBuiltin(Fiber *fiber, Fiber **newFiber, ErrorFunc error)
             fiber->top->realVal = sqrt(fiber->top->realVal);
             break;
         }
-        case BUILTIN_SIN:       fiber->top->realVal = sin (fiber->top->realVal); break;
-        case BUILTIN_COS:       fiber->top->realVal = cos (fiber->top->realVal); break;
-        case BUILTIN_ATAN:      fiber->top->realVal = atan(fiber->top->realVal); break;
-        case BUILTIN_EXP:       fiber->top->realVal = exp (fiber->top->realVal); break;
+        case BUILTIN_SIN:           fiber->top->realVal = sin (fiber->top->realVal); break;
+        case BUILTIN_COS:           fiber->top->realVal = cos (fiber->top->realVal); break;
+        case BUILTIN_ATAN:          fiber->top->realVal = atan(fiber->top->realVal); break;
+        case BUILTIN_EXP:           fiber->top->realVal = exp (fiber->top->realVal); break;
         case BUILTIN_LOG:
         {
             if (fiber->top->realVal <= 0)
@@ -557,53 +617,35 @@ static void doCallBuiltin(Fiber *fiber, Fiber **newFiber, ErrorFunc error)
         }
 
         // sizeof (does not produce VM instructions)
-        case BUILTIN_SIZEOF:    error("Illegal instruction"); return;
+        case BUILTIN_SIZEOF:        error("Illegal instruction"); return;
 
         // Fibers
         case BUILTIN_FIBERSPAWN:
-        {
-            void *anyParam = (fiber->top++)->ptrVal;
-            int childEntryOffset = (fiber->top++)->intVal;
-
-            // Copy whole fiber context
-            Fiber *child = malloc(sizeof(Fiber));
-            *child = *fiber;
-
-            child->stack = malloc(fiber->stackSize * sizeof(Slot));
-            *(child->stack) = *(fiber->stack);
-
-            child->top  = child->stack + (fiber->top  - fiber->stack);
-            child->base = child->stack + (fiber->base - fiber->stack);
-
-            // Call child fiber function
-            (--child->top)->ptrVal = fiber;                  // Push parent fiber pointer
-            (--child->top)->ptrVal = anyParam;               // Push arbitrary pointer parameter
-            (--child->top)->intVal = fiber->ip + 1;          // Push return address
-            child->ip = childEntryOffset;                    // Call
-
-            // Return child fiber pointer to parent fiber as result
-            (--fiber->top)->ptrVal = child;
-            break;
-        }
         case BUILTIN_FIBERFREE:
-        {
-            Fiber *ptr = (fiber->top++)->ptrVal;
-            free(ptr->stack);
-            free(ptr);
-            break;
-        }
-        case BUILTIN_FIBERCALL:  *newFiber = (fiber->top++)->ptrVal; break;
+        case BUILTIN_FIBERCALL:
+        case BUILTIN_FIBERALIVE:    doFiberBuiltin(fiber, newFiber, builtin, error); break;
     }
     fiber->ip++;
 }
 
 
-static void doReturn(Fiber *fiber)
+static void doReturn(Fiber *fiber, Fiber **newFiber)
 {
     // Pop return address, remove parameters and entry point address from stack and go back
     int returnOffset = (fiber->top++)->intVal;
-    fiber->top += fiber->code[fiber->ip].operand.intVal + 1;
-    fiber->ip = returnOffset;
+
+    if (returnOffset == VM_FIBER_KILL_SIGNAL)
+    {
+        // For fiber function, kill the fiber, extract the parent fiber pointer and switch to it
+        fiber->alive = false;
+        *newFiber = (fiber->top + 1)->ptrVal;
+    }
+    else
+    {
+        // For conventional function, remove parameters and entry point address from stack and go back
+        fiber->top += fiber->code[fiber->ip].operand.intVal + 1;
+        fiber->ip = returnOffset;
+    }
 }
 
 
@@ -664,7 +706,7 @@ void fiberStep(Fiber *fiber, Fiber **newFiber, ErrorFunc error)
         case OP_CALL:           doCall(fiber);                          break;
         case OP_CALL_EXTERN:    doCallExtern(fiber);                    break;
         case OP_CALL_BUILTIN:   doCallBuiltin(fiber, newFiber, error);  break;
-        case OP_RETURN:         doReturn(fiber);                        break;
+        case OP_RETURN:         doReturn(fiber, newFiber);              break;
         case OP_ENTER_FRAME:    doEnterFrame(fiber);                    break;
         case OP_LEAVE_FRAME:    doLeaveFrame(fiber);                    break;
 
@@ -675,7 +717,7 @@ void fiberStep(Fiber *fiber, Fiber **newFiber, ErrorFunc error)
 
 void vmRun(VM *vm)
 {
-    while (vm->fiber->code[vm->fiber->ip].opcode != OP_HALT)
+    while (vm->fiber->alive && vm->fiber->code[vm->fiber->ip].opcode != OP_HALT)
     {
         //char buf[256];
         //printf("%s\n", vmAsm(&vm->fiber.code[vm->fiber.ip], buf));

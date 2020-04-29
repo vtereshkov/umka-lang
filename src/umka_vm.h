@@ -8,20 +8,22 @@
 
 enum
 {
-    VM_NUM_REGS         = 64,
+    VM_NUM_REGS          = 64,
 
     // General-purpose registers
-    VM_RESULT_REG_0     = 0,
-    VM_SELF_REG         = 31,
-    VM_COMMON_REG_0     = 32,
-    VM_COMMON_REG_1     = VM_COMMON_REG_0 + 1,
+    VM_RESULT_REG_0      = 0,
+    VM_SELF_REG          = 31,
+    VM_COMMON_REG_0      = 32,
+    VM_COMMON_REG_1      = VM_COMMON_REG_0 + 1,
 
     // Registers for special use by printf() / scanf()
-    VM_IO_STREAM_REG    = VM_NUM_REGS - 3,
-    VM_IO_FORMAT_REG    = VM_NUM_REGS - 2,
-    VM_IO_COUNT_REG     = VM_NUM_REGS - 1,
+    VM_IO_STREAM_REG     = VM_NUM_REGS - 3,
+    VM_IO_FORMAT_REG     = VM_NUM_REGS - 2,
+    VM_IO_COUNT_REG      = VM_NUM_REGS - 1,
 
-    VM_MIN_STACK_SIZE   = 1024  // Slots
+    VM_MIN_STACK_SIZE    = 1024,  // Slots
+
+    VM_FIBER_KILL_SIGNAL = -1
 };
 
 
@@ -83,7 +85,8 @@ typedef enum
     // Fibers
     BUILTIN_FIBERSPAWN,
     BUILTIN_FIBERFREE,
-    BUILTIN_FIBERCALL
+    BUILTIN_FIBERCALL,
+    BUILTIN_FIBERALIVE
 } BuiltinFunc;
 
 
@@ -112,6 +115,7 @@ typedef struct
     Slot *stack, *top, *base;
     int stackSize;
     Slot reg[VM_NUM_REGS];
+    bool alive;
 } Fiber;
 
 

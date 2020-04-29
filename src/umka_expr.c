@@ -309,6 +309,9 @@ static void parseBuiltinFiberCall(Compiler *comp, Type **type, Const *constant, 
 
     if (builtin == BUILTIN_FIBERSPAWN)
     {
+        // type FiberFunc = fn(parent: ^void, anyParam: ^type)
+        // fn fiberspawn(childFunc: FiberFunc, anyParam: ^type)
+
         // Parent fiber pointer
         parseExpr(comp, type, constant);
         if (!typeFiberFunc(*type))
@@ -323,12 +326,17 @@ static void parseBuiltinFiberCall(Compiler *comp, Type **type, Const *constant, 
 
         *type = comp->ptrVoidType;
     }
-    else    // BUILTIN_FIBERFREE, BUILTIN_FIBERSPAWN
+    else    // BUILTIN_FIBERFREE, BUILTIN_FIBERCALL, BUILTIN_FIBERALIVE
     {
+        // fn fiber...(child: ^void)
         parseExpr(comp, type, constant);
         doImplicitTypeConv(comp, comp->ptrVoidType, type, constant, false);
         typeAssertCompatible(&comp->types, comp->ptrVoidType, *type);
-        *type = comp->voidType;
+
+        if (builtin == BUILTIN_FIBERALIVE)
+            *type = comp->boolType;
+        else
+            *type = comp->voidType;
     }
 
     genCallBuiltin(&comp->gen, TYPE_NONE, builtin);
@@ -366,7 +374,8 @@ static void parseBuiltinCall(Compiler *comp, Type **type, Const *constant, Built
         // Fibers
         case BUILTIN_FIBERSPAWN:
         case BUILTIN_FIBERFREE:
-        case BUILTIN_FIBERCALL:     parseBuiltinFiberCall(comp, type, constant, builtin); break;
+        case BUILTIN_FIBERCALL:
+        case BUILTIN_FIBERALIVE:    parseBuiltinFiberCall(comp, type, constant, builtin); break;
 
         default: comp->error("Illegal built-in function");
     }
