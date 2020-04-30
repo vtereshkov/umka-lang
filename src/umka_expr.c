@@ -23,6 +23,32 @@ void doPushVarPtr(Compiler *comp, Ident *ident)
 }
 
 
+void doTryIncDecRefCntRecursive(Compiler *comp, Type *type, int offset, bool inc)
+{
+    if (type->kind == TYPE_ARRAY)
+        for (int i = 0; i < type->numItems; i++)
+            doTryIncDecRefCntRecursive(comp, type->base, offset + i * typeSize(&comp->types, type->base), inc);
+    else if (type->kind == TYPE_STRUCT || type->kind == TYPE_INTERFACE)
+        for (int i = 0; i < type->numItems; i++)
+            doTryIncDecRefCntRecursive(comp, type->field[i]->type, offset + type->field[i]->offset, inc);
+    else if (type->kind == TYPE_PTR)
+    {
+        genDup(&comp->gen);
+        if (offset != 0)
+        {
+            genPushIntConst(&comp->gen, offset);
+            genBinary(&comp->gen, TOK_PLUS, TYPE_INT, 0);
+        }
+        genDeref(&comp->gen, TYPE_PTR);
+        if (inc)
+            genTryIncRefCnt(&comp->gen);
+        else
+            genTryDecRefCnt(&comp->gen);
+        genPop(&comp->gen);
+    }
+}
+
+
 static void doIntToRealConv(Compiler *comp, Type *dest, Type **src, Const *constant, bool lhs)
 {
     BuiltinFunc builtin = lhs ? BUILTIN_REAL_LHS : BUILTIN_REAL;
@@ -448,7 +474,11 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
 
             // Copy structured parameter if passed by value
             if (typeStructured(formalParamType))
+            {
+                doTryIncDecRefCntRecursive(comp, formalParamType, 0, true);
                 genPushStruct(&comp->gen, typeSize(&comp->types, formalParamType));
+            }
+
 
             numExplicitParams++;
             i++;
@@ -788,7 +818,7 @@ static void parseCompositeLiteral(Compiler *comp, Type **type, Const *constant)
                 constAssign(&comp->consts, constant->ptrVal + itemOffset, itemConstant, itemType->kind, itemSize);
             else
             {
-                if ((*type)->kind == TYPE_PTR)
+                if (itemType->kind == TYPE_PTR)
                     genTryIncRefCnt(&comp->gen);
                 genAssign(&comp->gen, itemType->kind, itemSize);
             }

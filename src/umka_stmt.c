@@ -28,6 +28,20 @@ void doResolveExtern(Compiler *comp)
 }
 
 
+static void doGarbageCollection(Compiler *comp, bool collectGlobals)
+{
+    int block = collectGlobals ? 0 : comp->blocks.item[comp->blocks.top].block;
+
+    for (Ident *ident = comp->idents.first; ident; ident = ident->next)
+        if (ident->kind == IDENT_VAR && ident->block == block)
+        {
+            doPushVarPtr(comp, ident);
+            doTryIncDecRefCntRecursive(comp, ident->type, 0, false);
+            genPop(&comp->gen);
+        }
+}
+
+
 // assignmentStmt = designator "=" expr.
 void parseAssignmentStmt(Compiler *comp, Type *type, void *initializedVarPtr)
 {
@@ -515,6 +529,7 @@ void parseBlock(Compiler *comp, Ident *fn)
     }
 
     parseStmtList(comp);
+    doGarbageCollection(comp, false);
 
     if (fn)
     {
@@ -522,13 +537,15 @@ void parseBlock(Compiler *comp, Ident *fn)
         genLeaveFrameFixup(&comp->gen, comp->blocks.item[comp->blocks.top].localVarSize);
 
         if (mainFn)
+        {
+            doGarbageCollection(comp, true);
             genHalt(&comp->gen);
+        }
         else
         {
             int paramSlots = typeParamSizeTotal(&comp->types, &fn->type->sig) / sizeof(Slot);
             genReturn(&comp->gen, paramSlots);
         }
-
     }
 
     identFree(&comp->idents, comp->blocks.item[comp->blocks.top].block);

@@ -5,12 +5,34 @@ fn f(p: ^int) {
     g(q)
 }
 
+type st = struct {
+    x: int
+    p: ^int
+    y: int
+    q: ^int
+}    
+
+fn h(s: st) {
+}
+
+var a: ^[]int
+
 fn main() {
-    a := new([1000] int)
+    a = new([1000] int)
     b := a
     c := &a[10]
     f(&a[6])
     e := new([3]real)
     e[2] = 7
     x := e[2]
+    
+    u := 2
+    v := 3
+    s := st {x: 2, p: new(int), y: 3, q: &a[11]}
+    h(s)
+    
+    for i := 0; i < 1000000000; i++ {
+        a := new([1000000] int)
+        //a[2] = 7
+    }
 }
