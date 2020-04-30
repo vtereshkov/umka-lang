@@ -52,7 +52,12 @@ void parseAssignmentStmt(Compiler *comp, Type *type, void *initializedVarPtr)
     if (initializedVarPtr)      // Initialize global variable
         constAssign(&comp->consts, initializedVarPtr, rightConstant, type->kind, typeSize(&comp->types, type));
     else                        // Assign to local variable
+    {
+        if (type->kind == TYPE_PTR)
+            genTryIncRefCnt(&comp->gen);
         genAssign(&comp->gen, type->kind, typeSize(&comp->types, type));
+    }
+
 }
 
 
@@ -78,6 +83,9 @@ void parseShortAssignmentStmt(Compiler *comp, Type *type, TokenKind op)
     parseExpr(comp, &rightType, NULL);
 
     doApplyOperator(comp, &type, &rightType, NULL, NULL, lexShortAssignment(op), true, false);
+
+    if (type->kind == TYPE_PTR)
+        genTryIncRefCnt(&comp->gen);
     genAssign(&comp->gen, type->kind, typeSize(&comp->types, type));
 }
 
@@ -102,6 +110,9 @@ void parseDeclAssignmentStmt(Compiler *comp, IdentName name, bool constExpr, boo
     {
         doPushVarPtr(comp, ident);
         genSwap(&comp->gen);                    // Assignment requires that the left-hand side comes first
+
+        if (rightType->kind == TYPE_PTR)
+            genTryIncRefCnt(&comp->gen);
         genAssign(&comp->gen, rightType->kind, typeSize(&comp->types, rightType));
     }
 }

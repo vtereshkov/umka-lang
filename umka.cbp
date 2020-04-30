@@ -11,7 +11,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="fibers.um" />
+				<Option parameters="raytracer.um" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
@@ -21,7 +21,7 @@
 				<Option object_output="obj/Release/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="test.um" />
+				<Option parameters="raytracer.um" />
 				<Compiler>
 					<Add option="-O2" />
 					<Add option="-pg" />

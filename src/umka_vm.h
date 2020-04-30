@@ -41,6 +41,8 @@ typedef enum
     OP_DEREF,
     OP_ASSIGN,
     OP_ASSIGN_OFS,
+    OP_TRY_INC_REF_CNT,
+    OP_TRY_DEC_REF_CNT,
     OP_UNARY,
     OP_BINARY,
     OP_GET_ARRAY_PTR,
@@ -79,7 +81,8 @@ typedef enum
     BUILTIN_EXP,
     BUILTIN_LOG,
 
-    // sizeof
+    // Memory
+    BUILTIN_NEW,
     BUILTIN_SIZEOF,
 
     // Fibers
@@ -120,12 +123,28 @@ typedef struct
 } Fiber;
 
 
+typedef struct tagHeapChunk
+{
+    void *ptr;
+    int size;
+    int refCnt;
+    struct tagHeapChunk *next;
+} HeapChunk;
+
+
+typedef struct
+{
+    HeapChunk *first, *last;
+} HeapChunks;
+
+
 typedef void (*ExternFunc)(Slot *params, Slot *result);
 
 
 typedef struct
 {
     Fiber *fiber;
+    HeapChunks chunks;
     ErrorFunc error;
 } VM;
 

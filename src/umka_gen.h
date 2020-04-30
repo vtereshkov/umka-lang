@@ -49,6 +49,9 @@ void genDeref    (CodeGen *gen, TypeKind typeKind);
 void genAssign   (CodeGen *gen, TypeKind typeKind, int structSize);
 void genAssignOfs(CodeGen *gen, int offset);
 
+void genTryIncRefCnt(CodeGen *gen);
+void genTryDecRefCnt(CodeGen *gen);
+
 void genUnary (CodeGen *gen, TokenKind tokKind, TypeKind typeKind);
 void genBinary(CodeGen *gen, TokenKind tokKind, TypeKind typeKind, int bufOffset /*bytes*/);
 

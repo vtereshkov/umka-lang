@@ -46,6 +46,7 @@ static void doConcreteToInterfaceConv(Compiler *comp, Type *dest, Type **src, Co
     // Assign __self (offset 0)
     genPushLocalPtr(&comp->gen, destOffset);                // Push dest pointer
     genSwap(&comp->gen);                                    // For assignment, dest should come first
+    genTryIncRefCnt(&comp->gen);
     genAssignOfs(&comp->gen, 0);                            // Assign to dest with zero offset
 
     // Assign methods
@@ -82,6 +83,7 @@ static void doInterfaceToInterfaceConv(Compiler *comp, Type *dest, Type **src, C
     genDeref(&comp->gen, TYPE_PTR);                         // Get __self value
     genPushLocalPtr(&comp->gen, destOffset);                // Push dest pointer
     genSwap(&comp->gen);                                    // For assignment, dest should come first
+    genTryIncRefCnt(&comp->gen);
     genAssignOfs(&comp->gen, 0);                            // Assign to dest with zero offset
 
     // Assign methods
@@ -282,6 +284,24 @@ static void parseBuiltinMathCall(Compiler *comp, Type **type, Const *constant, B
 }
 
 
+static void parseBuiltinNewCall(Compiler *comp, Type **type, Const *constant)
+{
+    lexEat(&comp->lex, TOK_LPAR);
+
+    if (constant)
+        comp->error("Function is not allowed in constant expressions");
+
+    *type = parseType(comp, NULL);
+    int size = typeSize(&comp->types, *type);
+
+    genPushIntConst(&comp->gen, size);
+    genCallBuiltin(&comp->gen, TYPE_PTR, BUILTIN_NEW);
+
+    *type = typeAddPtrTo(&comp->types, &comp->blocks, *type);
+    lexEat(&comp->lex, TOK_RPAR);
+}
+
+
 static void parseBuiltinSizeofCall(Compiler *comp, Type **type, Const *constant)
 {
     lexEat(&comp->lex, TOK_LPAR);
@@ -369,7 +389,8 @@ static void parseBuiltinCall(Compiler *comp, Type **type, Const *constant, Built
         case BUILTIN_EXP:
         case BUILTIN_LOG:           parseBuiltinMathCall(comp, type, constant, builtin); break;
 
-        // sizeof
+        // Memory
+        case BUILTIN_NEW:           parseBuiltinNewCall(comp, type, constant); break;
         case BUILTIN_SIZEOF:        parseBuiltinSizeofCall(comp, type, constant); break;
 
         // Fibers
@@ -421,6 +442,9 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
 
             doImplicitTypeConv(comp, formalParamType, &actualParamType, constant, false);
             typeAssertCompatible(&comp->types, formalParamType, actualParamType);
+
+            if (formalParamType->kind == TYPE_PTR)
+                genTryIncRefCnt(&comp->gen);
 
             // Copy structured parameter if passed by value
             if (typeStructured(formalParamType))
@@ -503,7 +527,6 @@ static void parsePrimary(Compiler *comp, Ident *ident, Type **type, Const *const
         {
             lexNext(&comp->lex);
             parseBuiltinCall(comp, type, constant, ident->builtin);
-            *type = ident->type;
             *isVar = false;
             *isCall = true;
             break;
@@ -764,7 +787,12 @@ static void parseCompositeLiteral(Compiler *comp, Type **type, Const *constant)
             if (constant)
                 constAssign(&comp->consts, constant->ptrVal + itemOffset, itemConstant, itemType->kind, itemSize);
             else
+            {
+                if ((*type)->kind == TYPE_PTR)
+                    genTryIncRefCnt(&comp->gen);
                 genAssign(&comp->gen, itemType->kind, itemSize);
+            }
+
 
             numItems++;
             itemOffset += itemSize;

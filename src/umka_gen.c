@@ -141,6 +141,20 @@ void genAssignOfs(CodeGen *gen, int offset)
 }
 
 
+void genTryIncRefCnt(CodeGen *gen)
+{
+    const Instruction instr = {.opcode = OP_TRY_INC_REF_CNT, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = 0};
+    genAddInstr(gen, &instr);
+}
+
+
+void genTryDecRefCnt(CodeGen *gen)
+{
+    const Instruction instr = {.opcode = OP_TRY_DEC_REF_CNT, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = 0};
+    genAddInstr(gen, &instr);
+}
+
+
 void genUnary(CodeGen *gen, TokenKind tokKind, TypeKind typeKind)
 {
     const Instruction instr = {.opcode = OP_UNARY, .tokKind = tokKind, .typeKind = typeKind, .operand.intVal = 0};

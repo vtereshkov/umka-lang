@@ -1,0 +1,16 @@
+fn g(q: ^int) {}    
+
+fn f(p: ^int) {
+    q := p
+    g(q)
+}
+
+fn main() {
+    a := new([1000] int)
+    b := a
+    c := &a[10]
+    f(&a[6])
+    e := new([3]real)
+    e[2] = 7
+    x := e[2]
+}
