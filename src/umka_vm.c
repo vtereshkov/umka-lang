@@ -72,6 +72,7 @@ static HeapChunk *chunkAdd(HeapChunks *chunks, int size)
     chunk->ptr = malloc(size);
     chunk->size = size;
     chunk->refCnt = 0;
+    chunk->prev = chunks->last;
     chunk->next = NULL;
 
     // Add to list
@@ -83,6 +84,25 @@ static HeapChunk *chunkAdd(HeapChunks *chunks, int size)
         chunks->last = chunk;
     }
     return chunks->last;
+}
+
+
+static void chunkRemove(HeapChunks *chunks, HeapChunk *chunk)
+{
+    if (chunk == chunks->first)
+        chunks->first = chunk->next;
+
+    if (chunk == chunks->last)
+        chunks->last = chunk->prev;
+
+    if (chunk->prev)
+        chunk->prev->next = chunk->next;
+
+    if (chunk->next)
+        chunk->next->prev = chunk->prev;
+
+    free(chunk->ptr);
+    free(chunk);
 }
 
 
@@ -113,10 +133,7 @@ bool chunkTryDecCnt(HeapChunks *chunks, void *ptr)
     if (chunk)
     {
         if (--chunk->refCnt == 0)
-        {
-            free(chunk->ptr);
-            chunk->ptr = NULL;
-        }
+            chunkRemove(chunks, chunk);
         return true;
     }
     return false;

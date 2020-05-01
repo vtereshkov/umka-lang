@@ -128,7 +128,7 @@ typedef struct tagHeapChunk
     void *ptr;
     int size;
     int refCnt;
-    struct tagHeapChunk *next;
+    struct tagHeapChunk *prev, *next;
 } HeapChunk;
 
 

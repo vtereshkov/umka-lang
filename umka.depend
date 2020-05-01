@@ -145,7 +145,7 @@
 	"umka_common.h"
 	"umka_lexer.h"
 
-1588254222 c:\users\vasiliy\desktop\umka-lang-master\src\umka_vm.h
+1588289582 c:\users\vasiliy\desktop\umka-lang-master\src\umka_vm.h
 	"umka_common.h"
 	"umka_lexer.h"
 	"umka_types.h"
@@ -231,7 +231,7 @@
 	"umka_types.h"
 	"umka_ident.h"
 
-1588287962 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_vm.c
+1588293737 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_vm.c
 	<stdio.h>
 	<stdlib.h>
 	<string.h>
