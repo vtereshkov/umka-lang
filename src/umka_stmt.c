@@ -34,11 +34,7 @@ static void doGarbageCollection(Compiler *comp, bool collectGlobals)
 
     for (Ident *ident = comp->idents.first; ident; ident = ident->next)
         if (ident->kind == IDENT_VAR && ident->block == block)
-        {
-            doPushVarPtr(comp, ident);
-            doTryIncDecRefCntRecursive(comp, ident->type, 0, false);
-            genPop(&comp->gen);
-        }
+            doUpdateRefCnt(comp, ident->type, ident, true, false, 0);
 }
 
 
@@ -51,6 +47,9 @@ void parseAssignmentStmt(Compiler *comp, Type *type, void *initializedVarPtr)
             comp->error("Left side cannot be assigned to");
         type = type->base;
     }
+
+    // Decrease old left-hand side reference count
+    doUpdateRefCnt(comp, type, NULL, true, false, 0);
 
     Type *rightType;
     Const rightConstantBuf, *rightConstant = NULL;
@@ -67,8 +66,8 @@ void parseAssignmentStmt(Compiler *comp, Type *type, void *initializedVarPtr)
         constAssign(&comp->consts, initializedVarPtr, rightConstant, type->kind, typeSize(&comp->types, type));
     else                        // Assign to local variable
     {
-        if (type->kind == TYPE_PTR)
-            genTryIncRefCnt(&comp->gen);
+        // Increase right-hand side reference count
+        doUpdateRefCnt(comp, type, NULL, false, true, 0);
         genAssign(&comp->gen, type->kind, typeSize(&comp->types, type));
     }
 
@@ -93,13 +92,16 @@ void parseShortAssignmentStmt(Compiler *comp, Type *type, TokenKind op)
     if (type->kind == TYPE_REAL32)
         type = comp->realType;
 
+    // Decrease old left-hand side reference count
+    doUpdateRefCnt(comp, type, NULL, true, false, 0);
+
     Type *rightType;
     parseExpr(comp, &rightType, NULL);
 
     doApplyOperator(comp, &type, &rightType, NULL, NULL, lexShortAssignment(op), true, false);
 
-    if (type->kind == TYPE_PTR)
-        genTryIncRefCnt(&comp->gen);
+    // Increase right-hand side reference count
+    doUpdateRefCnt(comp, type, NULL, false, true, 0);
     genAssign(&comp->gen, type->kind, typeSize(&comp->types, type));
 }
 
@@ -125,8 +127,8 @@ void parseDeclAssignmentStmt(Compiler *comp, IdentName name, bool constExpr, boo
         doPushVarPtr(comp, ident);
         genSwap(&comp->gen);                    // Assignment requires that the left-hand side comes first
 
-        if (rightType->kind == TYPE_PTR)
-            genTryIncRefCnt(&comp->gen);
+        // Increase right-hand side reference count
+        doUpdateRefCnt(comp, rightType, NULL, false, true, 0);
         genAssign(&comp->gen, rightType->kind, typeSize(&comp->types, rightType));
     }
 }
@@ -234,10 +236,11 @@ void parseIfStmt(Compiler *comp)
             parseBlock(comp, NULL);
     }
 
-    // Additional scope embracing shortVarDecl
-    blocksLeave(&comp->blocks);
-
     genIfElseEpilog(&comp->gen);
+
+    // Additional scope embracing shortVarDecl
+    doGarbageCollection(comp, false);
+    blocksLeave(&comp->blocks);
 }
 
 
@@ -321,10 +324,11 @@ void parseSwitchStmt(Compiler *comp)
 
     lexEat(&comp->lex, TOK_RBRACE);
 
-    // Additional scope embracing shortVarDecl
-    blocksLeave(&comp->blocks);
-
     genSwitchEpilog(&comp->gen, numCases);
+
+    // Additional scope embracing shortVarDecl
+    doGarbageCollection(comp, false);
+    blocksLeave(&comp->blocks);
 }
 
 
@@ -376,9 +380,6 @@ void parseForStmt(Compiler *comp)
     // block
     parseBlock(comp, NULL);
 
-    // Additional scope embracing shortVarDecl
-    blocksLeave(&comp->blocks);
-
     // continue epilog
     genGotosEpilog(&comp->gen, comp->gen.continues);
     comp->gen.continues = outerContinues;
@@ -388,6 +389,10 @@ void parseForStmt(Compiler *comp)
     // break epilog
     genGotosEpilog(&comp->gen, comp->gen.breaks);
     comp->gen.breaks = outerBreaks;
+
+    // Additional scope embracing shortVarDecl
+    doGarbageCollection(comp, false);
+    blocksLeave(&comp->blocks);
 }
 
 
@@ -398,6 +403,9 @@ void parseBreakStmt(Compiler *comp)
 
     if (!comp->gen.breaks)
         comp->error("No loop to break");
+
+    // Leave block scope
+    doGarbageCollection(comp, false);
     genGotosAddStub(&comp->gen, comp->gen.breaks);
 }
 
@@ -409,6 +417,9 @@ void parseContinueStmt(Compiler *comp)
 
     if (!comp->gen.continues)
         comp->error("No loop to continue");
+
+    // Leave block scope
+    doGarbageCollection(comp, false);
     genGotosAddStub(&comp->gen, comp->gen.continues);
 }
 
@@ -458,6 +469,8 @@ void parseReturnStmt(Compiler *comp)
     if (sig->resultType[0]->kind != TYPE_VOID)
         genPopReg(&comp->gen, VM_RESULT_REG_0);
 
+    // Leave block scope
+    doGarbageCollection(comp, false);
     genGotosAddStub(&comp->gen, comp->gen.returns);
 }
 

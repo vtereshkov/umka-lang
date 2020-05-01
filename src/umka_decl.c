@@ -201,12 +201,12 @@ static Type *parseArrayType(Compiler *comp)
     {
         parseExpr(comp, &indexType, &len);
         typeAssertCompatible(&comp->types, comp->intType, indexType);
-        if (len.intVal <= 0)
-            comp->error("Array length must be positive");
+        if (len.intVal < 0)
+            comp->error("Array length cannot be negative");
     }
     else    // Open array
     {
-        len.intVal = 0;
+        len.intVal = -1;
         indexType = comp->intType;
     }
 
@@ -234,8 +234,8 @@ static Type *parseStrType(Compiler *comp)
         lexNext(&comp->lex);
         parseExpr(comp, &indexType, &len);
         typeAssertCompatible(&comp->types, comp->intType, indexType);
-        if (len.intVal <= 0)
-            comp->error("String length must be positive");
+        if (len.intVal < 0)
+            comp->error("String length cannot be negative");
 
         lexEat(&comp->lex, TOK_RBRACKET);
     }

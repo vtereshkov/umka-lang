@@ -6,7 +6,7 @@
 
 void doPushConst(Compiler *comp, Type *type, Const *constant);
 void doPushVarPtr(Compiler *comp, Ident *ident);
-void doTryIncDecRefCntRecursive(Compiler *comp, Type *type, int offset, bool inc);
+void doUpdateRefCnt(Compiler *comp, Type *type, Ident *ident, bool lhs, bool inc, int offset);
 void doImplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant, bool lhs);
 void doApplyOperator(Compiler *comp, Type **type, Type **rightType, Const *constant, Const *rightConstant, TokenKind op, bool apply, bool convertLhs);
 

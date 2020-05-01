@@ -159,7 +159,15 @@ int typeSize(Types *types, Type *type)
         case TYPE_REAL:     return sizeof(double);
         case TYPE_PTR:      return sizeof(void *);
         case TYPE_ARRAY:
-        case TYPE_STR:      return type->numItems * typeSize(types, type->base);
+        case TYPE_STR:
+        {
+            if (type->numItems == -1)
+            {
+                char buf[DEFAULT_STR_LEN + 1];
+                types->error("Illegal type %s", typeSpelling(type, buf));
+            }
+            return type->numItems * typeSize(types, type->base);
+        }
         case TYPE_STRUCT:
         case TYPE_INTERFACE:
         {
@@ -362,7 +370,7 @@ bool typeCompatible(Type *left, Type *right)
         return true;
 
     // Any pointer to array can be assigned to a pointer to open array
-    if (left->kind  == TYPE_PTR && left->base->kind  == TYPE_ARRAY && left->base->numItems == 0 &&
+    if (left->kind  == TYPE_PTR && left->base->kind  == TYPE_ARRAY && left->base->numItems == -1 &&
         right->kind == TYPE_PTR && right->base->kind == TYPE_ARRAY)
         return typeEquivalent(left->base->base, right->base->base);
 
@@ -481,7 +489,7 @@ Field *typeAddField(Types *types, Type *structType, Type *fieldType, char *name)
     if (fieldType->kind == TYPE_VOID)
         types->error("Void field %s is not allowed", name);
 
-    if (fieldType->kind == TYPE_ARRAY && fieldType->numItems == 0)
+    if (fieldType->kind == TYPE_ARRAY && fieldType->numItems == -1)
         types->error("Open array field %s is not allowed", name);
 
     if (structType->numItems > MAX_FIELDS)

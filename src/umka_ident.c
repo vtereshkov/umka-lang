@@ -125,7 +125,7 @@ static Ident *identAdd(Idents *idents, Modules *modules, Blocks *blocks, IdentKi
         if (type->kind == TYPE_VOID)
             idents->error("Void variable or constant %s is not allowed", name);
 
-        if (type->kind == TYPE_ARRAY && type->numItems == 0)
+        if (type->kind == TYPE_ARRAY && type->numItems == -1)
             idents->error("Open array variable or constant %s is not allowed", name);
     }
 

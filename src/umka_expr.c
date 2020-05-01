@@ -23,29 +23,50 @@ void doPushVarPtr(Compiler *comp, Ident *ident)
 }
 
 
-void doTryIncDecRefCntRecursive(Compiler *comp, Type *type, int offset, bool inc)
+static void doUpdatePointerRefCnt(Compiler *comp, Ident *ident, bool lhs, bool increment, int offset)
 {
-    if (type->kind == TYPE_ARRAY)
-        for (int i = 0; i < type->numItems; i++)
-            doTryIncDecRefCntRecursive(comp, type->base, offset + i * typeSize(&comp->types, type->base), inc);
-    else if (type->kind == TYPE_STRUCT || type->kind == TYPE_INTERFACE)
-        for (int i = 0; i < type->numItems; i++)
-            doTryIncDecRefCntRecursive(comp, type->field[i]->type, offset + type->field[i]->offset, inc);
-    else if (type->kind == TYPE_PTR)
+    // If it is a left-hand side, we need to have its copy to dereference, check and then remove it
+    if (lhs)
     {
-        genDup(&comp->gen);
+        // Load ident if specified, otherwise duplicate the pointer at the stack top
+        if (ident)
+            doPushVarPtr(comp, ident);
+        else
+            genDup(&comp->gen);
+
+        // Add offset if needed
         if (offset != 0)
         {
             genPushIntConst(&comp->gen, offset);
             genBinary(&comp->gen, TOK_PLUS, TYPE_INT, 0);
         }
+
         genDeref(&comp->gen, TYPE_PTR);
-        if (inc)
-            genTryIncRefCnt(&comp->gen);
-        else
-            genTryDecRefCnt(&comp->gen);
-        genPop(&comp->gen);
     }
+
+    if (increment)
+        genTryIncRefCnt(&comp->gen);
+    else
+        genTryDecRefCnt(&comp->gen);
+
+    if (lhs)
+        genPop(&comp->gen);
+}
+
+
+void doUpdateRefCnt(Compiler *comp, Type *type, Ident *ident, bool lhs, bool increment, int offset)
+{
+    // Update reference counts for pointers (including array items and structure/interface fields) if allocated dynamically
+    if (type->kind == TYPE_ARRAY)
+        for (int i = 0; i < type->numItems; i++)
+            doUpdateRefCnt(comp, type->base, ident, true, increment, offset + i * typeSize(&comp->types, type->base));
+
+    else if (type->kind == TYPE_STRUCT || type->kind == TYPE_INTERFACE)
+        for (int i = 0; i < type->numItems; i++)
+            doUpdateRefCnt(comp, type->field[i]->type, ident, true, increment, offset + type->field[i]->offset);
+
+    else if (type->kind == TYPE_PTR)
+        doUpdatePointerRefCnt(comp, ident, lhs, increment, offset);
 }
 
 
@@ -475,7 +496,7 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
             // Copy structured parameter if passed by value
             if (typeStructured(formalParamType))
             {
-                doTryIncDecRefCntRecursive(comp, formalParamType, 0, true);
+                doUpdateRefCnt(comp, formalParamType, NULL, true, true, 0);
                 genPushStruct(&comp->gen, typeSize(&comp->types, formalParamType));
             }
 
@@ -617,7 +638,7 @@ static void parseSelectors(Compiler *comp, Type **type, Const *constant, bool *i
 
                 // Length (for range checking)
                 int len = (*type)->numItems;
-                if (len == 0)
+                if (len == -1)
                     len = INT_MAX;
                 genPushIntConst(&comp->gen, len);
 
@@ -817,12 +838,8 @@ static void parseCompositeLiteral(Compiler *comp, Type **type, Const *constant)
             if (constant)
                 constAssign(&comp->consts, constant->ptrVal + itemOffset, itemConstant, itemType->kind, itemSize);
             else
-            {
-                if (itemType->kind == TYPE_PTR)
-                    genTryIncRefCnt(&comp->gen);
+                // Assignment to an anonymouns stack area does not require updating reference counts
                 genAssign(&comp->gen, itemType->kind, itemSize);
-            }
-
 
             numItems++;
             itemOffset += itemSize;

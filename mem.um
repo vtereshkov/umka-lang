@@ -15,12 +15,18 @@ type st = struct {
 fn h(s: st) {
 }
 
+fn ff(): ^[1000] int {
+    return  new([1000] int)
+}
+
+
 var a: ^[]int
 
 fn main() {
     a = new([1000] int)
     b := a
     c := &a[10]
+    b = new([10] int)
     f(&a[6])
     e := new([3]real)
     e[2] = 7
@@ -28,11 +34,17 @@ fn main() {
     
     u := 2
     v := 3
+    
     s := st {x: 2, p: new(int), y: 3, q: &a[11]}
     h(s)
     
-    for i := 0; i < 1000000; i++ {
-        a := new([1000000] int)
-        //a[2] = 7
+    var a: ^[]int
+    for i := 0; i < 1000; i++ {
+        a = new([1000] int)
+        a[2] = 7
+        b := new(int)
+        if i > 10 {break}
     }
+    
+    //ff()
 }
