@@ -38,6 +38,7 @@ typedef struct tagIdent
 typedef struct
 {
     Ident *first, *last;
+    int tempVarNameSuffix;
     ErrorFunc error;
 } Idents;
 
@@ -57,5 +58,7 @@ Ident *identAddBuiltinFunc(Idents *idents, Modules *modules, Blocks *blocks, cha
 int    identAllocStack    (Idents *idents, Blocks *blocks, int size);
 Ident *identAllocVar      (Idents *idents, Types *types, Modules *modules, Blocks *blocks, char *name, Type *type, bool exported);
 Ident *identAllocParam    (Idents *idents, Types *types, Modules *modules, Blocks *blocks, Signature *sig, int index);
+
+char *identTempVarName(Idents *idents, char *buf);
 
 #endif // UMKA_IDENT_H_INCLUDED

@@ -13,6 +13,8 @@ type st = struct {
 }    
 
 fn h(s: st) {
+    s.y = 5
+    s.q = new(int)
 }
 
 fn ff() {
@@ -28,7 +30,7 @@ fn hh(): st {
     return st{x: 3, p: g, y: 5, q: g}
 }
 
-fn gg(): ^int {return new(int)}
+fn gg(): ^int {a := new(int); return a}
 
 var a: ^[]int
 
@@ -68,7 +70,9 @@ fn main() {
     hhres := hh()
     hhres.p^ = 17
     
-    //gg()
+    ggres := gg()
+    
+    new([10000000] int)
 
     //for i := 0; i < 10000000; i++ {}
 }

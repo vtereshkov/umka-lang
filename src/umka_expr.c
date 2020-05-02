@@ -23,6 +23,19 @@ void doPushVarPtr(Compiler *comp, Ident *ident)
 }
 
 
+static void doCopyResultToTempVar(Compiler *comp, Type *type)
+{
+    IdentName tempName;
+    identTempVarName(&comp->idents, tempName);
+    Ident *__temp = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, tempName, type, false);
+
+    genDup(&comp->gen);
+    doPushVarPtr(comp, __temp);
+    genSwap(&comp->gen);
+    genAssign(&comp->gen, type->kind, typeSize(&comp->types, type));
+}
+
+
 static void doUpdatePointerRefCnt(Compiler *comp, Ident *ident, bool lhs, bool increment, int offset)
 {
     // If it is a left-hand side, we need to have its copy to dereference, check and then remove it
@@ -490,16 +503,12 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
             doImplicitTypeConv(comp, formalParamType, &actualParamType, constant, false);
             typeAssertCompatible(&comp->types, formalParamType, actualParamType);
 
-            if (formalParamType->kind == TYPE_PTR)
-                genTryIncRefCnt(&comp->gen);
+            // Increase parameter's reference count
+            doUpdateRefCnt(comp, formalParamType, NULL, false, true, 0);
 
             // Copy structured parameter if passed by value
             if (typeStructured(formalParamType))
-            {
-                doUpdateRefCnt(comp, formalParamType, NULL, true, true, 0);
                 genPushStruct(&comp->gen, typeSize(&comp->types, formalParamType));
-            }
-
 
             numExplicitParams++;
             i++;
@@ -578,6 +587,11 @@ static void parsePrimary(Compiler *comp, Ident *ident, Type **type, Const *const
         {
             lexNext(&comp->lex);
             parseBuiltinCall(comp, type, constant, ident->builtin);
+
+            // Copy result to a temporary local variable to collect it as garbage when leaving the block
+            if ((*type)->kind == TYPE_PTR || typeStructured(*type))
+                doCopyResultToTempVar(comp, *type);
+
             *isVar = false;
             *isCall = true;
             break;
@@ -735,8 +749,13 @@ static void parseSelectors(Compiler *comp, Type **type, Const *constant, bool *i
 
                 parseCall(comp, type, constant);
 
+                // Push result
                 if ((*type)->kind != TYPE_VOID)
                     genPushReg(&comp->gen, VM_RESULT_REG_0);
+
+                // Copy result to a temporary local variable to collect it as garbage when leaving the block
+                if ((*type)->kind == TYPE_PTR || typeStructured(*type))
+                    doCopyResultToTempVar(comp, *type);
 
                 // No direct support for 32-bit reals
                 if ((*type)->kind == TYPE_REAL32)

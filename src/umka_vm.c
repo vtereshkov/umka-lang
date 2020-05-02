@@ -56,7 +56,7 @@ void chunkFree(HeapChunks *chunks)
         HeapChunk *next = chunk->next;
         if (chunk->ptr)
         {
-            printf("Memory leak at %8p (%d bytes, %d refs)\n", chunk->ptr, chunk->size, chunk->refCnt);
+            printf("Memory leak at %p (%d bytes, %d refs)\n", chunk->ptr, chunk->size, chunk->refCnt);
             free(chunk->ptr);
         }
         free(chunk);
@@ -71,7 +71,7 @@ static HeapChunk *chunkAdd(HeapChunks *chunks, int size)
 
     chunk->ptr = malloc(size);
     chunk->size = size;
-    chunk->refCnt = 0;
+    chunk->refCnt = 1;
     chunk->prev = chunks->last;
     chunk->next = NULL;
 

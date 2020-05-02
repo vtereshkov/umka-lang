@@ -8,6 +8,7 @@
 void identInit(Idents *idents, ErrorFunc error)
 {
     idents->first = idents->last = NULL;
+    idents->tempVarNameSuffix = 0;
     idents->error = error;
 }
 
@@ -236,5 +237,12 @@ Ident *identAllocParam(Idents *idents, Types *types, Modules *modules, Blocks *b
 
     int offset = (paramSizeTotal - paramSizeUpToIndex) + 2 * sizeof(Slot);  // + 2 slots for old base pointer and return address
     return identAddLocalVar(idents, modules, blocks, sig->param[index]->name, sig->param[index]->type, false, offset);
+}
+
+
+char *identTempVarName(Idents *idents, char *buf)
+{
+    sprintf(buf, "__temp%d", idents->tempVarNameSuffix++);
+    return buf;
 }
 

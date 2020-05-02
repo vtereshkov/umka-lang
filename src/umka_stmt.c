@@ -477,7 +477,11 @@ static void parseReturnStmt(Compiler *comp)
     }
 
     if (sig->resultType[0]->kind != TYPE_VOID)
+    {
+        // Increase result reference count
+        doUpdateRefCnt(comp, sig->resultType[0], NULL, false, true, 0);
         genPopReg(&comp->gen, VM_RESULT_REG_0);
+    }
 
     doGarbageCollectionDownToBlock(comp, comp->gen.returns->block);
     genGotosAddStub(&comp->gen, comp->gen.returns);
