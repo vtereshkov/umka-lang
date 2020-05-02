@@ -3,6 +3,7 @@ import "import/std.um"
 type (
     vec = struct {
         x, y: int
+        p: [1000000] int
     }
     
     fooable = interface {
@@ -36,20 +37,33 @@ fn proc_fooable_barable(fb: fooable_barable) {
 }
 
 fn main() {
-    v := vec{x: 3, y: 5}
-    var fb: fooable_barable = v
+    //for i := 0; i < 10000000; i++ {}
+
+    //v := vec{x: 3, y: 5}    
+    var fb: fooable_barable
+
+    if true {
+        v := new(vec)                
+        v.x = 3
+        v.y = 5
+        fb = v^
+    }
     
-    proc_fooable(v)
-    proc_fooable_barable(v)
+    //for i := 0; i < 10000000; i++ {}
+       
+    //proc_fooable(v^)
+    //proc_fooable_barable(v^)
     
     proc_fooable(fb)
     proc_fooable_barable(fb)
 
-    f := fooable(v)
+    f := fooable(fb)
     //fb2 := fooable_barable(f)
     
-    proc_fooable(f)
+    //proc_fooable(f)
     //proc_fooable_barable(f) 
+    
+    //for i := 0; i < 10000000; i++ {}
 }
     
 

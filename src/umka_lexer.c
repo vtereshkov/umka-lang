@@ -749,6 +749,7 @@ void lexNext(Lexer *lex)
                 lex->prevTok.kind == TOK_RPAR        ||
                 lex->prevTok.kind == TOK_RBRACKET    ||
                 lex->prevTok.kind == TOK_RBRACE      ||
+                lex->prevTok.kind == TOK_CARET       ||
                 lex->prevTok.kind == TOK_IDENT       ||
                 lex->prevTok.kind == TOK_INTNUMBER   ||
                 lex->prevTok.kind == TOK_REALNUMBER  ||

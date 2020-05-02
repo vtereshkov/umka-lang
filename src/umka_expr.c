@@ -104,9 +104,9 @@ static void doConcreteToInterfaceConv(Compiler *comp, Type *dest, Type **src, Co
     int destOffset = identAllocStack(&comp->idents, &comp->blocks, destSize);
 
     // Assign __self (offset 0)
+    // Assignment to an anonymous stack area does not require updating reference counts
     genPushLocalPtr(&comp->gen, destOffset);                // Push dest pointer
     genSwap(&comp->gen);                                    // For assignment, dest should come first
-    genTryIncRefCnt(&comp->gen);
     genAssignOfs(&comp->gen, 0);                            // Assign to dest with zero offset
 
     // Assign methods
@@ -139,11 +139,11 @@ static void doInterfaceToInterfaceConv(Compiler *comp, Type *dest, Type **src, C
     int destOffset = identAllocStack(&comp->idents, &comp->blocks, destSize);
 
     // Assign __self (offset 0)
+    // Assignment to an anonymous stack area does not require updating reference counts
     genDup(&comp->gen);                                     // Duplicate src pointer
     genDeref(&comp->gen, TYPE_PTR);                         // Get __self value
     genPushLocalPtr(&comp->gen, destOffset);                // Push dest pointer
     genSwap(&comp->gen);                                    // For assignment, dest should come first
-    genTryIncRefCnt(&comp->gen);
     genAssignOfs(&comp->gen, 0);                            // Assign to dest with zero offset
 
     // Assign methods
@@ -480,6 +480,10 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
     if ((*type)->sig.method)
     {
         genPushReg(&comp->gen, VM_SELF_REG);
+
+        // Increase receiver's reference count
+        doUpdateRefCnt(comp, (*type)->sig.param[0]->type, NULL, false, true, 0);
+
         numPreHiddenParams++;
         i++;
     }
@@ -857,7 +861,7 @@ static void parseCompositeLiteral(Compiler *comp, Type **type, Const *constant)
             if (constant)
                 constAssign(&comp->consts, constant->ptrVal + itemOffset, itemConstant, itemType->kind, itemSize);
             else
-                // Assignment to an anonymouns stack area does not require updating reference counts
+                // Assignment to an anonymous stack area does not require updating reference counts
                 genAssign(&comp->gen, itemType->kind, itemSize);
 
             numItems++;
