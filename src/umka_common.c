@@ -150,6 +150,12 @@ void blocksLeave(Blocks *blocks)
 }
 
 
+int blocksCurrent(Blocks *blocks)
+{
+    return blocks->item[blocks->top].block;
+}
+
+
 // Externals
 
 void externalInit(Externals *externals)

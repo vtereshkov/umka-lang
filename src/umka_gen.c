@@ -442,9 +442,10 @@ void genEntryPoint(CodeGen *gen, int start)
 }
 
 
-void genGotosProlog(CodeGen *gen, Gotos *gotos)
+void genGotosProlog(CodeGen *gen, Gotos *gotos, int block)
 {
     gotos->numGotos = 0;
+    gotos->block = block;
 }
 
 

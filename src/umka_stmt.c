@@ -5,7 +5,8 @@
 #include "umka_decl.h"
 
 
-void parseStmtList(Compiler *comp);
+static void parseStmtList(Compiler *comp);
+static void parseBlock(Compiler *comp);
 
 
 void doResolveExtern(Compiler *comp)
@@ -28,13 +29,23 @@ void doResolveExtern(Compiler *comp)
 }
 
 
-static void doGarbageCollection(Compiler *comp, bool collectGlobals)
+static void doGarbageCollection(Compiler *comp, int block)
 {
-    int block = collectGlobals ? 0 : comp->blocks.item[comp->blocks.top].block;
-
     for (Ident *ident = comp->idents.first; ident; ident = ident->next)
         if (ident->kind == IDENT_VAR && ident->block == block)
             doUpdateRefCnt(comp, ident->type, ident, true, false, 0);
+}
+
+
+static void doGarbageCollectionDownToBlock(Compiler *comp, int block)
+{
+    // Collect garbage over all scopes down to the specified block (not inclusive)
+    for (int i = comp->blocks.top; i >= 1; i--)
+    {
+        if (comp->blocks.item[i].block == block)
+            break;
+        doGarbageCollection(comp, comp->blocks.item[i].block);
+    }
 }
 
 
@@ -70,12 +81,11 @@ void parseAssignmentStmt(Compiler *comp, Type *type, void *initializedVarPtr)
         doUpdateRefCnt(comp, type, NULL, false, true, 0);
         genAssign(&comp->gen, type->kind, typeSize(&comp->types, type));
     }
-
 }
 
 
 // shortAssignmentStmt = designator ("+=" | "-=" | "*=" | "/=" | "%=" | "&=" | "|=" | "~=") expr.
-void parseShortAssignmentStmt(Compiler *comp, Type *type, TokenKind op)
+static void parseShortAssignmentStmt(Compiler *comp, Type *type, TokenKind op)
 {
     if (!typeStructured(type))
     {
@@ -135,7 +145,7 @@ void parseDeclAssignmentStmt(Compiler *comp, IdentName name, bool constExpr, boo
 
 
 // incDecStmt = designator ("++" | "--").
-void parseIncDecStmt(Compiler *comp, Type *type, TokenKind op)
+static void parseIncDecStmt(Compiler *comp, Type *type, TokenKind op)
 {
     if (!typeStructured(type))
     {
@@ -152,7 +162,7 @@ void parseIncDecStmt(Compiler *comp, Type *type, TokenKind op)
 
 // simpleStmt     = assignmentStmt | shortAssignmentStmt | incDecStmt | callStmt.
 // callStmt       = designator.
-void parseSimpleStmt(Compiler *comp)
+static void parseSimpleStmt(Compiler *comp)
 {
     Lexer lookaheadLex = comp->lex;
     lexNext(&lookaheadLex);
@@ -190,14 +200,14 @@ void parseSimpleStmt(Compiler *comp)
             if (!isCall)
                 comp->error("Assignment or function call expected");
             if (type->kind != TYPE_VOID)
-                genPop(&comp->gen);  // Manually remove parameter
+                genPop(&comp->gen);  // Manually remove result
         }
     }
 }
 
 
 // ifStmt = "if" [shortVarDecl ";"] expr block ["else" (ifStmt | block)].
-void parseIfStmt(Compiler *comp)
+static void parseIfStmt(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_IF);
 
@@ -222,7 +232,7 @@ void parseIfStmt(Compiler *comp)
     genIfCondEpilog(&comp->gen);
 
     // block
-    parseBlock(comp, NULL);
+    parseBlock(comp);
 
     // ["else" (ifStmt | block)]
     if (comp->lex.tok.kind == TOK_ELSE)
@@ -233,19 +243,19 @@ void parseIfStmt(Compiler *comp)
         if (comp->lex.tok.kind == TOK_IF)
             parseIfStmt(comp);
         else
-            parseBlock(comp, NULL);
+            parseBlock(comp);
     }
 
     genIfElseEpilog(&comp->gen);
 
     // Additional scope embracing shortVarDecl
-    doGarbageCollection(comp, false);
+    doGarbageCollection(comp, blocksCurrent(&comp->blocks));
     blocksLeave(&comp->blocks);
 }
 
 
 // case = "case" expr {"," expr} ":" stmtList.
-void parseCase(Compiler *comp, Type *selectorType)
+static void parseCase(Compiler *comp, Type *selectorType)
 {
     lexEat(&comp->lex, TOK_CASE);
 
@@ -274,7 +284,7 @@ void parseCase(Compiler *comp, Type *selectorType)
 
 
 // default = "default" ":" stmtList.
-void parseDefault(Compiler *comp)
+static void parseDefault(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_DEFAULT);
     lexEat(&comp->lex, TOK_COLON);
@@ -283,7 +293,7 @@ void parseDefault(Compiler *comp)
 
 
 // switchStmt = "switch" [shortVarDecl ";"] expr "{" {case} [default] "}".
-void parseSwitchStmt(Compiler *comp)
+static void parseSwitchStmt(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_SWITCH);
 
@@ -327,27 +337,27 @@ void parseSwitchStmt(Compiler *comp)
     genSwitchEpilog(&comp->gen, numCases);
 
     // Additional scope embracing shortVarDecl
-    doGarbageCollection(comp, false);
+    doGarbageCollection(comp, blocksCurrent(&comp->blocks));
     blocksLeave(&comp->blocks);
 }
 
 
 // forStmt = "for" [shortVarDecl ";"] expr [";" simpleStmt] block.
-void parseForStmt(Compiler *comp)
+static void parseForStmt(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_FOR);
 
-    // break/continue prologs
+    // Additional scope embracing shortVarDecl
+    blocksEnter(&comp->blocks, NULL);
+
+    // 'break'/'continue' prologs
     Gotos breaks, *outerBreaks = comp->gen.breaks;
     comp->gen.breaks = &breaks;
-    genGotosProlog(&comp->gen, comp->gen.breaks);
+    genGotosProlog(&comp->gen, comp->gen.breaks, blocksCurrent(&comp->blocks));
 
     Gotos continues, *outerContinues = comp->gen.continues;
     comp->gen.continues = &continues;
-    genGotosProlog(&comp->gen, comp->gen.continues);
-
-    // Additional scope embracing shortVarDecl
-    blocksEnter(&comp->blocks, NULL);
+    genGotosProlog(&comp->gen, comp->gen.continues, blocksCurrent(&comp->blocks));
 
     // [shortVarDecl ";"]
     Lexer lookaheadLex = comp->lex;
@@ -378,54 +388,52 @@ void parseForStmt(Compiler *comp)
     genForPostStmtEpilog(&comp->gen);
 
     // block
-    parseBlock(comp, NULL);
+    parseBlock(comp);
 
-    // continue epilog
+    // 'continue' epilog
     genGotosEpilog(&comp->gen, comp->gen.continues);
     comp->gen.continues = outerContinues;
 
     genForEpilog(&comp->gen);
 
-    // break epilog
+    // 'break' epilog
     genGotosEpilog(&comp->gen, comp->gen.breaks);
     comp->gen.breaks = outerBreaks;
 
     // Additional scope embracing shortVarDecl
-    doGarbageCollection(comp, false);
+    doGarbageCollection(comp, blocksCurrent(&comp->blocks));
     blocksLeave(&comp->blocks);
 }
 
 
 // breakStmt = "break".
-void parseBreakStmt(Compiler *comp)
+static void parseBreakStmt(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_BREAK);
 
     if (!comp->gen.breaks)
         comp->error("No loop to break");
 
-    // Leave block scope
-    doGarbageCollection(comp, false);
+    doGarbageCollectionDownToBlock(comp, comp->gen.breaks->block);
     genGotosAddStub(&comp->gen, comp->gen.breaks);
 }
 
 
 // continueStmt = "continue".
-void parseContinueStmt(Compiler *comp)
+static void parseContinueStmt(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_CONTINUE);
 
     if (!comp->gen.continues)
         comp->error("No loop to continue");
 
-    // Leave block scope
-    doGarbageCollection(comp, false);
+    doGarbageCollectionDownToBlock(comp, comp->gen.continues->block);
     genGotosAddStub(&comp->gen, comp->gen.continues);
 }
 
 
 // returnStmt = "return" [expr].
-void parseReturnStmt(Compiler *comp)
+static void parseReturnStmt(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_RETURN);
     Type *type;
@@ -460,6 +468,8 @@ void parseReturnStmt(Compiler *comp)
         doPushVarPtr(comp, __result);
         genDeref(&comp->gen, TYPE_PTR);
         genSwap(&comp->gen);
+
+        // Assignment to an anonymouns stack area (pointed to by __result) does not require updating reference counts
         genAssign(&comp->gen, sig->resultType[0]->kind, typeSize(&comp->types, sig->resultType[0]));
 
         doPushVarPtr(comp, __result);
@@ -469,14 +479,13 @@ void parseReturnStmt(Compiler *comp)
     if (sig->resultType[0]->kind != TYPE_VOID)
         genPopReg(&comp->gen, VM_RESULT_REG_0);
 
-    // Leave block scope
-    doGarbageCollection(comp, false);
+    doGarbageCollectionDownToBlock(comp, comp->gen.returns->block);
     genGotosAddStub(&comp->gen, comp->gen.returns);
 }
 
 
 // stmt = decl | block | simpleStmt | ifStmt | switchStmt | forStmt | breakStmt | continueStmt | returnStmt.
-void parseStmt(Compiler *comp)
+static void parseStmt(Compiler *comp)
 {
     switch (comp->lex.tok.kind)
     {
@@ -484,7 +493,7 @@ void parseStmt(Compiler *comp)
         case TOK_CONST:
         case TOK_VAR:
         case TOK_FN:        parseDecl(comp);            break;
-        case TOK_LBRACE:    parseBlock(comp, NULL);     break;
+        case TOK_LBRACE:    parseBlock(comp);           break;
         case TOK_IDENT:     parseSimpleStmt(comp);      break;
         case TOK_IF:        parseIfStmt(comp);          break;
         case TOK_SWITCH:    parseSwitchStmt(comp);      break;
@@ -499,7 +508,7 @@ void parseStmt(Compiler *comp)
 
 
 // stmtList = Stmt {";" Stmt}.
-void parseStmtList(Compiler *comp)
+static void parseStmtList(Compiler *comp)
 {
     while (1)
     {
@@ -512,68 +521,77 @@ void parseStmtList(Compiler *comp)
 
 
 // block = "{" StmtList "}".
-void parseBlock(Compiler *comp, Ident *fn)
+static void parseBlock(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_LBRACE);
-    blocksEnter(&comp->blocks, fn);
-
-    Gotos returns;
-
-    bool mainFn = false;
-    if (fn)
-    {
-        if (strcmp(fn->name, "main") == 0)
-        {
-            genEntryPoint(&comp->gen, 0);
-            mainFn = true;
-        }
-        else if (fn->prototypeOffset >= 0)
-        {
-            genEntryPoint(&comp->gen, fn->prototypeOffset);
-            fn->prototypeOffset = -1;
-        }
-
-        genEnterFrameStub(&comp->gen);
-        for (int i = 0; i < fn->type->sig.numParams; i++)
-            identAllocParam(&comp->idents, &comp->types, &comp->modules, &comp->blocks, &fn->type->sig, i);
-
-        comp->gen.returns = &returns;
-        genGotosProlog(&comp->gen, comp->gen.returns);
-    }
+    blocksEnter(&comp->blocks, NULL);
 
     parseStmtList(comp);
-    doGarbageCollection(comp, false);
 
-    if (fn)
-    {
-        genGotosEpilog(&comp->gen, comp->gen.returns);
-        genLeaveFrameFixup(&comp->gen, comp->blocks.item[comp->blocks.top].localVarSize);
-
-        if (mainFn)
-        {
-            doGarbageCollection(comp, true);
-            genHalt(&comp->gen);
-        }
-        else
-        {
-            int paramSlots = typeParamSizeTotal(&comp->types, &fn->type->sig) / sizeof(Slot);
-            genReturn(&comp->gen, paramSlots);
-        }
-    }
-
-    identFree(&comp->idents, comp->blocks.item[comp->blocks.top].block);
+    doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+    identFree(&comp->idents, blocksCurrent(&comp->blocks));
 
     blocksLeave(&comp->blocks);
     lexEat(&comp->lex, TOK_RBRACE);
 }
 
 
-// prototype = .
-void parsePrototype(Compiler *comp, Ident *fn)
+// fnBlock = block.
+void parseFnBlock(Compiler *comp, Ident *fn)
+{
+    lexEat(&comp->lex, TOK_LBRACE);
+    blocksEnter(&comp->blocks, fn);
+
+    bool mainFn = false;
+    if (strcmp(fn->name, "main") == 0)
+    {
+        genEntryPoint(&comp->gen, 0);
+        mainFn = true;
+    }
+    else if (fn->prototypeOffset >= 0)
+    {
+        genEntryPoint(&comp->gen, fn->prototypeOffset);
+        fn->prototypeOffset = -1;
+    }
+
+    genEnterFrameStub(&comp->gen);
+    for (int i = 0; i < fn->type->sig.numParams; i++)
+        identAllocParam(&comp->idents, &comp->types, &comp->modules, &comp->blocks, &fn->type->sig, i);
+
+    Gotos returns;
+    comp->gen.returns = &returns;
+    genGotosProlog(&comp->gen, comp->gen.returns, blocksCurrent(&comp->blocks));
+
+    // StmtList
+    parseStmtList(comp);
+
+    genGotosEpilog(&comp->gen, comp->gen.returns);
+
+    doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+    identFree(&comp->idents, blocksCurrent(&comp->blocks));
+
+    genLeaveFrameFixup(&comp->gen, comp->blocks.item[comp->blocks.top].localVarSize);
+
+    if (mainFn)
+    {
+        doGarbageCollection(comp, 0);
+        genHalt(&comp->gen);
+    }
+    else
+    {
+        int paramSlots = typeParamSizeTotal(&comp->types, &fn->type->sig) / sizeof(Slot);
+        genReturn(&comp->gen, paramSlots);
+    }
+
+    blocksLeave(&comp->blocks);
+    lexEat(&comp->lex, TOK_RBRACE);
+}
+
+
+// fnPrototype = .
+void parseFnPrototype(Compiler *comp, Ident *fn)
 {
     fn->prototypeOffset = fn->offset;
     genNop(&comp->gen);
 }
-
-
 

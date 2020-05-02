@@ -535,9 +535,9 @@ void parseFnDecl(Compiler *comp)
     Ident *fn = identAddConst(&comp->idents, &comp->modules, &comp->blocks, name, fnType, exported, constant);
 
     if (comp->lex.tok.kind == TOK_LBRACE)
-        parseBlock(comp, fn);
+        parseFnBlock(comp, fn);
     else
-        parsePrototype(comp, fn);
+        parseFnPrototype(comp, fn);
 }
 
 

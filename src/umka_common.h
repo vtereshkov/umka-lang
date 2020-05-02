@@ -93,10 +93,11 @@ int  moduleAssertFind   (Modules *modules, char *name);
 int  moduleFindByPath   (Modules *modules, char *path);
 int  moduleAdd          (Modules *modules, char *path);
 
-void blocksInit (Blocks *blocks, ErrorFunc error);
-void blocksFree (Blocks *blocks);
-void blocksEnter(Blocks *blocks, struct tagIdent *fn);
-void blocksLeave(Blocks *blocks);
+void blocksInit   (Blocks *blocks, ErrorFunc error);
+void blocksFree   (Blocks *blocks);
+void blocksEnter  (Blocks *blocks, struct tagIdent *fn);
+void blocksLeave  (Blocks *blocks);
+int  blocksCurrent(Blocks *blocks);
 
 void externalInit       (Externals *externals);
 void externalFree       (Externals *externals);

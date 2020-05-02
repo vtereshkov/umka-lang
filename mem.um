@@ -15,10 +15,20 @@ type st = struct {
 fn h(s: st) {
 }
 
-fn ff(): ^[1000] int {
-    return  new([1000] int)
+fn ff() {
+    g := new([100000000] int)
+    for i := 0; i < 10; i++ {
+        a := new([100000000] int)
+        if i > 5 {return}
+    }
 }
 
+fn hh(): st {
+    g := new(int)
+    return st{x: 3, p: g, y: 5, q: g}
+}
+
+fn gg(): ^int {return new(int)}
 
 var a: ^[]int
 
@@ -46,5 +56,19 @@ fn main() {
         if i > 10 {break}
     }
     
-    //ff()
+    a = new([1000] int)
+    i := 0
+    for p := new([10000000] int); i < 1000; i++ {
+        r := new([10000000] int)
+        if i > 5 {continue}
+    }
+
+    ff()
+    
+    hhres := hh()
+    hhres.p^ = 17
+    
+    //gg()
+
+    //for i := 0; i < 10000000; i++ {}
 }

@@ -9,6 +9,7 @@ typedef struct
 {
     int start[MAX_GOTOS];
     int numGotos;
+    int block;
     Type *returnType;
 } Gotos;
 
@@ -99,7 +100,7 @@ void genLeaveFrameFixup(CodeGen *gen, int localVarSize);
 
 void genEntryPoint(CodeGen *gen, int start);
 
-void genGotosProlog (CodeGen *gen, Gotos *gotos);
+void genGotosProlog (CodeGen *gen, Gotos *gotos, int block);
 void genGotosAddStub(CodeGen *gen, Gotos *gotos);
 void genGotosEpilog (CodeGen *gen, Gotos *gotos);
 
