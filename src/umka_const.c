@@ -164,6 +164,8 @@ void constCallBuiltin(Consts *consts, Const *arg, BuiltinFunc builtinVal)
             arg->realVal = sqrt(arg->realVal);
             break;
         }
+        case BUILTIN_LEN:       arg->intVal  = strlen(arg->ptrVal); break;
+
         default: consts->error("Illegal function");
     }
 }

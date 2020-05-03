@@ -362,6 +362,42 @@ static void parseBuiltinNewCall(Compiler *comp, Type **type, Const *constant)
 }
 
 
+static void parseBuiltinLenCall(Compiler *comp, Type **type, Const *constant)
+{
+    lexEat(&comp->lex, TOK_LPAR);
+    parseExpr(comp, type, constant);
+
+    switch ((*type)->kind)
+    {
+        case TYPE_ARRAY:
+        {
+            if (constant)
+                comp->error("Function is not allowed in constant expressions");
+
+            int len = (*type)->numItems;
+            if (len == -1)
+                comp->error("Unknown open array length");
+
+            genPop(&comp->gen);
+            genPushIntConst(&comp->gen, len);
+            break;
+        }
+        case TYPE_STR:
+        {
+            if (constant)
+                constCallBuiltin(&comp->consts, constant, BUILTIN_LEN);
+            else
+                genCallBuiltin(&comp->gen, TYPE_STR, BUILTIN_LEN);
+            break;
+        }
+        default: comp->error("Incompatible type in len()"); return;
+    }
+
+    *type = comp->intType;
+    lexEat(&comp->lex, TOK_RPAR);
+}
+
+
 static void parseBuiltinSizeofCall(Compiler *comp, Type **type, Const *constant)
 {
     lexEat(&comp->lex, TOK_LPAR);
@@ -451,6 +487,7 @@ static void parseBuiltinCall(Compiler *comp, Type **type, Const *constant, Built
 
         // Memory
         case BUILTIN_NEW:           parseBuiltinNewCall(comp, type, constant); break;
+        case BUILTIN_LEN:           parseBuiltinLenCall(comp, type, constant); break;
         case BUILTIN_SIZEOF:        parseBuiltinSizeofCall(comp, type, constant); break;
 
         // Fibers

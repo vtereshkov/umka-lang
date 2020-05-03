@@ -280,6 +280,17 @@ static void doScanf(Fiber *fiber, bool console, bool string, ErrorFunc error)
 }
 
 
+static void doLen(Fiber *fiber, ErrorFunc error)
+{
+    switch (fiber->code[fiber->ip].typeKind)
+    {
+        case TYPE_ARRAY:    error("Illegal type"); return;   // Done at compile time
+        case TYPE_STR:      fiber->top->intVal = strlen(fiber->top->ptrVal); break;
+        default:            error("Illegal type"); return;
+    }
+}
+
+
 static void doFiberBuiltin(Fiber *fiber, Fiber **newFiber, BuiltinFunc builtin, ErrorFunc error)
 {
     switch (builtin)
@@ -750,7 +761,8 @@ static void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapChunks *chunks, Er
 
         // Memory
         case BUILTIN_NEW:           fiber->top->ptrVal = chunkAdd(chunks, fiber->top->intVal)->ptr; break;
-        case BUILTIN_SIZEOF:        error("Illegal instruction"); return;   // Does not produce VM instructions
+        case BUILTIN_LEN:           doLen(fiber, error); break;
+        case BUILTIN_SIZEOF:        error("Illegal instruction"); return;   // Done at compile time
 
         // Fibers
         case BUILTIN_FIBERSPAWN:

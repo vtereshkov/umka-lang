@@ -1,0 +1,17 @@
+type (
+    st = struct {p: ^[] int}
+    fooable = interface {foo()}
+)
+
+fn (s: ^st) foo() {}
+
+fn main() {
+    s := new(st)
+    s.p = new([100] int)
+    f := fooable(s^)
+    f.foo()
+}
+    
+
+
+

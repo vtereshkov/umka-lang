@@ -83,6 +83,7 @@ typedef enum
 
     // Memory
     BUILTIN_NEW,
+    BUILTIN_LEN,
     BUILTIN_SIZEOF,
 
     // Fibers
