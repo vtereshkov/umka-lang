@@ -23,6 +23,7 @@ typedef enum
     TYPE_REAL,
     TYPE_PTR,
     TYPE_ARRAY,
+    TYPE_DYNARRAY,
     TYPE_STR,
     TYPE_STRUCT,
     TYPE_INTERFACE,

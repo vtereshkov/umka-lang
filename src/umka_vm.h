@@ -12,6 +12,7 @@ enum
 
     // General-purpose registers
     VM_RESULT_REG_0      = 0,
+    VM_DYNARRAY_REG      = 30,
     VM_SELF_REG          = 31,
     VM_COMMON_REG_0      = 32,
     VM_COMMON_REG_1      = VM_COMMON_REG_0 + 1,
@@ -46,6 +47,7 @@ typedef enum
     OP_UNARY,
     OP_BINARY,
     OP_GET_ARRAY_PTR,
+    OP_GET_DYNARRAY_PTR,
     OP_GOTO,
     OP_GOTO_IF,
     OP_CALL,
@@ -83,6 +85,7 @@ typedef enum
 
     // Memory
     BUILTIN_NEW,
+    BUILTIN_MAKE,
     BUILTIN_LEN,
     BUILTIN_SIZEOF,
 

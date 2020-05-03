@@ -18,6 +18,13 @@ enum
 };
 
 
+typedef struct
+{
+    int64_t len;
+    void *data;
+} DynArray;
+
+
 typedef void (*ErrorFunc)(const char *format, ...);
 
 

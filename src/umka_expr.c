@@ -67,19 +67,107 @@ static void doUpdatePointerRefCnt(Compiler *comp, Ident *ident, bool lhs, bool i
 }
 
 
+static void doUpdateDynArrayItemsRefCnt(Compiler *comp, Type *type, Ident *ident, bool lhs, bool increment, int offset)
+{
+    // Load ident if specified, otherwise duplicate the pointer at the stack top
+    if (ident)
+        doPushVarPtr(comp, ident);
+    else
+        genDup(&comp->gen);
+
+    // Add offset if needed
+    if (offset != 0)
+    {
+        genPushIntConst(&comp->gen, offset);
+        genBinary(&comp->gen, TOK_PLUS, TYPE_INT, 0);
+    }
+
+    // Save array pointer to dedicated register
+    genPopReg(&comp->gen, VM_DYNARRAY_REG);
+
+    // Traverse all array items
+
+    // i := len(array) - 1
+    genPushReg(&comp->gen, VM_DYNARRAY_REG);
+    genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_LEN);
+    genPushIntConst(&comp->gen, 1);
+    genBinary(&comp->gen, TOK_MINUS, TYPE_INT, 0);
+
+    int iOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, comp->intType));
+    genPushLocalPtr(&comp->gen, iOffset);
+
+    genSwap(&comp->gen);
+    genAssign(&comp->gen, TYPE_INT, 0);
+
+    // for i >= 0 {
+    genWhileCondProlog(&comp->gen);
+
+    genPushLocalPtr(&comp->gen, iOffset);
+    genDeref(&comp->gen, TYPE_INT);
+    genPushIntConst(&comp->gen, 0);
+    genBinary(&comp->gen, TOK_GREATEREQ, TYPE_INT, 0);
+
+    genWhileCondEpilog(&comp->gen);
+
+    // doUpdateRefCnt(array[i])
+    genPushReg(&comp->gen, VM_DYNARRAY_REG);
+    genPushLocalPtr(&comp->gen, iOffset);
+    genDeref(&comp->gen, TYPE_INT);
+    genGetDynArrayPtr(&comp->gen, typeSize(&comp->types, type->base));
+
+    doUpdateRefCnt(comp, type->base, NULL, true, increment, 0);
+    genPop(&comp->gen);
+
+    // i--
+    genPushLocalPtr(&comp->gen, iOffset);
+    genUnary(&comp->gen, TOK_MINUSMINUS, TYPE_INT);
+
+    // ...}
+    genWhileEpilog(&comp->gen);
+}
+
+
 void doUpdateRefCnt(Compiler *comp, Type *type, Ident *ident, bool lhs, bool increment, int offset)
 {
     // Update reference counts for pointers (including array items and structure/interface fields) if allocated dynamically
-    if (type->kind == TYPE_ARRAY)
-        for (int i = 0; i < type->numItems; i++)
-            doUpdateRefCnt(comp, type->base, ident, true, increment, offset + i * typeSize(&comp->types, type->base));
 
-    else if (type->kind == TYPE_STRUCT || type->kind == TYPE_INTERFACE)
-        for (int i = 0; i < type->numItems; i++)
-            doUpdateRefCnt(comp, type->field[i]->type, ident, true, increment, offset + type->field[i]->offset);
+    switch (type->kind)
+    {
+        case TYPE_PTR:
+        {
+            doUpdatePointerRefCnt(comp, ident, lhs, increment, offset);
+            break;
+        }
 
-    else if (type->kind == TYPE_PTR)
-        doUpdatePointerRefCnt(comp, ident, lhs, increment, offset);
+        case TYPE_ARRAY:
+        {
+            for (int i = 0; i < type->numItems; i++)
+                doUpdateRefCnt(comp, type->base, ident, true, increment, offset + i * typeSize(&comp->types, type->base));
+            break;
+        }
+
+        case TYPE_DYNARRAY:
+        {
+            if (type->base->kind == TYPE_ARRAY  || type->base->kind == TYPE_DYNARRAY  ||
+                type->base->kind == TYPE_STRUCT || type->base->kind == TYPE_INTERFACE || type->base->kind == TYPE_PTR)
+            {
+                doUpdateDynArrayItemsRefCnt(comp, type, ident, lhs, increment, offset);
+            }
+
+            doUpdateRefCnt(comp, comp->ptrVoidType, ident, true, increment, offset + offsetof(DynArray, data));
+            break;
+        }
+
+        case TYPE_STRUCT:
+        case TYPE_INTERFACE:
+        {
+            for (int i = 0; i < type->numItems; i++)
+                doUpdateRefCnt(comp, type->field[i]->type, ident, true, increment, offset + type->field[i]->offset);
+            break;
+        }
+
+        default: break;
+    }
 }
 
 
@@ -362,6 +450,39 @@ static void parseBuiltinNewCall(Compiler *comp, Type **type, Const *constant)
 }
 
 
+static void parseBuiltinMakeCall(Compiler *comp, Type **type, Const *constant)
+{
+    lexEat(&comp->lex, TOK_LPAR);
+
+    if (constant)
+        comp->error("Function is not allowed in constant expressions");
+
+    // fn make(T: type (actually itemSize: int), len: int): [var] T
+
+    // Dynamic array type and item size
+    *type = parseType(comp, NULL);
+    if ((*type)->kind != TYPE_DYNARRAY)
+        comp->error("Incompatible type in make()");
+
+    int itemSize = typeSize(&comp->types, (*type)->base);
+    genPushIntConst(&comp->gen, itemSize);
+
+    lexEat(&comp->lex, TOK_COMMA);
+
+    // Dynamic array length
+    Type *lenType;
+    parseExpr(comp, &lenType, NULL);
+    typeCompatible(comp->intType, lenType);
+
+    // Pointer to result (hidden parameter)
+    int resultOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, *type));
+    genPushLocalPtr(&comp->gen, resultOffset);
+
+    genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_MAKE);
+    lexEat(&comp->lex, TOK_RPAR);
+}
+
+
 static void parseBuiltinLenCall(Compiler *comp, Type **type, Const *constant)
 {
     lexEat(&comp->lex, TOK_LPAR);
@@ -380,6 +501,14 @@ static void parseBuiltinLenCall(Compiler *comp, Type **type, Const *constant)
 
             genPop(&comp->gen);
             genPushIntConst(&comp->gen, len);
+            break;
+        }
+        case TYPE_DYNARRAY:
+        {
+            if (constant)
+                comp->error("Function is not allowed in constant expressions");
+
+            genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_LEN);
             break;
         }
         case TYPE_STR:
@@ -487,6 +616,7 @@ static void parseBuiltinCall(Compiler *comp, Type **type, Const *constant, Built
 
         // Memory
         case BUILTIN_NEW:           parseBuiltinNewCall(comp, type, constant); break;
+        case BUILTIN_MAKE:          parseBuiltinMakeCall(comp, type, constant); break;
         case BUILTIN_LEN:           parseBuiltinLenCall(comp, type, constant); break;
         case BUILTIN_SIZEOF:        parseBuiltinSizeofCall(comp, type, constant); break;
 
@@ -643,7 +773,168 @@ static void parsePrimary(Compiler *comp, Ident *ident, Type **type, Const *const
 }
 
 
-// selectors = {"^" | "[" expr "]" | "." ident | "(" actualParams ")"}.
+// derefSelector = "^".
+static void parseDerefSelector(Compiler *comp, Type **type, Const *constant, bool *isVar, bool *isCall)
+{
+    if ((*type)->kind != TYPE_PTR || (*type)->base->kind != TYPE_PTR || (*type)->base->base->kind == TYPE_VOID)
+        comp->error("Typed pointer expected");
+
+    lexNext(&comp->lex);
+    genDeref(&comp->gen, TYPE_PTR);
+    *type = (*type)->base;
+    *isVar = true;
+    *isCall = false;
+}
+
+
+// indexSelector = "[" expr "]".
+static void parseIndexSelector(Compiler *comp, Type **type, Const *constant, bool *isVar, bool *isCall)
+{
+    // Implicit dereferencing: a^[i] == a[i]
+    if ((*type)->kind == TYPE_PTR && (*type)->base->kind == TYPE_PTR)
+    {
+        genDeref(&comp->gen, TYPE_PTR);
+        *type = (*type)->base;
+    }
+
+    if ((*type)->kind == TYPE_PTR &&
+       ((*type)->base->kind == TYPE_ARRAY || (*type)->base->kind == TYPE_DYNARRAY || (*type)->base->kind == TYPE_STR))
+        *type = (*type)->base;
+
+    if ((*type)->kind != TYPE_ARRAY && (*type)->kind != TYPE_DYNARRAY && (*type)->kind != TYPE_STR)
+        comp->error("Array or string expected");
+
+    // Index
+    lexNext(&comp->lex);
+    Type *indexType;
+    parseExpr(comp, &indexType, NULL);
+    typeAssertCompatible(&comp->types, comp->intType, indexType);
+    lexEat(&comp->lex, TOK_RBRACKET);
+
+    if ((*type)->kind == TYPE_DYNARRAY)
+        genGetDynArrayPtr(&comp->gen, typeSize(&comp->types, (*type)->base));
+    else
+    {
+        // Length (for range checking)
+        int len = (*type)->numItems;
+        if (len == -1)
+            len = INT_MAX;
+        genPushIntConst(&comp->gen, len);
+
+        genGetArrayPtr(&comp->gen, typeSize(&comp->types, (*type)->base));
+    }
+
+    if (typeStructured((*type)->base))
+        *type = (*type)->base;
+    else
+        *type = typeAddPtrTo(&comp->types, &comp->blocks, (*type)->base);
+    *isVar = true;
+    *isCall = false;
+}
+
+
+// fieldSelector = "." ident.
+static void parseFieldSelector(Compiler *comp, Type **type, Const *constant, bool *isVar, bool *isCall)
+{
+    // Implicit dereferencing: a^.x == a.x
+    if ((*type)->kind == TYPE_PTR && (*type)->base->kind == TYPE_PTR)
+    {
+        genDeref(&comp->gen, TYPE_PTR);
+        *type = (*type)->base;
+    }
+
+    if ((*type)->kind == TYPE_PTR && typeStructured((*type)->base))
+        *type = (*type)->base;
+
+    lexNext(&comp->lex);
+    lexCheck(&comp->lex, TOK_IDENT);
+
+    Type *rcvType = typeAddPtrTo(&comp->types, &comp->blocks, *type);
+
+    Ident *method = identFind(&comp->idents, &comp->modules, &comp->blocks,
+                               comp->blocks.module, comp->lex.tok.name, rcvType);
+    if (method)
+    {
+        // Method
+        lexNext(&comp->lex);
+
+        // Save concrete method's receiver to dedicated register and push method's entry point
+        genPopReg(&comp->gen, VM_SELF_REG);
+        doPushConst(comp, method->type, &method->constant);
+
+        *type = method->type;
+        *isVar = false;
+        *isCall = false;
+    }
+    else
+    {
+        // Field
+        if ((*type)->kind != TYPE_STRUCT && (*type)->kind != TYPE_INTERFACE)
+            comp->error("Structure expected");
+
+        Field *field = typeAssertFindField(&comp->types, *type, comp->lex.tok.name);
+        lexNext(&comp->lex);
+
+        genPushIntConst(&comp->gen, field->offset);
+        genBinary(&comp->gen, TOK_PLUS, TYPE_INT, 0);
+
+        // Save interface method's receiver to dedicated register and push method's entry point
+        if (field->type->kind == TYPE_FN && field->type->sig.method && field->type->sig.offsetFromSelf != 0)
+        {
+            genDup(&comp->gen);
+            genPushIntConst(&comp->gen, field->type->sig.offsetFromSelf);
+            genBinary(&comp->gen, TOK_MINUS, TYPE_INT, 0);
+            genDeref(&comp->gen, TYPE_PTR);
+            genPopReg(&comp->gen, VM_SELF_REG);
+        }
+
+        if (typeStructured(field->type))
+            *type = field->type;
+        else
+            *type = typeAddPtrTo(&comp->types, &comp->blocks, field->type);
+
+        *isVar = true;
+        *isCall = false;
+    }
+}
+
+
+// callSelector = "(" actualParams ")".
+static void parseCallSelector(Compiler *comp, Type **type, Const *constant, bool *isVar, bool *isCall)
+{
+    // Implicit dereferencing
+    if ((*type)->kind == TYPE_PTR && (*type)->base->kind == TYPE_FN)
+    {
+        genDeref(&comp->gen, TYPE_FN);
+        *type = (*type)->base;
+    }
+
+    if ((*type)->kind != TYPE_FN)
+        comp->error("Function expected");
+
+    parseCall(comp, type, constant);
+
+    // Push result
+    if ((*type)->kind != TYPE_VOID)
+        genPushReg(&comp->gen, VM_RESULT_REG_0);
+
+    // Copy result to a temporary local variable to collect it as garbage when leaving the block
+    if ((*type)->kind == TYPE_PTR || typeStructured(*type))
+        doCopyResultToTempVar(comp, *type);
+
+    // No direct support for 32-bit reals
+    if ((*type)->kind == TYPE_REAL32)
+        *type = comp->realType;
+
+    if (typeStructured(*type))
+        *isVar = true;
+    else
+        *isVar = false;
+    *isCall = true;
+}
+
+
+// selectors = {derefSelector | indexSelector | fieldSelector | callSelector}.
 static void parseSelectors(Compiler *comp, Type **type, Const *constant, bool *isVar, bool *isCall)
 {
     while (comp->lex.tok.kind == TOK_CARET  || comp->lex.tok.kind == TOK_LBRACKET ||
@@ -654,163 +945,11 @@ static void parseSelectors(Compiler *comp, Type **type, Const *constant, bool *i
 
         switch (comp->lex.tok.kind)
         {
-            // Pointer dereference
-            case TOK_CARET:
-            {
-                if ((*type)->kind != TYPE_PTR || (*type)->base->kind != TYPE_PTR || (*type)->base->base->kind == TYPE_VOID)
-                    comp->error("Typed pointer expected");
-
-                lexNext(&comp->lex);
-                genDeref(&comp->gen, TYPE_PTR);
-                *type = (*type)->base;
-                *isVar = true;
-                *isCall = false;
-                break;
-            }
-
-            // Array element
-            case TOK_LBRACKET:
-            {
-                // Implicit dereferencing: a^[i] == a[i]
-                if ((*type)->kind == TYPE_PTR && (*type)->base->kind == TYPE_PTR)
-                {
-                    genDeref(&comp->gen, TYPE_PTR);
-                    *type = (*type)->base;
-                }
-
-                if ((*type)->kind == TYPE_PTR && ((*type)->base->kind == TYPE_ARRAY || (*type)->base->kind == TYPE_STR))
-                    *type = (*type)->base;
-
-                if ((*type)->kind != TYPE_ARRAY && (*type)->kind != TYPE_STR)
-                    comp->error("Array or string expected");
-
-                // Index
-                lexNext(&comp->lex);
-                Type *indexType;
-                parseExpr(comp, &indexType, NULL);
-                typeAssertCompatible(&comp->types, comp->intType, indexType);
-                lexEat(&comp->lex, TOK_RBRACKET);
-
-                // Length (for range checking)
-                int len = (*type)->numItems;
-                if (len == -1)
-                    len = INT_MAX;
-                genPushIntConst(&comp->gen, len);
-
-                genGetArrayPtr(&comp->gen, typeSize(&comp->types, (*type)->base));
-
-                if (typeStructured((*type)->base))
-                    *type = (*type)->base;
-                else
-                    *type = typeAddPtrTo(&comp->types, &comp->blocks, (*type)->base);
-                *isVar = true;
-                *isCall = false;
-                break;
-            }
-
-            // Method or field
-            case TOK_PERIOD:
-            {
-                // Implicit dereferencing: a^.x == a.x
-                if ((*type)->kind == TYPE_PTR && (*type)->base->kind == TYPE_PTR)
-                {
-                    genDeref(&comp->gen, TYPE_PTR);
-                    *type = (*type)->base;
-                }
-
-                if ((*type)->kind == TYPE_PTR && typeStructured((*type)->base))
-                    *type = (*type)->base;
-
-                lexNext(&comp->lex);
-                lexCheck(&comp->lex, TOK_IDENT);
-
-                Type *rcvType = typeAddPtrTo(&comp->types, &comp->blocks, *type);
-
-                Ident *method = identFind(&comp->idents, &comp->modules, &comp->blocks,
-                                           comp->blocks.module, comp->lex.tok.name, rcvType);
-                if (method)
-                {
-                    // Method
-                    lexNext(&comp->lex);
-
-                    // Save concrete method's receiver to dedicated register and push method's entry point
-                    genPopReg(&comp->gen, VM_SELF_REG);
-                    doPushConst(comp, method->type, &method->constant);
-
-                    *type = method->type;
-                    *isVar = false;
-                    *isCall = false;
-                }
-                else
-                {
-                    // Field
-                    if ((*type)->kind != TYPE_STRUCT && (*type)->kind != TYPE_INTERFACE)
-                        comp->error("Structure expected");
-
-                    Field *field = typeAssertFindField(&comp->types, *type, comp->lex.tok.name);
-                    lexNext(&comp->lex);
-
-                    genPushIntConst(&comp->gen, field->offset);
-                    genBinary(&comp->gen, TOK_PLUS, TYPE_INT, 0);
-
-                    // Save interface method's receiver to dedicated register and push method's entry point
-                    if (field->type->kind == TYPE_FN && field->type->sig.method && field->type->sig.offsetFromSelf != 0)
-                    {
-                        genDup(&comp->gen);
-                        genPushIntConst(&comp->gen, field->type->sig.offsetFromSelf);
-                        genBinary(&comp->gen, TOK_MINUS, TYPE_INT, 0);
-                        genDeref(&comp->gen, TYPE_PTR);
-                        genPopReg(&comp->gen, VM_SELF_REG);
-                    }
-
-                    if (typeStructured(field->type))
-                        *type = field->type;
-                    else
-                        *type = typeAddPtrTo(&comp->types, &comp->blocks, field->type);
-
-                    *isVar = true;
-                    *isCall = false;
-                }
-
-                break;
-            }
-
-            // Function call
-            case TOK_LPAR:
-            {
-                // Implicit dereferencing
-                if ((*type)->kind == TYPE_PTR && (*type)->base->kind == TYPE_FN)
-                {
-                    genDeref(&comp->gen, TYPE_FN);
-                    *type = (*type)->base;
-                }
-
-                if ((*type)->kind != TYPE_FN)
-                    comp->error("Function expected");
-
-                parseCall(comp, type, constant);
-
-                // Push result
-                if ((*type)->kind != TYPE_VOID)
-                    genPushReg(&comp->gen, VM_RESULT_REG_0);
-
-                // Copy result to a temporary local variable to collect it as garbage when leaving the block
-                if ((*type)->kind == TYPE_PTR || typeStructured(*type))
-                    doCopyResultToTempVar(comp, *type);
-
-                // No direct support for 32-bit reals
-                if ((*type)->kind == TYPE_REAL32)
-                    *type = comp->realType;
-
-                if (typeStructured(*type))
-                    *isVar = true;
-                else
-                    *isVar = false;
-                *isCall = true;
-                break;
-            }
-
-        default: break;
+            case TOK_CARET:     parseDerefSelector(comp, type, constant, isVar, isCall); break;
+            case TOK_LBRACKET:  parseIndexSelector(comp, type, constant, isVar, isCall); break;
+            case TOK_PERIOD:    parseFieldSelector(comp, type, constant, isVar, isCall); break;
+            case TOK_LPAR:      parseCallSelector (comp, type, constant, isVar, isCall); break;
+            default:            break;
         } // switch
     } // while
 }

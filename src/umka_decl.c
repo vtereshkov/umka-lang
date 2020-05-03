@@ -190,31 +190,43 @@ static Type *parsePtrType(Compiler *comp)
 
 
 // arrayType = "[" [expr] "]" type.
+// dynArrayType = "[" "var" "]" type.
 static Type *parseArrayType(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_LBRACKET);
 
+    TypeKind typeKind;
     Const len;
-    Type *indexType;
 
-    if (comp->lex.tok.kind != TOK_RBRACKET)
+    if (comp->lex.tok.kind == TOK_VAR)
     {
+        // Dynamic array
+        typeKind = TYPE_DYNARRAY;
+        len.intVal = 0;
+        lexNext(&comp->lex);
+    }
+    else if (comp->lex.tok.kind == TOK_RBRACKET)
+    {
+        // Open array
+        typeKind = TYPE_ARRAY;
+        len.intVal = -1;
+    }
+    else
+    {
+        // Conventional array
+        typeKind = TYPE_ARRAY;
+        Type *indexType;
         parseExpr(comp, &indexType, &len);
         typeAssertCompatible(&comp->types, comp->intType, indexType);
         if (len.intVal < 0)
             comp->error("Array length cannot be negative");
-    }
-    else    // Open array
-    {
-        len.intVal = -1;
-        indexType = comp->intType;
     }
 
     lexEat(&comp->lex, TOK_RBRACKET);
 
     Type *baseType = parseType(comp, NULL);
 
-    Type *type = typeAdd(&comp->types, &comp->blocks, TYPE_ARRAY);
+    Type *type = typeAdd(&comp->types, &comp->blocks, typeKind);
     type->base = baseType;
     type->numItems = len.intVal;
     return type;
@@ -328,7 +340,7 @@ static Type *parseFnType(Compiler *comp)
 }
 
 
-// type = qualIdent | ptrType | arrayType | structType | fnType.
+// type = qualIdent | ptrType | arrayType | dynArrayType | strType | structType | fnType.
 Type *parseType(Compiler *comp, Ident *ident)
 {
     if (ident)

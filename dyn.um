@@ -1,0 +1,15 @@
+import "import/std.um"
+
+fn main() {
+    a := make([var][2]^int, 10)
+
+    for i := 0; i < len(a); i++ {
+        a[i] = [2]^int {new(int), new(int)}
+        a[i][0]^ = 5
+        a[i][1]^ = 7
+    } 
+
+    for i := 0; i < len(a); i++ {
+        std.println(std.itoa(a[i][0]^) + " " + std.itoa(a[i][1]^))
+    }   
+}

@@ -25,6 +25,7 @@ static char *spelling [] =
     "real",
     "^",
     "[]",
+    "[var]",
     "str",
     "struct",
     "interface",
@@ -159,7 +160,6 @@ int typeSize(Types *types, Type *type)
         case TYPE_REAL:     return sizeof(double);
         case TYPE_PTR:      return sizeof(void *);
         case TYPE_ARRAY:
-        case TYPE_STR:
         {
             if (type->numItems == -1)
             {
@@ -168,6 +168,8 @@ int typeSize(Types *types, Type *type)
             }
             return type->numItems * typeSize(types, type->base);
         }
+        case TYPE_DYNARRAY: return sizeof(DynArray);
+        case TYPE_STR:      return type->numItems * typeSize(types, type->base);
         case TYPE_STRUCT:
         case TYPE_INTERFACE:
         {
@@ -215,7 +217,8 @@ bool typeReal(Type *type)
 
 bool typeStructured(Type *type)
 {
-    return type->kind == TYPE_ARRAY || type->kind == TYPE_STR || type->kind == TYPE_STRUCT || type->kind == TYPE_INTERFACE;
+    return type->kind == TYPE_ARRAY  || type->kind == TYPE_DYNARRAY || type->kind == TYPE_STR ||
+           type->kind == TYPE_STRUCT || type->kind == TYPE_INTERFACE;
 }
 
 
@@ -254,6 +257,10 @@ bool typeEquivalent(Type *left, Type *right)
 
             return typeEquivalent(left->base, right->base);
         }
+
+        // Dynamic arrays
+        else if (left->kind == TYPE_DYNARRAY)
+            return typeEquivalent(left->base, right->base);
 
         // Strings
         else if (left->kind == TYPE_STR)
@@ -564,7 +571,7 @@ char *typeKindSpelling(TypeKind kind)
 char *typeSpelling(Type *type, char *buf)
 {
     sprintf(buf, "%s", spelling[type->kind]);
-    if (type->kind == TYPE_PTR || type->kind == TYPE_ARRAY)
+    if (type->kind == TYPE_PTR || type->kind == TYPE_ARRAY || type->kind == TYPE_DYNARRAY)
     {
         char baseBuf[DEFAULT_STR_LEN + 1];
         strcat(buf, typeSpelling(type->base, baseBuf));

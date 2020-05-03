@@ -176,6 +176,13 @@ void genGetArrayPtr(CodeGen *gen, int itemSize)
 }
 
 
+void genGetDynArrayPtr(CodeGen *gen, int itemSize)
+{
+    const Instruction instr = {.opcode = OP_GET_DYNARRAY_PTR, .tokKind = TOK_NONE, .typeKind = TYPE_VOID, .operand.intVal = itemSize};
+    genAddInstr(gen, &instr);
+}
+
+
 void genGoto(CodeGen *gen, int dest)
 {
     const Instruction instr = {.opcode = OP_GOTO, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = dest};

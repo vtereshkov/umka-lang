@@ -28,6 +28,7 @@ static char *spelling [] =
     "UNARY",
     "BINARY",
     "GET_ARRAY_PTR",
+    "GET_DYNARRAY_PTR",
     "GOTO",
     "GOTO_IF",
     "CALL",
@@ -69,6 +70,7 @@ static HeapChunk *chunkAdd(HeapChunks *chunks, int size)
 {
     HeapChunk *chunk = malloc(sizeof(HeapChunk));
 
+    printf("+");
     chunk->ptr = malloc(size);
     chunk->size = size;
     chunk->refCnt = 1;
@@ -120,6 +122,7 @@ bool chunkTryIncCnt(HeapChunks *chunks, void *ptr)
     HeapChunk *chunk = chunkFind(chunks, ptr);
     if (chunk)
     {
+        printf("+");
         chunk->refCnt++;
         return true;
     }
@@ -132,6 +135,7 @@ bool chunkTryDecCnt(HeapChunks *chunks, void *ptr)
     HeapChunk *chunk = chunkFind(chunks, ptr);
     if (chunk)
     {
+        printf("-");
         if (--chunk->refCnt == 0)
             chunkRemove(chunks, chunk);
         return true;
@@ -214,7 +218,7 @@ static void doConvertFormatStringToC(char *formatC, char **format, ErrorFunc err
 }
 
 
-static void doPrintf(Fiber *fiber, bool console, bool string, ErrorFunc error)
+static void doBuiltinPrintf(Fiber *fiber, bool console, bool string, ErrorFunc error)
 {
     void *stream = console ? stdout : fiber->reg[VM_IO_STREAM_REG].ptrVal;
     char *format = fiber->reg[VM_IO_FORMAT_REG].ptrVal;
@@ -249,7 +253,7 @@ static void doPrintf(Fiber *fiber, bool console, bool string, ErrorFunc error)
 }
 
 
-static void doScanf(Fiber *fiber, bool console, bool string, ErrorFunc error)
+static void doBuiltinScanf(Fiber *fiber, bool console, bool string, ErrorFunc error)
 {
     void *stream = console ? stdin : fiber->reg[VM_IO_STREAM_REG].ptrVal;
     char *format = fiber->reg[VM_IO_FORMAT_REG].ptrVal;
@@ -280,18 +284,33 @@ static void doScanf(Fiber *fiber, bool console, bool string, ErrorFunc error)
 }
 
 
-static void doLen(Fiber *fiber, ErrorFunc error)
+static void doBuiltinMake(Fiber *fiber, HeapChunks *chunks, ErrorFunc error)
+{
+    // fn make(T: type (actually itemSize: int), len: int): [var] T
+    DynArray *result = (fiber->top++)->ptrVal;
+    int len          = (fiber->top++)->intVal;
+    int itemSize     = (fiber->top++)->intVal;
+
+    result->len = len;
+    result->data = chunkAdd(chunks, len * itemSize)->ptr;
+
+    (--fiber->top)->ptrVal = result;
+}
+
+
+static void doBuiltinLen(Fiber *fiber, ErrorFunc error)
 {
     switch (fiber->code[fiber->ip].typeKind)
     {
-        case TYPE_ARRAY:    error("Illegal type"); return;   // Done at compile time
+        // Done at compile time for arrays
+        case TYPE_DYNARRAY: fiber->top->intVal = ((DynArray *)(fiber->top->ptrVal))->len; break;
         case TYPE_STR:      fiber->top->intVal = strlen(fiber->top->ptrVal); break;
         default:            error("Illegal type"); return;
     }
 }
 
 
-static void doFiberBuiltin(Fiber *fiber, Fiber **newFiber, BuiltinFunc builtin, ErrorFunc error)
+static void doBuiltinFiber(Fiber *fiber, Fiber **newFiber, BuiltinFunc builtin, ErrorFunc error)
 {
     switch (builtin)
     {
@@ -436,6 +455,7 @@ static void doDeref(Fiber *fiber, ErrorFunc error)
         case TYPE_REAL:         fiber->top->realVal = *(double   *)ptr; break;
         case TYPE_PTR:          fiber->top->ptrVal  = *(void *   *)ptr; break;
         case TYPE_ARRAY:
+        case TYPE_DYNARRAY:
         case TYPE_STR:
         case TYPE_STRUCT:
         case TYPE_INTERFACE:    fiber->top->intVal =   (int64_t   )ptr; break;  // Always represented by pointer, not dereferenced
@@ -466,6 +486,7 @@ static void doAssign(Fiber *fiber, ErrorFunc error)
         case TYPE_REAL:   *(double   *)lhs = rhs.realVal; break;
         case TYPE_PTR:    *(void *   *)lhs = rhs.ptrVal; break;
         case TYPE_ARRAY:
+        case TYPE_DYNARRAY:
         case TYPE_STRUCT:
         case TYPE_INTERFACE:
         {
@@ -669,13 +690,29 @@ static void doBinary(Fiber *fiber, ErrorFunc error)
 static void doGetArrayPtr(Fiber *fiber, ErrorFunc error)
 {
     int itemSize = fiber->code[fiber->ip].operand.intVal;
-    int len = (fiber->top++)->intVal;
-    int index = (fiber->top++)->intVal;
+    int len      = (fiber->top++)->intVal;
+    int index    = (fiber->top++)->intVal;
 
     if (index < 0 || index > len - 1)
         error("Index is out of range");
 
     fiber->top->ptrVal += itemSize * index;
+    fiber->ip++;
+}
+
+
+static void doGetDynArrayPtr(Fiber *fiber, ErrorFunc error)
+{
+    int itemSize    = fiber->code[fiber->ip].operand.intVal;
+    int index       = (fiber->top++)->intVal;
+
+    DynArray *array = (fiber->top++)->ptrVal;
+    int len         = array->len;
+
+    if (index < 0 || index > len - 1)
+        error("Index is out of range");
+
+    (--fiber->top)->ptrVal = array->data + itemSize * index;
     fiber->ip++;
 }
 
@@ -721,12 +758,12 @@ static void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapChunks *chunks, Er
     switch (builtin)
     {
         // I/O
-        case BUILTIN_PRINTF:        doPrintf(fiber, true, false, error); break;
-        case BUILTIN_FPRINTF:       doPrintf(fiber, false, false, error); break;
-        case BUILTIN_SPRINTF:       doPrintf(fiber, false, true, error); break;
-        case BUILTIN_SCANF:         doScanf(fiber, true, false, error); break;
-        case BUILTIN_FSCANF:        doScanf(fiber, false, false, error); break;
-        case BUILTIN_SSCANF:        doScanf(fiber, false, true, error); break;
+        case BUILTIN_PRINTF:        doBuiltinPrintf(fiber, true, false, error); break;
+        case BUILTIN_FPRINTF:       doBuiltinPrintf(fiber, false, false, error); break;
+        case BUILTIN_SPRINTF:       doBuiltinPrintf(fiber, false, true, error); break;
+        case BUILTIN_SCANF:         doBuiltinScanf(fiber, true, false, error); break;
+        case BUILTIN_FSCANF:        doBuiltinScanf(fiber, false, false, error); break;
+        case BUILTIN_SSCANF:        doBuiltinScanf(fiber, false, true, error); break;
 
         // Math
         case BUILTIN_REAL:          fiber->top->realVal = fiber->top->intVal; break;
@@ -761,14 +798,15 @@ static void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapChunks *chunks, Er
 
         // Memory
         case BUILTIN_NEW:           fiber->top->ptrVal = chunkAdd(chunks, fiber->top->intVal)->ptr; break;
-        case BUILTIN_LEN:           doLen(fiber, error); break;
+        case BUILTIN_MAKE:          doBuiltinMake(fiber, chunks, error); break;
+        case BUILTIN_LEN:           doBuiltinLen(fiber, error); break;
         case BUILTIN_SIZEOF:        error("Illegal instruction"); return;   // Done at compile time
 
         // Fibers
         case BUILTIN_FIBERSPAWN:
         case BUILTIN_FIBERFREE:
         case BUILTIN_FIBERCALL:
-        case BUILTIN_FIBERALIVE:    doFiberBuiltin(fiber, newFiber, builtin, error); break;
+        case BUILTIN_FIBERALIVE:    doBuiltinFiber(fiber, newFiber, builtin, error); break;
     }
     fiber->ip++;
 }
@@ -838,30 +876,31 @@ void fiberStep(Fiber *fiber, Fiber **newFiber, HeapChunks *chunks, ErrorFunc err
 
     switch (fiber->code[fiber->ip].opcode)
     {
-        case OP_PUSH:            doPush(fiber);                                 break;
-        case OP_PUSH_LOCAL_PTR:  doPushLocalPtr(fiber);                         break;
-        case OP_PUSH_REG:        doPushReg(fiber);                              break;
-        case OP_PUSH_STRUCT:     doPushStruct(fiber, error);                    break;
-        case OP_POP:             doPop(fiber);                                  break;
-        case OP_POP_REG:         doPopReg(fiber);                               break;
-        case OP_DUP:             doDup(fiber);                                  break;
-        case OP_SWAP:            doSwap(fiber);                                 break;
-        case OP_DEREF:           doDeref(fiber, error);                         break;
-        case OP_ASSIGN:          doAssign(fiber, error);                        break;
-        case OP_ASSIGN_OFS:      doAssignOfs(fiber);                            break;
-        case OP_TRY_INC_REF_CNT: doTryIncRefCnt(fiber, chunks);                 break;
-        case OP_TRY_DEC_REF_CNT: doTryDecRefCnt(fiber, chunks);                 break;
-        case OP_UNARY:           doUnary(fiber, error);                         break;
-        case OP_BINARY:          doBinary(fiber, error);                        break;
-        case OP_GET_ARRAY_PTR:   doGetArrayPtr(fiber, error);                   break;
-        case OP_GOTO:            doGoto(fiber);                                 break;
-        case OP_GOTO_IF:         doGotoIf(fiber);                               break;
-        case OP_CALL:            doCall(fiber);                                 break;
-        case OP_CALL_EXTERN:     doCallExtern(fiber);                           break;
-        case OP_CALL_BUILTIN:    doCallBuiltin(fiber, newFiber, chunks, error); break;
-        case OP_RETURN:          doReturn(fiber, newFiber);                     break;
-        case OP_ENTER_FRAME:     doEnterFrame(fiber, error);                    break;
-        case OP_LEAVE_FRAME:     doLeaveFrame(fiber);                           break;
+        case OP_PUSH:               doPush(fiber);                                 break;
+        case OP_PUSH_LOCAL_PTR:     doPushLocalPtr(fiber);                         break;
+        case OP_PUSH_REG:           doPushReg(fiber);                              break;
+        case OP_PUSH_STRUCT:        doPushStruct(fiber, error);                    break;
+        case OP_POP:                doPop(fiber);                                  break;
+        case OP_POP_REG:            doPopReg(fiber);                               break;
+        case OP_DUP:                doDup(fiber);                                  break;
+        case OP_SWAP:               doSwap(fiber);                                 break;
+        case OP_DEREF:              doDeref(fiber, error);                         break;
+        case OP_ASSIGN:             doAssign(fiber, error);                        break;
+        case OP_ASSIGN_OFS:         doAssignOfs(fiber);                            break;
+        case OP_TRY_INC_REF_CNT:    doTryIncRefCnt(fiber, chunks);                 break;
+        case OP_TRY_DEC_REF_CNT:    doTryDecRefCnt(fiber, chunks);                 break;
+        case OP_UNARY:              doUnary(fiber, error);                         break;
+        case OP_BINARY:             doBinary(fiber, error);                        break;
+        case OP_GET_ARRAY_PTR:      doGetArrayPtr(fiber, error);                   break;
+        case OP_GET_DYNARRAY_PTR:   doGetDynArrayPtr(fiber, error);                break;
+        case OP_GOTO:               doGoto(fiber);                                 break;
+        case OP_GOTO_IF:            doGotoIf(fiber);                               break;
+        case OP_CALL:               doCall(fiber);                                 break;
+        case OP_CALL_EXTERN:        doCallExtern(fiber);                           break;
+        case OP_CALL_BUILTIN:       doCallBuiltin(fiber, newFiber, chunks, error); break;
+        case OP_RETURN:             doReturn(fiber, newFiber);                     break;
+        case OP_ENTER_FRAME:        doEnterFrame(fiber, error);                    break;
+        case OP_LEAVE_FRAME:        doLeaveFrame(fiber);                           break;
 
         default: error("Illegal instruction"); return;
     } // switch
