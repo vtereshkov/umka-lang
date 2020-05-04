@@ -113,7 +113,7 @@ static void doUpdateDynArrayItemsRefCnt(Compiler *comp, Type *type, Ident *ident
     genPushReg(&comp->gen, VM_DYNARRAY_REG);
     genPushLocalPtr(&comp->gen, iOffset);
     genDeref(&comp->gen, TYPE_INT);
-    genGetDynArrayPtr(&comp->gen, typeSize(&comp->types, type->base));
+    genGetDynArrayPtr(&comp->gen);
 
     doUpdateRefCnt(comp, type->base, NULL, true, increment, 0);
     genPop(&comp->gen);
@@ -178,6 +178,41 @@ static void doIntToRealConv(Compiler *comp, Type *dest, Type **src, Const *const
         constCallBuiltin(&comp->consts, constant, builtin);
     else
         genCallBuiltin(&comp->gen, TYPE_INT, builtin);
+
+    *src = dest;
+}
+
+
+static void doArrayToDynArrayConv(Compiler *comp, Type *dest, Type **src, Const *constant)
+{
+    if (constant)
+        comp->error("Conversion to array is not allowed in constant expressions");
+
+    // fn makefrom(array: [] type, itemSize: int, len: int): [var] type
+
+    genPushIntConst(&comp->gen, typeSize(&comp->types, (*src)->base));  // Dynamic array item size
+    genPushIntConst(&comp->gen, (*src)->numItems);                      // Dynamic array length
+
+    int resultOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, dest));
+    genPushLocalPtr(&comp->gen, resultOffset);                          // Pointer to result (hidden parameter)
+
+    genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_MAKEFROM);
+
+    // Copy result to a temporary local variable to collect it as garbage when leaving the block
+    doCopyResultToTempVar(comp, dest);
+
+    *src = dest;
+}
+
+
+static void doDynArrayPtrToArrayPtrConv(Compiler *comp, Type *dest, Type **src, Const *constant)
+{
+    if (constant)
+        comp->error("Conversion to array is not allowed in constant expressions");
+
+    genPushIntConst(&comp->gen, offsetof(DynArray, data));
+    genBinary(&comp->gen, TOK_PLUS, TYPE_INT, 0);
+    genDeref(&comp->gen, TYPE_PTR);
 
     *src = dest;
 }
@@ -261,7 +296,28 @@ static void doInterfaceToInterfaceConv(Compiler *comp, Type *dest, Type **src, C
 
 void doImplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant, bool lhs)
 {
-    if (dest->kind == TYPE_INTERFACE && typeStructured(*src))
+    // Integer to real
+    if (dest->kind == TYPE_REAL && typeInteger(*src))
+    {
+        doIntToRealConv(comp, dest, src, constant, lhs);
+    }
+
+    // Array to dynamic array
+    else if (dest->kind == TYPE_DYNARRAY && (*src)->kind == TYPE_ARRAY && typeEquivalent(dest->base, (*src)->base))
+    {
+        doArrayToDynArrayConv(comp, dest, src, constant);
+    }
+
+    // Dynamic array pointer to (open) array pointer
+    else if (dest->kind == TYPE_PTR && dest->base->kind == TYPE_ARRAY &&
+            (*src)->kind == TYPE_PTR && (*src)->base->kind == TYPE_DYNARRAY &&
+             typeEquivalent(dest->base->base, (*src)->base->base))
+    {
+        doDynArrayPtrToArrayPtrConv(comp, dest, src, constant);
+    }
+
+    // Concrete to interface or interface to interface
+    else if (dest->kind == TYPE_INTERFACE && typeStructured(*src))
     {
         if ((*src)->kind == TYPE_INTERFACE)
         {
@@ -271,8 +327,6 @@ void doImplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant,
         else
             doConcreteToInterfaceConv(comp, dest, src, constant);
     }
-    else if (dest->kind == TYPE_REAL && typeInteger(*src))
-        doIntToRealConv(comp, dest, src, constant, lhs);
 }
 
 
@@ -457,7 +511,7 @@ static void parseBuiltinMakeCall(Compiler *comp, Type **type, Const *constant)
     if (constant)
         comp->error("Function is not allowed in constant expressions");
 
-    // fn make(T: type (actually itemSize: int), len: int): [var] T
+    // fn make([] type (actually itemSize: int), len: int): [var] type
 
     // Dynamic array type and item size
     *type = parseType(comp, NULL);
@@ -812,7 +866,7 @@ static void parseIndexSelector(Compiler *comp, Type **type, Const *constant, boo
     lexEat(&comp->lex, TOK_RBRACKET);
 
     if ((*type)->kind == TYPE_DYNARRAY)
-        genGetDynArrayPtr(&comp->gen, typeSize(&comp->types, (*type)->base));
+        genGetDynArrayPtr(&comp->gen);
     else
     {
         // Length (for range checking)

@@ -284,17 +284,28 @@ static void doBuiltinScanf(Fiber *fiber, bool console, bool string, ErrorFunc er
 }
 
 
-static void doBuiltinMake(Fiber *fiber, HeapChunks *chunks, ErrorFunc error)
+static void doBuiltinMake(Fiber *fiber, HeapChunks *chunks)
 {
-    // fn make(T: type (actually itemSize: int), len: int): [var] T
+    // fn make([] type (actually itemSize: int), len: int): [var] type
     DynArray *result = (fiber->top++)->ptrVal;
-    int len          = (fiber->top++)->intVal;
-    int itemSize     = (fiber->top++)->intVal;
-
-    result->len = len;
-    result->data = chunkAdd(chunks, len * itemSize)->ptr;
+    result->len      = (fiber->top++)->intVal;
+    result->itemSize = (fiber->top++)->intVal;
+    result->data     = chunkAdd(chunks, result->len * result->itemSize)->ptr;
 
     (--fiber->top)->ptrVal = result;
+}
+
+
+static void doBuiltinMakeFrom(Fiber *fiber, HeapChunks *chunks)
+{
+    // fn makefrom(array: [] type, itemSize: int, len: int): [var] type
+    doBuiltinMake(fiber, chunks);
+
+    DynArray *dest = (fiber->top++)->ptrVal;
+    void *src      = (fiber->top++)->ptrVal;
+
+    memcpy(dest->data, src, dest->len * dest->itemSize);
+    (--fiber->top)->ptrVal = dest;
 }
 
 
@@ -703,10 +714,10 @@ static void doGetArrayPtr(Fiber *fiber, ErrorFunc error)
 
 static void doGetDynArrayPtr(Fiber *fiber, ErrorFunc error)
 {
-    int itemSize    = fiber->code[fiber->ip].operand.intVal;
     int index       = (fiber->top++)->intVal;
 
     DynArray *array = (fiber->top++)->ptrVal;
+    int itemSize    = array->itemSize;
     int len         = array->len;
 
     if (index < 0 || index > len - 1)
@@ -798,7 +809,8 @@ static void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapChunks *chunks, Er
 
         // Memory
         case BUILTIN_NEW:           fiber->top->ptrVal = chunkAdd(chunks, fiber->top->intVal)->ptr; break;
-        case BUILTIN_MAKE:          doBuiltinMake(fiber, chunks, error); break;
+        case BUILTIN_MAKE:          doBuiltinMake(fiber, chunks); break;
+        case BUILTIN_MAKEFROM:      doBuiltinMakeFrom(fiber, chunks); break;
         case BUILTIN_LEN:           doBuiltinLen(fiber, error); break;
         case BUILTIN_SIZEOF:        error("Illegal instruction"); return;   // Done at compile time
 

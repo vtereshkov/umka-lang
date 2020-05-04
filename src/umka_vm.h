@@ -86,6 +86,7 @@ typedef enum
     // Memory
     BUILTIN_NEW,
     BUILTIN_MAKE,
+    BUILTIN_MAKEFROM,
     BUILTIN_LEN,
     BUILTIN_SIZEOF,
 
@@ -93,7 +94,7 @@ typedef enum
     BUILTIN_FIBERSPAWN,
     BUILTIN_FIBERFREE,
     BUILTIN_FIBERCALL,
-    BUILTIN_FIBERALIVE
+    BUILTIN_FIBERALIVE,
 } BuiltinFunc;
 
 

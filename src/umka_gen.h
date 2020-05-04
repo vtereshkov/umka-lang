@@ -56,8 +56,8 @@ void genTryDecRefCnt(CodeGen *gen);
 void genUnary (CodeGen *gen, TokenKind tokKind, TypeKind typeKind);
 void genBinary(CodeGen *gen, TokenKind tokKind, TypeKind typeKind, int bufOffset /*bytes*/);
 
-void genGetArrayPtr(CodeGen *gen, int itemSize);
-void genGetDynArrayPtr(CodeGen *gen, int itemSize);
+void genGetArrayPtr   (CodeGen *gen, int itemSize);
+void genGetDynArrayPtr(CodeGen *gen);
 
 void genGoto  (CodeGen *gen, int dest);
 void genGotoIf(CodeGen *gen, int dest);

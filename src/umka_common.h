@@ -21,6 +21,7 @@ enum
 typedef struct
 {
     int64_t len;
+    int64_t itemSize;
     void *data;
 } DynArray;
 

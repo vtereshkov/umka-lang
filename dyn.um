@@ -1,15 +1,33 @@
 import "import/std.um"
 
+fn f(b: ^[][2]^int, length: int) {
+    for i := 0; i < length; i++ {
+        std.println("b: " + std.itoa(b[i][0]^) + " " + std.itoa(b[i][1]^))
+    }
+}    
+
 fn main() {
     a := make([var][2]^int, 10)
 
     for i := 0; i < len(a); i++ {
         a[i] = [2]^int {new(int), new(int)}
-        a[i][0]^ = 5
-        a[i][1]^ = 7
+        a[i][0]^ = 5 * i
+        a[i][1]^ = 7 * i
     } 
 
     for i := 0; i < len(a); i++ {
-        std.println(std.itoa(a[i][0]^) + " " + std.itoa(a[i][1]^))
-    }   
+        std.println("a: " + std.itoa(a[i][0]^) + " " + std.itoa(a[i][1]^))
+    }
+
+    f(&a, len(a))
+    
+    std.println("--> c")
+
+    var c: [var]int = [3]int {3, 4, 5}
+    
+    for i := 0; i < len(c); i++ {
+        std.println("c: " + std.itoa(c[i]))
+    }
+    
+    
 }
