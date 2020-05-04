@@ -1,4 +1,4 @@
-import "import/std.um"
+import "../import/std.um"
 
 fn f(b: ^[][2]^int, length: int) {
     for i := 0; i < length; i++ {
@@ -19,7 +19,7 @@ fn main() {
         std.println("a: " + std.itoa(a[i][0]^) + " " + std.itoa(a[i][1]^))
     }
     
-    std.println("appending...")
+    std.println("Appending...")
     a = append(a, [2]^int {new(int), new(int)})
     a[len(a) - 1][0]^ = 666
     a[len(a) - 1][1]^ = 777    
@@ -36,13 +36,12 @@ fn main() {
         std.println("c: " + std.itoa(c[i]))
     }
     
-    std.println("appending...")
+    std.println("Appending...")
     c = append(c, 6)
     
     for i := 0; i < len(c); i++ {
         std.println("c: " + std.itoa(c[i]))
     } 
-
 
     d := make([var][2]int, 2)
     d[0] = [2]int {666, 777}
@@ -52,8 +51,7 @@ fn main() {
         std.println("d: " + std.itoa(d[i][0]) + " " + std.itoa(d[i][1]))
     }       
     
-    std.println("appending...")
-    
+    std.println("Appending...")    
     d = append(d, [2]int {444, 555})
 
     for i := 0; i < len(d); i++ {

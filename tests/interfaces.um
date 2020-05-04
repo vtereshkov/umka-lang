@@ -1,4 +1,4 @@
-import "import/std.um"
+import "../import/std.um"
 
 type (
     vec = struct {
@@ -37,9 +37,6 @@ fn proc_fooable_barable(fb: fooable_barable) {
 }
 
 fn main() {
-    //for i := 0; i < 10000000; i++ {}
-
-    //v := vec{x: 3, y: 5}    
     var fb: fooable_barable
 
     if true {
@@ -49,21 +46,10 @@ fn main() {
         fb = v^
     }
     
-    //for i := 0; i < 10000000; i++ {}
-       
-    //proc_fooable(v^)
-    //proc_fooable_barable(v^)
-    
     proc_fooable(fb)
     proc_fooable_barable(fb)
 
     f := fooable(fb)
-    //fb2 := fooable_barable(f)
-    
-    //proc_fooable(f)
-    //proc_fooable_barable(f) 
-    
-    //for i := 0; i < 10000000; i++ {}
 }
     
 

@@ -1,6 +1,6 @@
 // Raytracer demo in Umka
 
-import "import/std.um"
+import "../import/std.um"
 
 type Vec = [3]real
 

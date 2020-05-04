@@ -1,4 +1,6 @@
-fn draw() {
+// Fractal demo in Umka (adapted from a Wren version by Robert Nystrom)
+
+fn main() {
     const (
         yMin = -0.2
         yMax =  0.1
@@ -19,14 +21,14 @@ fn draw() {
           x1 := x0 * x0 - y0 * y0
           y1 := 2 * x0 * y0
 
-          // Add the seed.
+          // Add the seed
           x1 = x1 + x
           y1 = y1 + y
 
           x0 = x1
           y0 = y1
 
-          // Stop if the point escaped.
+          // Stop if the point escaped
           d := x0 * x0 + y0 * y0
           
           if d > 4 {
@@ -42,10 +44,3 @@ fn draw() {
       printf("\n")
     }
 }
-
-
-fn main() {
-    draw()
-}
-
-  

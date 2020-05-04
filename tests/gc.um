@@ -1,5 +1,7 @@
-fn g(q: ^int) {}    
+import "../import/std.um"
 
+fn g(q: ^int) {}   
+ 
 fn f(p: ^int) {
     q := p
     g(q)
@@ -17,24 +19,26 @@ fn h(s: st) {
     s.q = new(int)
 }
 
-fn ff() {
-    g := new([100000000] int)
+fn f2() {
+    d := new([1000] int)
     for i := 0; i < 10; i++ {
-        a := new([100000000] int)
+        a := new([1000] int)
         if i > 5 {return}
     }
 }
 
-fn hh(): st {
-    g := new(int)
-    return st{x: 3, p: g, y: 5, q: g}
-}
+fn g2(): ^int {a := new(int); return a}
 
-fn gg(): ^int {a := new(int); return a}
+fn h2(): st {
+    d := new(int)
+    return st{x: 3, p: d, y: 5, q: d}
+}
 
 var a: ^[]int
 
 fn main() {
+    std.println("See memory leak warnings")
+ 
     a = new([1000] int)
     b := a
     c := &a[10]
@@ -43,9 +47,6 @@ fn main() {
     e := new([3]real)
     e[2] = 7
     x := e[2]
-    
-    u := 2
-    v := 3
     
     s := st {x: 2, p: new(int), y: 3, q: &a[11]}
     h(s)
@@ -60,19 +61,17 @@ fn main() {
     
     a = new([1000] int)
     i := 0
-    for p := new([10000000] int); i < 1000; i++ {
-        r := new([10000000] int)
+    for p := new([1000] int); i < 1000; i++ {
+        r := new([1000] int)
         if i > 5 {continue}
     }
 
-    ff()
+    f2()
     
-    hhres := hh()
-    hhres.p^ = 17
+    h2res := h2()
+    h2res.p^ = 17
     
-    ggres := gg()
+    g2res := g2()
     
     new([10000000] int)
-
-    //for i := 0; i < 10000000; i++ {}
 }

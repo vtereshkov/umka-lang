@@ -1,4 +1,4 @@
-import "import/std.um"
+import "../import/std.um"
 
 fn childFunc(parent: std.Fiber, buf: ^[2]real) {
     for i := 0; i < 5; i++ {
