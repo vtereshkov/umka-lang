@@ -31,6 +31,7 @@ void doResolveExtern(Compiler *comp)
 
 static void doGarbageCollection(Compiler *comp, int block)
 {
+    // TODO: Eliminate memory leak when a heap-allocated structure with a heap-allocated field is converted to an interface (type info gets lost)
     for (Ident *ident = comp->idents.first; ident; ident = ident->next)
         if (ident->kind == IDENT_VAR && ident->block == block)
             doUpdateRefCnt(comp, ident->type, ident, true, false, 0);
@@ -59,9 +60,6 @@ void parseAssignmentStmt(Compiler *comp, Type *type, void *initializedVarPtr)
         type = type->base;
     }
 
-    // Decrease old left-hand side reference count
-    doUpdateRefCnt(comp, type, NULL, true, false, 0);
-
     Type *rightType;
     Const rightConstantBuf, *rightConstant = NULL;
 
@@ -79,6 +77,13 @@ void parseAssignmentStmt(Compiler *comp, Type *type, void *initializedVarPtr)
     {
         // Increase right-hand side reference count
         doUpdateRefCnt(comp, type, NULL, false, true, 0);
+
+        // Decrease old left-hand side reference count
+        // TODO: optimize reference count decrement
+        genSwap(&comp->gen);
+        doUpdateRefCnt(comp, type, NULL, true, false, 0);
+        genSwap(&comp->gen);
+
         genAssign(&comp->gen, type->kind, typeSize(&comp->types, type));
     }
 }
@@ -102,9 +107,6 @@ static void parseShortAssignmentStmt(Compiler *comp, Type *type, TokenKind op)
     if (type->kind == TYPE_REAL32)
         type = comp->realType;
 
-    // Decrease old left-hand side reference count
-    doUpdateRefCnt(comp, type, NULL, true, false, 0);
-
     Type *rightType;
     parseExpr(comp, &rightType, NULL);
 
@@ -112,6 +114,13 @@ static void parseShortAssignmentStmt(Compiler *comp, Type *type, TokenKind op)
 
     // Increase right-hand side reference count
     doUpdateRefCnt(comp, type, NULL, false, true, 0);
+
+    // Decrease old left-hand side reference count
+    // TODO: optimize reference count decrement
+    genSwap(&comp->gen);
+    doUpdateRefCnt(comp, type, NULL, true, false, 0);
+    genSwap(&comp->gen);
+
     genAssign(&comp->gen, type->kind, typeSize(&comp->types, type));
 }
 

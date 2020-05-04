@@ -72,7 +72,7 @@ typedef enum
 
     // Math
     BUILTIN_REAL,           // Integer to real at stack top (right operand)
-    BUILTIN_REAL_LHS,       // Integer to real at stack top + 1 (left operand)
+    BUILTIN_REAL_LHS,       // Integer to real at stack top + 1 (left operand) - implicit calls only
     BUILTIN_ROUND,
     BUILTIN_TRUNC,
     BUILTIN_FABS,
@@ -86,7 +86,8 @@ typedef enum
     // Memory
     BUILTIN_NEW,
     BUILTIN_MAKE,
-    BUILTIN_MAKEFROM,
+    BUILTIN_MAKEFROM,       // Array to dynamic array - implicit calls only
+    BUILTIN_APPEND,
     BUILTIN_LEN,
     BUILTIN_SIZEOF,
 

@@ -486,6 +486,7 @@ static void parseBuiltinMathCall(Compiler *comp, Type **type, Const *constant, B
 }
 
 
+// fn new(type (actually size: int)): ^type
 static void parseBuiltinNewCall(Compiler *comp, Type **type, Const *constant)
 {
     lexEat(&comp->lex, TOK_LPAR);
@@ -504,14 +505,13 @@ static void parseBuiltinNewCall(Compiler *comp, Type **type, Const *constant)
 }
 
 
+// fn make([] type (actually itemSize: int), len: int): [var] type
 static void parseBuiltinMakeCall(Compiler *comp, Type **type, Const *constant)
 {
     lexEat(&comp->lex, TOK_LPAR);
 
     if (constant)
         comp->error("Function is not allowed in constant expressions");
-
-    // fn make([] type (actually itemSize: int), len: int): [var] type
 
     // Dynamic array type and item size
     *type = parseType(comp, NULL);
@@ -526,13 +526,54 @@ static void parseBuiltinMakeCall(Compiler *comp, Type **type, Const *constant)
     // Dynamic array length
     Type *lenType;
     parseExpr(comp, &lenType, NULL);
-    typeCompatible(comp->intType, lenType);
+    typeAssertCompatible(&comp->types, comp->intType, lenType);
 
     // Pointer to result (hidden parameter)
     int resultOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, *type));
     genPushLocalPtr(&comp->gen, resultOffset);
 
     genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_MAKE);
+    lexEat(&comp->lex, TOK_RPAR);
+}
+
+
+// fn append(array: [var] type, item: ^type): [var] type
+static void parseBuiltinAppendCall(Compiler *comp, Type **type, Const *constant)
+{
+    lexEat(&comp->lex, TOK_LPAR);
+
+    if (constant)
+        comp->error("Function is not allowed in constant expressions");
+
+    // Dynamic array
+    parseExpr(comp, type, NULL);
+    if ((*type)->kind != TYPE_DYNARRAY)
+        comp->error("Incompatible type in append()");
+
+    lexEat(&comp->lex, TOK_COMMA);
+
+    // New item (must always be a pointer, even for value types)
+    Type *itemType;
+    parseExpr(comp, &itemType, NULL);
+    doImplicitTypeConv(comp, (*type)->base, &itemType, NULL, false);
+    typeAssertCompatible(&comp->types, (*type)->base, itemType);
+
+    if (!typeStructured(itemType))
+    {
+        // Assignment to an anonymous stack area does not require updating reference counts
+        int itemOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, itemType));
+        genPushLocalPtr(&comp->gen, itemOffset);
+        genSwap(&comp->gen);
+        genAssign(&comp->gen, itemType->kind, 0);
+
+        genPushLocalPtr(&comp->gen, itemOffset);
+    }
+
+    // Pointer to result (hidden parameter)
+    int resultOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, *type));
+    genPushLocalPtr(&comp->gen, resultOffset);
+
+    genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_APPEND);
     lexEat(&comp->lex, TOK_RPAR);
 }
 
@@ -600,6 +641,11 @@ static void parseBuiltinSizeofCall(Compiler *comp, Type **type, Const *constant)
 }
 
 
+// type FiberFunc = fn(parent: ^void, anyParam: ^type)
+// fn fiberspawn(childFunc: FiberFunc, anyParam: ^type)
+// fn fiberfree(child: ^void)
+// fn fibercall(child: ^void)
+// fn fiberalive(child: ^void)
 static void parseBuiltinFiberCall(Compiler *comp, Type **type, Const *constant, BuiltinFunc builtin)
 {
     lexEat(&comp->lex, TOK_LPAR);
@@ -609,9 +655,6 @@ static void parseBuiltinFiberCall(Compiler *comp, Type **type, Const *constant, 
 
     if (builtin == BUILTIN_FIBERSPAWN)
     {
-        // type FiberFunc = fn(parent: ^void, anyParam: ^type)
-        // fn fiberspawn(childFunc: FiberFunc, anyParam: ^type)
-
         // Parent fiber pointer
         parseExpr(comp, type, constant);
         if (!typeFiberFunc(*type))
@@ -628,7 +671,6 @@ static void parseBuiltinFiberCall(Compiler *comp, Type **type, Const *constant, 
     }
     else    // BUILTIN_FIBERFREE, BUILTIN_FIBERCALL, BUILTIN_FIBERALIVE
     {
-        // fn fiber...(child: ^void)
         parseExpr(comp, type, constant);
         doImplicitTypeConv(comp, comp->ptrVoidType, type, constant, false);
         typeAssertCompatible(&comp->types, comp->ptrVoidType, *type);
@@ -671,6 +713,7 @@ static void parseBuiltinCall(Compiler *comp, Type **type, Const *constant, Built
         // Memory
         case BUILTIN_NEW:           parseBuiltinNewCall(comp, type, constant); break;
         case BUILTIN_MAKE:          parseBuiltinMakeCall(comp, type, constant); break;
+        case BUILTIN_APPEND:        parseBuiltinAppendCall(comp, type, constant); break;
         case BUILTIN_LEN:           parseBuiltinLenCall(comp, type, constant); break;
         case BUILTIN_SIZEOF:        parseBuiltinSizeofCall(comp, type, constant); break;
 

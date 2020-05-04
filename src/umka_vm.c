@@ -70,7 +70,7 @@ static HeapChunk *chunkAdd(HeapChunks *chunks, int size)
 {
     HeapChunk *chunk = malloc(sizeof(HeapChunk));
 
-    printf("+");
+    //printf("+");
     chunk->ptr = malloc(size);
     chunk->size = size;
     chunk->refCnt = 1;
@@ -122,7 +122,7 @@ bool chunkTryIncCnt(HeapChunks *chunks, void *ptr)
     HeapChunk *chunk = chunkFind(chunks, ptr);
     if (chunk)
     {
-        printf("+");
+        //printf("+");
         chunk->refCnt++;
         return true;
     }
@@ -135,7 +135,7 @@ bool chunkTryDecCnt(HeapChunks *chunks, void *ptr)
     HeapChunk *chunk = chunkFind(chunks, ptr);
     if (chunk)
     {
-        printf("-");
+        //printf("-");
         if (--chunk->refCnt == 0)
             chunkRemove(chunks, chunk);
         return true;
@@ -284,9 +284,9 @@ static void doBuiltinScanf(Fiber *fiber, bool console, bool string, ErrorFunc er
 }
 
 
+// fn make([] type (actually itemSize: int), len: int): [var] type
 static void doBuiltinMake(Fiber *fiber, HeapChunks *chunks)
 {
-    // fn make([] type (actually itemSize: int), len: int): [var] type
     DynArray *result = (fiber->top++)->ptrVal;
     result->len      = (fiber->top++)->intVal;
     result->itemSize = (fiber->top++)->intVal;
@@ -296,9 +296,9 @@ static void doBuiltinMake(Fiber *fiber, HeapChunks *chunks)
 }
 
 
+// fn makefrom(array: [] type, itemSize: int, len: int): [var] type
 static void doBuiltinMakeFrom(Fiber *fiber, HeapChunks *chunks)
 {
-    // fn makefrom(array: [] type, itemSize: int, len: int): [var] type
     doBuiltinMake(fiber, chunks);
 
     DynArray *dest = (fiber->top++)->ptrVal;
@@ -306,6 +306,24 @@ static void doBuiltinMakeFrom(Fiber *fiber, HeapChunks *chunks)
 
     memcpy(dest->data, src, dest->len * dest->itemSize);
     (--fiber->top)->ptrVal = dest;
+}
+
+
+// fn append(array: [var] type, item: ^type): [var] type
+static void doBuiltinAppend(Fiber *fiber, HeapChunks *chunks)
+{
+    DynArray *result = (fiber->top++)->ptrVal;
+    void *item       = (fiber->top++)->ptrVal;
+    DynArray *array  = (fiber->top++)->ptrVal;
+
+    result->len      = array->len + 1;
+    result->itemSize = array->itemSize;
+    result->data     = chunkAdd(chunks, result->len * result->itemSize)->ptr;
+
+    memcpy(result->data, array->data, array->len * array->itemSize);
+    memcpy(result->data + (result->len - 1) * result->itemSize, item, result->itemSize);
+
+    (--fiber->top)->ptrVal = result;
 }
 
 
@@ -321,15 +339,17 @@ static void doBuiltinLen(Fiber *fiber, ErrorFunc error)
 }
 
 
+// type FiberFunc = fn(parent: ^void, anyParam: ^type)
+// fn fiberspawn(childFunc: FiberFunc, anyParam: ^type)
+// fn fiberfree(child: ^void)
+// fn fibercall(child: ^void)
+// fn fiberalive(child: ^void)
 static void doBuiltinFiber(Fiber *fiber, Fiber **newFiber, BuiltinFunc builtin, ErrorFunc error)
 {
     switch (builtin)
     {
         case BUILTIN_FIBERSPAWN:
         {
-            // type FiberFunc = fn(parent: ^void, anyParam: ^type)
-            // fn fiberspawn(childFunc: FiberFunc, anyParam: ^type)
-
             void *anyParam = (fiber->top++)->ptrVal;
             int childEntryOffset = (fiber->top++)->intVal;
 
@@ -355,6 +375,7 @@ static void doBuiltinFiber(Fiber *fiber, Fiber **newFiber, BuiltinFunc builtin, 
         }
         case BUILTIN_FIBERFREE:
         {
+            // TODO: use garbage collection for fibers and eliminate fiberfree()
             Fiber *ptr = (fiber->top++)->ptrVal;
             free(ptr->stack);
             free(ptr);
@@ -811,6 +832,7 @@ static void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapChunks *chunks, Er
         case BUILTIN_NEW:           fiber->top->ptrVal = chunkAdd(chunks, fiber->top->intVal)->ptr; break;
         case BUILTIN_MAKE:          doBuiltinMake(fiber, chunks); break;
         case BUILTIN_MAKEFROM:      doBuiltinMakeFrom(fiber, chunks); break;
+        case BUILTIN_APPEND:        doBuiltinAppend(fiber, chunks); break;
         case BUILTIN_LEN:           doBuiltinLen(fiber, error); break;
         case BUILTIN_SIZEOF:        error("Illegal instruction"); return;   // Done at compile time
 
