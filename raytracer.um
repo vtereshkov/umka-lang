@@ -101,8 +101,7 @@ fn (s: ^Sphere) intersect(ray: ^Ray, point, normal: ^Vec): bool {
 
 type Scene = struct {
     ambientColor: Color
-    body:         ^[]Body
-    numBodies:    int
+    body:         [var]Body
 }
 
 fn (sc: ^Scene) trace(ray: ^Ray, depth: int): Color {
@@ -115,7 +114,7 @@ fn (sc: ^Scene) trace(ray: ^Ray, depth: int): Color {
     bestIndex := -1
     var bestPoint, bestNormal: Vec
 
-    for i := 0; i < sc.numBodies; i++ {
+    for i := 0; i < len(sc.body); i++ {
         b := sc.body[i]
         var point, normal: Vec
         
@@ -197,10 +196,8 @@ fn render(parent: std.Fiber, buf: ^RenderData) {
 }
 
 fn main() {
-    // Define scene
-    const numBodies = 5
-    
-    body := [numBodies]Body {
+    // Define scene  
+    body := [5]Body {
         Box {
             body: GenericBody {
                 center: Vec{500, -100, 1200},
@@ -242,24 +239,24 @@ fn main() {
                 isLamp: true},
             radius: 800}}
             
-    scene := Scene{ambientColor: Color{0.2, 0.2, 0.2}, body: &body, numBodies: numBodies}
+    scene := Scene{ambientColor: Color{0.2, 0.2, 0.2}, body: body}
     
-    var pixels: [height][width][3] uint8            
+    var pixels: [height][width][3]uint8            
 
-    var rays: int
+    var rays, fibers: int
     printf("Raytracer demo\n")
     printf("Rays per pixel (recommended 1 to 20): ");  scanf("{d}", &rays)
+    printf("Threads (recommended 1, 2, 4, 8, 16): ");  scanf("{d}", &fibers)
     
     // Define fibers
-    const numFibers = 4
-    var fiber: [numFibers] std.Fiber
-    var renderData: [numFibers] RenderData
+    fiber := make([var]std.Fiber, fibers)
+    renderData := make([var]RenderData, fibers)
     
-    for i := 0; i < numFibers; i++ {
+    for i := 0; i < len(fiber); i++ {
         // Define eye
         renderData[i] = RenderData {
-            startHeight:  height / numFibers * i,
-            stopHeight:   height / numFibers * (i + 1),
+            startHeight:  height / len(fiber) * i,
+            stopHeight:   height / len(fiber) * (i + 1),
             pos:          Vec{0, 0, 0},
             azimuth:      30.0 * std.pi / 180.0,
             focal:        500,
@@ -277,7 +274,7 @@ fn main() {
     
     for true {
         working := false
-        for i := 0; i < numFibers; i++ {
+        for i := 0; i < len(fiber); i++ {
             fiberWorking := fiberalive(fiber[i]) 
             if fiberWorking {
                 fibercall(fiber[i])
@@ -291,7 +288,7 @@ fn main() {
     printf("Rendering time = {d} s\n", endTime - startTime)
     
     // Free fibers
-    for i := 0; i < numFibers; i++ {
+    for i := 0; i < len(fiber); i++ {
         fiberfree(fiber[i])
     }
     
