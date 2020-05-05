@@ -119,6 +119,19 @@ void compilerInit(Compiler *comp, char *fileName, int storageCapacity, int argc,
     comp->argc  = argc;
     comp->argv  = argv;
     comp->error = compileError;
+
+    comp->blocks.module = moduleAdd(&comp->modules, "__universe");
+
+    compilerDeclareBuiltinTypes (comp);
+    compilerDeclareBuiltinIdents(comp);
+    compilerDeclareExternalFuncs(comp);
+
+    // Command-line-arguments
+    Ident *rtlargc = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "rtlargc", comp->intType, true);
+    Ident *rtlargv = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "rtlargv", comp->ptrVoidType, true);
+
+    *(int64_t *)(rtlargc->ptr) = comp->argc;
+    *(void *  *)(rtlargv->ptr) = comp->argv;
 }
 
 
@@ -138,19 +151,6 @@ void compilerFree(Compiler *comp)
 
 void compilerCompile(Compiler *comp)
 {
-    comp->blocks.module = moduleAdd(&comp->modules, "__universe");
-
-    compilerDeclareBuiltinTypes (comp);
-    compilerDeclareBuiltinIdents(comp);
-    compilerDeclareExternalFuncs(comp);
-
-    // Command-line-arguments
-    Ident *rtlargc = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "rtlargc", comp->intType, true);
-    Ident *rtlargv = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "rtlargv", comp->ptrVoidType, true);
-
-    *(int64_t *)(rtlargc->ptr) = comp->argc;
-    *(void *  *)(rtlargv->ptr) = comp->argv;
-
     parseProgram(comp);
 }
 
