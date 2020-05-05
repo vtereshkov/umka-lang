@@ -1,5 +1,6 @@
 #include <string.h>
 #include <limits.h>
+#include <stddef.h>
 
 #include "umka_expr.h"
 #include "umka_decl.h"
