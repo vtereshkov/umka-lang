@@ -2,10 +2,10 @@
 cd src
 
 gcc -fPIC -O3 -Wall -Wno-format-security -c umka_api.c umka_common.c umka_compiler.c umka_const.c umka_decl.c umka_expr.c umka_gen.c umka_ident.c umka_lexer.c umka_runtime.c umka_stmt.c umka_types.c umka_vm.c 
-gcc -shared -fPIC -static-libgcc *.o -o libumka.so -lm -lumka 
+gcc -shared -fPIC -static-libgcc *.o -o libumka.so -lm 
 
 gcc -O3 -Wall -Wno-format-security -c umka.c 
-gcc umka.o -o umka -static-libgcc -lm -lumka -Wl,-rpath,'$ORIGIN'
+gcc umka.o -o umka -static-libgcc -L$PWD -lm -lumka -Wl,-rpath,'$ORIGIN'
 
 rm -f *.o
 cd ..
