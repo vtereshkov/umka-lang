@@ -12,7 +12,7 @@ Umka is a statically typed scripting language. It combines the simplicity and fl
 * Type inference
 
 ## How to Get Started
-* Download [version 0.1](https://github.com/vtereshkov/umka-lang/releases) for Windows and Linux
+* Download [version 0.1](https://github.com/vtereshkov/umka-lang/releases) for Windows and Linux (_Note:_ both use `/` as path separator)
 * Take a tour of Umka (see below)
 * Explore the [raytracer example](https://github.com/vtereshkov/umka-lang/blob/master/examples/raytracer.um) that demonstrates many language features like fibers, interfaces and dynamic arrays
 
