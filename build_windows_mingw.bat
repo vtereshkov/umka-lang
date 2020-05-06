@@ -14,6 +14,7 @@ mkdir umka_windows_mingw
 move /y src\libumka.* umka_windows_mingw
 move /y src\umka.exe umka_windows_mingw
 copy src\umka_api.h umka_windows_mingw
+copy LICENSE umka_windows_mingw
 
 mkdir umka_windows_mingw\examples
 mkdir umka_windows_mingw\import
