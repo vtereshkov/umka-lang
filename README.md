@@ -10,6 +10,7 @@ Umka is a statically typed scripting language. It combines the simplicity and fl
 * Polymorphism via interfaces
 * Multitasking based on fibers
 * Type inference
+* C extensions
 * C99 source
 
 ## How to Get Started
