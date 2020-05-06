@@ -1,5 +1,14 @@
-# umka-lang
-Umka: a statically typed scripting language
+# Welcome to Umka
+Umka is a statically typed scripting language. Its aim is to follow the Python Zen principle _Explicit is better than implicit_ more consistently than dynamically typed languages generally do. It combines the simplicity and flexibility needed for scripting with a compile-time protection against type errors.  
+
+## Features
+* Clean syntax inspired by Go
+* Cross-platform bytecode compiler and virtual machine
+* Garbage collection
+* Polymorphism via interfaces
+* Multitasking based on fibers
+* Type inference
+
 
 ```
                                          .................+::;:;;;+
