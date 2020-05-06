@@ -10,6 +10,7 @@ Umka is a statically typed scripting language. It combines the simplicity and fl
 * Polymorphism via interfaces
 * Multitasking based on fibers
 * Type inference
+* C99 source
 
 ## How to Get Started
 * Download [release 0.1](https://github.com/vtereshkov/umka-lang/releases) for Windows and Linux (_Note:_ both versions use `/` as path separator)
