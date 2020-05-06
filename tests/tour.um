@@ -1,0 +1,126 @@
+import "../import/std.um"
+
+// Constants
+const a = 3
+const b* = 2.38  // Exported identifier
+const (
+    c = sin(b) / 5
+    d = "Hello" + " World"
+)
+
+// Types
+type IntPtr = ^uint16
+type Arr = [a]real
+type (
+    Quat = struct {
+        q: [4]real
+        normalized: bool
+    }
+    Printable = interface {
+        print(): int
+    }
+    ErrFn = fn(code: int)
+)        
+
+// Variables
+var e: int
+var f: str = d + "!"
+var (
+    g: Arr = [3]real{2.3, -4.1 / 2, b}
+    h: [var][5]int  // Dynamic arrays require calling make()
+)
+q := Quat{q: [4]real{1, 0, 0, 0}, normalized: true}
+
+// Functions
+fn tan(x: real): real {return sin(x) / cos(x)}
+
+/*
+Built-in functions:
+    printf fprintf sprintf scanf fscanf sscanf
+    round trunc fabs sqrt sin cos atan exp log
+    new make append len sizeof
+    fiberspawn fiberfree fibercall fiberalive
+*/
+
+// Methods
+fn (a: ^Arr) print(): int {
+    printf("Arr: {8.3lf} {8.3lf} {8.3lf}\n", a[0], a[1], a[2])
+    return 0
+}
+
+
+// Fibers
+fn childFunc(parent: std.Fiber, buf: ^int) {
+    for i := 0; i < 5; i++ {
+        std.println("Child : i=" + std.itoa(i) + " buf=" + std.itoa(buf^))
+        buf^ = i * 3
+        fibercall(parent)
+    }
+}
+
+fn parentFunc() {
+    a := 0
+    child := fiberspawn(childFunc, &a)    
+    for i := 0; i < 10; i++ {
+        std.println("Parent: i=" + std.itoa(i) + " buf=" + std.itoa(a))
+        a = i * 7
+        if fiberalive(child) {
+            fibercall(child)
+        }
+    }    
+    fiberfree(child)
+}   
+
+
+fn getError(): bool {return false}
+
+fn main() {
+    // Assignment
+    h = make([var][5]int, 3)
+    
+    // Declaration via assignment (with type inference)
+    sum := 0.0
+    
+    // Function call
+    y := tan(30 * std.pi / 180)
+    h = append(h, [5]int{10, 20, 30, 40, 50})
+    
+    // Method call
+    g.print()
+    
+    // Conditional execution
+    if err := getError(); !err {
+        std.println("Done")
+    }
+    
+    // Switch
+    switch a {
+        case 1, 3, 5, 7: std.println(std.itoa(a) + " is odd")
+        case 2, 4, 6, 8: std.println(std.itoa(a) + " is even")
+        default:         std.println("I don't know")
+    }
+
+    // Loop
+    for i := 0; i < len(g); i++ {
+        if fabs(g[i]) > 1e12 {break}
+        if g[i] < 0 {continue}
+        sum += g[i]
+    }
+    
+        
+    std.println("len = " + std.itoa(len(h)))
+    std.println(std.ftoa(sum, 3))
+    
+    
+    // Interfaces
+    var printable: Printable = Arr{0.5, 0.7, 0.9}
+    printable.print()
+    
+    // Fibers
+    parentFunc()    
+}
+
+
+
+
+    
