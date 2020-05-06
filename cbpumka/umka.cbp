@@ -11,7 +11,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="../test.um" />
+				<Option parameters="../examples/raytracer.um" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
@@ -32,6 +32,10 @@
 		<Compiler>
 			<Add option="-Wall" />
 		</Compiler>
+		<Linker>
+			<Add library="libumka" />
+			<Add directory="../cbplibumka/bin/Debug" />
+		</Linker>
 		<Unit filename="../src/umka.c">
 			<Option compilerVar="CC" />
 		</Unit>
