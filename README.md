@@ -1,3 +1,5 @@
+![](logo.png)
+
 # Welcome to Umka
 Umka is a statically typed scripting language. It combines the simplicity and flexibility needed for scripting with a compile-time protection against type errors. Its aim is to follow the Python Zen principle _Explicit is better than implicit_ more consistently than dynamically typed languages generally do.
 
@@ -14,7 +16,7 @@ Umka is a statically typed scripting language. It combines the simplicity and fl
 * Take a tour of Umka (see below)
 * Explore the [raytracer example](https://github.com/vtereshkov/umka-lang/blob/master/examples/raytracer.um) that demonstrates many language features like fibers, interfaces and dynamic arrays
 
-![](https://github.com/vtereshkov/umka-lang/blob/master/examples/scene.png)
+![](examples/scene.png)
 
 ## A Tour of Umka
 ### Declarations
