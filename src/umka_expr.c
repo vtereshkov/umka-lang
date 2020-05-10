@@ -48,10 +48,7 @@ static void doUpdatePointerRefCnt(Compiler *comp, Ident *ident, bool lhs, bool i
         else
             genDup(&comp->gen);
 
-        // Add offset if needed
-        if (offset != 0)
-            genGetFieldPtr(&comp->gen, offset);
-
+        genGetFieldPtr(&comp->gen, offset);
         genDeref(&comp->gen, TYPE_PTR);
     }
 
@@ -73,9 +70,7 @@ static void doUpdateDynArrayItemsRefCnt(Compiler *comp, Type *type, Ident *ident
     else
         genDup(&comp->gen);
 
-    // Add offset if needed
-    if (offset != 0)
-        genGetFieldPtr(&comp->gen, offset);
+    genGetFieldPtr(&comp->gen, offset);
 
     // Save array pointer to dedicated register
     genPopReg(&comp->gen, VM_DYNARRAY_REG);

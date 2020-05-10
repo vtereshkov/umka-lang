@@ -105,7 +105,7 @@
 1588822370 c:\users\vasiliy\desktop\umka-lang-master\src\umka_decl.h
 	"umka_compiler.h"
 
-1589143534 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_expr.c
+1589147488 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_expr.c
 	<string.h>
 	<limits.h>
 	<stddef.h>

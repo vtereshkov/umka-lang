@@ -45,6 +45,7 @@ static void genAddInstr(CodeGen *gen, const Instruction *instr)
 }
 
 
+
 // Peephole optimizations
 
 static bool peepholeFound(CodeGen *gen, int size)
@@ -68,7 +69,7 @@ static bool optimizeDeref(CodeGen *gen, TypeKind typeKind)
 
     Instruction *prev = &gen->code[gen->ip - 1];
 
-    // Optimization: (OP_PUSH | ...) + OP_DEREF -> (OP_PUSH | ...), DEREF
+    // Optimization: (PUSH | ...) + DEREF -> (PUSH | ...); DEREF
     if (((prev->opcode == OP_PUSH && prev->typeKind == TYPE_PTR) ||
           prev->opcode == OP_PUSH_LOCAL_PTR                      ||
           prev->opcode == OP_GET_ARRAY_PTR                       ||
@@ -78,6 +79,32 @@ static bool optimizeDeref(CodeGen *gen, TypeKind typeKind)
     {
         prev->inlineDeref = true;
         prev->typeKind = typeKind;
+        return true;
+    }
+
+    return false;
+}
+
+
+static bool optimizeGetArrayPtr(CodeGen *gen, int itemSize)
+{
+    if (!peepholeFound(gen, 2))
+        return false;
+
+    Instruction *prev  = &gen->code[gen->ip - 1];
+    Instruction *prev2 = &gen->code[gen->ip - 2];
+
+    // Optimization: PUSH + PUSH + GET_ARRAY_PTR -> GET_FIELD_PTR
+    if (prev2->opcode == OP_PUSH && prev->opcode == OP_PUSH)
+    {
+        int len   = prev->operand.intVal;
+        int index = prev2->operand.intVal;
+
+        if (index < 0 || index > len - 1)
+            gen->error("Index is out of range");
+
+        gen->ip -= 2;
+        genGetFieldPtr(gen, itemSize * index);
         return true;
     }
 
@@ -218,8 +245,11 @@ void genBinary(CodeGen *gen, TokenKind tokKind, TypeKind typeKind, int bufOffset
 
 void genGetArrayPtr(CodeGen *gen, int itemSize)
 {
-    const Instruction instr = {.opcode = OP_GET_ARRAY_PTR, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = itemSize};
-    genAddInstr(gen, &instr);
+    if (!optimizeGetArrayPtr(gen, itemSize))
+    {
+        const Instruction instr = {.opcode = OP_GET_ARRAY_PTR, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = itemSize};
+        genAddInstr(gen, &instr);
+    }
 }
 
 
@@ -530,6 +560,8 @@ void genGotosEpilog(CodeGen *gen, Gotos *gotos)
 }
 
 
+// Assembly output
+
 char *genAsm(CodeGen *gen, char *buf)
 {
     int ip = 0, chars = 0;
@@ -551,3 +583,4 @@ char *genAsm(CodeGen *gen, char *buf)
 
     return buf;
 }
+
