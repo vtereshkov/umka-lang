@@ -69,10 +69,12 @@ static bool optimizeDeref(CodeGen *gen, TypeKind typeKind)
     Instruction *prev = &gen->code[gen->ip - 1];
 
     // Optimization: (OP_PUSH | ...) + OP_DEREF -> (OP_PUSH | ...), DEREF
-    if ((prev->opcode == OP_PUSH && prev->typeKind == TYPE_PTR) ||
-         prev->opcode == OP_PUSH_LOCAL_PTR                      ||
-         prev->opcode == OP_GET_ARRAY_PTR                       ||
-         prev->opcode == OP_GET_DYNARRAY_PTR)
+    if (((prev->opcode == OP_PUSH && prev->typeKind == TYPE_PTR) ||
+          prev->opcode == OP_PUSH_LOCAL_PTR                      ||
+          prev->opcode == OP_GET_ARRAY_PTR                       ||
+          prev->opcode == OP_GET_DYNARRAY_PTR                    ||
+          prev->opcode == OP_GET_FIELD_PTR)                      &&
+         !prev->inlineDeref)
     {
         prev->inlineDeref = true;
         prev->typeKind = typeKind;
@@ -225,6 +227,16 @@ void genGetDynArrayPtr(CodeGen *gen)
 {
     const Instruction instr = {.opcode = OP_GET_DYNARRAY_PTR, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = 0};
     genAddInstr(gen, &instr);
+}
+
+
+void genGetFieldPtr(CodeGen *gen, int fieldOffset)
+{
+    if (fieldOffset != 0)
+    {
+        const Instruction instr = {.opcode = OP_GET_FIELD_PTR, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = fieldOffset};
+        genAddInstr(gen, &instr);
+    }
 }
 
 

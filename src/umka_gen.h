@@ -58,6 +58,7 @@ void genBinary(CodeGen *gen, TokenKind tokKind, TypeKind typeKind, int bufOffset
 
 void genGetArrayPtr   (CodeGen *gen, int itemSize);
 void genGetDynArrayPtr(CodeGen *gen);
+void genGetFieldPtr   (CodeGen *gen, int fieldOffset);
 
 void genGoto  (CodeGen *gen, int dest);
 void genGotoIf(CodeGen *gen, int dest);

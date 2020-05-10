@@ -50,10 +50,7 @@ static void doUpdatePointerRefCnt(Compiler *comp, Ident *ident, bool lhs, bool i
 
         // Add offset if needed
         if (offset != 0)
-        {
-            genPushIntConst(&comp->gen, offset);
-            genBinary(&comp->gen, TOK_PLUS, TYPE_INT, 0);
-        }
+            genGetFieldPtr(&comp->gen, offset);
 
         genDeref(&comp->gen, TYPE_PTR);
     }
@@ -78,10 +75,7 @@ static void doUpdateDynArrayItemsRefCnt(Compiler *comp, Type *type, Ident *ident
 
     // Add offset if needed
     if (offset != 0)
-    {
-        genPushIntConst(&comp->gen, offset);
-        genBinary(&comp->gen, TOK_PLUS, TYPE_INT, 0);
-    }
+        genGetFieldPtr(&comp->gen, offset);
 
     // Save array pointer to dedicated register
     genPopReg(&comp->gen, VM_DYNARRAY_REG);
@@ -211,8 +205,7 @@ static void doDynArrayPtrToArrayPtrConv(Compiler *comp, Type *dest, Type **src, 
     if (constant)
         comp->error("Conversion to array is not allowed in constant expressions");
 
-    genPushIntConst(&comp->gen, offsetof(DynArray, data));
-    genBinary(&comp->gen, TOK_PLUS, TYPE_INT, 0);
+    genGetFieldPtr(&comp->gen, offsetof(DynArray, data));
     genDeref(&comp->gen, TYPE_PTR);
 
     *src = dest;
@@ -281,8 +274,7 @@ static void doInterfaceToInterfaceConv(Compiler *comp, Type *dest, Type **src, C
         typeAssertCompatible(&comp->types, dest->field[i]->type, srcMethod->type);
 
         genDup(&comp->gen);                                 // Duplicate src pointer
-        genPushIntConst(&comp->gen, srcMethod->offset);     // Push src method offset
-        genBinary(&comp->gen, TOK_PLUS, TYPE_INT, 0);       // Add src method offset
+        genGetFieldPtr(&comp->gen, srcMethod->offset);      // Get src method entry point
         genDeref(&comp->gen, TYPE_PTR);                     // Get method entry point
         genPushLocalPtr(&comp->gen, destOffset);            // Push dest pointer
         genSwap(&comp->gen);                                // For assignment, dest should come first
@@ -973,15 +965,13 @@ static void parseFieldSelector(Compiler *comp, Type **type, Const *constant, boo
         Field *field = typeAssertFindField(&comp->types, *type, comp->lex.tok.name);
         lexNext(&comp->lex);
 
-        genPushIntConst(&comp->gen, field->offset);
-        genBinary(&comp->gen, TOK_PLUS, TYPE_INT, 0);
+        genGetFieldPtr(&comp->gen, field->offset);
 
         // Save interface method's receiver to dedicated register and push method's entry point
         if (field->type->kind == TYPE_FN && field->type->sig.method && field->type->sig.offsetFromSelf != 0)
         {
             genDup(&comp->gen);
-            genPushIntConst(&comp->gen, field->type->sig.offsetFromSelf);
-            genBinary(&comp->gen, TOK_MINUS, TYPE_INT, 0);
+            genGetFieldPtr(&comp->gen, -field->type->sig.offsetFromSelf);
             genDeref(&comp->gen, TYPE_PTR);
             genPopReg(&comp->gen, VM_SELF_REG);
         }

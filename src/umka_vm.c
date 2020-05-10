@@ -29,6 +29,7 @@ static char *opcodeSpelling [] =
     "BINARY",
     "GET_ARRAY_PTR",
     "GET_DYNARRAY_PTR",
+    "GET_FIELD_PTR",
     "GOTO",
     "GOTO_IF",
     "CALL",
@@ -802,6 +803,18 @@ static void doGetDynArrayPtr(Fiber *fiber, ErrorFunc error)
 }
 
 
+static void doGetFieldPtr(Fiber *fiber, ErrorFunc error)
+{
+    int fieldOffset = fiber->code[fiber->ip].operand.intVal;
+    fiber->top->ptrVal += fieldOffset;
+
+    if (fiber->code[fiber->ip].inlineDeref)
+        doInlineDeref(fiber->top, fiber->code[fiber->ip].typeKind, error);
+
+    fiber->ip++;
+}
+
+
 static void doGoto(Fiber *fiber)
 {
     fiber->ip = fiber->code[fiber->ip].operand.intVal;
@@ -980,6 +993,7 @@ void fiberStep(Fiber *fiber, Fiber **newFiber, HeapChunks *chunks, ErrorFunc err
         case OP_BINARY:             doBinary(fiber, error);                        break;
         case OP_GET_ARRAY_PTR:      doGetArrayPtr(fiber, error);                   break;
         case OP_GET_DYNARRAY_PTR:   doGetDynArrayPtr(fiber, error);                break;
+        case OP_GET_FIELD_PTR:      doGetFieldPtr(fiber, error);                   break;
         case OP_GOTO:               doGoto(fiber);                                 break;
         case OP_GOTO_IF:            doGotoIf(fiber);                               break;
         case OP_CALL:               doCall(fiber);                                 break;
@@ -1036,6 +1050,7 @@ int vmAsm(int ip, Instruction *instr, char *buf)
         case OP_ASSIGN_OFS:
         case OP_BINARY:
         case OP_GET_ARRAY_PTR:
+        case OP_GET_FIELD_PTR:
         case OP_GOTO:
         case OP_GOTO_IF:
         case OP_CALL:
