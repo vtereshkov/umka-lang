@@ -258,7 +258,7 @@ static void lexSpacesAndComments(Lexer *lex)
 {
     char ch = lex->buf[lex->bufPos];
 
-    while (ch && (ch == ' ' || ch == '\t' || ch == '/'))
+    while (ch && (ch == ' ' || ch == '\t' || ch == '\r' || ch == '/'))
     {
         if (ch == '/')
         {
