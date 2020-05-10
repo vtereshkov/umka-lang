@@ -114,6 +114,7 @@ typedef struct
     TokenKind tokKind;  // Unary/binary operation token
     TypeKind typeKind;  // Slot type kind
     Slot operand;
+    bool inlineDeref;   // Short form of OP_PUSH + OP_DEREF etc.
     DebugInfo debug;
 } Instruction;
 

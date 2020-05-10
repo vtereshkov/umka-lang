@@ -204,6 +204,34 @@ void vmFree(VM *vm)
 }
 
 
+static void doInlineDeref(Slot *slot, TypeKind typeKind, ErrorFunc error)
+{
+    switch (typeKind)
+    {
+        case TYPE_INT8:         slot->intVal  = *(int8_t   *)slot->ptrVal; break;
+        case TYPE_INT16:        slot->intVal  = *(int16_t  *)slot->ptrVal; break;
+        case TYPE_INT32:        slot->intVal  = *(int32_t  *)slot->ptrVal; break;
+        case TYPE_INT:          slot->intVal  = *(int64_t  *)slot->ptrVal; break;
+        case TYPE_UINT8:        slot->intVal  = *(uint8_t  *)slot->ptrVal; break;
+        case TYPE_UINT16:       slot->intVal  = *(uint16_t *)slot->ptrVal; break;
+        case TYPE_UINT32:       slot->intVal  = *(uint32_t *)slot->ptrVal; break;
+        case TYPE_BOOL:         slot->intVal  = *(bool     *)slot->ptrVal; break;
+        case TYPE_CHAR:         slot->intVal  = *(char     *)slot->ptrVal; break;
+        case TYPE_REAL32:       slot->realVal = *(float    *)slot->ptrVal; break;
+        case TYPE_REAL:         slot->realVal = *(double   *)slot->ptrVal; break;
+        case TYPE_PTR:          slot->ptrVal  = *(void *   *)slot->ptrVal; break;
+        case TYPE_ARRAY:
+        case TYPE_DYNARRAY:
+        case TYPE_STR:
+        case TYPE_STRUCT:
+        case TYPE_INTERFACE:    slot->intVal  =  (int64_t   )slot->ptrVal; break;  // Always represented by pointer, not dereferenced
+        case TYPE_FN:           slot->ptrVal  = *(void *   *)slot->ptrVal; break;
+
+        default:                error("Illegal type"); return;
+    }
+}
+
+
 static void doConvertFormatStringToC(char *formatC, char **format, ErrorFunc error) // "{d}" -> "%d"
 {
     bool leftBraceFound = false, rightBraceFound = false, slashFound = false;
@@ -432,17 +460,25 @@ static void doBuiltinFiber(Fiber *fiber, Fiber **newFiber, BuiltinFunc builtin, 
 }
 
 
-static void doPush(Fiber *fiber)
+static void doPush(Fiber *fiber, ErrorFunc error)
 {
     (--fiber->top)->intVal = fiber->code[fiber->ip].operand.intVal;
+
+    if (fiber->code[fiber->ip].inlineDeref)
+        doInlineDeref(fiber->top, fiber->code[fiber->ip].typeKind, error);
+
     fiber->ip++;
 }
 
 
-static void doPushLocalPtr(Fiber *fiber)
+static void doPushLocalPtr(Fiber *fiber, ErrorFunc error)
 {
     // Local variable addresses are offsets (in bytes) from the stack frame base pointer
     (--fiber->top)->ptrVal = (int8_t *)fiber->base + fiber->code[fiber->ip].operand.intVal;
+
+    if (fiber->code[fiber->ip].inlineDeref)
+        doInlineDeref(fiber->top, fiber->code[fiber->ip].typeKind, error);
+
     fiber->ip++;
 }
 
@@ -503,30 +539,7 @@ static void doSwap(Fiber *fiber)
 
 static void doDeref(Fiber *fiber, ErrorFunc error)
 {
-    void *ptr = fiber->top->ptrVal;
-    switch (fiber->code[fiber->ip].typeKind)
-    {
-        case TYPE_INT8:         fiber->top->intVal  = *(int8_t   *)ptr; break;
-        case TYPE_INT16:        fiber->top->intVal  = *(int16_t  *)ptr; break;
-        case TYPE_INT32:        fiber->top->intVal  = *(int32_t  *)ptr; break;
-        case TYPE_INT:          fiber->top->intVal  = *(int64_t  *)ptr; break;
-        case TYPE_UINT8:        fiber->top->intVal  = *(uint8_t  *)ptr; break;
-        case TYPE_UINT16:       fiber->top->intVal  = *(uint16_t *)ptr; break;
-        case TYPE_UINT32:       fiber->top->intVal  = *(uint32_t *)ptr; break;
-        case TYPE_BOOL:         fiber->top->intVal  = *(bool     *)ptr; break;
-        case TYPE_CHAR:         fiber->top->intVal  = *(char     *)ptr; break;
-        case TYPE_REAL32:       fiber->top->realVal = *(float    *)ptr; break;
-        case TYPE_REAL:         fiber->top->realVal = *(double   *)ptr; break;
-        case TYPE_PTR:          fiber->top->ptrVal  = *(void *   *)ptr; break;
-        case TYPE_ARRAY:
-        case TYPE_DYNARRAY:
-        case TYPE_STR:
-        case TYPE_STRUCT:
-        case TYPE_INTERFACE:    fiber->top->intVal =   (int64_t   )ptr; break;  // Always represented by pointer, not dereferenced
-        case TYPE_FN:           fiber->top->ptrVal  = *(void *   *)ptr; break;
-
-        default:                error("Illegal type"); return;
-    }
+    doInlineDeref(fiber->top, fiber->code[fiber->ip].typeKind, error);
     fiber->ip++;
 }
 
@@ -761,6 +774,10 @@ static void doGetArrayPtr(Fiber *fiber, ErrorFunc error)
         error("Index is out of range");
 
     fiber->top->ptrVal += itemSize * index;
+
+    if (fiber->code[fiber->ip].inlineDeref)
+        doInlineDeref(fiber->top, fiber->code[fiber->ip].typeKind, error);
+
     fiber->ip++;
 }
 
@@ -777,6 +794,10 @@ static void doGetDynArrayPtr(Fiber *fiber, ErrorFunc error)
         error("Index is out of range");
 
     (--fiber->top)->ptrVal = array->data + itemSize * index;
+
+    if (fiber->code[fiber->ip].inlineDeref)
+        doInlineDeref(fiber->top, fiber->code[fiber->ip].typeKind, error);
+
     fiber->ip++;
 }
 
@@ -942,8 +963,8 @@ void fiberStep(Fiber *fiber, Fiber **newFiber, HeapChunks *chunks, ErrorFunc err
 
     switch (fiber->code[fiber->ip].opcode)
     {
-        case OP_PUSH:               doPush(fiber);                                 break;
-        case OP_PUSH_LOCAL_PTR:     doPushLocalPtr(fiber);                         break;
+        case OP_PUSH:               doPush(fiber, error);                          break;
+        case OP_PUSH_LOCAL_PTR:     doPushLocalPtr(fiber, error);                  break;
         case OP_PUSH_REG:           doPushReg(fiber);                              break;
         case OP_PUSH_STRUCT:        doPushStruct(fiber, error);                    break;
         case OP_POP:                doPop(fiber);                                  break;
@@ -990,21 +1011,21 @@ int vmAsm(int ip, Instruction *instr, char *buf)
     int chars = sprintf(buf, "%09d %6d %16s", ip, instr->debug.line, opcodeSpelling[instr->opcode]);
 
     if (instr->tokKind != TOK_NONE)
-        chars += sprintf(buf + chars, ", %s", lexSpelling(instr->tokKind));
+        chars += sprintf(buf + chars, " %s", lexSpelling(instr->tokKind));
 
     if (instr->typeKind != TYPE_NONE)
-        chars += sprintf(buf + chars, ", %s", typeKindSpelling(instr->typeKind));
+        chars += sprintf(buf + chars, " %s", typeKindSpelling(instr->typeKind));
 
     switch (instr->opcode)
     {
         case OP_PUSH:
         {
             if (instr->typeKind == TYPE_REAL)
-                chars += sprintf(buf + chars, ", %.8lf", instr->operand.realVal);
+                chars += sprintf(buf + chars, " %.8lf", instr->operand.realVal);
             else if (instr->typeKind == TYPE_PTR)
-                chars += sprintf(buf + chars, ", %p", instr->operand.ptrVal);
+                chars += sprintf(buf + chars, " %p", instr->operand.ptrVal);
             else
-                chars += sprintf(buf + chars, ", %lld", instr->operand.intVal);
+                chars += sprintf(buf + chars, " %lld", instr->operand.intVal);
             break;
         }
         case OP_PUSH_LOCAL_PTR:
@@ -1019,12 +1040,15 @@ int vmAsm(int ip, Instruction *instr, char *buf)
         case OP_GOTO_IF:
         case OP_CALL:
         case OP_RETURN:
-        case OP_ENTER_FRAME:    chars += sprintf(buf + chars, ", %lld", instr->operand.intVal); break;
-        case OP_CALL_EXTERN:    chars += sprintf(buf + chars, ", %p",   instr->operand.ptrVal); break;
-        case OP_CALL_BUILTIN:   chars += sprintf(buf + chars, ", %s",   builtinSpelling[instr->operand.builtinVal]); break;
+        case OP_ENTER_FRAME:    chars += sprintf(buf + chars, " %lld", instr->operand.intVal); break;
+        case OP_CALL_EXTERN:    chars += sprintf(buf + chars, " %p",   instr->operand.ptrVal); break;
+        case OP_CALL_BUILTIN:   chars += sprintf(buf + chars, " %s",   builtinSpelling[instr->operand.builtinVal]); break;
 
         default: break;
     }
+
+    if (instr->inlineDeref)
+        chars += sprintf(buf + chars, "; DEREF");
 
     return chars;
 }

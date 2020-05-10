@@ -4,6 +4,8 @@
 #include "umka_gen.h"
 
 
+// Common functions
+
 void genInit(CodeGen *gen, DebugInfo *debug, ErrorFunc error)
 {
     gen->capacity = 1000;
@@ -36,8 +38,48 @@ static void genAddInstr(CodeGen *gen, const Instruction *instr)
         genRealloc(gen);
 
     gen->code[gen->ip] = *instr;
+    gen->code[gen->ip].inlineDeref = false;
     gen->code[gen->ip].debug = *gen->debug;
+
     gen->ip++;
+}
+
+
+// Peephole optimizations
+
+static bool peepholeFound(CodeGen *gen, int size)
+{
+    if (gen->ip < size)
+        return false;
+
+    // No branching within the peephole
+    if (gen->top >= 0)
+        if (gen->ip < gen->stack[gen->top] + size)
+            return false;
+
+    return true;
+}
+
+
+static bool optimizeDeref(CodeGen *gen, TypeKind typeKind)
+{
+    if (!peepholeFound(gen, 1))
+        return false;
+
+    Instruction *prev = &gen->code[gen->ip - 1];
+
+    // Optimization: (OP_PUSH | ...) + OP_DEREF -> (OP_PUSH | ...), DEREF
+    if ((prev->opcode == OP_PUSH && prev->typeKind == TYPE_PTR) ||
+         prev->opcode == OP_PUSH_LOCAL_PTR                      ||
+         prev->opcode == OP_GET_ARRAY_PTR                       ||
+         prev->opcode == OP_GET_DYNARRAY_PTR)
+    {
+        prev->inlineDeref = true;
+        prev->typeKind = typeKind;
+        return true;
+    }
+
+    return false;
 }
 
 
@@ -122,8 +164,11 @@ void genSwap(CodeGen *gen)
 
 void genDeref(CodeGen *gen, TypeKind typeKind)
 {
-    const Instruction instr = {.opcode = OP_DEREF, .tokKind = TOK_NONE, .typeKind = typeKind, .operand.intVal = 0};
-    genAddInstr(gen, &instr);
+    if (!optimizeDeref(gen, typeKind))
+    {
+        const Instruction instr = {.opcode = OP_DEREF, .tokKind = TOK_NONE, .typeKind = typeKind, .operand.intVal = 0};
+        genAddInstr(gen, &instr);
+    }
 }
 
 
@@ -171,14 +216,14 @@ void genBinary(CodeGen *gen, TokenKind tokKind, TypeKind typeKind, int bufOffset
 
 void genGetArrayPtr(CodeGen *gen, int itemSize)
 {
-    const Instruction instr = {.opcode = OP_GET_ARRAY_PTR, .tokKind = TOK_NONE, .typeKind = TYPE_VOID, .operand.intVal = itemSize};
+    const Instruction instr = {.opcode = OP_GET_ARRAY_PTR, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = itemSize};
     genAddInstr(gen, &instr);
 }
 
 
 void genGetDynArrayPtr(CodeGen *gen)
 {
-    const Instruction instr = {.opcode = OP_GET_DYNARRAY_PTR, .tokKind = TOK_NONE, .typeKind = TYPE_VOID, .operand.intVal = 0};
+    const Instruction instr = {.opcode = OP_GET_DYNARRAY_PTR, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = 0};
     genAddInstr(gen, &instr);
 }
 
@@ -486,6 +531,9 @@ char *genAsm(CodeGen *gen, char *buf)
 
         chars += vmAsm(ip, &gen->code[ip], buf + chars);
         chars += sprintf(buf + chars, "\n");
+
+        if (gen->code[ip].opcode == OP_GOTO || gen->code[ip].opcode == OP_GOTO_IF)
+            chars += sprintf(buf + chars, "\n");
 
     } while (gen->code[ip++].opcode != OP_HALT);
 
