@@ -9,7 +9,7 @@
 #include "umka_vm.h"
 
 
-static char *spelling [] =
+static char *opcodeSpelling [] =
 {
     "NOP",
     "PUSH",
@@ -38,6 +38,38 @@ static char *spelling [] =
     "ENTER_FRAME",
     "LEAVE_FRAME",
     "HALT"
+};
+
+
+static char *builtinSpelling [] =
+{
+    "printf",
+    "fprintf",
+    "sprintf",
+    "scanf",
+    "fscanf",
+    "sscanf",
+    "real",
+    "real_lhs",
+    "round",
+    "trunc",
+    "fabs",
+    "sqrt",
+    "sin",
+    "cos",
+    "atan",
+    "exp",
+    "log",
+    "new",
+    "make",
+    "makefrom",
+    "append",
+    "len",
+    "sizeof",
+    "fiberspawn",
+    "fiberfree",
+    "fibercall",
+    "fiberalive"
 };
 
 
@@ -945,9 +977,6 @@ void vmRun(VM *vm)
 {
     while (vm->fiber->alive && vm->fiber->code[vm->fiber->ip].opcode != OP_HALT)
     {
-        //char buf[256];
-        //printf("%s\n", vmAsm(&vm->fiber.code[vm->fiber.ip], buf));
-
         Fiber *newFiber = NULL;
         fiberStep(vm->fiber, &newFiber, &vm->chunks, vm->error);
         if (newFiber)
@@ -956,9 +985,46 @@ void vmRun(VM *vm)
 }
 
 
-char *vmAsm(Instruction *instr, char *buf)
+int vmAsm(int ip, Instruction *instr, char *buf)
 {
-    sprintf(buf, "%16s %10s %8s %16X", spelling[instr->opcode], lexSpelling(instr->tokKind),
-                                       typeKindSpelling(instr->typeKind), (int)instr->operand.intVal);
-    return buf;
+    int chars = sprintf(buf, "%09d %6d %16s", ip, instr->debug.line, opcodeSpelling[instr->opcode]);
+
+    if (instr->tokKind != TOK_NONE)
+        chars += sprintf(buf + chars, ", %s", lexSpelling(instr->tokKind));
+
+    if (instr->typeKind != TYPE_NONE)
+        chars += sprintf(buf + chars, ", %s", typeKindSpelling(instr->typeKind));
+
+    switch (instr->opcode)
+    {
+        case OP_PUSH:
+        {
+            if (instr->typeKind == TYPE_REAL)
+                chars += sprintf(buf + chars, ", %.8lf", instr->operand.realVal);
+            else if (instr->typeKind == TYPE_PTR)
+                chars += sprintf(buf + chars, ", %p", instr->operand.ptrVal);
+            else
+                chars += sprintf(buf + chars, ", %lld", instr->operand.intVal);
+            break;
+        }
+        case OP_PUSH_LOCAL_PTR:
+        case OP_PUSH_REG:
+        case OP_PUSH_STRUCT:
+        case OP_POP_REG:
+        case OP_ASSIGN:
+        case OP_ASSIGN_OFS:
+        case OP_BINARY:
+        case OP_GET_ARRAY_PTR:
+        case OP_GOTO:
+        case OP_GOTO_IF:
+        case OP_CALL:
+        case OP_RETURN:
+        case OP_ENTER_FRAME:    chars += sprintf(buf + chars, ", %lld", instr->operand.intVal); break;
+        case OP_CALL_EXTERN:    chars += sprintf(buf + chars, ", %p",   instr->operand.ptrVal); break;
+        case OP_CALL_BUILTIN:   chars += sprintf(buf + chars, ", %s",   builtinSpelling[instr->operand.builtinVal]); break;
+
+        default: break;
+    }
+
+    return chars;
 }

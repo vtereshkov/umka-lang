@@ -7,6 +7,12 @@
 #include "umka_api.h"
 
 
+enum
+{
+    ASM_BUF_SIZE = 2 * 1024 * 1024
+};
+
+
 // Umka extension example
 void meow(UmkaStackSlot *params, UmkaStackSlot *result)
 {
@@ -21,12 +27,16 @@ int main(int argc, char **argv)
     if (argc < 2)
     {
         printf("Umka interpreter (C) Vasiliy Tereshkov, 2020\n");
-        printf("Usage: umka <file.um> [-storage <storage-size>] [-stack <stack-size>]\n");
+        printf("Usage: umka <file.um> [<parameters>] [<script-parameters>]\n");
+        printf("    -storage <storage-size>\n");
+        printf("    -stack   <stack-size>\n");
+        printf("    -asm     <output.asm>\n");
         return 1;
     }
 
-    int storageSize = 1024 * 1024;  // Bytes
-    int stackSize   = 1024 * 1024;  // Slots
+    int storageSize     = 1024 * 1024;  // Bytes
+    int stackSize       = 1024 * 1024;  // Slots
+    char *asmFileName   = NULL;
 
     for (int i = 0; i < 4; i += 2)
     {
@@ -62,6 +72,16 @@ int main(int argc, char **argv)
                     return 1;
                 }
             }
+            else if (strcmp(argv[2 + i], "-asm") == 0)
+            {
+                if (argc == 2 + i + 1)
+                {
+                    printf("Illegal command line parameter\n");
+                    return 1;
+                }
+
+                asmFileName = argv[2 + i + 1];
+            }
         }
     }
 
@@ -75,6 +95,28 @@ int main(int argc, char **argv)
 
     if (res == 0)
     {
+        if (asmFileName)
+        {
+            char *asmBuf = malloc(ASM_BUF_SIZE);
+            umkaAsm(asmBuf);
+
+            FILE *asmFile = fopen(asmFileName, "w");
+            if (!asmFile)
+            {
+                printf("Cannot open file %s\n", asmFileName);
+                return 1;
+            }
+            if (fwrite(asmBuf, strlen(asmBuf), 1, asmFile) != 1)
+            {
+                printf("Cannot write file %s\n", asmFileName);
+                return 1;
+            }
+
+            fclose(asmFile);
+            free(asmBuf);
+        }
+
+
         res = umkaRun(stackSize);
 
         if (res != 0)

@@ -66,7 +66,7 @@ void genPushRealConst(CodeGen *gen, double realVal)
 
 void genPushGlobalPtr(CodeGen *gen, void *ptrVal)
 {
-    const Instruction instr = {.opcode = OP_PUSH, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.ptrVal = ptrVal};
+    const Instruction instr = {.opcode = OP_PUSH, .tokKind = TOK_NONE, .typeKind = TYPE_PTR, .operand.ptrVal = ptrVal};
     genAddInstr(gen, &instr);
 }
 
@@ -475,16 +475,19 @@ void genGotosEpilog(CodeGen *gen, Gotos *gotos)
 
 char *genAsm(CodeGen *gen, char *buf)
 {
-    int ip = 0, pos = 0;
+    int ip = 0, chars = 0;
     do
     {
-        char instrBuf[DEFAULT_STR_LEN + 1];
-        pos += sprintf(buf + pos, "%08X %s\n", ip, vmAsm(&gen->code[ip], instrBuf));
+        if (ip == 0 || gen->code[ip].debug.fileName != gen->code[ip - 1].debug.fileName)
+            chars += sprintf(buf + chars, "\n\nModule: %s\n", gen->code[ip].debug.fileName);
+
+        if (gen->code[ip].opcode == OP_ENTER_FRAME)
+            chars += sprintf(buf + chars, "\n\n");
+
+        chars += vmAsm(ip, &gen->code[ip], buf + chars);
+        chars += sprintf(buf + chars, "\n");
+
     } while (gen->code[ip++].opcode != OP_HALT);
 
     return buf;
 }
-
-
-
-

@@ -1,5 +1,5 @@
 # depslib dependency file v1.0
-1588822370 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka.c
+1589120287 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka.c
 	<stdio.h>
 	<stdlib.h>
 	<string.h>
