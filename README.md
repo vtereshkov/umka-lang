@@ -14,7 +14,7 @@ Umka is a statically typed embeddable scripting language. It combines the simpli
 * C99 source
 
 ## Getting Started
-* Download [release 0.1](https://github.com/vtereshkov/umka-lang/releases) for Windows and Linux (_Note:_ both versions use `/` as path separator)
+* Download the latest [release](https://github.com/vtereshkov/umka-lang/releases) for Windows and Linux (_Note:_ both versions use `/` as path separator)
 * Take a tour of Umka (see below)
 * Explore the [raytracer example](https://github.com/vtereshkov/umka-lang/blob/master/examples/raytracer.um) that demonstrates many language features like fibers, interfaces and dynamic arrays
 
