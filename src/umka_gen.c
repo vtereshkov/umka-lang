@@ -39,6 +39,7 @@ static void genAddInstr(CodeGen *gen, const Instruction *instr)
 
     gen->code[gen->ip] = *instr;
     gen->code[gen->ip].inlineDeref = false;
+    gen->code[gen->ip].inlinePop = false;
     gen->code[gen->ip].debug = *gen->debug;
 
     gen->ip++;
@@ -59,6 +60,26 @@ static bool peepholeFound(CodeGen *gen, int size)
             return false;
 
     return true;
+}
+
+
+static bool optimizePop(CodeGen *gen)
+{
+    if (!peepholeFound(gen, 1))
+        return false;
+
+    Instruction *prev = &gen->code[gen->ip - 1];
+
+    // Optimization: (TRY_INC_REF_CNT | TRY_DEC_REF_CNT) + POP -> (TRY_INC_REF_CNT | TRY_DEC_REF_CNT); POP
+    if ((prev->opcode == OP_TRY_INC_REF_CNT  ||
+         prev->opcode == OP_TRY_DEC_REF_CNT) &&
+        !prev->inlinePop)
+    {
+        prev->inlinePop = true;
+        return true;
+    }
+
+    return false;
 }
 
 
@@ -165,8 +186,11 @@ void genPushStruct(CodeGen *gen, int size)
 
 void genPop(CodeGen *gen)
 {
-    const Instruction instr = {.opcode = OP_POP, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = 0};
-    genAddInstr(gen, &instr);
+    if (!optimizePop(gen))
+    {
+        const Instruction instr = {.opcode = OP_POP, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = 0};
+        genAddInstr(gen, &instr);
+    }
 }
 
 

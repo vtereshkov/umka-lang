@@ -114,10 +114,11 @@ typedef union
 typedef struct
 {
     Opcode opcode;
-    TokenKind tokKind;  // Unary/binary operation token
-    TypeKind typeKind;  // Slot type kind
+    TokenKind tokKind;              // Unary/binary operation token
+    TypeKind typeKind;              // Slot type kind
     Slot operand;
-    bool inlineDeref;   // Short form of OP_PUSH + OP_DEREF etc.
+    bool inlineDeref;               // Compound instruction flag (PUSH + DEREF etc.)
+    bool inlinePop;                 // Compound instruction flag (TRY_INC_REF_CNT + POP etc.)
     DebugInfo debug;
 } Instruction;
 

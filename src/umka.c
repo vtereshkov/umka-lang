@@ -28,6 +28,7 @@ int main(int argc, char **argv)
     {
         printf("Umka interpreter (C) Vasiliy Tereshkov, 2020\n");
         printf("Usage: umka <file.um> [<parameters>] [<script-parameters>]\n");
+        printf("Parameters:\n");
         printf("    -storage <storage-size>\n");
         printf("    -stack   <stack-size>\n");
         printf("    -asm     <output.asm>\n");

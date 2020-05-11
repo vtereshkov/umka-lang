@@ -619,6 +619,10 @@ static void doTryIncRefCnt(Fiber *fiber, HeapChunks *chunks)
 {
     void *ptr = fiber->top->ptrVal;
     chunkTryIncCnt(chunks, ptr);
+
+    if (fiber->code[fiber->ip].inlinePop)
+        fiber->top++;
+
     fiber->ip++;
 }
 
@@ -627,6 +631,10 @@ static void doTryDecRefCnt(Fiber *fiber, HeapChunks *chunks)
 {
     void *ptr = fiber->top->ptrVal;
     chunkTryDecCnt(chunks, ptr);
+
+    if (fiber->code[fiber->ip].inlinePop)
+        fiber->top++;
+
     fiber->ip++;
 }
 
@@ -1091,6 +1099,9 @@ int vmAsm(int ip, Instruction *instr, char *buf)
 
     if (instr->inlineDeref)
         chars += sprintf(buf + chars, "; DEREF");
+
+    if (instr->inlinePop)
+        chars += sprintf(buf + chars, "; POP");
 
     return chars;
 }
