@@ -208,9 +208,23 @@ void genAssign(CodeGen *gen, TypeKind typeKind, int structSize)
 }
 
 
+void genSwapAssign(CodeGen *gen, TypeKind typeKind, int structSize)
+{
+    const Instruction instr = {.opcode = OP_SWAP_ASSIGN, .tokKind = TOK_NONE, .typeKind = typeKind, .operand.intVal = structSize};
+    genAddInstr(gen, &instr);
+}
+
+
 void genAssignOfs(CodeGen *gen, int offset)
 {
     const Instruction instr = {.opcode = OP_ASSIGN_OFS, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = offset};
+    genAddInstr(gen, &instr);
+}
+
+
+void genSwapAssignOfs(CodeGen *gen, int offset)
+{
+    const Instruction instr = {.opcode = OP_SWAP_ASSIGN_OFS, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = offset};
     genAddInstr(gen, &instr);
 }
 

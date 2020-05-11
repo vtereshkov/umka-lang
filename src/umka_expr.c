@@ -32,8 +32,7 @@ static void doCopyResultToTempVar(Compiler *comp, Type *type)
 
     genDup(&comp->gen);
     doPushVarPtr(comp, __temp);
-    genSwap(&comp->gen);
-    genAssign(&comp->gen, type->kind, typeSize(&comp->types, type));
+    genSwapAssign(&comp->gen, type->kind, typeSize(&comp->types, type));
 }
 
 
@@ -86,8 +85,7 @@ static void doUpdateDynArrayItemsRefCnt(Compiler *comp, Type *type, Ident *ident
     int iOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, comp->intType));
     genPushLocalPtr(&comp->gen, iOffset);
 
-    genSwap(&comp->gen);
-    genAssign(&comp->gen, TYPE_INT, 0);
+    genSwapAssign(&comp->gen, TYPE_INT, 0);
 
     // for i >= 0 {
     genWhileCondProlog(&comp->gen);
@@ -217,9 +215,8 @@ static void doConcreteToInterfaceConv(Compiler *comp, Type *dest, Type **src, Co
 
     // Assign __self (offset 0)
     // Assignment to an anonymous stack area does not require updating reference counts
-    genPushLocalPtr(&comp->gen, destOffset);                // Push dest pointer
-    genSwap(&comp->gen);                                    // For assignment, dest should come first
-    genAssignOfs(&comp->gen, 0);                            // Assign to dest with zero offset
+    genPushLocalPtr(&comp->gen, destOffset);                    // Push dest pointer
+    genSwapAssignOfs(&comp->gen, 0);                            // Assign to dest with zero offset
 
     // Assign methods
     for (int i = 1; i < dest->numItems; i++)
@@ -232,9 +229,9 @@ static void doConcreteToInterfaceConv(Compiler *comp, Type *dest, Type **src, Co
 
         typeAssertCompatible(&comp->types, dest->field[i]->type, srcMethod->type);
 
-        genPushLocalPtr(&comp->gen, destOffset);            // Push dest pointer
-        genPushIntConst(&comp->gen, srcMethod->offset);     // Push src value
-        genAssignOfs(&comp->gen, dest->field[i]->offset);   // Assign to dest with non-zero offset
+        genPushLocalPtr(&comp->gen, destOffset);                // Push dest pointer
+        genPushIntConst(&comp->gen, srcMethod->offset);         // Push src value
+        genAssignOfs(&comp->gen, dest->field[i]->offset);       // Assign to dest with non-zero offset
     }
 
     genPushLocalPtr(&comp->gen, destOffset);
@@ -252,11 +249,10 @@ static void doInterfaceToInterfaceConv(Compiler *comp, Type *dest, Type **src, C
 
     // Assign __self (offset 0)
     // Assignment to an anonymous stack area does not require updating reference counts
-    genDup(&comp->gen);                                     // Duplicate src pointer
-    genDeref(&comp->gen, TYPE_PTR);                         // Get __self value
-    genPushLocalPtr(&comp->gen, destOffset);                // Push dest pointer
-    genSwap(&comp->gen);                                    // For assignment, dest should come first
-    genAssignOfs(&comp->gen, 0);                            // Assign to dest with zero offset
+    genDup(&comp->gen);                                         // Duplicate src pointer
+    genDeref(&comp->gen, TYPE_PTR);                             // Get __self value
+    genPushLocalPtr(&comp->gen, destOffset);                    // Push dest pointer
+    genSwapAssignOfs(&comp->gen, 0);                            // Assign to dest with zero offset
 
     // Assign methods
     for (int i = 1; i < dest->numItems; i++)
@@ -268,15 +264,14 @@ static void doInterfaceToInterfaceConv(Compiler *comp, Type *dest, Type **src, C
 
         typeAssertCompatible(&comp->types, dest->field[i]->type, srcMethod->type);
 
-        genDup(&comp->gen);                                 // Duplicate src pointer
-        genGetFieldPtr(&comp->gen, srcMethod->offset);      // Get src method entry point
-        genDeref(&comp->gen, TYPE_PTR);                     // Get method entry point
-        genPushLocalPtr(&comp->gen, destOffset);            // Push dest pointer
-        genSwap(&comp->gen);                                // For assignment, dest should come first
-        genAssignOfs(&comp->gen, dest->field[i]->offset);   // Assign to dest with non-zero offset
+        genDup(&comp->gen);                                     // Duplicate src pointer
+        genGetFieldPtr(&comp->gen, srcMethod->offset);          // Get src method entry point
+        genDeref(&comp->gen, TYPE_PTR);                         // Get method entry point
+        genPushLocalPtr(&comp->gen, destOffset);                // Push dest pointer
+        genSwapAssignOfs(&comp->gen, dest->field[i]->offset);   // Assign to dest with non-zero offset
     }
 
-    genPop(&comp->gen);                                     // Remove src pointer
+    genPop(&comp->gen);                                         // Remove src pointer
     genPushLocalPtr(&comp->gen, destOffset);
     *src = dest;
 }
@@ -551,8 +546,7 @@ static void parseBuiltinAppendCall(Compiler *comp, Type **type, Const *constant)
         // Assignment to an anonymous stack area does not require updating reference counts
         int itemOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, itemType));
         genPushLocalPtr(&comp->gen, itemOffset);
-        genSwap(&comp->gen);
-        genAssign(&comp->gen, itemType->kind, 0);
+        genSwapAssign(&comp->gen, itemType->kind, 0);
 
         genPushLocalPtr(&comp->gen, itemOffset);
     }

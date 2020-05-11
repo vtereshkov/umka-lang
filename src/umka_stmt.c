@@ -82,9 +82,8 @@ void parseAssignmentStmt(Compiler *comp, Type *type, void *initializedVarPtr)
         // TODO: optimize reference count decrement
         genSwap(&comp->gen);
         doUpdateRefCnt(comp, type, NULL, true, false, 0);
-        genSwap(&comp->gen);
 
-        genAssign(&comp->gen, type->kind, typeSize(&comp->types, type));
+        genSwapAssign(&comp->gen, type->kind, typeSize(&comp->types, type));
     }
 }
 
@@ -119,9 +118,8 @@ static void parseShortAssignmentStmt(Compiler *comp, Type *type, TokenKind op)
     // TODO: optimize reference count decrement
     genSwap(&comp->gen);
     doUpdateRefCnt(comp, type, NULL, true, false, 0);
-    genSwap(&comp->gen);
 
-    genAssign(&comp->gen, type->kind, typeSize(&comp->types, type));
+    genSwapAssign(&comp->gen, type->kind, typeSize(&comp->types, type));
 }
 
 
@@ -143,12 +141,11 @@ void parseDeclAssignmentStmt(Compiler *comp, IdentName name, bool constExpr, boo
         constAssign(&comp->consts, ident->ptr, rightConstant, rightType->kind, typeSize(&comp->types, rightType));
     else                                        // Assign to local variable
     {
-        doPushVarPtr(comp, ident);
-        genSwap(&comp->gen);                    // Assignment requires that the left-hand side comes first
-
         // Increase right-hand side reference count
         doUpdateRefCnt(comp, rightType, NULL, false, true, 0);
-        genAssign(&comp->gen, rightType->kind, typeSize(&comp->types, rightType));
+
+        doPushVarPtr(comp, ident);
+        genSwapAssign(&comp->gen, rightType->kind, typeSize(&comp->types, rightType));
     }
 }
 
@@ -476,10 +473,9 @@ static void parseReturnStmt(Compiler *comp)
 
         doPushVarPtr(comp, __result);
         genDeref(&comp->gen, TYPE_PTR);
-        genSwap(&comp->gen);
 
-        // Assignment to an anonymouns stack area (pointed to by __result) does not require updating reference counts
-        genAssign(&comp->gen, sig->resultType[0]->kind, typeSize(&comp->types, sig->resultType[0]));
+        // Assignment to an anonymous stack area (pointed to by __result) does not require updating reference counts
+        genSwapAssign(&comp->gen, sig->resultType[0]->kind, typeSize(&comp->types, sig->resultType[0]));
 
         doPushVarPtr(comp, __result);
         genDeref(&comp->gen, TYPE_PTR);

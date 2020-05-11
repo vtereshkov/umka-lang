@@ -22,7 +22,9 @@ static char *opcodeSpelling [] =
     "SWAP",
     "DEREF",
     "ASSIGN",
+    "SWAP_ASSIGN",
     "ASSIGN_OFS",
+    "SWAP_ASSIGN_OFS",
     "TRY_INC_REF_CNT",
     "TRY_DEC_REF_CNT",
     "UNARY",
@@ -205,7 +207,7 @@ void vmFree(VM *vm)
 }
 
 
-static void doInlineDeref(Slot *slot, TypeKind typeKind, ErrorFunc error)
+static void doBasicDeref(Slot *slot, TypeKind typeKind, ErrorFunc error)
 {
     switch (typeKind)
     {
@@ -227,6 +229,34 @@ static void doInlineDeref(Slot *slot, TypeKind typeKind, ErrorFunc error)
         case TYPE_STRUCT:
         case TYPE_INTERFACE:    slot->intVal  =  (int64_t   )slot->ptrVal; break;  // Always represented by pointer, not dereferenced
         case TYPE_FN:           slot->ptrVal  = *(void *   *)slot->ptrVal; break;
+
+        default:                error("Illegal type"); return;
+    }
+}
+
+
+static void doBasicAssign(void *lhs, Slot rhs, TypeKind typeKind, int structSize, ErrorFunc error)
+{
+    switch (typeKind)
+    {
+        case TYPE_INT8:         *(int8_t   *)lhs = rhs.intVal; break;
+        case TYPE_INT16:        *(int16_t  *)lhs = rhs.intVal; break;
+        case TYPE_INT32:        *(int32_t  *)lhs = rhs.intVal; break;
+        case TYPE_INT:          *(int64_t  *)lhs = rhs.intVal; break;
+        case TYPE_UINT8:        *(uint8_t  *)lhs = rhs.intVal; break;
+        case TYPE_UINT16:       *(uint16_t *)lhs = rhs.intVal; break;
+        case TYPE_UINT32:       *(uint32_t *)lhs = rhs.intVal; break;
+        case TYPE_BOOL:         *(bool     *)lhs = rhs.intVal; break;
+        case TYPE_CHAR:         *(char     *)lhs = rhs.intVal; break;
+        case TYPE_REAL32:       *(float    *)lhs = rhs.realVal; break;
+        case TYPE_REAL:         *(double   *)lhs = rhs.realVal; break;
+        case TYPE_PTR:          *(void *   *)lhs = rhs.ptrVal; break;
+        case TYPE_ARRAY:
+        case TYPE_DYNARRAY:
+        case TYPE_STRUCT:
+        case TYPE_INTERFACE:    memcpy(lhs, rhs.ptrVal, structSize); break;
+        case TYPE_STR:          strcpy(lhs, rhs.ptrVal); break;
+        case TYPE_FN:           *(void *   *)lhs = rhs.ptrVal; break;
 
         default:                error("Illegal type"); return;
     }
@@ -466,7 +496,7 @@ static void doPush(Fiber *fiber, ErrorFunc error)
     (--fiber->top)->intVal = fiber->code[fiber->ip].operand.intVal;
 
     if (fiber->code[fiber->ip].inlineDeref)
-        doInlineDeref(fiber->top, fiber->code[fiber->ip].typeKind, error);
+        doBasicDeref(fiber->top, fiber->code[fiber->ip].typeKind, error);
 
     fiber->ip++;
 }
@@ -478,7 +508,7 @@ static void doPushLocalPtr(Fiber *fiber, ErrorFunc error)
     (--fiber->top)->ptrVal = (int8_t *)fiber->base + fiber->code[fiber->ip].operand.intVal;
 
     if (fiber->code[fiber->ip].inlineDeref)
-        doInlineDeref(fiber->top, fiber->code[fiber->ip].typeKind, error);
+        doBasicDeref(fiber->top, fiber->code[fiber->ip].typeKind, error);
 
     fiber->ip++;
 }
@@ -540,7 +570,7 @@ static void doSwap(Fiber *fiber)
 
 static void doDeref(Fiber *fiber, ErrorFunc error)
 {
-    doInlineDeref(fiber->top, fiber->code[fiber->ip].typeKind, error);
+    doBasicDeref(fiber->top, fiber->code[fiber->ip].typeKind, error);
     fiber->ip++;
 }
 
@@ -549,34 +579,16 @@ static void doAssign(Fiber *fiber, ErrorFunc error)
 {
     Slot rhs = *fiber->top++;
     void *lhs = (fiber->top++)->ptrVal;
-    switch (fiber->code[fiber->ip].typeKind)
-    {
-        case TYPE_INT8:   *(int8_t   *)lhs = rhs.intVal; break;
-        case TYPE_INT16:  *(int16_t  *)lhs = rhs.intVal; break;
-        case TYPE_INT32:  *(int32_t  *)lhs = rhs.intVal; break;
-        case TYPE_INT:    *(int64_t  *)lhs = rhs.intVal; break;
-        case TYPE_UINT8:  *(uint8_t  *)lhs = rhs.intVal; break;
-        case TYPE_UINT16: *(uint16_t *)lhs = rhs.intVal; break;
-        case TYPE_UINT32: *(uint32_t *)lhs = rhs.intVal; break;
-        case TYPE_BOOL:   *(bool     *)lhs = rhs.intVal; break;
-        case TYPE_CHAR:   *(char     *)lhs = rhs.intVal; break;
-        case TYPE_REAL32: *(float    *)lhs = rhs.realVal; break;
-        case TYPE_REAL:   *(double   *)lhs = rhs.realVal; break;
-        case TYPE_PTR:    *(void *   *)lhs = rhs.ptrVal; break;
-        case TYPE_ARRAY:
-        case TYPE_DYNARRAY:
-        case TYPE_STRUCT:
-        case TYPE_INTERFACE:
-        {
-            int size = fiber->code[fiber->ip].operand.intVal;
-            memcpy(lhs, rhs.ptrVal, size);
-            break;
-        }
-        case TYPE_STR:    strcpy(lhs, rhs.ptrVal); break;
-        case TYPE_FN:     *(void *   *)lhs = rhs.ptrVal; break;
+    doBasicAssign(lhs, rhs, fiber->code[fiber->ip].typeKind, fiber->code[fiber->ip].operand.intVal, error);
+    fiber->ip++;
+}
 
-        default:          error("Illegal type"); return;
-    }
+
+static void doSwapAssign(Fiber *fiber, ErrorFunc error)
+{
+    void *lhs = (fiber->top++)->ptrVal;
+    Slot rhs = *fiber->top++;
+    doBasicAssign(lhs, rhs, fiber->code[fiber->ip].typeKind, fiber->code[fiber->ip].operand.intVal, error);
     fiber->ip++;
 }
 
@@ -585,6 +597,17 @@ static void doAssignOfs(Fiber *fiber)
 {
     Slot rhs = *fiber->top++;
     void *lhs = (fiber->top++)->ptrVal;
+    int offset = fiber->code[fiber->ip].operand.intVal;
+
+    *(Slot *)(lhs + offset) = rhs;
+    fiber->ip++;
+}
+
+
+static void doSwapAssignOfs(Fiber *fiber)
+{
+    void *lhs = (fiber->top++)->ptrVal;
+    Slot rhs = *fiber->top++;
     int offset = fiber->code[fiber->ip].operand.intVal;
 
     *(Slot *)(lhs + offset) = rhs;
@@ -777,7 +800,7 @@ static void doGetArrayPtr(Fiber *fiber, ErrorFunc error)
     fiber->top->ptrVal += itemSize * index;
 
     if (fiber->code[fiber->ip].inlineDeref)
-        doInlineDeref(fiber->top, fiber->code[fiber->ip].typeKind, error);
+        doBasicDeref(fiber->top, fiber->code[fiber->ip].typeKind, error);
 
     fiber->ip++;
 }
@@ -797,7 +820,7 @@ static void doGetDynArrayPtr(Fiber *fiber, ErrorFunc error)
     (--fiber->top)->ptrVal = array->data + itemSize * index;
 
     if (fiber->code[fiber->ip].inlineDeref)
-        doInlineDeref(fiber->top, fiber->code[fiber->ip].typeKind, error);
+        doBasicDeref(fiber->top, fiber->code[fiber->ip].typeKind, error);
 
     fiber->ip++;
 }
@@ -809,7 +832,7 @@ static void doGetFieldPtr(Fiber *fiber, ErrorFunc error)
     fiber->top->ptrVal += fieldOffset;
 
     if (fiber->code[fiber->ip].inlineDeref)
-        doInlineDeref(fiber->top, fiber->code[fiber->ip].typeKind, error);
+        doBasicDeref(fiber->top, fiber->code[fiber->ip].typeKind, error);
 
     fiber->ip++;
 }
@@ -986,7 +1009,9 @@ void fiberStep(Fiber *fiber, Fiber **newFiber, HeapChunks *chunks, ErrorFunc err
         case OP_SWAP:               doSwap(fiber);                                 break;
         case OP_DEREF:              doDeref(fiber, error);                         break;
         case OP_ASSIGN:             doAssign(fiber, error);                        break;
+        case OP_SWAP_ASSIGN:        doSwapAssign(fiber, error);                    break;
         case OP_ASSIGN_OFS:         doAssignOfs(fiber);                            break;
+        case OP_SWAP_ASSIGN_OFS:    doSwapAssignOfs(fiber);                        break;
         case OP_TRY_INC_REF_CNT:    doTryIncRefCnt(fiber, chunks);                 break;
         case OP_TRY_DEC_REF_CNT:    doTryDecRefCnt(fiber, chunks);                 break;
         case OP_UNARY:              doUnary(fiber, error);                         break;
@@ -1047,7 +1072,9 @@ int vmAsm(int ip, Instruction *instr, char *buf)
         case OP_PUSH_STRUCT:
         case OP_POP_REG:
         case OP_ASSIGN:
+        case OP_SWAP_ASSIGN:
         case OP_ASSIGN_OFS:
+        case OP_SWAP_ASSIGN_OFS:
         case OP_BINARY:
         case OP_GET_ARRAY_PTR:
         case OP_GET_FIELD_PTR:
