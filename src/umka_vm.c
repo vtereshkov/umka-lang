@@ -1072,7 +1072,7 @@ int vmAsm(int ip, Instruction *instr, char *buf)
             else if (instr->typeKind == TYPE_PTR)
                 chars += sprintf(buf + chars, " %p", instr->operand.ptrVal);
             else
-                chars += sprintf(buf + chars, " %lld", instr->operand.intVal);
+                chars += sprintf(buf + chars, " %lld", (long long int)instr->operand.intVal);
             break;
         }
         case OP_PUSH_LOCAL_PTR:
@@ -1090,7 +1090,7 @@ int vmAsm(int ip, Instruction *instr, char *buf)
         case OP_GOTO_IF:
         case OP_CALL:
         case OP_RETURN:
-        case OP_ENTER_FRAME:    chars += sprintf(buf + chars, " %lld", instr->operand.intVal); break;
+        case OP_ENTER_FRAME:    chars += sprintf(buf + chars, " %lld", (long long int)instr->operand.intVal); break;
         case OP_CALL_EXTERN:    chars += sprintf(buf + chars, " %p",   instr->operand.ptrVal); break;
         case OP_CALL_BUILTIN:   chars += sprintf(buf + chars, " %s",   builtinSpelling[instr->operand.builtinVal]); break;
 
