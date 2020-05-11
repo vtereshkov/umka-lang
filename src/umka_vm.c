@@ -78,13 +78,13 @@ static char *builtinSpelling [] =
 
 // Heap chunks
 
-void chunkInit(HeapChunks *chunks)
+static void chunkInit(HeapChunks *chunks)
 {
     chunks->first = chunks->last = NULL;
 }
 
 
-void chunkFree(HeapChunks *chunks)
+static void chunkFree(HeapChunks *chunks)
 {
     HeapChunk *chunk = chunks->first;
     while (chunk)
@@ -152,7 +152,7 @@ static HeapChunk *chunkFind(HeapChunks *chunks, void *ptr)
 }
 
 
-bool chunkTryIncCnt(HeapChunks *chunks, void *ptr)
+static bool chunkTryIncCnt(HeapChunks *chunks, void *ptr)
 {
     HeapChunk *chunk = chunkFind(chunks, ptr);
     if (chunk)
@@ -165,7 +165,7 @@ bool chunkTryIncCnt(HeapChunks *chunks, void *ptr)
 }
 
 
-bool chunkTryDecCnt(HeapChunks *chunks, void *ptr)
+static bool chunkTryDecCnt(HeapChunks *chunks, void *ptr)
 {
     HeapChunk *chunk = chunkFind(chunks, ptr);
     if (chunk)
@@ -1000,7 +1000,7 @@ static void doLeaveFrame(Fiber *fiber)
 }
 
 
-void fiberStep(Fiber *fiber, Fiber **newFiber, HeapChunks *chunks, ErrorFunc error)
+static void fiberStep(Fiber *fiber, Fiber **newFiber, HeapChunks *chunks, ErrorFunc error)
 {
     if (fiber->top - fiber->stack < VM_MIN_FREE_STACK)
         error("Stack overflow");

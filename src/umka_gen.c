@@ -83,6 +83,26 @@ static bool optimizePop(CodeGen *gen)
 }
 
 
+static bool optimizeSwapAssign(CodeGen *gen, TypeKind typeKind, int structSize)
+{
+    if (!peepholeFound(gen, 1))
+        return false;
+
+    Instruction *prev = &gen->code[gen->ip - 1];
+
+    // Optimization: SWAP + SWAP_ASSIGN -> ASSIGN
+    if (prev->opcode == OP_SWAP)
+    {
+        gen->ip -= 1;
+        const Instruction instr = {.opcode = OP_ASSIGN, .tokKind = TOK_NONE, .typeKind = typeKind, .operand.intVal = structSize};
+        genAddInstr(gen, &instr);
+        return true;
+    }
+
+    return false;
+}
+
+
 static bool optimizeDeref(CodeGen *gen, TypeKind typeKind)
 {
     if (!peepholeFound(gen, 1))
@@ -234,8 +254,11 @@ void genAssign(CodeGen *gen, TypeKind typeKind, int structSize)
 
 void genSwapAssign(CodeGen *gen, TypeKind typeKind, int structSize)
 {
-    const Instruction instr = {.opcode = OP_SWAP_ASSIGN, .tokKind = TOK_NONE, .typeKind = typeKind, .operand.intVal = structSize};
-    genAddInstr(gen, &instr);
+    if (!optimizeSwapAssign(gen, typeKind, structSize))
+    {
+        const Instruction instr = {.opcode = OP_SWAP_ASSIGN, .tokKind = TOK_NONE, .typeKind = typeKind, .operand.intVal = structSize};
+        genAddInstr(gen, &instr);
+    }
 }
 
 
