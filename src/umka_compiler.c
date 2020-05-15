@@ -9,20 +9,22 @@ void parseProgram(Compiler *comp);
 
 static void compilerDeclareBuiltinTypes(Compiler *comp)
 {
-    typeAdd(&comp->types, &comp->blocks, TYPE_VOID);    comp->voidType   = comp->types.last;
-    typeAdd(&comp->types, &comp->blocks, TYPE_INT8);    comp->int8Type   = comp->types.last;
-    typeAdd(&comp->types, &comp->blocks, TYPE_INT16);   comp->int16Type  = comp->types.last;
-    typeAdd(&comp->types, &comp->blocks, TYPE_INT32);   comp->int32Type  = comp->types.last;
-    typeAdd(&comp->types, &comp->blocks, TYPE_INT);     comp->intType    = comp->types.last;
-    typeAdd(&comp->types, &comp->blocks, TYPE_UINT8);   comp->uint8Type  = comp->types.last;
-    typeAdd(&comp->types, &comp->blocks, TYPE_UINT16);  comp->uint16Type = comp->types.last;
-    typeAdd(&comp->types, &comp->blocks, TYPE_UINT32);  comp->uint32Type = comp->types.last;
-    typeAdd(&comp->types, &comp->blocks, TYPE_BOOL);    comp->boolType   = comp->types.last;
-    typeAdd(&comp->types, &comp->blocks, TYPE_CHAR);    comp->charType   = comp->types.last;
-    typeAdd(&comp->types, &comp->blocks, TYPE_REAL32);  comp->real32Type = comp->types.last;
-    typeAdd(&comp->types, &comp->blocks, TYPE_REAL);    comp->realType   = comp->types.last;
+    comp->voidType   = typeAdd(&comp->types, &comp->blocks, TYPE_VOID);
+    comp->nullType   = typeAdd(&comp->types, &comp->blocks, TYPE_NULL);
+    comp->int8Type   = typeAdd(&comp->types, &comp->blocks, TYPE_INT8);
+    comp->int16Type  = typeAdd(&comp->types, &comp->blocks, TYPE_INT16);
+    comp->int32Type  = typeAdd(&comp->types, &comp->blocks, TYPE_INT32);
+    comp->intType    = typeAdd(&comp->types, &comp->blocks, TYPE_INT);
+    comp->uint8Type  = typeAdd(&comp->types, &comp->blocks, TYPE_UINT8);
+    comp->uint16Type = typeAdd(&comp->types, &comp->blocks, TYPE_UINT16);
+    comp->uint32Type = typeAdd(&comp->types, &comp->blocks, TYPE_UINT32);
+    comp->boolType   = typeAdd(&comp->types, &comp->blocks, TYPE_BOOL);
+    comp->charType   = typeAdd(&comp->types, &comp->blocks, TYPE_CHAR);
+    comp->real32Type = typeAdd(&comp->types, &comp->blocks, TYPE_REAL32);
+    comp->realType   = typeAdd(&comp->types, &comp->blocks, TYPE_REAL);
 
     comp->ptrVoidType = typeAddPtrTo(&comp->types, &comp->blocks, comp->voidType);
+    comp->ptrNullType = typeAddPtrTo(&comp->types, &comp->blocks, comp->nullType);
 
     comp->strType = typeAdd(&comp->types, &comp->blocks, TYPE_STR);
     comp->strType->base = comp->charType;
@@ -39,7 +41,7 @@ static void compilerDeclareBuiltinIdents(Compiler *comp)
 
     identAddConst(&comp->idents, &comp->modules, &comp->blocks, "true",  comp->boolType,    true, trueConst);
     identAddConst(&comp->idents, &comp->modules, &comp->blocks, "false", comp->boolType,    true, falseConst);
-    identAddConst(&comp->idents, &comp->modules, &comp->blocks, "null",  comp->ptrVoidType, true, nullConst);
+    identAddConst(&comp->idents, &comp->modules, &comp->blocks, "null",  comp->ptrNullType, true, nullConst);
 
     // Types
     identAddType(&comp->idents, &comp->modules, &comp->blocks,  "void",     comp->voidType,    true);

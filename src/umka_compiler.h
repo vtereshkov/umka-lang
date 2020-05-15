@@ -28,12 +28,14 @@ typedef struct
 
     // Pointers to built-in types
     Type *voidType,
+         *nullType,
          *int8Type,  *int16Type,  *int32Type,  *intType,
          *uint8Type, *uint16Type, *uint32Type,
          *boolType,
          *charType,
          *real32Type, *realType,
          *ptrVoidType,
+         *ptrNullType,
          *strType;
 
     // Command-line arguments

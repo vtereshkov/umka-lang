@@ -15,6 +15,12 @@ void constFree(Consts *consts)
 }
 
 
+void constZero(void *lhs, int size)
+{
+    memset(lhs, 0, size);
+}
+
+
 void constAssign(Consts *consts, void *lhs, Const *rhs, TypeKind typeKind, int size)
 {
     switch (typeKind)
@@ -121,6 +127,8 @@ void constBinary(Consts *consts, Const *lhs, const Const *rhs, TokenKind tokKind
                 break;
             }
 
+            case TOK_SHL:   lhs->intVal <<= rhs->intVal; break;
+            case TOK_SHR:   lhs->intVal >>= rhs->intVal; break;
             case TOK_AND:   lhs->intVal &= rhs->intVal; break;
             case TOK_OR:    lhs->intVal |= rhs->intVal; break;
             case TOK_XOR:   lhs->intVal ^= rhs->intVal; break;

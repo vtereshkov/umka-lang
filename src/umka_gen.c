@@ -70,10 +70,8 @@ static bool optimizePop(CodeGen *gen)
 
     Instruction *prev = &gen->code[gen->ip - 1];
 
-    // Optimization: (TRY_INC_REF_CNT | TRY_DEC_REF_CNT) + POP -> (TRY_INC_REF_CNT | TRY_DEC_REF_CNT); POP
-    if ((prev->opcode == OP_TRY_INC_REF_CNT  ||
-         prev->opcode == OP_TRY_DEC_REF_CNT) &&
-        !prev->inlinePop)
+    // Optimization: CHANGE_REF_CNT + POP -> CHANGE_REF_CNT; POP
+    if (prev->opcode == OP_CHANGE_REF_CNT && !prev->inlinePop)
     {
         prev->inlinePop = true;
         return true;
@@ -235,6 +233,13 @@ void genSwap(CodeGen *gen)
 }
 
 
+void genZero(CodeGen *gen, int size)
+{
+    const Instruction instr = {.opcode = OP_ZERO, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = size};
+    genAddInstr(gen, &instr);
+}
+
+
 void genDeref(CodeGen *gen, TypeKind typeKind)
 {
     if (!optimizeDeref(gen, typeKind))
@@ -276,16 +281,9 @@ void genSwapAssignOfs(CodeGen *gen, int offset)
 }
 
 
-void genTryIncRefCnt(CodeGen *gen)
+void genChangeRefCnt(CodeGen *gen, TokenKind tokKind, Type *type)
 {
-    const Instruction instr = {.opcode = OP_TRY_INC_REF_CNT, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = 0};
-    genAddInstr(gen, &instr);
-}
-
-
-void genTryDecRefCnt(CodeGen *gen)
-{
-    const Instruction instr = {.opcode = OP_TRY_DEC_REF_CNT, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = 0};
+    const Instruction instr = {.opcode = OP_CHANGE_REF_CNT, .tokKind = tokKind, .typeKind = TYPE_NONE, .operand.ptrVal = type};
     genAddInstr(gen, &instr);
 }
 

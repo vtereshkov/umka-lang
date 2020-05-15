@@ -36,125 +36,19 @@ static void doCopyResultToTempVar(Compiler *comp, Type *type)
 }
 
 
-static void doUpdatePointerRefCnt(Compiler *comp, Ident *ident, bool lhs, bool increment, int offset)
+void doUpdateRefCnt(Compiler *comp, Type *type, bool lhs, TokenKind tokKind)
 {
-    // If it is a left-hand side, we need to have its copy to dereference, check and then remove it
-    if (lhs)
+    if (typeGarbageCollected(type))
     {
-        // Load ident if specified, otherwise duplicate the pointer at the stack top
-        if (ident)
-            doPushVarPtr(comp, ident);
-        else
+        if (lhs)
+        {
             genDup(&comp->gen);
-
-        genGetFieldPtr(&comp->gen, offset);
-        genDeref(&comp->gen, TYPE_PTR);
-    }
-
-    if (increment)
-        genTryIncRefCnt(&comp->gen);
-    else
-        genTryDecRefCnt(&comp->gen);
-
-    if (lhs)
-        genPop(&comp->gen);
-}
-
-
-static void doUpdateDynArrayItemsRefCnt(Compiler *comp, Type *type, Ident *ident, bool lhs, bool increment, int offset)
-{
-    // Load ident if specified, otherwise duplicate the pointer at the stack top
-    if (ident)
-        doPushVarPtr(comp, ident);
-    else
-        genDup(&comp->gen);
-
-    genGetFieldPtr(&comp->gen, offset);
-
-    // Save array pointer to dedicated register
-    genPopReg(&comp->gen, VM_DYNARRAY_REG);
-
-    // Traverse all array items
-
-    // i := len(array) - 1
-    genPushReg(&comp->gen, VM_DYNARRAY_REG);
-    genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_LEN);
-    genPushIntConst(&comp->gen, 1);
-    genBinary(&comp->gen, TOK_MINUS, TYPE_INT, 0);
-
-    int iOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, comp->intType));
-    genPushLocalPtr(&comp->gen, iOffset);
-
-    genSwapAssign(&comp->gen, TYPE_INT, 0);
-
-    // for i >= 0 {
-    genWhileCondProlog(&comp->gen);
-
-    genPushLocalPtr(&comp->gen, iOffset);
-    genDeref(&comp->gen, TYPE_INT);
-    genPushIntConst(&comp->gen, 0);
-    genBinary(&comp->gen, TOK_GREATEREQ, TYPE_INT, 0);
-
-    genWhileCondEpilog(&comp->gen);
-
-    // doUpdateRefCnt(array[i])
-    genPushReg(&comp->gen, VM_DYNARRAY_REG);
-    genPushLocalPtr(&comp->gen, iOffset);
-    genDeref(&comp->gen, TYPE_INT);
-    genGetDynArrayPtr(&comp->gen);
-
-    doUpdateRefCnt(comp, type->base, NULL, true, increment, 0);
-    genPop(&comp->gen);
-
-    // i--
-    genPushLocalPtr(&comp->gen, iOffset);
-    genUnary(&comp->gen, TOK_MINUSMINUS, TYPE_INT);
-
-    // ...}
-    genWhileEpilog(&comp->gen);
-}
-
-
-void doUpdateRefCnt(Compiler *comp, Type *type, Ident *ident, bool lhs, bool increment, int offset)
-{
-    // Update reference counts for pointers (including array items and structure/interface fields) if allocated dynamically
-
-    switch (type->kind)
-    {
-        case TYPE_PTR:
-        {
-            doUpdatePointerRefCnt(comp, ident, lhs, increment, offset);
-            break;
+            genDeref(&comp->gen, type->kind);
+            genChangeRefCnt(&comp->gen, tokKind, type);
+            genPop(&comp->gen);
         }
-
-        case TYPE_ARRAY:
-        {
-            for (int i = 0; i < type->numItems; i++)
-                doUpdateRefCnt(comp, type->base, ident, true, increment, offset + i * typeSize(&comp->types, type->base));
-            break;
-        }
-
-        case TYPE_DYNARRAY:
-        {
-            if (type->base->kind == TYPE_ARRAY  || type->base->kind == TYPE_DYNARRAY  ||
-                type->base->kind == TYPE_STRUCT || type->base->kind == TYPE_INTERFACE || type->base->kind == TYPE_PTR)
-            {
-                doUpdateDynArrayItemsRefCnt(comp, type, ident, lhs, increment, offset);
-            }
-
-            doUpdateRefCnt(comp, comp->ptrVoidType, ident, true, increment, offset + offsetof(DynArray, data));
-            break;
-        }
-
-        case TYPE_STRUCT:
-        case TYPE_INTERFACE:
-        {
-            for (int i = 0; i < type->numItems; i++)
-                doUpdateRefCnt(comp, type->field[i]->type, ident, true, increment, offset + type->field[i]->offset);
-            break;
-        }
-
-        default: break;
+        else
+            genChangeRefCnt(&comp->gen, tokKind, type);
     }
 }
 
@@ -728,7 +622,7 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
         genPushReg(&comp->gen, VM_SELF_REG);
 
         // Increase receiver's reference count
-        doUpdateRefCnt(comp, (*type)->sig.param[0]->type, NULL, false, true, 0);
+        doUpdateRefCnt(comp, (*type)->sig.param[0]->type, false, TOK_PLUSPLUS);
 
         numPreHiddenParams++;
         i++;
@@ -754,7 +648,7 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
             typeAssertCompatible(&comp->types, formalParamType, actualParamType);
 
             // Increase parameter's reference count
-            doUpdateRefCnt(comp, formalParamType, NULL, false, true, 0);
+            doUpdateRefCnt(comp, formalParamType, false, TOK_PLUSPLUS);
 
             // Copy structured parameter if passed by value
             if (typeStructured(formalParamType))
@@ -855,7 +749,8 @@ static void parsePrimary(Compiler *comp, Ident *ident, Type **type, Const *const
 // derefSelector = "^".
 static void parseDerefSelector(Compiler *comp, Type **type, Const *constant, bool *isVar, bool *isCall)
 {
-    if ((*type)->kind != TYPE_PTR || (*type)->base->kind != TYPE_PTR || (*type)->base->base->kind == TYPE_VOID)
+    if ((*type)->kind != TYPE_PTR || (*type)->base->kind != TYPE_PTR ||
+        (*type)->base->base->kind == TYPE_VOID || (*type)->base->base->kind == TYPE_NULL)
         comp->error("Typed pointer expected");
 
     lexNext(&comp->lex);

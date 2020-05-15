@@ -453,9 +453,9 @@ static void parseVarDeclItem(Compiler *comp)
     Type *varType;
     parseTypedIdentList(comp, varNames, varExported, MAX_FIELDS, &numVars, &varType);
 
-    Ident *var = NULL;
+    Ident *var[MAX_FIELDS];
     for (int i = 0; i < numVars; i++)
-        var = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, varNames[i], varType, varExported[i]);
+        var[i] = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, varNames[i], varType, varExported[i]);
 
     // Initializer
     if (comp->lex.tok.kind == TOK_EQ)
@@ -463,18 +463,21 @@ static void parseVarDeclItem(Compiler *comp)
         if (numVars != 1)
             comp->error("Unable to initialize multiple variables");
 
-        Type *designatorType = typeAddPtrTo(&comp->types, &comp->blocks, var->type);
+        Type *designatorType = typeAddPtrTo(&comp->types, &comp->blocks, var[0]->type);
 
         void *initializedVarPtr = NULL;
 
         if (comp->blocks.top == 0)          // Globals are initialized with constant expressions
-            initializedVarPtr = var->ptr;
+            initializedVarPtr = var[0]->ptr;
         else                                // Locals are assigned to
-            doPushVarPtr(comp, var);
+            doPushVarPtr(comp, var[0]);
 
         lexNext(&comp->lex);
         parseAssignmentStmt(comp, designatorType, initializedVarPtr);
     }
+    else
+        for (int i = 0; i < numVars; i++)
+            doZeroVar(comp, var[i]);
 }
 
 

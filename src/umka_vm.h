@@ -39,13 +39,13 @@ typedef enum
     OP_POP_REG,
     OP_DUP,
     OP_SWAP,
+    OP_ZERO,
     OP_DEREF,
     OP_ASSIGN,
     OP_SWAP_ASSIGN,
     OP_ASSIGN_OFS,
     OP_SWAP_ASSIGN_OFS,
-    OP_TRY_INC_REF_CNT,
-    OP_TRY_DEC_REF_CNT,
+    OP_CHANGE_REF_CNT,
     OP_UNARY,
     OP_BINARY,
     OP_GET_ARRAY_PTR,
@@ -118,7 +118,7 @@ typedef struct
     TypeKind typeKind;              // Slot type kind
     Slot operand;
     bool inlineDeref;               // Compound instruction flag (PUSH + DEREF etc.)
-    bool inlinePop;                 // Compound instruction flag (TRY_INC_REF_CNT + POP etc.)
+    bool inlinePop;                 // Compound instruction flag (CHANGE_REF_CNT + POP)
     DebugInfo debug;
 } Instruction;
 
@@ -139,6 +139,7 @@ typedef struct tagHeapChunk
     void *ptr;
     int size;
     int refCnt;
+    bool inheritsRefs;
     struct tagHeapChunk *prev, *next;
 } HeapChunk;
 

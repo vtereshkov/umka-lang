@@ -10,6 +10,7 @@ typedef enum
     TYPE_NONE,
     TYPE_FORWARD,
     TYPE_VOID,
+    TYPE_NULL,      // Base type for 'null' constant only
     TYPE_INT8,
     TYPE_INT16,
     TYPE_INT32,
@@ -96,14 +97,17 @@ void typeFree(Types *types, int startBlock /* < 0 to free in all blocks*/);
 Type *typeAdd       (Types *types, Blocks *blocks, TypeKind kind);
 void typeDeepCopy   (Type *dest, Type *src);
 Type *typeAddPtrTo  (Types *types, Blocks *blocks, Type *type);
+
+int typeSizeRuntime (Type *type);
 int typeSize        (Types *types, Type *type);
 
-bool typeInteger    (Type *type);
-bool typeOrdinal    (Type *type);
-bool typeCastable   (Type *type);
-bool typeReal       (Type *type);
-bool typeStructured (Type *type);
-bool typeFiberFunc  (Type *type);
+bool typeInteger            (Type *type);
+bool typeOrdinal            (Type *type);
+bool typeCastable           (Type *type);
+bool typeReal               (Type *type);
+bool typeStructured         (Type *type);
+bool typeGarbageCollected   (Type *type);
+bool typeFiberFunc          (Type *type);
 
 bool typeEquivalent         (Type *left, Type *right);
 bool typeAssertEquivalent   (Types *types, Type *left, Type *right);

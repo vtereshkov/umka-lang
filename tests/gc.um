@@ -31,13 +31,13 @@ fn g2(): ^int {a := new(int); return a}
 
 fn h2(): st {
     d := new(int)
-    return st{x: 3, p: d, y: 5, q: d}
+    return st{x: 7, p: d, y: 5, q: d}
 }
 
 var a: ^[]int
 
 fn main() {
-    std.println("See memory leak warnings")
+    std.println("See any memory leak warnings?")
  
     a = new([1000] int)
     b := a

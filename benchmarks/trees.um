@@ -1,0 +1,9 @@
+type Node = struct {
+    next: ^Node
+}
+
+fn main() {
+    node := new(Node)
+    node.next = new(Node)
+    node.next.next = new(Node)
+}

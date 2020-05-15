@@ -12,6 +12,7 @@ static char *spelling [] =
     "none",
     "forward",
     "void",
+    "null",
     "int8",
     "int16",
     "int32",
@@ -142,7 +143,7 @@ Type *typeAddPtrTo(Types *types, Blocks *blocks, Type *type)
 }
 
 
-int typeSize(Types *types, Type *type)
+int typeSizeRuntime(Type *type)
 {
     switch (type->kind)
     {
@@ -162,31 +163,34 @@ int typeSize(Types *types, Type *type)
         case TYPE_ARRAY:
         {
             if (type->numItems == -1)
-            {
-                char buf[DEFAULT_STR_LEN + 1];
-                types->error("Illegal type %s", typeSpelling(type, buf));
-            }
-            return type->numItems * typeSize(types, type->base);
+                return -1;
+            return type->numItems * typeSizeRuntime(type->base);
         }
         case TYPE_DYNARRAY: return sizeof(DynArray);
-        case TYPE_STR:      return type->numItems * typeSize(types, type->base);
+        case TYPE_STR:      return type->numItems * typeSizeRuntime(type->base);
         case TYPE_STRUCT:
         case TYPE_INTERFACE:
         {
             int size = 0;
             for (int i = 0; i < type->numItems; i++)
-                size += typeSize(types, type->field[i]->type);
+                size += typeSizeRuntime(type->field[i]->type);
             return size;
         }
         case TYPE_FN:       return sizeof(void *);
-
-        default:
-            {
-            char buf[DEFAULT_STR_LEN + 1];
-            types->error("Illegal type %s", typeSpelling(type, buf));
-            return 0;
-            }
+        default:            return -1;
     }
+}
+
+
+int typeSize(Types *types, Type *type)
+{
+    int size = typeSizeRuntime(type);
+    if (size < 0)
+    {
+        char buf[DEFAULT_STR_LEN + 1];
+        types->error("Illegal type %s", typeSpelling(type, buf));
+    }
+    return size;
 }
 
 
@@ -218,6 +222,13 @@ bool typeReal(Type *type)
 bool typeStructured(Type *type)
 {
     return type->kind == TYPE_ARRAY  || type->kind == TYPE_DYNARRAY || type->kind == TYPE_STR ||
+           type->kind == TYPE_STRUCT || type->kind == TYPE_INTERFACE;
+}
+
+
+bool typeGarbageCollected(Type *type)
+{
+    return type->kind == TYPE_PTR    || type->kind == TYPE_ARRAY || type->kind == TYPE_DYNARRAY ||
            type->kind == TYPE_STRUCT || type->kind == TYPE_INTERFACE;
 }
 
@@ -376,6 +387,11 @@ bool typeCompatible(Type *left, Type *right)
         right->kind == TYPE_PTR)
         return true;
 
+    // Null can be assigned to any pointer
+    if (left->kind  == TYPE_PTR &&
+        right->kind == TYPE_PTR && right->base->kind == TYPE_NULL)
+        return true;
+
     // Any pointer to array can be assigned to a pointer to open array
     if (left->kind  == TYPE_PTR && left->base->kind  == TYPE_ARRAY && left->base->numItems == -1 &&
         right->kind == TYPE_PTR && right->base->kind == TYPE_ARRAY)
@@ -425,7 +441,7 @@ bool typeValidOperator(Type *type, TokenKind op)
         case TOK_OROR:      return type->kind == TYPE_BOOL;
         case TOK_PLUSPLUS:
         case TOK_MINUSMINUS:return typeInteger(type);
-        case TOK_EQEQ:
+        case TOK_EQEQ:      return typeOrdinal(type) || typeReal(type) || type->kind == TYPE_PTR || type->kind == TYPE_STR;
         case TOK_LESS:
         case TOK_GREATER:   return typeOrdinal(type) || typeReal(type) || type->kind == TYPE_STR;
         case TOK_EQ:        return true;

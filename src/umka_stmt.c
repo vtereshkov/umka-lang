@@ -9,6 +9,18 @@ static void parseStmtList(Compiler *comp);
 static void parseBlock(Compiler *comp);
 
 
+void doZeroVar(Compiler *comp, Ident *ident)
+{
+    if (ident->block == 0)
+        constZero(ident->ptr, typeSize(&comp->types, ident->type));
+    else
+    {
+        doPushVarPtr(comp, ident);
+        genZero(&comp->gen, typeSize(&comp->types, ident->type));
+    }
+}
+
+
 void doResolveExtern(Compiler *comp)
 {
     for (Ident *ident = comp->idents.first; ident; ident = ident->next)
@@ -33,8 +45,12 @@ static void doGarbageCollection(Compiler *comp, int block)
 {
     // TODO: Eliminate memory leak when a heap-allocated structure with a heap-allocated field is converted to an interface (type info gets lost)
     for (Ident *ident = comp->idents.first; ident; ident = ident->next)
-        if (ident->kind == IDENT_VAR && ident->block == block)
-            doUpdateRefCnt(comp, ident->type, ident, true, false, 0);
+        if (ident->kind == IDENT_VAR && ident->block == block && typeGarbageCollected(ident->type))
+        {
+            doPushVarPtr(comp, ident);
+            doUpdateRefCnt(comp, ident->type, true, TOK_MINUSMINUS);
+            genPop(&comp->gen);
+        }
 }
 
 
@@ -76,12 +92,12 @@ void parseAssignmentStmt(Compiler *comp, Type *type, void *initializedVarPtr)
     else                        // Assign to local variable
     {
         // Increase right-hand side reference count
-        doUpdateRefCnt(comp, type, NULL, false, true, 0);
+        doUpdateRefCnt(comp, type, false, TOK_PLUSPLUS);
 
         // Decrease old left-hand side reference count
         // TODO: optimize reference count decrement
         genSwap(&comp->gen);
-        doUpdateRefCnt(comp, type, NULL, true, false, 0);
+        doUpdateRefCnt(comp, type, true, TOK_MINUSMINUS);
 
         genSwapAssign(&comp->gen, type->kind, typeSize(&comp->types, type));
     }
@@ -112,12 +128,12 @@ static void parseShortAssignmentStmt(Compiler *comp, Type *type, TokenKind op)
     doApplyOperator(comp, &type, &rightType, NULL, NULL, lexShortAssignment(op), true, false);
 
     // Increase right-hand side reference count
-    doUpdateRefCnt(comp, type, NULL, false, true, 0);
+    doUpdateRefCnt(comp, type, false, TOK_PLUSPLUS);
 
     // Decrease old left-hand side reference count
     // TODO: optimize reference count decrement
     genSwap(&comp->gen);
-    doUpdateRefCnt(comp, type, NULL, true, false, 0);
+    doUpdateRefCnt(comp, type, true, TOK_MINUSMINUS);
 
     genSwapAssign(&comp->gen, type->kind, typeSize(&comp->types, type));
 }
@@ -142,7 +158,7 @@ void parseDeclAssignmentStmt(Compiler *comp, IdentName name, bool constExpr, boo
     else                                        // Assign to local variable
     {
         // Increase right-hand side reference count
-        doUpdateRefCnt(comp, rightType, NULL, false, true, 0);
+        doUpdateRefCnt(comp, rightType, false, TOK_PLUSPLUS);
 
         doPushVarPtr(comp, ident);
         genSwapAssign(&comp->gen, rightType->kind, typeSize(&comp->types, rightType));
@@ -484,7 +500,7 @@ static void parseReturnStmt(Compiler *comp)
     if (sig->resultType[0]->kind != TYPE_VOID)
     {
         // Increase result reference count
-        doUpdateRefCnt(comp, sig->resultType[0], NULL, false, true, 0);
+        doUpdateRefCnt(comp, sig->resultType[0], false, TOK_PLUSPLUS);
         genPopReg(&comp->gen, VM_RESULT_REG_0);
     }
 
