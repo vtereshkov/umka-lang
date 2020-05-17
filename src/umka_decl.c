@@ -475,9 +475,10 @@ static void parseVarDeclItem(Compiler *comp)
         lexNext(&comp->lex);
         parseAssignmentStmt(comp, designatorType, initializedVarPtr);
     }
-    else
+    // Zeros (locals are zeroed automatically upon entering stack frame)
+    else if (var[0]->block == 0)
         for (int i = 0; i < numVars; i++)
-            doZeroVar(comp, var[i]);
+            constZero(var[i]->ptr, typeSize(&comp->types, var[i]->type));
 }
 
 

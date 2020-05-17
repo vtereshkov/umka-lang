@@ -8,7 +8,7 @@
 
 #include "umka_vm.h"
 
-//#define REF_CNT_DEBUG
+//#define DEBUG_REF_CNT
 
 
 static char *opcodeSpelling [] =
@@ -22,7 +22,6 @@ static char *opcodeSpelling [] =
     "POP_REG",
     "DUP",
     "SWAP",
-    "ZERO",
     "DEREF",
     "ASSIGN",
     "SWAP_ASSIGN",
@@ -107,14 +106,14 @@ static HeapChunk *chunkAdd(HeapChunks *chunks, int size)
 {
     HeapChunk *chunk = malloc(sizeof(HeapChunk));
 
-#ifdef REF_CNT_DEBUG
+#ifdef DEBUG_REF_CNT
     printf("+");
 #endif
     chunk->ptr = malloc(size);
     memset(chunk->ptr, 0, size);
     chunk->size = size;
     chunk->refCnt = 1;
-    chunk->inheritsRefs = false;
+    chunk->extraRefCnt = 0;
     chunk->prev = chunks->last;
     chunk->next = NULL;
 
@@ -158,23 +157,14 @@ static HeapChunk *chunkFind(HeapChunks *chunks, void *ptr)
 }
 
 
-static int chunkGetCnt(HeapChunks *chunks, void *ptr)
-{
-    HeapChunk *chunk = chunkFind(chunks, ptr);
-    if (chunk)
-        return chunk->refCnt;
-    return 0;
-}
-
-
 static bool chunkTryIncCnt(HeapChunks *chunks, void *ptr)
 {
     HeapChunk *chunk = chunkFind(chunks, ptr);
     if (chunk)
     {
-#ifdef REF_CNT_DEBUG
+#ifdef DEBUG_REF_CNT
         printf("+");
-#endif // REF_CNT_DEBUG
+#endif // DEBUG_REF_CNT
 
         chunk->refCnt++;
         return true;
@@ -188,9 +178,9 @@ static bool chunkTryDecCnt(HeapChunks *chunks, void *ptr)
     HeapChunk *chunk = chunkFind(chunks, ptr);
     if (chunk)
     {
-#ifdef REF_CNT_DEBUG
+#ifdef DEBUG_REF_CNT
         printf("-");
-#endif // REF_CNT_DEBUG
+#endif // DEBUG_REF_CNT
 
         if (--chunk->refCnt == 0)
             chunkRemove(chunks, chunk);
@@ -201,6 +191,20 @@ static bool chunkTryDecCnt(HeapChunks *chunks, void *ptr)
 
 
 // Virtual machine
+
+// Static copies of some external functions that allow inlining
+static int alignRuntime(int size, int alignment)
+{
+    return ((size + (alignment - 1)) / alignment) * alignment;
+}
+
+
+static bool typeGarbageCollectedRuntime(Type *type)
+{
+    return type->kind == TYPE_PTR    || type->kind == TYPE_ARRAY || type->kind == TYPE_DYNARRAY ||
+           type->kind == TYPE_STRUCT || type->kind == TYPE_INTERFACE;
+}
+
 
 void vmInit(VM *vm, Instruction *code, int stackSize, ErrorFunc error)
 {
@@ -290,57 +294,79 @@ static void doBasicAssign(void *lhs, Slot rhs, TypeKind typeKind, int structSize
 }
 
 
-static void doBasicChangeRefCnt(Fiber *fiber, HeapChunks *chunks, void *ptr, Type *type, int inheritedRefCnt, TokenKind tokKind, ErrorFunc error)
+static void doBasicChangeRefCnt(Fiber *fiber, HeapChunks *chunks, void *ptr, Type *type, int extraRefCnt, bool root, TokenKind tokKind, ErrorFunc error)
 {
-    // Update reference counts for pointers (including array items and structure/interface fields) if allocated dynamically
-    // Among garbage collected types, all types except pointer type are represented by pointers by default
+    // Update ref counts for pointers (including static/dynamic array items and structure/interface fields) if allocated dynamically
+    // Ref count is the total number of ways through which the node is accessible, not just a number of immediate refs
+    // Among garbage collected types, all types except the pointer type are represented by pointers by default
+
+    // RTTI is required for lists, trees, etc., since the propagation depth for the root ref count is unknown at compile time
+    // Root ref count is propagated by means of an "extra ref" count equal to the parent ref count minus one ref through which we reached the child
+    // "Extra ref" count is updated just before decreasing ref counts through the whole data structure
+
+    // TODO: consider structures like a -> c <- b
+
     switch (type->kind)
     {
         case TYPE_PTR:
         {
-            int curRefCnt = 0;
-            HeapChunk *chunk = chunkFind(chunks, ptr);
-            if (chunk)
-            {
-                curRefCnt = chunk->refCnt;
-                if (!chunk->inheritsRefs && inheritedRefCnt > 0)
-                {
-#ifdef REF_CNT_DEBUG
-                    for (int i = 0; i < inheritedRefCnt - 1; i++)
-                        printf("+");
-#endif // REF_CNT_DEBUG
-                    chunk->refCnt += inheritedRefCnt - 1;
-                    chunk->inheritsRefs = true;
-                }
-            }
-
-            if (ptr && typeGarbageCollected(type->base))
-            {
-                void *data = ptr;
-                if (type->base->kind == TYPE_PTR)
-                    data = *(void **)data;
-
-                doBasicChangeRefCnt(fiber, chunks, data, type->base, curRefCnt, tokKind, error);
-            }
-
             if (tokKind == TOK_PLUSPLUS)
                 chunkTryIncCnt(chunks, ptr);
             else
+            {
+                int newExtraRefCnt = extraRefCnt;
+                HeapChunk *chunk = chunkFind(chunks, ptr);
+                if (chunk)
+                {
+                    if (!root)
+                    {
+                        int deltaExtraRefCnt = extraRefCnt - chunk->extraRefCnt;
+                        chunk->extraRefCnt = extraRefCnt;
+#ifdef DEBUG_REF_CNT
+                        if (deltaExtraRefCnt < 0)
+                            printf("Extra ref count delta < 0\n");
+                        for (int i = 0; i < deltaExtraRefCnt; i++)
+                            printf("*");
+                        printf("|");
+#endif // DEBUG_REF_CNT
+                        chunk->refCnt += deltaExtraRefCnt;
+                    }
+
+                    newExtraRefCnt = chunk->refCnt - 1;
+                }
+
+                if (0 && ptr && typeGarbageCollectedRuntime(type->base))
+                {
+                    void *data = ptr;
+                    if (type->base->kind == TYPE_PTR)
+                        data = *(void **)data;
+
+                    doBasicChangeRefCnt(fiber, chunks, data, type->base, newExtraRefCnt, false, tokKind, error);
+                }
+
+                if (!root && chunk && chunk->extraRefCnt > 0)
+                    chunk->extraRefCnt--;
+
                 chunkTryDecCnt(chunks, ptr);
+            }
             break;
         }
 
         case TYPE_ARRAY:
         {
-            if (typeGarbageCollected(type->base))
+            if (typeGarbageCollectedRuntime(type->base))
             {
+                void *itemPtr = ptr;
+                int itemSize = typeSizeRuntime(type->base);
+
                 for (int i = 0; i < type->numItems; i++)
                 {
-                    void *item = ptr + i * typeSizeRuntime(type->base);
-                     if (type->base->kind == TYPE_PTR)
+                    void *item = itemPtr;
+                    if (type->base->kind == TYPE_PTR)
                         item = *(void **)item;
 
-                    doBasicChangeRefCnt(fiber, chunks, item, type->base, inheritedRefCnt, tokKind, error);
+                    doBasicChangeRefCnt(fiber, chunks, item, type->base, extraRefCnt, root, tokKind, error);
+                    itemPtr += itemSize;
                 }
             }
             break;
@@ -350,15 +376,18 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapChunks *chunks, void *ptr, Typ
         {
             DynArray *array = (DynArray *)ptr;
 
-            if (typeGarbageCollected(type->base))
+            if (typeGarbageCollectedRuntime(type->base))
             {
+                void *itemPtr = array->data;
+
                 for (int i = 0; i < array->len; i++)
                 {
-                    void *item = array->data + i * array->itemSize;
+                    void *item = itemPtr;
                     if (type->base->kind == TYPE_PTR)
                         item = *(void **)item;
 
-                    doBasicChangeRefCnt(fiber, chunks, item, type->base, inheritedRefCnt, tokKind, error);
+                    doBasicChangeRefCnt(fiber, chunks, item, type->base, extraRefCnt, root, tokKind, error);
+                    itemPtr += array->itemSize;
                 }
             }
 
@@ -374,13 +403,13 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapChunks *chunks, void *ptr, Typ
         {
             for (int i = 0; i < type->numItems; i++)
             {
-                if (typeGarbageCollected(type->field[i]->type))
+                if (typeGarbageCollectedRuntime(type->field[i]->type))
                 {
                     void *field = ptr + type->field[i]->offset;
                     if (type->field[i]->type->kind == TYPE_PTR)
                         field = *(void **)field;
 
-                    doBasicChangeRefCnt(fiber, chunks, field, type->field[i]->type, inheritedRefCnt, tokKind, error);
+                    doBasicChangeRefCnt(fiber, chunks, field, type->field[i]->type, extraRefCnt, root, tokKind, error);
                 }
             }
             break;
@@ -653,7 +682,7 @@ static void doPushStruct(Fiber *fiber, ErrorFunc error)
 {
     void *src = (fiber->top++)->ptrVal;
     int size  = fiber->code[fiber->ip].operand.intVal;
-    int slots = align(size, sizeof(Slot)) / sizeof(Slot);
+    int slots = alignRuntime(size, sizeof(Slot)) / sizeof(Slot);
 
     if (fiber->top - slots - fiber->stack < VM_MIN_FREE_STACK)
         error("Stack overflow");
@@ -692,20 +721,6 @@ static void doSwap(Fiber *fiber)
     Slot val = *fiber->top;
     *fiber->top = *(fiber->top + 1);
     *(fiber->top + 1) = val;
-    fiber->ip++;
-}
-
-
-static void doZero(Fiber *fiber)
-{
-    void *ptr = (fiber->top++)->ptrVal;
-    int size = fiber->code[fiber->ip].operand.intVal;
-
-    if (size == sizeof(int64_t))
-        *(int64_t *)ptr = 0;
-    else
-        memset(ptr, 0, size);
-
     fiber->ip++;
 }
 
@@ -763,7 +778,7 @@ static void doChangeRefCnt(Fiber *fiber, HeapChunks *chunks, ErrorFunc error)
     TokenKind tokKind = fiber->code[fiber->ip].tokKind;
     Type *type        = fiber->code[fiber->ip].operand.ptrVal;
 
-    doBasicChangeRefCnt(fiber, chunks, ptr, type, 0, tokKind, error);
+    doBasicChangeRefCnt(fiber, chunks, ptr, type, 0, true, tokKind, error);
 
     if (fiber->code[fiber->ip].inlinePop)
         fiber->top++;
@@ -1105,7 +1120,7 @@ static void doEnterFrame(Fiber *fiber, ErrorFunc error)
 {
     // Push old stack frame base pointer, move new one to stack top, shift stack top by local variables' size
     int size = fiber->code[fiber->ip].operand.intVal;
-    int slots = align(size, sizeof(Slot)) / sizeof(Slot);
+    int slots = alignRuntime(size, sizeof(Slot)) / sizeof(Slot);
 
     if (fiber->top - slots - fiber->stack < VM_MIN_FREE_STACK)
         error("Stack overflow");
@@ -1113,6 +1128,12 @@ static void doEnterFrame(Fiber *fiber, ErrorFunc error)
     (--fiber->top)->ptrVal = fiber->base;
     fiber->base = fiber->top;
     fiber->top -= slots;
+
+    // Zero all local variables
+    if (slots == 1)
+        fiber->top->intVal = 0;
+    else if (slots > 0)
+        memset(fiber->top, 0, slots * sizeof(Slot));
 
     // Push I/O registers
     *(--fiber->top) = fiber->reg[VM_IO_STREAM_REG];
@@ -1153,7 +1174,6 @@ static void fiberStep(Fiber *fiber, Fiber **newFiber, HeapChunks *chunks, ErrorF
         case OP_POP_REG:            doPopReg(fiber);                               break;
         case OP_DUP:                doDup(fiber);                                  break;
         case OP_SWAP:               doSwap(fiber);                                 break;
-        case OP_ZERO:               doZero(fiber);                                 break;
         case OP_DEREF:              doDeref(fiber, error);                         break;
         case OP_ASSIGN:             doAssign(fiber, error);                        break;
         case OP_SWAP_ASSIGN:        doSwapAssign(fiber, error);                    break;
@@ -1183,6 +1203,10 @@ void vmRun(VM *vm)
 {
     while (vm->fiber->alive && vm->fiber->code[vm->fiber->ip].opcode != OP_HALT)
     {
+#ifdef DEBUG_REF_CNT
+        printf(" %d", vm->fiber->ip);
+#endif // DEBUG_REF_CNT
+
         Fiber *newFiber = NULL;
         fiberStep(vm->fiber, &newFiber, &vm->chunks, vm->error);
         if (newFiber)
@@ -1217,7 +1241,6 @@ int vmAsm(int ip, Instruction *instr, char *buf)
         case OP_PUSH_REG:
         case OP_PUSH_STRUCT:
         case OP_POP_REG:
-        case OP_ZERO:
         case OP_ASSIGN:
         case OP_SWAP_ASSIGN:
         case OP_ASSIGN_OFS:
@@ -1238,8 +1261,6 @@ int vmAsm(int ip, Instruction *instr, char *buf)
             chars += sprintf(buf + chars, " %s", typeSpelling(instr->operand.ptrVal, typeBuf));
             break;
         }
-
-
         default: break;
     }
 

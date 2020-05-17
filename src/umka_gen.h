@@ -45,7 +45,7 @@ void genPop   (CodeGen *gen);
 void genPopReg(CodeGen *gen, int regIndex);
 void genDup   (CodeGen *gen);
 void genSwap  (CodeGen *gen);
-void genZero  (CodeGen *gen, int size);
+
 
 void genDeref        (CodeGen *gen, TypeKind typeKind);
 void genAssign       (CodeGen *gen, TypeKind typeKind, int structSize);

@@ -1,9 +1,5 @@
-# The Computer Language Benchmarks Game
-# http://shootout.alioth.debian.org/
-#
-# contributed by Antoine Pitrou
-# modified by Dominique Wahli
-# modified by Heinrich Acker
+# Binary trees benchmark - Python version by Antoine Pitrou et al.
+
 from __future__ import print_function
 
 import time
@@ -25,8 +21,8 @@ def check_tree(node):
     if not left: return item
     return item + check_tree(left) - check_tree(right)
 
-min_depth = 2#4
-max_depth = 2#12
+min_depth = 4
+max_depth = 8 #12
 stretch_depth = max_depth + 1
 
 start = time.clock()

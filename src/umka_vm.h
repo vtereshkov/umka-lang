@@ -39,7 +39,6 @@ typedef enum
     OP_POP_REG,
     OP_DUP,
     OP_SWAP,
-    OP_ZERO,
     OP_DEREF,
     OP_ASSIGN,
     OP_SWAP_ASSIGN,
@@ -138,8 +137,7 @@ typedef struct tagHeapChunk
 {
     void *ptr;
     int size;
-    int refCnt;
-    bool inheritsRefs;
+    int refCnt, extraRefCnt;
     struct tagHeapChunk *prev, *next;
 } HeapChunk;
 

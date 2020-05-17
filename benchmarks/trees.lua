@@ -1,6 +1,4 @@
--- The Computer Language Benchmarks Game
--- http://shootout.alioth.debian.org/
--- contributed by Mike Pall
+-- Binary trees benchmark - Lua version by Mike Pall
 
 local function BottomUpTree(item, depth)
   if depth > 0 then

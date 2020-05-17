@@ -233,13 +233,6 @@ void genSwap(CodeGen *gen)
 }
 
 
-void genZero(CodeGen *gen, int size)
-{
-    const Instruction instr = {.opcode = OP_ZERO, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = size};
-    genAddInstr(gen, &instr);
-}
-
-
 void genDeref(CodeGen *gen, TypeKind typeKind)
 {
     if (!optimizeDeref(gen, typeKind))

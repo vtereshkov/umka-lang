@@ -1,9 +1,54 @@
+// Binary trees benchmark - Umka version
+
+import "../import/std.um"
+
 type Node = struct {
-    next: ^Node
+    item: int
+    left, right: ^Node
+}
+
+fn make_tree(item, depth: int): ^Node {
+    node := new(Node)
+    node.item = item
+    if depth == 0 {return node}    
+    
+    item2 := item + item
+    depth--
+    
+    node.left  = make_tree(item2 - 1, depth)
+    node.right = make_tree(item2, depth)
+    return node
+}
+
+fn check_tree(node: ^Node): int {
+    if node.left == null {return node.item}
+    return node.item + check_tree(node.left) - check_tree(node.right)
 }
 
 fn main() {
-    node := new(Node)
-    node.next = new(Node)
-    node.next.next = new(Node)
+    const (
+        min_depth = 4
+        max_depth = 8 //12
+        stretch_depth = max_depth + 1
+    )
+
+    start := std.time()
+    stretch_tree := make_tree(0, stretch_depth)
+    printf("stretch tree of depth {d} check: {d}\n", stretch_depth, check_tree(stretch_tree))
+
+    long_lived_tree := make_tree(0, max_depth)
+
+    iterations := 1 << max_depth
+    for depth := min_depth; depth < stretch_depth; depth += 2 {
+        check := 0
+        for i := 1; i <= iterations; i++ {
+            check += check_tree(make_tree(i, depth)) + check_tree(make_tree(-i, depth))
+        }
+
+        printf("{d} trees of depth {d} check: {d}\n", iterations * 2, depth, check)
+        iterations /= 4
+    }
+    
+    printf("long lived tree of depth {d} check: {d}\n", max_depth, check_tree(long_lived_tree))
+    printf("elapsed: {d}\n", std.time() - start)
 }

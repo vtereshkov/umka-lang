@@ -9,18 +9,6 @@ static void parseStmtList(Compiler *comp);
 static void parseBlock(Compiler *comp);
 
 
-void doZeroVar(Compiler *comp, Ident *ident)
-{
-    if (ident->block == 0)
-        constZero(ident->ptr, typeSize(&comp->types, ident->type));
-    else
-    {
-        doPushVarPtr(comp, ident);
-        genZero(&comp->gen, typeSize(&comp->types, ident->type));
-    }
-}
-
-
 void doResolveExtern(Compiler *comp)
 {
     for (Ident *ident = comp->idents.first; ident; ident = ident->next)

@@ -181,13 +181,14 @@ fn render(parent: std.Fiber, buf: ^RenderData) {
                 -dir[0]*sinAz + dir[2]*cosAz}
 
             color := Color{0, 0, 0}
+
             for r := 0; r < buf.rays; r++ {
                 randomDir := rotDir.add(randn().mul(buf.antialiasing))
                 ray := Ray{origin: buf.pos, dir: normalize(randomDir)}
                 color = color.add(buf.scene.trace(&ray, 0))
             }
             color = color.mul(255.0 / buf.rays)
-
+            
             buf.pixels[i][j] = [3]uint8 {round(color[0]), round(color[1]), round(color[2])}
         }
         printf("{3d}//{3d}\n", i + 1, height)
@@ -251,7 +252,7 @@ fn main() {
     // Define fibers
     fiber := make([var]std.Fiber, fibers)
     renderData := make([var]RenderData, fibers)
-    
+
     for i := 0; i < len(fiber); i++ {
         // Define eye
         renderData[i] = RenderData {
