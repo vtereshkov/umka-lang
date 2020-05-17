@@ -152,7 +152,7 @@
 	"umka_types.h"
 	"umka_ident.h"
 
-1589748276 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_vm.c
+1589754262 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_vm.c
 	<stdio.h>
 	<stdlib.h>
 	<string.h>

@@ -1028,11 +1028,14 @@ static void doGotoIf(Fiber *fiber)
 }
 
 
-static void doCall(Fiber *fiber)
+static void doCall(Fiber *fiber, ErrorFunc error)
 {
     // All calls are indirect, entry point address is below the parameters
     int paramSlots = fiber->code[fiber->ip].operand.intVal;
     int entryOffset = (fiber->top + paramSlots)->intVal;
+
+    if (entryOffset == 0)
+        error("Called function is not defined");
 
     // Push return address and go to the entry point
     (--fiber->top)->intVal = fiber->ip + 1;
@@ -1201,7 +1204,7 @@ static void fiberStep(Fiber *fiber, Fiber **newFiber, HeapChunks *chunks, ErrorF
         case OP_GET_FIELD_PTR:      doGetFieldPtr(fiber, error);                   break;
         case OP_GOTO:               doGoto(fiber);                                 break;
         case OP_GOTO_IF:            doGotoIf(fiber);                               break;
-        case OP_CALL:               doCall(fiber);                                 break;
+        case OP_CALL:               doCall(fiber, error);                          break;
         case OP_CALL_EXTERN:        doCallExtern(fiber);                           break;
         case OP_CALL_BUILTIN:       doCallBuiltin(fiber, newFiber, chunks, error); break;
         case OP_RETURN:             doReturn(fiber, newFiber);                     break;
