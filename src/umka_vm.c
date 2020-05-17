@@ -190,9 +190,8 @@ static bool chunkTryDecCnt(HeapChunks *chunks, void *ptr)
 }
 
 
-// Virtual machine
-
 // Static copies of some external functions that allow inlining
+
 static int alignRuntime(int size, int alignment)
 {
     return ((size + (alignment - 1)) / alignment) * alignment;
@@ -205,6 +204,8 @@ static bool typeGarbageCollectedRuntime(Type *type)
            type->kind == TYPE_STRUCT || type->kind == TYPE_INTERFACE;
 }
 
+
+// Virtual machine
 
 void vmInit(VM *vm, Instruction *code, int stackSize, ErrorFunc error)
 {
@@ -333,21 +334,21 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapChunks *chunks, void *ptr, Typ
                     }
 
                     newExtraRefCnt = chunk->refCnt - 1;
+
+                    if (ptr && typeGarbageCollectedRuntime(type->base))
+                    {
+                        void *data = ptr;
+                        if (type->base->kind == TYPE_PTR)
+                            data = *(void **)data;
+
+                        doBasicChangeRefCnt(fiber, chunks, data, type->base, newExtraRefCnt, false, tokKind, error);
+                    }
+
+                    if (!root && chunk->extraRefCnt > 0)
+                        chunk->extraRefCnt--;
+
+                    chunkTryDecCnt(chunks, ptr);
                 }
-
-                if (0 && ptr && typeGarbageCollectedRuntime(type->base))
-                {
-                    void *data = ptr;
-                    if (type->base->kind == TYPE_PTR)
-                        data = *(void **)data;
-
-                    doBasicChangeRefCnt(fiber, chunks, data, type->base, newExtraRefCnt, false, tokKind, error);
-                }
-
-                if (!root && chunk && chunk->extraRefCnt > 0)
-                    chunk->extraRefCnt--;
-
-                chunkTryDecCnt(chunks, ptr);
             }
             break;
         }
@@ -558,11 +559,14 @@ static void doBuiltinMakeFrom(Fiber *fiber, HeapChunks *chunks)
 
 
 // fn append(array: [var] type, item: ^type): [var] type
-static void doBuiltinAppend(Fiber *fiber, HeapChunks *chunks)
+static void doBuiltinAppend(Fiber *fiber, HeapChunks *chunks, ErrorFunc error)
 {
     DynArray *result = (fiber->top++)->ptrVal;
     void *item       = (fiber->top++)->ptrVal;
     DynArray *array  = (fiber->top++)->ptrVal;
+
+    if (!array->data)
+        error("Dynamic array is not initialized");
 
     result->len      = array->len + 1;
     result->itemSize = array->itemSize;
@@ -1082,7 +1086,7 @@ static void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapChunks *chunks, Er
         case BUILTIN_NEW:           fiber->top->ptrVal = chunkAdd(chunks, fiber->top->intVal)->ptr; break;
         case BUILTIN_MAKE:          doBuiltinMake(fiber, chunks); break;
         case BUILTIN_MAKEFROM:      doBuiltinMakeFrom(fiber, chunks); break;
-        case BUILTIN_APPEND:        doBuiltinAppend(fiber, chunks); break;
+        case BUILTIN_APPEND:        doBuiltinAppend(fiber, chunks, error); break;
         case BUILTIN_LEN:           doBuiltinLen(fiber, error); break;
         case BUILTIN_SIZEOF:        error("Illegal instruction"); return;   // Done at compile time
 
