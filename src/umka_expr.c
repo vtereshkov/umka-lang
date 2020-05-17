@@ -104,7 +104,8 @@ static void doConcreteToInterfaceConv(Compiler *comp, Type *dest, Type **src, Co
     if (constant)
         comp->error("Conversion to interface is not allowed in constant expressions");
 
-    int destSize = typeSize(&comp->types, dest);
+    Type *rcvType  = typeAddPtrTo(&comp->types, &comp->blocks, *src);
+    int destSize   = typeSize(&comp->types, dest);
     int destOffset = identAllocStack(&comp->idents, &comp->blocks, destSize);
 
     // Assign __self (offset 0)
@@ -112,11 +113,16 @@ static void doConcreteToInterfaceConv(Compiler *comp, Type *dest, Type **src, Co
     genPushLocalPtr(&comp->gen, destOffset);                    // Push dest pointer
     genSwapAssignOfs(&comp->gen, 0);                            // Assign to dest with zero offset
 
+    // Assign __selftype (RTTI)
+    Field *__selftype = typeAssertFindField(&comp->types, dest, "__selftype");
+    genPushGlobalPtr(&comp->gen, rcvType);                      // Push src type pointer
+    genPushLocalPtr(&comp->gen, destOffset);                    // Push dest pointer
+    genSwapAssignOfs(&comp->gen, __selftype->offset);           // Assign to dest with offset
+
     // Assign methods
-    for (int i = 1; i < dest->numItems; i++)
+    for (int i = 2; i < dest->numItems; i++)
     {
         char *name = dest->field[i]->name;
-        Type *rcvType = typeAddPtrTo(&comp->types, &comp->blocks, *src);
         Ident *srcMethod = identFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, name, rcvType);
         if (!srcMethod)
             comp->error("Method %s is not implemented", name);
@@ -148,8 +154,16 @@ static void doInterfaceToInterfaceConv(Compiler *comp, Type *dest, Type **src, C
     genPushLocalPtr(&comp->gen, destOffset);                    // Push dest pointer
     genSwapAssignOfs(&comp->gen, 0);                            // Assign to dest with zero offset
 
+    // Assign __selftype (RTTI)
+    Field *__selftype = typeAssertFindField(&comp->types, dest, "__selftype");
+    genDup(&comp->gen);                                         // Duplicate src pointer
+    genGetFieldPtr(&comp->gen, __selftype->offset);             // Get src __selftype pointer
+    genDeref(&comp->gen, TYPE_PTR);                             // Get src __selftype
+    genPushLocalPtr(&comp->gen, destOffset);                    // Push dest pointer
+    genSwapAssignOfs(&comp->gen, __selftype->offset);           // Assign to dest with offset
+
     // Assign methods
-    for (int i = 1; i < dest->numItems; i++)
+    for (int i = 2; i < dest->numItems; i++)
     {
         char *name = dest->field[i]->name;
         Field *srcMethod = typeFindField(*src, name);

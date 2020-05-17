@@ -400,7 +400,6 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapChunks *chunks, void *ptr, Typ
         }
 
         case TYPE_STRUCT:
-        case TYPE_INTERFACE:
         {
             for (int i = 0; i < type->numItems; i++)
             {
@@ -413,6 +412,17 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapChunks *chunks, void *ptr, Typ
                     doBasicChangeRefCnt(fiber, chunks, field, type->field[i]->type, extraRefCnt, root, tokKind, error);
                 }
             }
+            break;
+        }
+
+        case TYPE_INTERFACE:
+        {
+            // Interface layout: __self, __selftype, methods
+            void *__self = *(void **)ptr;
+            Type *__selftype = *(Type **)(ptr + type->field[1]->offset);
+
+            if (__self)
+                doBasicChangeRefCnt(fiber, chunks, __self, __selftype, extraRefCnt, root, tokKind, error);
             break;
         }
 

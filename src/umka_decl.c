@@ -304,8 +304,9 @@ static Type *parseInterfaceType(Compiler *comp)
     Type *type = typeAdd(&comp->types, &comp->blocks, TYPE_INTERFACE);
     type->numItems = 0;
 
-    // __self
+    // __self, __selftype
     typeAddField(&comp->types, type, comp->ptrVoidType, "__self");
+    typeAddField(&comp->types, type, comp->ptrVoidType, "__selftype");
 
     // Methods
     while (comp->lex.tok.kind == TOK_IDENT)
