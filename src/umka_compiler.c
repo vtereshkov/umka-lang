@@ -1,4 +1,5 @@
 #include <stddef.h>
+#include <string.h>
 #include <stdio.h>
 
 #include "umka_compiler.h"
@@ -108,16 +109,18 @@ static void compilerDeclareExternalFuncs(Compiler *comp)
 
 void compilerInit(Compiler *comp, char *fileName, int storageSize, int stackSize, int argc, char **argv, ErrorFunc compileError, ErrorFunc runtimeError)
 {
+    memset(comp, 0, sizeof(Compiler));
+
     storageInit  (&comp->storage, storageSize);
     moduleInit   (&comp->modules, compileError);
     blocksInit   (&comp->blocks, compileError);
     externalInit (&comp->externals);
-    lexInit      (&comp->lex, &comp->storage, &comp->debug, fileName, compileError);
     typeInit     (&comp->types, compileError);
     identInit    (&comp->idents, compileError);
     constInit    (&comp->consts, compileError);
     genInit      (&comp->gen, &comp->debug, compileError);
-    vmInit       (&comp->vm, comp->gen.code, stackSize, runtimeError);
+    vmInit       (&comp->vm, stackSize, runtimeError);
+    lexInit      (&comp->lex, &comp->storage, &comp->debug, fileName, compileError);
 
     comp->argc  = argc;
     comp->argv  = argv;
@@ -140,12 +143,12 @@ void compilerInit(Compiler *comp, char *fileName, int storageSize, int stackSize
 
 void compilerFree(Compiler *comp)
 {
+    lexFree      (&comp->lex);
     vmFree       (&comp->vm);
     genFree      (&comp->gen);
     constFree    (&comp->consts);
     identFree    (&comp->idents, -1);
     typeFree     (&comp->types, -1);
-    lexFree      (&comp->lex);
     externalFree (&comp->externals);
     blocksFree   (&comp->blocks);
     moduleFree   (&comp->modules);
@@ -161,14 +164,14 @@ void compilerCompile(Compiler *comp)
 
 void compilerRun(Compiler *comp)
 {
-    vmReset(&comp->vm);
+    vmReset(&comp->vm, comp->gen.code);
     vmRun(&comp->vm);
 }
 
 
 void compilerCall(Compiler *comp, int entryOffset, int numParamSlots, Slot *params, Slot *result)
 {
-    vmReset(&comp->vm);
+    vmReset(&comp->vm, comp->gen.code);
     vmCall(&comp->vm, entryOffset, numParamSlots, params, result);
 }
 

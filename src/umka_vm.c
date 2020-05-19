@@ -207,14 +207,12 @@ static bool typeGarbageCollectedRuntime(Type *type)
 
 // Virtual machine
 
-void vmInit(VM *vm, Instruction *code, int stackSize, ErrorFunc error)
+void vmInit(VM *vm, int stackSize, ErrorFunc error)
 {
     vm->fiber = malloc(sizeof(Fiber));
-    vm->fiber->code = code;
     vm->fiber->stack = malloc(stackSize * sizeof(Slot));
     vm->fiber->stackSize = stackSize;
     vm->fiber->alive = true;
-    vmReset(vm);
     chunkInit(&vm->chunks);
     vm->error = error;
 }
@@ -228,8 +226,9 @@ void vmFree(VM *vm)
 }
 
 
-void vmReset(VM *vm)
+void vmReset(VM *vm, Instruction *code)
 {
+    vm->fiber->code = code;
     vm->fiber->ip = 0;
     vm->fiber->top = vm->fiber->base = vm->fiber->stack + vm->fiber->stackSize - 1;
 }
