@@ -16,16 +16,16 @@ Umka is a statically typed embeddable scripting language. It combines the simpli
 ## Getting Started
 * Download the [latest release](https://github.com/vtereshkov/umka-lang/releases) for Windows and Linux (_Note:_ both versions use `/` as path separator)
 * Take a tour of Umka (see below)
-* Explore the [raytracer example](https://github.com/vtereshkov/umka-lang/blob/master/examples/raytracer.um) that demonstrates many language features like fibers, interfaces and dynamic arrays
-* Look at the more realistic [C](https://github.com/vtereshkov/umka-lang/blob/master/examples/3dcam.c) + [Umka](https://github.com/vtereshkov/umka-lang/blob/master/examples/3dcam.um) embedded scripting example (_Note:_ [raylib](https://www.raylib.com) is required to compile and run it)
-
-![](examples/scene.png)
+* Explore the [raytracer](https://github.com/vtereshkov/umka-lang/blob/master/examples/raytracer.um) example that demonstrates many language features like fibers, interfaces and dynamic arrays
+* Look at the more realistic [C](https://github.com/vtereshkov/umka-lang/blob/master/examples/3dcam.c)+[Umka](https://github.com/vtereshkov/umka-lang/blob/master/examples/3dcam.um) embedded scripting example (_Note:_ [raylib](https://www.raylib.com) is required to compile and run it)
 
 _Raytracer example_
 
-![](examples/3dcam.png)
+![](examples/scene.png)
 
-_C + Umka 3D camera example_
+_C+Umka 3D camera example_
+
+![](examples/3dcam.png)
 
 ## A Tour of Umka
 ### Declarations
