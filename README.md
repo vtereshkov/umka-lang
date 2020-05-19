@@ -20,9 +20,11 @@ Umka is a statically typed embeddable scripting language. It combines the simpli
 * Look at the more realistic [C](https://github.com/vtereshkov/umka-lang/blob/master/examples/3dcam.c) + [Umka](https://github.com/vtereshkov/umka-lang/blob/master/examples/3dcam.um) embedded scripting example (_Note:_ [raylib](https://www.raylib.com) is required to compile and run)
 
 ![](examples/scene.png)
+
 _Raytracer example_
 
 ![](examples/3dcam.png)
+
 _C + Umka 3D camera example_
 
 ## A Tour of Umka
