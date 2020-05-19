@@ -2,6 +2,7 @@
 #define UMKA_API_H_INCLUDED
 
 #include <stdint.h>
+#include <stdbool.h>
 
 
 typedef union
@@ -29,13 +30,14 @@ typedef struct
 } UmkaError;
 
 
-int umkaInit(char *fileName, int storageCapacity, int argc, char **argv);
-int umkaCompile(void);
-int umkaRun(int stackSize);
-int umkaFree(void);
-int umkaGetError(UmkaError *err);
-int umkaAsm(char *buf);
-int umkaAddFunc(char *name, UmkaExternFunc entry);
-
+bool umkaInit(char *fileName, int storageSize, int stackSize, int argc, char **argv);
+bool umkaCompile(void);
+bool umkaRun(void);
+bool umkaCall(int entryOffset, int numParamSlots, UmkaStackSlot *params, UmkaStackSlot *result);
+void umkaFree(void);
+void umkaGetError(UmkaError *err);
+void umkaAsm(char *buf);
+void umkaAddFunc(char *name, UmkaExternFunc entry);
+int  umkaGetFunc(char *name);
 
 #endif // UMKA_API_H_INCLUDED

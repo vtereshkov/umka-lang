@@ -1,0 +1,51 @@
+import "../../import/std.um"
+
+type (
+    Vector2 = struct {x, y: real32}
+    Vector3 = struct {x, y, z: real32}
+    Color   = struct {r, g, b, a: uint8}
+) 
+
+// External functions
+fn drawPlane(centerPos: Vector3, size: Vector2, color: Color)
+fn drawCube(position: Vector3, width, height, length: real32, color: Color)   
+
+const maxColumns = 20
+
+var (
+    heights:   [maxColumns]real
+    positions: [maxColumns]Vector3
+    colors:    [maxColumns]Color
+)
+
+fn rnd(min, max: real): real {return min + (max - min) * std.frand()}
+
+fn initBodies() {    
+    // Generates some random columns
+    std.srand(std.time())
+    for i := 0; i < maxColumns; i++ {
+        heights[i]   = rnd(1, 12);
+        positions[i] = Vector3{x: rnd(-15, 15), y: heights[i] / 2, z: rnd(-15, 15)}
+        colors[i]    = Color{r: round(rnd(40, 150)), g: round(rnd(40, 60)), b: 40, a: 255}
+    }
+}
+
+fn drawBodies() {
+    // Draw ground
+    drawPlane(Vector3{x: 0, y: 0, z: 0}, Vector2{x: 32, y: 32}, Color{r: 50, g: 100, b: 50, a: 255})
+
+    // Draw walls
+    drawCube(Vector3{x: -16, y: 2.5, z:   0}, 1, 5, 32, Color{r:  90, g:  90, b:  90, a: 255})
+    drawCube(Vector3{x:  16, y: 2.5, z:   0}, 1, 5, 32, Color{r:  90, g:  90, b:  90, a: 255})
+    drawCube(Vector3{x:   0, y: 2.5, z: -16}, 32, 5, 1, Color{r: 120, g: 120, b: 120, a: 255})
+    drawCube(Vector3{x:   0, y: 2.5, z:  16}, 32, 5, 1, Color{r: 120, g: 120, b: 120, a: 255})    
+                
+    // Draw columns
+    for i := 0; i < maxColumns; i++ {
+        drawCube(positions[i], 2, heights[i], 2, colors[i])
+    }
+}
+
+fn main() {}
+    
+    

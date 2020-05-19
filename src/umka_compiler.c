@@ -106,9 +106,9 @@ static void compilerDeclareExternalFuncs(Compiler *comp)
 }
 
 
-void compilerInit(Compiler *comp, char *fileName, int storageCapacity, int argc, char **argv, ErrorFunc compileError)
+void compilerInit(Compiler *comp, char *fileName, int storageSize, int stackSize, int argc, char **argv, ErrorFunc compileError, ErrorFunc runtimeError)
 {
-    storageInit  (&comp->storage, storageCapacity);
+    storageInit  (&comp->storage, storageSize);
     moduleInit   (&comp->modules, compileError);
     blocksInit   (&comp->blocks, compileError);
     externalInit (&comp->externals);
@@ -117,6 +117,7 @@ void compilerInit(Compiler *comp, char *fileName, int storageCapacity, int argc,
     identInit    (&comp->idents, compileError);
     constInit    (&comp->consts, compileError);
     genInit      (&comp->gen, &comp->debug, compileError);
+    vmInit       (&comp->vm, comp->gen.code, stackSize, runtimeError);
 
     comp->argc  = argc;
     comp->argv  = argv;
@@ -139,6 +140,7 @@ void compilerInit(Compiler *comp, char *fileName, int storageCapacity, int argc,
 
 void compilerFree(Compiler *comp)
 {
+    vmFree       (&comp->vm);
     genFree      (&comp->gen);
     constFree    (&comp->consts);
     identFree    (&comp->idents, -1);
@@ -157,17 +159,32 @@ void compilerCompile(Compiler *comp)
 }
 
 
-void compilerRun(Compiler *comp, int stackSize, ErrorFunc runtimeError)
+void compilerRun(Compiler *comp)
 {
-    vmInit(&comp->vm, comp->gen.code, stackSize, runtimeError);
-    vmRun (&comp->vm);
-    vmFree(&comp->vm);
+    vmReset(&comp->vm);
+    vmRun(&comp->vm);
+}
+
+
+void compilerCall(Compiler *comp, int entryOffset, int numParamSlots, Slot *params, Slot *result)
+{
+    vmReset(&comp->vm);
+    vmCall(&comp->vm, entryOffset, numParamSlots, params, result);
 }
 
 
 void compilerAsm(Compiler *comp, char *buf)
 {
     genAsm(&comp->gen, buf);
+}
+
+
+int compilerGetFunc(Compiler *comp, char *name)
+{
+    Ident *fn = identFind(&comp->idents, &comp->modules, &comp->blocks, 1, name, NULL);
+    if (fn && fn->kind == IDENT_CONST && fn->type->kind == TYPE_FN)
+        return fn->offset;
+    return 0;
 }
 
 

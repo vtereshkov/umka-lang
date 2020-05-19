@@ -210,16 +210,11 @@ static bool typeGarbageCollectedRuntime(Type *type)
 void vmInit(VM *vm, Instruction *code, int stackSize, ErrorFunc error)
 {
     vm->fiber = malloc(sizeof(Fiber));
-
     vm->fiber->code = code;
-    vm->fiber->ip = 0;
-
     vm->fiber->stack = malloc(stackSize * sizeof(Slot));
-    vm->fiber->top = vm->fiber->base = vm->fiber->stack + stackSize - 1;
     vm->fiber->stackSize = stackSize;
-
     vm->fiber->alive = true;
-
+    vmReset(vm);
     chunkInit(&vm->chunks);
     vm->error = error;
 }
@@ -230,6 +225,13 @@ void vmFree(VM *vm)
     chunkFree(&vm->chunks);
     free(vm->fiber->stack);
     free(vm->fiber);
+}
+
+
+void vmReset(VM *vm)
+{
+    vm->fiber->ip = 0;
+    vm->fiber->top = vm->fiber->base = vm->fiber->stack + vm->fiber->stackSize - 1;
 }
 
 
@@ -1229,6 +1231,34 @@ void vmRun(VM *vm)
         if (newFiber)
             vm->fiber = newFiber;
     }
+}
+
+
+void vmCall(VM *vm, int entryOffset, int numParamSlots, Slot *params, Slot *result)
+{
+    if (entryOffset == 0)
+        vm->error("Called function is not defined");
+
+    // Push parameters
+    vm->fiber->top -= numParamSlots;
+    for (int i = 0; i < numParamSlots; i++)
+        vm->fiber->top[i] = params[i];
+
+    // Push null return address and go to the entry point
+    (--vm->fiber->top)->intVal = 0;
+    vm->fiber->ip = entryOffset;
+
+    while (vm->fiber->alive && !(vm->fiber->code[vm->fiber->ip].opcode == OP_RETURN && vm->fiber->top->intVal == 0))
+    {
+        Fiber *newFiber = NULL;
+        fiberStep(vm->fiber, &newFiber, &vm->chunks, vm->error);
+        if (newFiber)
+            vm->fiber = newFiber;
+    }
+
+    // Save result
+    if (result)
+        *result = vm->fiber->reg[VM_RESULT_REG_0];
 }
 
 

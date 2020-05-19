@@ -1,5 +1,5 @@
 # depslib dependency file v1.0
-1589199342 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_api.c
+1589825267 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_api.c
 	<stdio.h>
 	<stdlib.h>
 	<string.h>
@@ -10,7 +10,7 @@
 
 1588579706 h"
 
-1589382830 c:\users\vasiliy\desktop\umka-lang-master\src\umka_compiler.h
+1589825768 c:\users\vasiliy\desktop\umka-lang-master\src\umka_compiler.h
 	"umka_common.h"
 	"umka_lexer.h"
 	"umka_types.h"
@@ -39,7 +39,7 @@
 
 1588579706 r.h"
 
-1589673041 c:\users\vasiliy\desktop\umka-lang-master\src\umka_vm.h
+1589813147 c:\users\vasiliy\desktop\umka-lang-master\src\umka_vm.h
 	"umka_common.h"
 	"umka_lexer.h"
 	"umka_types.h"
@@ -63,8 +63,9 @@
 1589199342 c:\users\vasiliy\desktop\umka-lang-master\src\umka_runtime.h
 	"umka_vm.h"
 
-1589199342 c:\users\vasiliy\desktop\umka-lang-master\src\umka_api.h
+1589825715 c:\users\vasiliy\desktop\umka-lang-master\src\umka_api.h
 	<stdint.h>
+	<stdbool.h>
 
 1588636805 
 
@@ -73,7 +74,7 @@
 	<string.h>
 	"umka_common.h"
 
-1589382959 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_compiler.c
+1589826199 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_compiler.c
 	<stddef.h>
 	<stdio.h>
 	"umka_compiler.h"
@@ -105,7 +106,7 @@
 1589199342 c:\users\vasiliy\desktop\umka-lang-master\src\umka_decl.h
 	"umka_compiler.h"
 
-1589741709 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_expr.c
+1589885503 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_expr.c
 	<string.h>
 	<limits.h>
 	<stddef.h>
@@ -138,13 +139,13 @@
 	<time.h>
 	"umka_runtime.h"
 
-1589672520 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_stmt.c
+1589899747 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_stmt.c
 	<string.h>
 	"umka_stmt.h"
 	"umka_expr.h"
 	"umka_decl.h"
 
-1589670418 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_types.c
+1589885364 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_types.c
 	<stdio.h>
 	<stdlib.h>
 	<string.h>
@@ -152,7 +153,7 @@
 	"umka_types.h"
 	"umka_ident.h"
 
-1589754262 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_vm.c
+1589894903 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_vm.c
 	<stdio.h>
 	<stdlib.h>
 	<string.h>

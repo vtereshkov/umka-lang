@@ -49,76 +49,92 @@ void runtimeError(const char *format, ...)
 
 // API functions
 
-int umkaInit(char *fileName, int storageCapacity, int argc, char **argv)
+bool umkaInit(char *fileName, int storageSize, int stackSize, int argc, char **argv)
 {
     if (setjmp(jumper) == 0)
     {
-        compilerInit(&comp, fileName, storageCapacity, argc, argv, compileError);
-        return 0;
+        compilerInit(&comp, fileName, storageSize, stackSize, argc, argv, compileError, runtimeError);
+        return true;
     }
     else
     {
         compilerFree(&comp);
-        return 1;
+        return false;
     }
 }
 
 
-int umkaCompile(void)
+bool umkaCompile(void)
 {
     if (setjmp(jumper) == 0)
     {
         compilerCompile(&comp);
-        return 0;
+        return true;
     }
     else
     {
         compilerFree(&comp);
-        return 1;
+        return false;
     }
 }
 
 
-int umkaRun(int stackSize)
+bool umkaRun(void)
 {
     if (setjmp(jumper) == 0)
     {
-        compilerRun(&comp, stackSize, runtimeError);
-        return 0;
+        compilerRun(&comp);
+        return true;
     }
     else
     {
         compilerFree(&comp);
-        return 1;
+        return false;
     }
 }
 
 
-int umkaFree(void)
+bool umkaCall(int entryOffset, int numParamSlots, UmkaStackSlot *params, UmkaStackSlot *result)
+{
+    if (setjmp(jumper) == 0)
+    {
+        compilerCall(&comp, entryOffset, numParamSlots, (Slot *)params, (Slot *)result);
+        return true;
+    }
+    else
+    {
+        compilerFree(&comp);
+        return false;
+    }
+}
+
+
+void umkaFree(void)
 {
     compilerFree(&comp);
-    return 0;
 }
 
 
-int umkaGetError(UmkaError *err)
+void umkaGetError(UmkaError *err)
 {
     *err = error;
-    return 0;
 }
 
 
-int umkaAsm(char *buf)
+void umkaAsm(char *buf)
 {
     compilerAsm(&comp, buf);
-    return 0;
 }
 
 
-int umkaAddFunc(char *name, UmkaExternFunc entry)
+void umkaAddFunc(char *name, UmkaExternFunc entry)
 {
     externalAdd(&comp.externals, name, entry);
-    return 0;
 }
 
+
+int umkaGetFunc(char *name)
+{
+    return compilerGetFunc(&comp, name);
+}
 

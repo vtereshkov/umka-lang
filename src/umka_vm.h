@@ -161,7 +161,9 @@ typedef struct
 
 void vmInit(VM *vm, Instruction *code, int stackSize /* slots */, ErrorFunc error);
 void vmFree(VM *vm);
+void vmReset(VM *vm);
 void vmRun (VM *vm);
+void vmCall(VM *vm, int entryOffset, int numParamSlots, Slot *params, Slot *result);
 int vmAsm(int ip, Instruction *instr, char *buf);
 
 #endif // UMKA_VM_H_INCLUDED

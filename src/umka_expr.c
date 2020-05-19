@@ -188,7 +188,7 @@ static void doInterfaceToInterfaceConv(Compiler *comp, Type *dest, Type **src, C
 void doImplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant, bool lhs)
 {
     // Integer to real
-    if (dest->kind == TYPE_REAL && typeInteger(*src))
+    if (typeReal(dest) && typeInteger(*src))
     {
         doIntToRealConv(comp, dest, src, constant, lhs);
     }
@@ -908,7 +908,7 @@ static void parseCallSelector(Compiler *comp, Type **type, Const *constant, bool
     if ((*type)->kind == TYPE_PTR || typeStructured(*type))
         doCopyResultToTempVar(comp, *type);
 
-    // No direct support for 32-bit reals
+    // All temporary reals are 64-bit
     if ((*type)->kind == TYPE_REAL32)
         *type = comp->realType;
 
@@ -1021,10 +1021,10 @@ static void parseCompositeLiteral(Compiler *comp, Type **type, Const *constant)
             typeAssertCompatible(&comp->types, expectedItemType, itemType);
 
             if (constant)
-                constAssign(&comp->consts, constant->ptrVal + itemOffset, itemConstant, itemType->kind, itemSize);
+                constAssign(&comp->consts, constant->ptrVal + itemOffset, itemConstant, expectedItemType->kind, itemSize);
             else
                 // Assignment to an anonymous stack area does not require updating reference counts
-                genAssign(&comp->gen, itemType->kind, itemSize);
+                genAssign(&comp->gen, expectedItemType->kind, itemSize);
 
             numItems++;
             itemOffset += itemSize;
@@ -1083,7 +1083,7 @@ static void parseFactor(Compiler *comp, Type **type, Const *constant)
                         *type = (*type)->base;
                     }
 
-                    // No direct support for 32-bit reals
+                    // All temporary reals are 64-bit
                     if ((*type)->kind == TYPE_REAL32)
                         *type = comp->realType;
                 }

@@ -86,15 +86,14 @@ int main(int argc, char **argv)
         }
     }
 
-    int res = umkaInit(argv[1], storageSize, argc, argv);
-
-    if (res == 0)
+    bool ok = umkaInit(argv[1], storageSize, stackSize, argc, argv);
+    if (ok)
     {
         umkaAddFunc("meow", &meow);
-        res = umkaCompile();
+        ok = umkaCompile();
     }
 
-    if (res == 0)
+    if (ok)
     {
         if (asmFileName)
         {
@@ -117,10 +116,8 @@ int main(int argc, char **argv)
             free(asmBuf);
         }
 
-
-        res = umkaRun(stackSize);
-
-        if (res != 0)
+        ok = umkaRun();
+        if (!ok)
         {
             UmkaError error;
             umkaGetError(&error);
@@ -134,8 +131,9 @@ int main(int argc, char **argv)
         printf("Error %s (%d, %d): %s\n", error.fileName, error.line, error.pos, error.msg);
     }
 
-    if (res == 0) res = umkaFree();
+    if (ok)
+        umkaFree();
 
-    return res;
+    return ok ? 0 : 1;
 }
 

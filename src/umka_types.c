@@ -374,6 +374,9 @@ bool typeCompatible(Type *left, Type *right)
     if (typeInteger(left) && typeInteger(right))
         return true;
 
+    if (typeReal(left) && typeReal(right))
+        return true;
+
     // Any string can be assigned to any other string
     if (left->kind == TYPE_STR && right->kind == TYPE_STR)
         return true;

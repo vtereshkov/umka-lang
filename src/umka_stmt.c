@@ -106,7 +106,7 @@ static void parseShortAssignmentStmt(Compiler *comp, Type *type, TokenKind op)
     genDup(&comp->gen);
     genDeref(&comp->gen, type->kind);
 
-    // No direct support for 32-bit reals
+    // All temporary reals are 64-bit
     if (type->kind == TYPE_REAL32)
         type = comp->realType;
 
