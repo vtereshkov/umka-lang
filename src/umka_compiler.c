@@ -165,14 +165,14 @@ void compilerCompile(Compiler *comp)
 void compilerRun(Compiler *comp)
 {
     vmReset(&comp->vm, comp->gen.code);
-    vmRun(&comp->vm);
+    vmRun(&comp->vm, 0, 0, NULL, NULL);
 }
 
 
 void compilerCall(Compiler *comp, int entryOffset, int numParamSlots, Slot *params, Slot *result)
 {
     vmReset(&comp->vm, comp->gen.code);
-    vmCall(&comp->vm, entryOffset, numParamSlots, params, result);
+    vmRun(&comp->vm, entryOffset, numParamSlots, params, result);
 }
 
 
@@ -187,7 +187,7 @@ int compilerGetFunc(Compiler *comp, char *name)
     Ident *fn = identFind(&comp->idents, &comp->modules, &comp->blocks, 1, name, NULL);
     if (fn && fn->kind == IDENT_CONST && fn->type->kind == TYPE_FN)
         return fn->offset;
-    return 0;
+    return -1;
 }
 
 

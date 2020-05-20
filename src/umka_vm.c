@@ -1217,9 +1217,26 @@ static void fiberStep(Fiber *fiber, Fiber **newFiber, HeapChunks *chunks, ErrorF
 }
 
 
-void vmRun(VM *vm)
+void vmRun(VM *vm, int entryOffset, int numParamSlots, Slot *params, Slot *result)
 {
-    while (vm->fiber->alive && vm->fiber->code[vm->fiber->ip].opcode != OP_HALT)
+    if (entryOffset < 0)
+        vm->error("Called function is not defined");
+
+    // Individual function call
+    if (entryOffset > 0)
+    {
+        // Push parameters
+        vm->fiber->top -= numParamSlots;
+        for (int i = 0; i < numParamSlots; i++)
+            vm->fiber->top[i] = params[i];
+
+        // Push null return address and go to the entry point
+        (--vm->fiber->top)->intVal = 0;
+        vm->fiber->ip = entryOffset;
+    }
+
+    while (vm->fiber->alive && !(vm->fiber->code[vm->fiber->ip].opcode == OP_HALT ||
+                                (vm->fiber->code[vm->fiber->ip].opcode == OP_RETURN && vm->fiber->top->intVal == 0)))
     {
 #ifdef DEBUG_REF_CNT
         printf(" %d", vm->fiber->ip);
@@ -1230,33 +1247,9 @@ void vmRun(VM *vm)
         if (newFiber)
             vm->fiber = newFiber;
     }
-}
-
-
-void vmCall(VM *vm, int entryOffset, int numParamSlots, Slot *params, Slot *result)
-{
-    if (entryOffset == 0)
-        vm->error("Called function is not defined");
-
-    // Push parameters
-    vm->fiber->top -= numParamSlots;
-    for (int i = 0; i < numParamSlots; i++)
-        vm->fiber->top[i] = params[i];
-
-    // Push null return address and go to the entry point
-    (--vm->fiber->top)->intVal = 0;
-    vm->fiber->ip = entryOffset;
-
-    while (vm->fiber->alive && !(vm->fiber->code[vm->fiber->ip].opcode == OP_RETURN && vm->fiber->top->intVal == 0))
-    {
-        Fiber *newFiber = NULL;
-        fiberStep(vm->fiber, &newFiber, &vm->chunks, vm->error);
-        if (newFiber)
-            vm->fiber = newFiber;
-    }
 
     // Save result
-    if (result)
+    if (entryOffset > 0 && result)
         *result = vm->fiber->reg[VM_RESULT_REG_0];
 }
 
