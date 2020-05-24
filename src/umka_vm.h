@@ -22,8 +22,8 @@ enum
     VM_IO_FORMAT_REG     = VM_NUM_REGS - 2,
     VM_IO_COUNT_REG      = VM_NUM_REGS - 1,
 
-    VM_MIN_FREE_STACK    = 1024,                    // Slots
-    VM_HEAP_PAGE_SIZE    = 10 * 1024 * 1024,        // Bytes
+    VM_MIN_FREE_STACK    = 1024,               // Slots
+    VM_MIN_HEAP_PAGE     = 1024 * 1024,        // Bytes
 
     VM_FIBER_KILL_SIGNAL = -1     // Used instead of return address in fiber function calls
 };
@@ -137,7 +137,7 @@ typedef struct
 typedef struct tagHeapPage
 {
     void *ptr;
-    int occupied;
+    int size, occupied;
     int refCnt;
     struct tagHeapPage *prev, *next;
 } HeapPage;

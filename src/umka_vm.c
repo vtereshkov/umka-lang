@@ -102,12 +102,13 @@ static void pageFree(HeapPages *pages)
 }
 
 
-static HeapPage *pageAdd(HeapPages *pages)
+static HeapPage *pageAdd(HeapPages *pages, int size)
 {
     HeapPage *page = malloc(sizeof(HeapPage));
 
-    page->ptr = malloc(VM_HEAP_PAGE_SIZE);
-    memset(page->ptr, 0, VM_HEAP_PAGE_SIZE);
+    page->ptr = malloc(size);
+    memset(page->ptr, 0, size);
+    page->size = size;
     page->occupied = 0;
     page->refCnt = 0;
     page->prev = pages->last;
@@ -166,12 +167,10 @@ static void *chunkAlloc(HeapPages *pages, int size, ErrorFunc error)
 {
     // Page layout: header, data, header, data...
     int chunkSize = sizeof(HeapChunkHeader) + size;
+    int pageSize = chunkSize > VM_MIN_HEAP_PAGE ? chunkSize : VM_MIN_HEAP_PAGE;
 
-    if (chunkSize > VM_HEAP_PAGE_SIZE)
-        error("Structure exceeds page size");
-
-    if (!pages->last || pages->last->occupied + chunkSize > VM_HEAP_PAGE_SIZE)
-        pageAdd(pages);
+    if (!pages->last || pages->last->occupied + chunkSize > VM_MIN_HEAP_PAGE)
+        pageAdd(pages, pageSize);
 
     HeapChunkHeader *chunk = pages->last->ptr + pages->last->occupied;
     chunk->refCnt = 1;
@@ -193,12 +192,16 @@ static void chunkChangeRefCnt(HeapPages *pages, HeapPage *page, void *ptr, int d
 {
     HeapChunkHeader *chunk = ptr - sizeof(HeapChunkHeader);
 
-    chunk->refCnt += delta;
-    page->refCnt += delta;
+    // TODO: double-check the suspicious condition
+    if (chunk->refCnt > 0)
+    {
+        chunk->refCnt += delta;
+        page->refCnt += delta;
 
 #ifdef DEBUG_REF_CNT
-    printf("%p: delta: %d  chunk: %d  page: %d\n", ptr, delta, chunk->refCnt, page->refCnt);
+        printf("%p: delta: %d  chunk: %d  page: %d\n", ptr, delta, chunk->refCnt, page->refCnt);
 #endif
+    }
 
     if (page->refCnt == 0)
         pageRemove(pages, page);
@@ -386,24 +389,38 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
             HeapPage *page = pageFind(pages, array->data);
             if (page)
             {
-                HeapChunkHeader *chunk = array->data - sizeof(HeapChunkHeader);
-
-                if (typeGarbageCollectedRuntime(type->base) && !(chunk->refCnt == 1 && tokKind == TOK_MINUSMINUS))  // Last reference (from make()) excluded
+                if (tokKind == TOK_PLUSPLUS)
+                    chunkChangeRefCnt(pages, page, array->data, 1);
+                else
                 {
-                    void *itemPtr = array->data;
-
-                    for (int i = 0; i < array->len; i++)
+                    HeapChunkHeader *chunk = array->data - sizeof(HeapChunkHeader);
+                    if (!root)
                     {
-                        void *item = itemPtr;
-                        if (type->base->kind == TYPE_PTR)
-                            item = *(void **)item;
-
-                        doBasicChangeRefCnt(fiber, pages, item, type->base, extraRefCnt, root, tokKind, error);
-                        itemPtr += array->itemSize;
+                        int deltaExtraRefCnt = extraRefCnt - chunk->extraRefCnt;
+                        chunk->extraRefCnt = extraRefCnt;
+                        chunkChangeRefCnt(pages, page, array->data, deltaExtraRefCnt);
                     }
-                }
 
-                chunkChangeRefCnt(pages, page, array->data, tokKind == TOK_PLUSPLUS ? 1 : -1);
+                    if (typeGarbageCollectedRuntime(type->base))
+                    {
+                        void *itemPtr = array->data;
+
+                        for (int i = 0; i < array->len; i++)
+                        {
+                            void *item = itemPtr;
+                            if (type->base->kind == TYPE_PTR)
+                                item = *(void **)item;
+
+                            doBasicChangeRefCnt(fiber, pages, item, type->base, chunk->refCnt - 1, false, tokKind, error);
+                            itemPtr += array->itemSize;
+                        }
+                    }
+
+                    if (!root && chunk->extraRefCnt > 0)
+                        chunk->extraRefCnt--;
+
+                    chunkChangeRefCnt(pages, page, array->data, -1);
+                }
             }
             break;
         }
