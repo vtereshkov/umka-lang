@@ -22,7 +22,8 @@ enum
     VM_IO_FORMAT_REG     = VM_NUM_REGS - 2,
     VM_IO_COUNT_REG      = VM_NUM_REGS - 1,
 
-    VM_MIN_FREE_STACK    = 1024,  // Slots
+    VM_MIN_FREE_STACK    = 1024,                    // Slots
+    VM_HEAP_PAGE_SIZE    = 10 * 1024 * 1024,        // Bytes
 
     VM_FIBER_KILL_SIGNAL = -1     // Used instead of return address in fiber function calls
 };
@@ -133,19 +134,26 @@ typedef struct
 } Fiber;
 
 
-typedef struct tagHeapChunk
+typedef struct tagHeapPage
 {
     void *ptr;
-    int size;
-    int refCnt, extraRefCnt;
-    struct tagHeapChunk *prev, *next;
-} HeapChunk;
+    int occupied;
+    int refCnt;
+    struct tagHeapPage *prev, *next;
+} HeapPage;
 
 
 typedef struct
 {
-    HeapChunk *first, *last;
-} HeapChunks;
+    HeapPage *first, *last;
+} HeapPages;
+
+
+typedef struct
+{
+    int refCnt, extraRefCnt;
+    int size;
+} HeapChunkHeader;
 
 
 typedef void (*ExternFunc)(Slot *params, Slot *result);
@@ -154,7 +162,7 @@ typedef void (*ExternFunc)(Slot *params, Slot *result);
 typedef struct
 {
     Fiber *fiber;
-    HeapChunks chunks;
+    HeapPages pages;
     ErrorFunc error;
 } VM;
 

@@ -6,7 +6,7 @@ fn f(b: ^[][2]^int, length: int) {
     }
 }    
 
-fn main() {
+fn main() {  
     a := make([var][2]^int, 10)
 
     for i := 0; i < len(a); i++ {
@@ -14,10 +14,19 @@ fn main() {
         a[i][0]^ = 5 * i
         a[i][1]^ = 7 * i
     } 
-
+    
     for i := 0; i < len(a); i++ {
         std.println("a: " + std.itoa(a[i][0]^) + " " + std.itoa(a[i][1]^))
     }
+    
+    std.println("Appending...")
+    e := append(a, [2]^int {new(int), new(int)})
+    e[len(e) - 1][0]^ = 876
+    e[len(e) - 1][1]^ = 765    
+
+    for i := 0; i < len(e); i++ {
+        std.println("e: " + std.itoa(e[i][0]^) + " " + std.itoa(e[i][1]^))
+    }     
     
     std.println("Appending...")
     a = append(a, [2]^int {new(int), new(int)})
@@ -56,5 +65,5 @@ fn main() {
 
     for i := 0; i < len(d); i++ {
         std.println("d: " + std.itoa(d[i][0]) + " " + std.itoa(d[i][1]))
-    }     
+    }    
 }

@@ -73,5 +73,5 @@ fn main() {
     
     g2res := g2()
     
-    new([10000000] int)
+    new([1000000] int)
 }

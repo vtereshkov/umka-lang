@@ -1,11 +1,11 @@
 # depslib dependency file v1.0
-1589877452 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka.c
+1589897104 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka.c
 	<stdio.h>
 	<stdlib.h>
 	<string.h>
 	"umka_api.h"
 
-1589877452 c:\users\vasiliy\desktop\umka-lang-master\src\umka_api.h
+1589897104 c:\users\vasiliy\desktop\umka-lang-master\src\umka_api.h
 	<stdint.h>
 	<stdbool.h>
 
