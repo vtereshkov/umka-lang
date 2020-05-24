@@ -169,7 +169,7 @@ static void *chunkAlloc(HeapPages *pages, int size, ErrorFunc error)
     int chunkSize = sizeof(HeapChunkHeader) + size;
     int pageSize = chunkSize > VM_MIN_HEAP_PAGE ? chunkSize : VM_MIN_HEAP_PAGE;
 
-    if (!pages->last || pages->last->occupied + chunkSize > VM_MIN_HEAP_PAGE)
+    if (!pages->last || pages->last->occupied + chunkSize > pages->last->size)
         pageAdd(pages, pageSize);
 
     HeapChunkHeader *chunk = pages->last->ptr + pages->last->occupied;
