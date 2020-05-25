@@ -174,7 +174,6 @@ static void *chunkAlloc(HeapPages *pages, int size, ErrorFunc error)
 
     HeapChunkHeader *chunk = pages->last->ptr + pages->last->occupied;
     chunk->refCnt = 1;
-    chunk->extraRefCnt = 0;
     chunk->size = size;
 
     pages->last->occupied += chunkSize;
@@ -314,17 +313,11 @@ static void doBasicAssign(void *lhs, Slot rhs, TypeKind typeKind, int structSize
 }
 
 
-static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type *type, int extraRefCnt, bool root, TokenKind tokKind, ErrorFunc error)
+static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type *type, TokenKind tokKind, ErrorFunc error)
 {
     // Update ref counts for pointers (including static/dynamic array items and structure/interface fields) if allocated dynamically
-    // Ref count is the total number of ways through which the node is accessible, not just a number of immediate refs
     // Among garbage collected types, all types except the pointer type are represented by pointers by default
-
     // RTTI is required for lists, trees, etc., since the propagation depth for the root ref count is unknown at compile time
-    // Root ref count is propagated by means of an "extra ref" count equal to the parent ref count minus one ref through which we reached the child
-    // "Extra ref" count is updated just before decreasing ref counts through the whole data structure
-
-    // TODO: consider structures like a -> c <- b
 
     switch (type->kind)
     {
@@ -337,26 +330,16 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
                     chunkChangeRefCnt(pages, page, ptr, 1);
                 else
                 {
+                    // Traverse children only before removing the last remaining ref
                     HeapChunkHeader *chunk = ptr - sizeof(HeapChunkHeader);
-                    if (!root)
-                    {
-                        int deltaExtraRefCnt = extraRefCnt - chunk->extraRefCnt;
-                        chunk->extraRefCnt = extraRefCnt;
-                        chunkChangeRefCnt(pages, page, ptr, deltaExtraRefCnt);
-                    }
-
-                    if (typeGarbageCollectedRuntime(type->base))
+                    if (chunk->refCnt == 1 && typeGarbageCollectedRuntime(type->base))
                     {
                         void *data = ptr;
                         if (type->base->kind == TYPE_PTR)
                             data = *(void **)data;
 
-                        doBasicChangeRefCnt(fiber, pages, data, type->base, chunk->refCnt - 1, false, tokKind, error);
+                        doBasicChangeRefCnt(fiber, pages, data, type->base, tokKind, error);
                     }
-
-                    if (!root && chunk->extraRefCnt > 0)
-                        chunk->extraRefCnt--;
-
                     chunkChangeRefCnt(pages, page, ptr, -1);
                 }
             }
@@ -376,7 +359,7 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
                     if (type->base->kind == TYPE_PTR)
                         item = *(void **)item;
 
-                    doBasicChangeRefCnt(fiber, pages, item, type->base, extraRefCnt, root, tokKind, error);
+                    doBasicChangeRefCnt(fiber, pages, item, type->base, tokKind, error);
                     itemPtr += itemSize;
                 }
             }
@@ -393,15 +376,9 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
                     chunkChangeRefCnt(pages, page, array->data, 1);
                 else
                 {
+                    // Traverse children only before removing the last remaining ref
                     HeapChunkHeader *chunk = array->data - sizeof(HeapChunkHeader);
-                    if (!root)
-                    {
-                        int deltaExtraRefCnt = extraRefCnt - chunk->extraRefCnt;
-                        chunk->extraRefCnt = extraRefCnt;
-                        chunkChangeRefCnt(pages, page, array->data, deltaExtraRefCnt);
-                    }
-
-                    if (typeGarbageCollectedRuntime(type->base))
+                    if (chunk->refCnt == 1 && typeGarbageCollectedRuntime(type->base))
                     {
                         void *itemPtr = array->data;
 
@@ -411,14 +388,10 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
                             if (type->base->kind == TYPE_PTR)
                                 item = *(void **)item;
 
-                            doBasicChangeRefCnt(fiber, pages, item, type->base, chunk->refCnt - 1, false, tokKind, error);
+                            doBasicChangeRefCnt(fiber, pages, item, type->base, tokKind, error);
                             itemPtr += array->itemSize;
                         }
                     }
-
-                    if (!root && chunk->extraRefCnt > 0)
-                        chunk->extraRefCnt--;
-
                     chunkChangeRefCnt(pages, page, array->data, -1);
                 }
             }
@@ -435,7 +408,7 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
                     if (type->field[i]->type->kind == TYPE_PTR)
                         field = *(void **)field;
 
-                    doBasicChangeRefCnt(fiber, pages, field, type->field[i]->type, extraRefCnt, root, tokKind, error);
+                    doBasicChangeRefCnt(fiber, pages, field, type->field[i]->type, tokKind, error);
                 }
             }
             break;
@@ -448,7 +421,7 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
             Type *__selftype = *(Type **)(ptr + type->field[1]->offset);
 
             if (__self)
-                doBasicChangeRefCnt(fiber, pages, __self, __selftype, extraRefCnt, root, tokKind, error);
+                doBasicChangeRefCnt(fiber, pages, __self, __selftype, tokKind, error);
             break;
         }
 
@@ -818,7 +791,7 @@ static void doChangeRefCnt(Fiber *fiber, HeapPages *pages, ErrorFunc error)
     TokenKind tokKind = fiber->code[fiber->ip].tokKind;
     Type *type        = fiber->code[fiber->ip].operand.ptrVal;
 
-    doBasicChangeRefCnt(fiber, pages, ptr, type, 0, true, tokKind, error);
+    doBasicChangeRefCnt(fiber, pages, ptr, type, tokKind, error);
 
     if (fiber->code[fiber->ip].inlinePop)
         fiber->top++;

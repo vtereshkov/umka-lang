@@ -22,7 +22,7 @@ def check_tree(node):
     return item + check_tree(left) - check_tree(right)
 
 min_depth = 4
-max_depth = 8 #12
+max_depth = 12
 stretch_depth = max_depth + 1
 
 start = time.clock()

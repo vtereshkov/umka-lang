@@ -151,7 +151,7 @@ typedef struct
 
 typedef struct
 {
-    int refCnt, extraRefCnt;
+    int refCnt;
     int size;
 } HeapChunkHeader;
 
