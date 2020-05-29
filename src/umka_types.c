@@ -228,8 +228,18 @@ bool typeStructured(Type *type)
 
 bool typeGarbageCollected(Type *type)
 {
-    return type->kind == TYPE_PTR    || type->kind == TYPE_ARRAY || type->kind == TYPE_DYNARRAY ||
-           type->kind == TYPE_STRUCT || type->kind == TYPE_INTERFACE;
+    if (type->kind == TYPE_PTR || type->kind == TYPE_DYNARRAY || type->kind == TYPE_INTERFACE)
+        return true;
+
+    if (type->kind == TYPE_ARRAY)
+        return typeGarbageCollected(type->base);
+
+    if (type->kind == TYPE_STRUCT)
+        for (int i = 0; i < type->numItems; i++)
+            if (typeGarbageCollected(type->field[i]->type))
+                return true;
+
+    return false;
 }
 
 
