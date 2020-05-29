@@ -36,7 +36,8 @@ static void doGarbageCollection(Compiler *comp, int block)
         if (ident->kind == IDENT_VAR && ident->block == block && typeGarbageCollected(ident->type))
         {
             doPushVarPtr(comp, ident);
-            doUpdateRefCnt(comp, ident->type, true, TOK_MINUSMINUS);
+            genDeref(&comp->gen, ident->type->kind);
+            genChangeRefCnt(&comp->gen, TOK_MINUSMINUS, ident->type);
             genPop(&comp->gen);
         }
 }
@@ -75,20 +76,10 @@ void parseAssignmentStmt(Compiler *comp, Type *type, void *initializedVarPtr)
     doImplicitTypeConv(comp, type, &rightType, rightConstant, false);
     typeAssertCompatible(&comp->types, type, rightType);
 
-    if (initializedVarPtr)      // Initialize global variable
+    if (initializedVarPtr)                          // Initialize global variable
         constAssign(&comp->consts, initializedVarPtr, rightConstant, type->kind, typeSize(&comp->types, type));
-    else                        // Assign to local variable
-    {
-        // Increase right-hand side reference count
-        doUpdateRefCnt(comp, type, false, TOK_PLUSPLUS);
-
-        // Decrease old left-hand side reference count
-        // TODO: optimize reference count decrement
-        genSwap(&comp->gen);
-        doUpdateRefCnt(comp, type, true, TOK_MINUSMINUS);
-
-        genSwapAssign(&comp->gen, type->kind, typeSize(&comp->types, type));
-    }
+    else                                            // Assign to variable
+        genChangeRefCntAssign(&comp->gen, type);
 }
 
 
@@ -114,16 +105,7 @@ static void parseShortAssignmentStmt(Compiler *comp, Type *type, TokenKind op)
     parseExpr(comp, &rightType, NULL);
 
     doApplyOperator(comp, &type, &rightType, NULL, NULL, lexShortAssignment(op), true, false);
-
-    // Increase right-hand side reference count
-    doUpdateRefCnt(comp, type, false, TOK_PLUSPLUS);
-
-    // Decrease old left-hand side reference count
-    // TODO: optimize reference count decrement
-    genSwap(&comp->gen);
-    doUpdateRefCnt(comp, type, true, TOK_MINUSMINUS);
-
-    genSwapAssign(&comp->gen, type->kind, typeSize(&comp->types, type));
+    genChangeRefCntAssign(&comp->gen, type);
 }
 
 
@@ -141,12 +123,12 @@ void parseDeclAssignmentStmt(Compiler *comp, IdentName name, bool constExpr, boo
     identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, name, rightType, exported);
     Ident *ident = comp->idents.last;
 
-    if (constExpr)                              // Initialize global variable
+    if (constExpr)              // Initialize global variable
         constAssign(&comp->consts, ident->ptr, rightConstant, rightType->kind, typeSize(&comp->types, rightType));
-    else                                        // Assign to local variable
+    else                        // Assign to variable
     {
         // Increase right-hand side reference count
-        doUpdateRefCnt(comp, rightType, false, TOK_PLUSPLUS);
+        genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, rightType);
 
         doPushVarPtr(comp, ident);
         genSwapAssign(&comp->gen, rightType->kind, typeSize(&comp->types, rightType));
@@ -488,7 +470,7 @@ static void parseReturnStmt(Compiler *comp)
     if (sig->resultType[0]->kind != TYPE_VOID)
     {
         // Increase result reference count
-        doUpdateRefCnt(comp, sig->resultType[0], false, TOK_PLUSPLUS);
+        genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, sig->resultType[0]);
         genPopReg(&comp->gen, VM_RESULT_REG_0);
     }
 

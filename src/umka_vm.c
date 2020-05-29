@@ -28,6 +28,7 @@ static char *opcodeSpelling [] =
     "ASSIGN_OFS",
     "SWAP_ASSIGN_OFS",
     "CHANGE_REF_CNT",
+    "CHANGE_REF_CNT_ASSIGN",
     "UNARY",
     "BINARY",
     "GET_ARRAY_PTR",
@@ -800,6 +801,25 @@ static void doChangeRefCnt(Fiber *fiber, HeapPages *pages, ErrorFunc error)
 }
 
 
+static void doChangeRefCntAssign(Fiber *fiber, HeapPages *pages, ErrorFunc error)
+{
+    Slot rhs   = *fiber->top++;
+    void *lhs  = (fiber->top++)->ptrVal;
+    Type *type = fiber->code[fiber->ip].operand.ptrVal;
+
+    // Increase right-hand side ref count
+    doBasicChangeRefCnt(fiber, pages, rhs.ptrVal, type, TOK_PLUSPLUS, error);
+
+    // Decrease left-hand side ref count
+    Slot lhsDeref = {.ptrVal = lhs};
+    doBasicDeref(&lhsDeref, type->kind, error);
+    doBasicChangeRefCnt(fiber, pages, lhsDeref.ptrVal, type, TOK_MINUSMINUS, error);
+
+    doBasicAssign(lhs, rhs, type->kind, typeSizeRuntime(type), error);
+    fiber->ip++;
+}
+
+
 static void doUnary(Fiber *fiber, ErrorFunc error)
 {
     if (fiber->code[fiber->ip].typeKind == TYPE_REAL || fiber->code[fiber->ip].typeKind == TYPE_REAL32)
@@ -1182,33 +1202,34 @@ static void fiberStep(Fiber *fiber, Fiber **newFiber, HeapPages *pages, ErrorFun
 
     switch (fiber->code[fiber->ip].opcode)
     {
-        case OP_PUSH:               doPush(fiber, error);                          break;
-        case OP_PUSH_LOCAL_PTR:     doPushLocalPtr(fiber, error);                  break;
-        case OP_PUSH_REG:           doPushReg(fiber);                              break;
-        case OP_PUSH_STRUCT:        doPushStruct(fiber, error);                    break;
-        case OP_POP:                doPop(fiber);                                  break;
-        case OP_POP_REG:            doPopReg(fiber);                               break;
-        case OP_DUP:                doDup(fiber);                                  break;
-        case OP_SWAP:               doSwap(fiber);                                 break;
-        case OP_DEREF:              doDeref(fiber, error);                         break;
-        case OP_ASSIGN:             doAssign(fiber, error);                        break;
-        case OP_SWAP_ASSIGN:        doSwapAssign(fiber, error);                    break;
-        case OP_ASSIGN_OFS:         doAssignOfs(fiber);                            break;
-        case OP_SWAP_ASSIGN_OFS:    doSwapAssignOfs(fiber);                        break;
-        case OP_CHANGE_REF_CNT:     doChangeRefCnt(fiber, pages, error);           break;
-        case OP_UNARY:              doUnary(fiber, error);                         break;
-        case OP_BINARY:             doBinary(fiber, error);                        break;
-        case OP_GET_ARRAY_PTR:      doGetArrayPtr(fiber, error);                   break;
-        case OP_GET_DYNARRAY_PTR:   doGetDynArrayPtr(fiber, error);                break;
-        case OP_GET_FIELD_PTR:      doGetFieldPtr(fiber, error);                   break;
-        case OP_GOTO:               doGoto(fiber);                                 break;
-        case OP_GOTO_IF:            doGotoIf(fiber);                               break;
-        case OP_CALL:               doCall(fiber, error);                          break;
-        case OP_CALL_EXTERN:        doCallExtern(fiber);                           break;
-        case OP_CALL_BUILTIN:       doCallBuiltin(fiber, newFiber, pages, error);  break;
-        case OP_RETURN:             doReturn(fiber, newFiber);                     break;
-        case OP_ENTER_FRAME:        doEnterFrame(fiber, error);                    break;
-        case OP_LEAVE_FRAME:        doLeaveFrame(fiber);                           break;
+        case OP_PUSH:                   doPush(fiber, error);                          break;
+        case OP_PUSH_LOCAL_PTR:         doPushLocalPtr(fiber, error);                  break;
+        case OP_PUSH_REG:               doPushReg(fiber);                              break;
+        case OP_PUSH_STRUCT:            doPushStruct(fiber, error);                    break;
+        case OP_POP:                    doPop(fiber);                                  break;
+        case OP_POP_REG:                doPopReg(fiber);                               break;
+        case OP_DUP:                    doDup(fiber);                                  break;
+        case OP_SWAP:                   doSwap(fiber);                                 break;
+        case OP_DEREF:                  doDeref(fiber, error);                         break;
+        case OP_ASSIGN:                 doAssign(fiber, error);                        break;
+        case OP_SWAP_ASSIGN:            doSwapAssign(fiber, error);                    break;
+        case OP_ASSIGN_OFS:             doAssignOfs(fiber);                            break;
+        case OP_SWAP_ASSIGN_OFS:        doSwapAssignOfs(fiber);                        break;
+        case OP_CHANGE_REF_CNT:         doChangeRefCnt(fiber, pages, error);           break;
+        case OP_CHANGE_REF_CNT_ASSIGN:  doChangeRefCntAssign(fiber, pages, error);     break;
+        case OP_UNARY:                  doUnary(fiber, error);                         break;
+        case OP_BINARY:                 doBinary(fiber, error);                        break;
+        case OP_GET_ARRAY_PTR:          doGetArrayPtr(fiber, error);                   break;
+        case OP_GET_DYNARRAY_PTR:       doGetDynArrayPtr(fiber, error);                break;
+        case OP_GET_FIELD_PTR:          doGetFieldPtr(fiber, error);                   break;
+        case OP_GOTO:                   doGoto(fiber);                                 break;
+        case OP_GOTO_IF:                doGotoIf(fiber);                               break;
+        case OP_CALL:                   doCall(fiber, error);                          break;
+        case OP_CALL_EXTERN:            doCallExtern(fiber);                           break;
+        case OP_CALL_BUILTIN:           doCallBuiltin(fiber, newFiber, pages, error);  break;
+        case OP_RETURN:                 doReturn(fiber, newFiber);                     break;
+        case OP_ENTER_FRAME:            doEnterFrame(fiber, error);                    break;
+        case OP_LEAVE_FRAME:            doLeaveFrame(fiber);                           break;
 
         default: error("Illegal instruction"); return;
     } // switch
@@ -1254,7 +1275,7 @@ void vmRun(VM *vm, int entryOffset, int numParamSlots, Slot *params, Slot *resul
 
 int vmAsm(int ip, Instruction *instr, char *buf)
 {
-    int chars = sprintf(buf, "%09d %6d %16s", ip, instr->debug.line, opcodeSpelling[instr->opcode]);
+    int chars = sprintf(buf, "%09d %6d %22s", ip, instr->debug.line, opcodeSpelling[instr->opcode]);
 
     if (instr->tokKind != TOK_NONE)
         chars += sprintf(buf + chars, " %s", lexSpelling(instr->tokKind));
@@ -1289,10 +1310,11 @@ int vmAsm(int ip, Instruction *instr, char *buf)
         case OP_GOTO_IF:
         case OP_CALL:
         case OP_RETURN:
-        case OP_ENTER_FRAME:    chars += sprintf(buf + chars, " %lld", (long long int)instr->operand.intVal); break;
-        case OP_CALL_EXTERN:    chars += sprintf(buf + chars, " %p",   instr->operand.ptrVal); break;
-        case OP_CALL_BUILTIN:   chars += sprintf(buf + chars, " %s",   builtinSpelling[instr->operand.builtinVal]); break;
+        case OP_ENTER_FRAME:            chars += sprintf(buf + chars, " %lld", (long long int)instr->operand.intVal); break;
+        case OP_CALL_EXTERN:            chars += sprintf(buf + chars, " %p",   instr->operand.ptrVal); break;
+        case OP_CALL_BUILTIN:           chars += sprintf(buf + chars, " %s",   builtinSpelling[instr->operand.builtinVal]); break;
         case OP_CHANGE_REF_CNT:
+        case OP_CHANGE_REF_CNT_ASSIGN:
         {
             char typeBuf[DEFAULT_STR_LEN + 1];
             chars += sprintf(buf + chars, " %s", typeSpelling(instr->operand.ptrVal, typeBuf));

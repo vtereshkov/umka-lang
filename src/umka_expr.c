@@ -36,23 +36,6 @@ static void doCopyResultToTempVar(Compiler *comp, Type *type)
 }
 
 
-void doUpdateRefCnt(Compiler *comp, Type *type, bool lhs, TokenKind tokKind)
-{
-    if (typeGarbageCollected(type))
-    {
-        if (lhs)
-        {
-            genDup(&comp->gen);
-            genDeref(&comp->gen, type->kind);
-            genChangeRefCnt(&comp->gen, tokKind, type);
-            genPop(&comp->gen);
-        }
-        else
-            genChangeRefCnt(&comp->gen, tokKind, type);
-    }
-}
-
-
 static void doIntToRealConv(Compiler *comp, Type *dest, Type **src, Const *constant, bool lhs)
 {
     BuiltinFunc builtin = lhs ? BUILTIN_REAL_LHS : BUILTIN_REAL;
@@ -636,7 +619,7 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
         genPushReg(&comp->gen, VM_SELF_REG);
 
         // Increase receiver's reference count
-        doUpdateRefCnt(comp, (*type)->sig.param[0]->type, false, TOK_PLUSPLUS);
+        genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, (*type)->sig.param[0]->type);
 
         numPreHiddenParams++;
         i++;
@@ -662,7 +645,7 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
             typeAssertCompatible(&comp->types, formalParamType, actualParamType);
 
             // Increase parameter's reference count
-            doUpdateRefCnt(comp, formalParamType, false, TOK_PLUSPLUS);
+            genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, formalParamType);
 
             // Copy structured parameter if passed by value
             if (typeStructured(formalParamType))
@@ -905,7 +888,7 @@ static void parseCallSelector(Compiler *comp, Type **type, Const *constant, bool
         genPushReg(&comp->gen, VM_RESULT_REG_0);
 
     // Copy result to a temporary local variable to collect it as garbage when leaving the block
-    if ((*type)->kind == TYPE_PTR || typeStructured(*type))
+    if (typeGarbageCollected(*type))
         doCopyResultToTempVar(comp, *type);
 
     // All temporary reals are 64-bit

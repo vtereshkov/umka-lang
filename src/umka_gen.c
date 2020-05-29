@@ -276,8 +276,23 @@ void genSwapAssignOfs(CodeGen *gen, int offset)
 
 void genChangeRefCnt(CodeGen *gen, TokenKind tokKind, Type *type)
 {
-    const Instruction instr = {.opcode = OP_CHANGE_REF_CNT, .tokKind = tokKind, .typeKind = TYPE_NONE, .operand.ptrVal = type};
-    genAddInstr(gen, &instr);
+    if (typeGarbageCollected(type))
+    {
+        const Instruction instr = {.opcode = OP_CHANGE_REF_CNT, .tokKind = tokKind, .typeKind = TYPE_NONE, .operand.ptrVal = type};
+        genAddInstr(gen, &instr);
+    }
+}
+
+
+void genChangeRefCntAssign(CodeGen *gen, Type *type)
+{
+    if (typeGarbageCollected(type))
+    {
+        const Instruction instr = {.opcode = OP_CHANGE_REF_CNT_ASSIGN, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.ptrVal = type};
+        genAddInstr(gen, &instr);
+    }
+    else
+        genAssign(gen, type->kind, typeSizeRuntime(type));
 }
 
 
