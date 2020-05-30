@@ -105,7 +105,3 @@ fn malloc*   (size: int): ^void {return rtlmalloc(size)}
 
 fn rtlfree   (ptr: ^void)
 fn free*     (ptr: ^void) {rtlfree(ptr)}
-
-// Fibers
-
-type Fiber* = ^void

@@ -22,10 +22,12 @@ enum
     VM_IO_FORMAT_REG     = VM_NUM_REGS - 2,
     VM_IO_COUNT_REG      = VM_NUM_REGS - 1,
 
-    VM_MIN_FREE_STACK    = 1024,               // Slots
-    VM_MIN_HEAP_PAGE     = 1024 * 1024,        // Bytes
+    VM_MIN_FREE_STACK    = 1024,                    // Slots
+    VM_MIN_HEAP_PAGE     = 1024 * 1024,             // Bytes
 
-    VM_FIBER_KILL_SIGNAL = -1     // Used instead of return address in fiber function calls
+    VM_HEAP_CHUNK_MAGIC  = 0x1234567887654321LL,
+
+    VM_FIBER_KILL_SIGNAL = -1                       // Used instead of return address in fiber function calls
 };
 
 
@@ -97,7 +99,6 @@ typedef enum
 
     // Fibers
     BUILTIN_FIBERSPAWN,
-    BUILTIN_FIBERFREE,
     BUILTIN_FIBERCALL,
     BUILTIN_FIBERALIVE,
 } BuiltinFunc;
@@ -152,6 +153,7 @@ typedef struct
 
 typedef struct
 {
+    int64_t magic;
     int refCnt;
     int size;
 } HeapChunkHeader;

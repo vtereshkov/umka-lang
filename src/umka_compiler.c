@@ -10,26 +10,29 @@ void parseProgram(Compiler *comp);
 
 static void compilerDeclareBuiltinTypes(Compiler *comp)
 {
-    comp->voidType   = typeAdd(&comp->types, &comp->blocks, TYPE_VOID);
-    comp->nullType   = typeAdd(&comp->types, &comp->blocks, TYPE_NULL);
-    comp->int8Type   = typeAdd(&comp->types, &comp->blocks, TYPE_INT8);
-    comp->int16Type  = typeAdd(&comp->types, &comp->blocks, TYPE_INT16);
-    comp->int32Type  = typeAdd(&comp->types, &comp->blocks, TYPE_INT32);
-    comp->intType    = typeAdd(&comp->types, &comp->blocks, TYPE_INT);
-    comp->uint8Type  = typeAdd(&comp->types, &comp->blocks, TYPE_UINT8);
-    comp->uint16Type = typeAdd(&comp->types, &comp->blocks, TYPE_UINT16);
-    comp->uint32Type = typeAdd(&comp->types, &comp->blocks, TYPE_UINT32);
-    comp->boolType   = typeAdd(&comp->types, &comp->blocks, TYPE_BOOL);
-    comp->charType   = typeAdd(&comp->types, &comp->blocks, TYPE_CHAR);
-    comp->real32Type = typeAdd(&comp->types, &comp->blocks, TYPE_REAL32);
-    comp->realType   = typeAdd(&comp->types, &comp->blocks, TYPE_REAL);
+    comp->voidType          = typeAdd(&comp->types, &comp->blocks, TYPE_VOID);
+    comp->nullType          = typeAdd(&comp->types, &comp->blocks, TYPE_NULL);
+    comp->int8Type          = typeAdd(&comp->types, &comp->blocks, TYPE_INT8);
+    comp->int16Type         = typeAdd(&comp->types, &comp->blocks, TYPE_INT16);
+    comp->int32Type         = typeAdd(&comp->types, &comp->blocks, TYPE_INT32);
+    comp->intType           = typeAdd(&comp->types, &comp->blocks, TYPE_INT);
+    comp->uint8Type         = typeAdd(&comp->types, &comp->blocks, TYPE_UINT8);
+    comp->uint16Type        = typeAdd(&comp->types, &comp->blocks, TYPE_UINT16);
+    comp->uint32Type        = typeAdd(&comp->types, &comp->blocks, TYPE_UINT32);
+    comp->boolType          = typeAdd(&comp->types, &comp->blocks, TYPE_BOOL);
+    comp->charType          = typeAdd(&comp->types, &comp->blocks, TYPE_CHAR);
+    comp->real32Type        = typeAdd(&comp->types, &comp->blocks, TYPE_REAL32);
+    comp->realType          = typeAdd(&comp->types, &comp->blocks, TYPE_REAL);
 
-    comp->ptrVoidType = typeAddPtrTo(&comp->types, &comp->blocks, comp->voidType);
-    comp->ptrNullType = typeAddPtrTo(&comp->types, &comp->blocks, comp->nullType);
-
-    comp->strType = typeAdd(&comp->types, &comp->blocks, TYPE_STR);
-    comp->strType->base = comp->charType;
+    comp->strType           = typeAdd(&comp->types, &comp->blocks, TYPE_STR);
+    comp->strType->base     = comp->charType;
     comp->strType->numItems = DEFAULT_STR_LEN + 1;
+
+    comp->fiberType         = typeAdd(&comp->types, &comp->blocks, TYPE_FIBER);
+
+    comp->ptrVoidType       = typeAddPtrTo(&comp->types, &comp->blocks, comp->voidType);
+    comp->ptrNullType       = typeAddPtrTo(&comp->types, &comp->blocks, comp->nullType);
+    comp->ptrFiberType      = typeAddPtrTo(&comp->types, &comp->blocks, comp->fiberType);
 }
 
 
@@ -57,6 +60,7 @@ static void compilerDeclareBuiltinIdents(Compiler *comp)
     identAddType(&comp->idents, &comp->modules, &comp->blocks,  "char",     comp->charType,    true);
     identAddType(&comp->idents, &comp->modules, &comp->blocks,  "real32",   comp->real32Type,  true);
     identAddType(&comp->idents, &comp->modules, &comp->blocks,  "real",     comp->realType,    true);
+    identAddType(&comp->idents, &comp->modules, &comp->blocks,  "fiber",    comp->fiberType,   true);
 
     // Built-in functions
     // I/O
@@ -87,7 +91,6 @@ static void compilerDeclareBuiltinIdents(Compiler *comp)
 
     // Fibers
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "fiberspawn", comp->ptrVoidType, BUILTIN_FIBERSPAWN);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "fiberfree",  comp->voidType,    BUILTIN_FIBERFREE);
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "fibercall",  comp->voidType,    BUILTIN_FIBERCALL);
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "fiberalive", comp->boolType,    BUILTIN_FIBERALIVE);
 }

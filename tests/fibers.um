@@ -1,6 +1,6 @@
 import "../import/std.um"
 
-fn childFunc(parent: std.Fiber, buf: ^[2]real) {
+fn childFunc(parent: ^fiber, buf: ^[2]real) {
     for i := 0; i < 5; i++ {
         std.println("Child  fiber: i = " + std.itoa(i) + "   buf = " + std.ftoa(buf[0], 2))
         buf[1] = i * 3
@@ -19,6 +19,4 @@ fn main() {
             fibercall(child)
         }
     }
-    
-    fiberfree(child)
 }   

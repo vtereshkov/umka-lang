@@ -28,6 +28,7 @@ typedef enum
     TYPE_STR,
     TYPE_STRUCT,
     TYPE_INTERFACE,
+    TYPE_FIBER,
     TYPE_FN
 } TypeKind;
 

@@ -2,44 +2,59 @@
 <CodeBlocks_layout_file>
 	<FileVersion major="1" minor="0" />
 	<ActiveTarget name="Debug" />
+	<File name="..\src\umka_types.h" open="1" top="0" tabpos="18" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+		<Cursor>
+			<Cursor1 position="564" topLine="14" />
+		</Cursor>
+	</File>
 	<File name="..\src\umka_common.c" open="1" top="0" tabpos="4" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
 			<Cursor1 position="4774" topLine="202" />
 		</Cursor>
 	</File>
-	<File name="..\src\umka_decl.c" open="1" top="0" tabpos="15" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+	<File name="..\src\umka_runtime.c" open="1" top="0" tabpos="7" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="8844" topLine="296" />
+			<Cursor1 position="1340" topLine="51" />
 		</Cursor>
 	</File>
-	<File name="..\src\umka_vm.c" open="1" top="0" tabpos="22" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+	<File name="..\src\umka_expr.h" open="1" top="0" tabpos="15" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="4395" topLine="216" />
+			<Cursor1 position="223" topLine="0" />
+		</Cursor>
+	</File>
+	<File name="..\src\umka_vm.h" open="1" top="0" tabpos="24" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+		<Cursor>
+			<Cursor1 position="735" topLine="12" />
 		</Cursor>
 	</File>
 	<File name="..\src\umka_compiler.c" open="1" top="0" tabpos="2" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="9069" topLine="160" />
+			<Cursor1 position="6292" topLine="73" />
 		</Cursor>
 	</File>
-	<File name="..\src\umka_lexer.h" open="1" top="0" tabpos="11" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+	<File name="..\src\umka_stmt.c" open="1" top="0" tabpos="8" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="143" topLine="99" />
+			<Cursor1 position="1168" topLine="26" />
 		</Cursor>
 	</File>
-	<File name="..\src\umka_expr.c" open="1" top="0" tabpos="13" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+	<File name="..\src\umka_gen.h" open="1" top="0" tabpos="11" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="30155" topLine="881" />
+			<Cursor1 position="1678" topLine="42" />
 		</Cursor>
 	</File>
-	<File name="..\src\umka_gen.c" open="1" top="0" tabpos="10" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+	<File name="..\src\umka_const.c" open="1" top="0" tabpos="13" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="7534" topLine="279" />
+			<Cursor1 position="4921" topLine="113" />
 		</Cursor>
 	</File>
-	<File name="..\src\umka_stmt.h" open="1" top="0" tabpos="17" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+	<File name="..\src\umka_types.c" open="1" top="0" tabpos="19" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="94" topLine="0" />
+			<Cursor1 position="6834" topLine="374" />
+		</Cursor>
+	</File>
+	<File name="..\src\umka_decl.c" open="1" top="0" tabpos="14" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+		<Cursor>
+			<Cursor1 position="8844" topLine="296" />
 		</Cursor>
 	</File>
 	<File name="..\src\umka_api.c" open="1" top="0" tabpos="1" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
@@ -47,19 +62,19 @@
 			<Cursor1 position="2333" topLine="109" />
 		</Cursor>
 	</File>
-	<File name="..\src\umka_ident.c" open="1" top="0" tabpos="21" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+	<File name="..\src\umka_lexer.h" open="1" top="0" tabpos="10" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="972" topLine="39" />
+			<Cursor1 position="143" topLine="99" />
 		</Cursor>
 	</File>
-	<File name="..\src\umka_const.h" open="1" top="0" tabpos="18" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+	<File name="..\src\umka_expr.c" open="1" top="0" tabpos="12" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="292" topLine="0" />
+			<Cursor1 position="19245" topLine="529" />
 		</Cursor>
 	</File>
-	<File name="..\src\umka_types.h" open="1" top="0" tabpos="19" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+	<File name="..\src\umka_vm.c" open="1" top="1" tabpos="21" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="1857" topLine="75" />
+			<Cursor1 position="4220" topLine="182" />
 		</Cursor>
 	</File>
 	<File name="..\src\umka_common.h" open="1" top="0" tabpos="6" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
@@ -67,49 +82,34 @@
 			<Cursor1 position="1289" topLine="87" />
 		</Cursor>
 	</File>
-	<File name="..\src\umka_lexer.c" open="1" top="0" tabpos="3" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+	<File name="..\src\umka_gen.c" open="1" top="0" tabpos="9" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="2349" topLine="128" />
-		</Cursor>
-	</File>
-	<File name="..\src\umka_vm.h" open="1" top="0" tabpos="7" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
-		<Cursor>
-			<Cursor1 position="1377" topLine="32" />
+			<Cursor1 position="7534" topLine="279" />
 		</Cursor>
 	</File>
 	<File name="..\src\umka_compiler.h" open="1" top="0" tabpos="5" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="1474" topLine="25" />
+			<Cursor1 position="922" topLine="23" />
 		</Cursor>
 	</File>
-	<File name="..\src\umka_runtime.c" open="1" top="0" tabpos="8" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+	<File name="..\src\umka_stmt.h" open="1" top="0" tabpos="16" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="1340" topLine="51" />
+			<Cursor1 position="94" topLine="0" />
 		</Cursor>
 	</File>
-	<File name="..\src\umka_expr.h" open="1" top="0" tabpos="16" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+	<File name="..\src\umka_ident.c" open="1" top="0" tabpos="20" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="223" topLine="0" />
+			<Cursor1 position="972" topLine="39" />
 		</Cursor>
 	</File>
-	<File name="..\src\umka_stmt.c" open="1" top="0" tabpos="9" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+	<File name="..\src\umka_const.h" open="1" top="0" tabpos="17" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="1168" topLine="26" />
+			<Cursor1 position="292" topLine="0" />
 		</Cursor>
 	</File>
-	<File name="..\src\umka_gen.h" open="1" top="0" tabpos="12" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+	<File name="..\src\umka_lexer.c" open="1" top="0" tabpos="3" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="1678" topLine="42" />
-		</Cursor>
-	</File>
-	<File name="..\src\umka_const.c" open="1" top="0" tabpos="14" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
-		<Cursor>
-			<Cursor1 position="4921" topLine="113" />
-		</Cursor>
-	</File>
-	<File name="..\src\umka_types.c" open="1" top="1" tabpos="20" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
-		<Cursor>
-			<Cursor1 position="5588" topLine="224" />
+			<Cursor1 position="2349" topLine="128" />
 		</Cursor>
 	</File>
 </CodeBlocks_layout_file>

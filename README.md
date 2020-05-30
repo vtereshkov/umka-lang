@@ -69,7 +69,7 @@ Built-in functions:
     printf fprintf sprintf scanf fscanf sscanf
     round trunc fabs sqrt sin cos atan exp log
     new make append len sizeof
-    fiberspawn fiberfree fibercall fiberalive
+    fiberspawn fibercall fiberalive
 */
 
 // Methods
@@ -114,7 +114,7 @@ for i := 0; i < len(g); i++ {
 ```
 ### Multitasking
 ```
-fn childFunc(parent: std.Fiber, buf: ^int) {
+fn childFunc(parent: ^fiber, buf: ^int) {
     for i := 0; i < 5; i++ {
         std.println("Child : i=" + std.itoa(i) + " buf=" + std.itoa(buf^))
         buf^ = i * 3
@@ -132,6 +132,5 @@ fn parentFunc() {
             fibercall(child)
         }
     }    
-    fiberfree(child)
 }
 ```

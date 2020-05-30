@@ -72,7 +72,6 @@ static char *builtinSpelling [] =
     "len",
     "sizeof",
     "fiberspawn",
-    "fiberfree",
     "fibercall",
     "fiberalive"
 };
@@ -159,7 +158,13 @@ static HeapPage *pageFind(HeapPages *pages, void *ptr)
 {
     for (HeapPage *page = pages->first; page; page = page->next)
         if (ptr >= page->ptr && ptr < page->ptr + page->occupied)
-            return page;
+        {
+            HeapChunkHeader *chunk = ptr - sizeof(HeapChunkHeader);
+            if (chunk->magic == VM_HEAP_CHUNK_MAGIC)
+                return page;
+            return NULL;
+        }
+
     return NULL;
 }
 
@@ -174,6 +179,7 @@ static void *chunkAlloc(HeapPages *pages, int size, ErrorFunc error)
         pageAdd(pages, pageSize);
 
     HeapChunkHeader *chunk = pages->last->ptr + pages->last->occupied;
+    chunk->magic = VM_HEAP_CHUNK_MAGIC;
     chunk->refCnt = 1;
     chunk->size = size;
 
@@ -218,8 +224,8 @@ static int alignRuntime(int size, int alignment)
 
 static bool typeGarbageCollectedRuntime(Type *type)
 {
-    return type->kind == TYPE_PTR    || type->kind == TYPE_ARRAY || type->kind == TYPE_DYNARRAY ||
-           type->kind == TYPE_STRUCT || type->kind == TYPE_INTERFACE;
+    return type->kind == TYPE_PTR    || type->kind == TYPE_ARRAY     || type->kind == TYPE_DYNARRAY ||
+           type->kind == TYPE_STRUCT || type->kind == TYPE_INTERFACE || type->kind == TYPE_FIBER;
 }
 
 
@@ -275,7 +281,8 @@ static void doBasicDeref(Slot *slot, TypeKind typeKind, ErrorFunc error)
         case TYPE_DYNARRAY:
         case TYPE_STR:
         case TYPE_STRUCT:
-        case TYPE_INTERFACE:    slot->intVal  =  (int64_t   )slot->ptrVal; break;  // Always represented by pointer, not dereferenced
+        case TYPE_INTERFACE:
+        case TYPE_FIBER:        slot->intVal  =  (int64_t   )slot->ptrVal; break;  // Always represented by pointer, not dereferenced
         case TYPE_FN:           slot->ptrVal  = *(void *   *)slot->ptrVal; break;
 
         default:                error("Illegal type"); return;
@@ -305,7 +312,8 @@ static void doBasicAssign(void *lhs, Slot rhs, TypeKind typeKind, int structSize
         case TYPE_ARRAY:
         case TYPE_DYNARRAY:
         case TYPE_STRUCT:
-        case TYPE_INTERFACE:    memcpy(lhs, rhs.ptrVal, structSize); break;
+        case TYPE_INTERFACE:
+        case TYPE_FIBER:        memcpy(lhs, rhs.ptrVal, structSize); break;
         case TYPE_STR:          strcpy(lhs, rhs.ptrVal); break;
         case TYPE_FN:           *(void *   *)lhs = rhs.ptrVal; break;
 
@@ -423,6 +431,19 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
 
             if (__self)
                 doBasicChangeRefCnt(fiber, pages, __self, __selftype, tokKind, error);
+            break;
+        }
+
+        case TYPE_FIBER:
+        {
+            HeapPage *page = pageFind(pages, ptr);
+            if (page)
+            {
+                // Don't use ref counting for the fiber stack, otherwise every local variable will also be ref-counted
+                HeapChunkHeader *chunk = ptr - sizeof(HeapChunkHeader);
+                if (chunk->refCnt == 1 && tokKind == TOK_MINUSMINUS)
+                    free(((Fiber *)ptr)->stack);
+            }
             break;
         }
 
@@ -601,12 +622,11 @@ static void doBuiltinLen(Fiber *fiber, ErrorFunc error)
 }
 
 
-// type FiberFunc = fn(parent: ^void, anyParam: ^type)
-// fn fiberspawn(childFunc: FiberFunc, anyParam: ^type)
-// fn fiberfree(child: ^void)
-// fn fibercall(child: ^void)
-// fn fiberalive(child: ^void)
-static void doBuiltinFiber(Fiber *fiber, Fiber **newFiber, BuiltinFunc builtin, ErrorFunc error)
+// type FiberFunc = fn(parent: ^fiber, anyParam: ^type)
+// fn fiberspawn(childFunc: FiberFunc, anyParam: ^type): ^fiber
+// fn fibercall(child: ^fiber)
+// fn fiberalive(child: ^fiber)
+static void doBuiltinFiber(Fiber *fiber, Fiber **newFiber, HeapPages *pages, BuiltinFunc builtin, ErrorFunc error)
 {
     switch (builtin)
     {
@@ -616,7 +636,7 @@ static void doBuiltinFiber(Fiber *fiber, Fiber **newFiber, BuiltinFunc builtin, 
             int childEntryOffset = (fiber->top++)->intVal;
 
             // Copy whole fiber context
-            Fiber *child = malloc(sizeof(Fiber));
+            Fiber *child = chunkAlloc(pages, sizeof(Fiber), error);
             *child = *fiber;
 
             child->stack = malloc(fiber->stackSize * sizeof(Slot));
@@ -633,14 +653,6 @@ static void doBuiltinFiber(Fiber *fiber, Fiber **newFiber, BuiltinFunc builtin, 
 
             // Return child fiber pointer to parent fiber as result
             (--fiber->top)->ptrVal = child;
-            break;
-        }
-        case BUILTIN_FIBERFREE:
-        {
-            // TODO: use garbage collection for fibers and eliminate fiberfree()
-            Fiber *ptr = (fiber->top++)->ptrVal;
-            free(ptr->stack);
-            free(ptr);
             break;
         }
         case BUILTIN_FIBERCALL:
@@ -1124,9 +1136,8 @@ static void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages *pages, Erro
 
         // Fibers
         case BUILTIN_FIBERSPAWN:
-        case BUILTIN_FIBERFREE:
         case BUILTIN_FIBERCALL:
-        case BUILTIN_FIBERALIVE:    doBuiltinFiber(fiber, newFiber, builtin, error); break;
+        case BUILTIN_FIBERALIVE:    doBuiltinFiber(fiber, newFiber, pages, builtin, error); break;
     }
     fiber->ip++;
 }

@@ -30,6 +30,7 @@ static char *spelling [] =
     "str",
     "struct",
     "interface",
+    "fiber",
     "fn"
 };
 
@@ -176,6 +177,7 @@ int typeSizeRuntime(Type *type)
                 size += typeSizeRuntime(type->field[i]->type);
             return size;
         }
+        case TYPE_FIBER:    return sizeof(Fiber);
         case TYPE_FN:       return sizeof(void *);
         default:            return -1;
     }
@@ -221,14 +223,14 @@ bool typeReal(Type *type)
 
 bool typeStructured(Type *type)
 {
-    return type->kind == TYPE_ARRAY  || type->kind == TYPE_DYNARRAY || type->kind == TYPE_STR ||
-           type->kind == TYPE_STRUCT || type->kind == TYPE_INTERFACE;
+    return type->kind == TYPE_ARRAY  || type->kind == TYPE_DYNARRAY  || type->kind == TYPE_STR  ||
+           type->kind == TYPE_STRUCT || type->kind == TYPE_INTERFACE || type->kind == TYPE_FIBER;
 }
 
 
 bool typeGarbageCollected(Type *type)
 {
-    if (type->kind == TYPE_PTR || type->kind == TYPE_DYNARRAY || type->kind == TYPE_INTERFACE)
+    if (type->kind == TYPE_PTR || type->kind == TYPE_DYNARRAY || type->kind == TYPE_INTERFACE || type->kind == TYPE_FIBER)
         return true;
 
     if (type->kind == TYPE_ARRAY)
@@ -245,15 +247,15 @@ bool typeGarbageCollected(Type *type)
 
 bool typeFiberFunc(Type *type)
 {
-    return type->kind                            == TYPE_FN   &&
-           type->sig.numParams                   == 2         &&
-           type->sig.numDefaultParams            == 0         &&
-           type->sig.param[0]->type->kind        == TYPE_PTR  &&
-           type->sig.param[0]->type->base->kind  == TYPE_VOID &&
-           type->sig.param[1]->type->kind        == TYPE_PTR  &&
-           type->sig.param[1]->type->base->kind  != TYPE_VOID &&
-           type->sig.numResults                  == 1         &&
-           type->sig.resultType[0]->kind         == TYPE_VOID &&
+    return type->kind                            == TYPE_FN    &&
+           type->sig.numParams                   == 2          &&
+           type->sig.numDefaultParams            == 0          &&
+           type->sig.param[0]->type->kind        == TYPE_PTR   &&
+           type->sig.param[0]->type->base->kind  == TYPE_FIBER &&
+           type->sig.param[1]->type->kind        == TYPE_PTR   &&
+           type->sig.param[1]->type->base->kind  != TYPE_VOID  &&
+           type->sig.numResults                  == 1          &&
+           type->sig.resultType[0]->kind         == TYPE_VOID  &&
            !type->sig.method;
 }
 
