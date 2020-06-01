@@ -28,6 +28,12 @@ _C+Umka 3D camera example_
 ![](examples/3dcam.png)
 
 ## A Tour of Umka
+### Hello
+```
+fn main() {
+    printf("Hello, Умка")
+}
+```
 ### Declarations
 ```
 // Constants
