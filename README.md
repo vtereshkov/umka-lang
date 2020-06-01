@@ -31,7 +31,7 @@ _C+Umka 3D camera example_
 ### Hello
 ```
 fn main() {
-    printf("Hello, Умка")
+    printf("Hello Umka!\n")
 }
 ```
 ### Declarations
