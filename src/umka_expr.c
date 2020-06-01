@@ -110,7 +110,7 @@ static void doConcreteToInterfaceConv(Compiler *comp, Type *dest, Type **src, Co
         if (!srcMethod)
             comp->error("Method %s is not implemented", name);
 
-        typeAssertCompatible(&comp->types, dest->field[i]->type, srcMethod->type);
+        typeAssertCompatible(&comp->types, dest->field[i]->type, srcMethod->type, false);
 
         genPushLocalPtr(&comp->gen, destOffset);                // Push dest pointer
         genPushIntConst(&comp->gen, srcMethod->offset);         // Push src value
@@ -153,7 +153,7 @@ static void doInterfaceToInterfaceConv(Compiler *comp, Type *dest, Type **src, C
         if (!srcMethod)
             comp->error("Method %s is not implemented", name);
 
-        typeAssertCompatible(&comp->types, dest->field[i]->type, srcMethod->type);
+        typeAssertCompatible(&comp->types, dest->field[i]->type, srcMethod->type, false);
 
         genDup(&comp->gen);                                     // Duplicate src pointer
         genGetFieldPtr(&comp->gen, srcMethod->offset);          // Get src method entry point
@@ -229,7 +229,7 @@ void doApplyOperator(Compiler *comp, Type **type, Type **rightType, Const *const
     if (convertLhs)
         doImplicitTypeConv(comp, *rightType, type, constant, true);
 
-    typeAssertCompatible(&comp->types, *type, *rightType);
+    typeAssertCompatible(&comp->types, *type, *rightType, true);
     typeAssertValidOperator(&comp->types, *type, op);
 
     if (apply)
@@ -287,14 +287,14 @@ static void parseBuiltinIOCall(Compiler *comp, Type **type, Const *constant, Bui
             expectedType = comp->strType;
 
         parseExpr(comp, type, constant);
-        typeAssertCompatible(&comp->types, expectedType, *type);
+        typeAssertCompatible(&comp->types, expectedType, *type, false);
         genPopReg(&comp->gen, VM_IO_STREAM_REG);
         lexEat(&comp->lex, TOK_COMMA);
     }
 
     // Format string
     parseExpr(comp, type, constant);
-    typeAssertCompatible(&comp->types, comp->strType, *type);
+    typeAssertCompatible(&comp->types, comp->strType, *type, false);
     genPopReg(&comp->gen, VM_IO_FORMAT_REG);
 
     // Values, if any
@@ -345,7 +345,7 @@ static void parseBuiltinMathCall(Compiler *comp, Type **type, Const *constant, B
     lexEat(&comp->lex, TOK_LPAR);
     parseExpr(comp, type, constant);
     doImplicitTypeConv(comp, comp->realType, type, constant, false);
-    typeAssertCompatible(&comp->types, comp->realType, *type);
+    typeAssertCompatible(&comp->types, comp->realType, *type, false);
 
     if (constant)
         constCallBuiltin(&comp->consts, constant, builtin);
@@ -400,7 +400,7 @@ static void parseBuiltinMakeCall(Compiler *comp, Type **type, Const *constant)
     // Dynamic array length
     Type *lenType;
     parseExpr(comp, &lenType, NULL);
-    typeAssertCompatible(&comp->types, comp->intType, lenType);
+    typeAssertCompatible(&comp->types, comp->intType, lenType, false);
 
     // Pointer to result (hidden parameter)
     int resultOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, *type));
@@ -430,7 +430,7 @@ static void parseBuiltinAppendCall(Compiler *comp, Type **type, Const *constant)
     Type *itemType;
     parseExpr(comp, &itemType, NULL);
     doImplicitTypeConv(comp, (*type)->base, &itemType, NULL, false);
-    typeAssertCompatible(&comp->types, (*type)->base, itemType);
+    typeAssertCompatible(&comp->types, (*type)->base, itemType, false);
 
     if (!typeStructured(itemType))
     {
@@ -537,7 +537,7 @@ static void parseBuiltinFiberCall(Compiler *comp, Type **type, Const *constant, 
         // Arbitrary pointer parameter
         parseExpr(comp, type, constant);
         doImplicitTypeConv(comp, comp->ptrVoidType, type, constant, false);
-        typeAssertCompatible(&comp->types, comp->ptrVoidType, *type);
+        typeAssertCompatible(&comp->types, comp->ptrVoidType, *type, false);
 
         // Increase parameter's reference count
         genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, *type);
@@ -548,7 +548,7 @@ static void parseBuiltinFiberCall(Compiler *comp, Type **type, Const *constant, 
     {
         parseExpr(comp, type, constant);
         doImplicitTypeConv(comp, comp->ptrFiberType, type, constant, false);
-        typeAssertCompatible(&comp->types, comp->ptrFiberType, *type);
+        typeAssertCompatible(&comp->types, comp->ptrFiberType, *type, false);
 
         if (builtin == BUILTIN_FIBERALIVE)
             *type = comp->boolType;
@@ -643,7 +643,7 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
             parseExpr(comp, &actualParamType, constant);
 
             doImplicitTypeConv(comp, formalParamType, &actualParamType, constant, false);
-            typeAssertCompatible(&comp->types, formalParamType, actualParamType);
+            typeAssertCompatible(&comp->types, formalParamType, actualParamType, false);
 
             // Increase parameter's reference count
             genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, formalParamType);
@@ -780,7 +780,7 @@ static void parseIndexSelector(Compiler *comp, Type **type, Const *constant, boo
     lexNext(&comp->lex);
     Type *indexType;
     parseExpr(comp, &indexType, NULL);
-    typeAssertCompatible(&comp->types, comp->intType, indexType);
+    typeAssertCompatible(&comp->types, comp->intType, indexType, false);
     lexEat(&comp->lex, TOK_RBRACKET);
 
     if ((*type)->kind == TYPE_DYNARRAY)
@@ -1002,7 +1002,7 @@ static void parseCompositeLiteral(Compiler *comp, Type **type, Const *constant)
             parseExpr(comp, &itemType, itemConstant);
 
             doImplicitTypeConv(comp, expectedItemType, &itemType, itemConstant, false);
-            typeAssertCompatible(&comp->types, expectedItemType, itemType);
+            typeAssertCompatible(&comp->types, expectedItemType, itemType, false);
 
             if (constant)
                 constAssign(&comp->consts, constant->ptrVal + itemOffset, itemConstant, expectedItemType->kind, itemSize);

@@ -378,47 +378,64 @@ bool typeAssertEquivalent(Types *types, Type *left, Type *right)
 }
 
 
-bool typeCompatible(Type *left, Type *right)
+bool typeCompatible(Type *left, Type *right, bool symmetric)
 {
     if (typeEquivalent(left, right))
         return true;
 
+    // Integers
     if (typeInteger(left) && typeInteger(right))
         return true;
 
+    // Reals
     if (typeReal(left) && typeReal(right))
         return true;
 
-    // Any string can be assigned to any other string
+    // Strings
     if (left->kind == TYPE_STR && right->kind == TYPE_STR)
         return true;
 
-    if (left->kind  == TYPE_PTR && left->base->kind  == TYPE_STR &&
-        right->kind == TYPE_PTR && right->base->kind == TYPE_STR)
-        return true;
+    // Pointers
+    if (left->kind == TYPE_PTR && right->kind == TYPE_PTR)
+    {
+        // All pointers to strings are compatible
+        if (left->base->kind == TYPE_STR && right->base->kind == TYPE_STR)
+            return true;
 
-    // Any pointer can be assigned to an untyped pointer
-    if (left->kind  == TYPE_PTR && left->base->kind == TYPE_VOID &&
-        right->kind == TYPE_PTR)
-        return true;
+        // Any pointer can be assigned to an untyped pointer
+        if (left->base->kind == TYPE_VOID)
+            return true;
 
-    // Null can be assigned to any pointer
-    if (left->kind  == TYPE_PTR &&
-        right->kind == TYPE_PTR && right->base->kind == TYPE_NULL)
-        return true;
+        // Any pointer can be compared to an untyped pointer
+        if (right->base->kind == TYPE_VOID && symmetric)
+            return true;
 
-    // Any pointer to array can be assigned to a pointer to open array
-    if (left->kind  == TYPE_PTR && left->base->kind  == TYPE_ARRAY && left->base->numItems == -1 &&
-        right->kind == TYPE_PTR && right->base->kind == TYPE_ARRAY)
-        return typeEquivalent(left->base->base, right->base->base);
+        // Null can be assigned to any pointer
+        if (right->base->kind == TYPE_NULL)
+            return true;
 
+        // Null can be compared to any pointer
+        if (left->base->kind == TYPE_NULL && symmetric)
+            return true;
+
+        if (left->base->kind  == TYPE_ARRAY && right->base->kind == TYPE_ARRAY)
+        {
+            // Any pointer to array can be assigned to a pointer to open array
+            if (left->base->numItems == -1)
+                return typeEquivalent(left->base->base, right->base->base);
+
+            // Any pointer to array can be compared to a pointer to open array
+            if (right->base->numItems == -1 && symmetric)
+                return typeEquivalent(left->base->base, right->base->base);
+        }
+    }
     return false;
 }
 
 
-bool typeAssertCompatible(Types *types, Type *left, Type *right)
+bool typeAssertCompatible(Types *types, Type *left, Type *right, bool symmetric)
 {
-    bool res = typeCompatible(left, right);
+    bool res = typeCompatible(left, right, symmetric);
     if (!res)
     {
         char leftBuf[DEFAULT_STR_LEN + 1], rightBuf[DEFAULT_STR_LEN + 1];

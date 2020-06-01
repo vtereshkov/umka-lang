@@ -74,7 +74,7 @@ void parseAssignmentStmt(Compiler *comp, Type *type, void *initializedVarPtr)
     parseExpr(comp, &rightType, rightConstant);
 
     doImplicitTypeConv(comp, type, &rightType, rightConstant, false);
-    typeAssertCompatible(&comp->types, type, rightType);
+    typeAssertCompatible(&comp->types, type, rightType, false);
 
     if (initializedVarPtr)                          // Initialize global variable
         constAssign(&comp->consts, initializedVarPtr, rightConstant, type->kind, typeSize(&comp->types, type));
@@ -146,7 +146,7 @@ static void parseIncDecStmt(Compiler *comp, Type *type, TokenKind op)
         type = type->base;
     }
 
-    typeAssertCompatible(&comp->types, comp->intType, type);
+    typeAssertCompatible(&comp->types, comp->intType, type, false);
     genUnary(&comp->gen, op, type->kind);
     lexNext(&comp->lex);
 }
@@ -219,7 +219,7 @@ static void parseIfStmt(Compiler *comp)
     // expr
     Type *type;
     parseExpr(comp, &type, NULL);
-    typeAssertCompatible(&comp->types, comp->boolType, type);
+    typeAssertCompatible(&comp->types, comp->boolType, type, false);
 
     genIfCondEpilog(&comp->gen);
 
@@ -257,7 +257,7 @@ static void parseCase(Compiler *comp, Type *selectorType)
         Const constant;
         Type *type;
         parseExpr(comp, &type, &constant);
-        typeAssertCompatible(&comp->types, selectorType, type);
+        typeAssertCompatible(&comp->types, selectorType, type, false);
 
         genCaseExprEpilog(&comp->gen, &constant);
 
@@ -366,7 +366,7 @@ static void parseForStmt(Compiler *comp)
     // expr
     Type *type;
     parseExpr(comp, &type, NULL);
-    typeAssertCompatible(&comp->types, comp->boolType, type);
+    typeAssertCompatible(&comp->types, comp->boolType, type, false);
 
     genForCondEpilog(&comp->gen);
 
@@ -450,7 +450,7 @@ static void parseReturnStmt(Compiler *comp)
         }
 
     doImplicitTypeConv(comp, sig->resultType[0], &type, NULL, false);
-    typeAssertCompatible(&comp->types, sig->resultType[0], type);
+    typeAssertCompatible(&comp->types, sig->resultType[0], type, false);
 
     // Copy structure to __result
     if (typeStructured(sig->resultType[0]))

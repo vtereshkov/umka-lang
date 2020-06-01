@@ -63,8 +63,8 @@ Ident *identFind(Idents *idents, Modules *modules, Blocks *blocks, int module, c
                         return ident;
 
                     // We need a method and what we found is a method
-                    if (rcvType && method && (typeCompatible(ident->type->sig.param[0]->type, rcvType) ||
-                                              typeCompatible(rcvType, ident->type->sig.param[0]->type)))
+                    if (rcvType && method && (typeCompatible(ident->type->sig.param[0]->type, rcvType, false) ||
+                                              typeCompatible(rcvType, ident->type->sig.param[0]->type, false)))
                         return ident;
                 }
 
@@ -106,7 +106,7 @@ static Ident *identAdd(Idents *idents, Modules *modules, Blocks *blocks, IdentKi
             kind == IDENT_CONST && type->kind == TYPE_FN &&
             ident->exported == exported &&
             strcmp(ident->name, name) == 0 &&
-            typeCompatible(ident->type, type) &&
+            typeCompatible(ident->type, type, false) &&
             ident->prototypeOffset >= 0)
         {
             return ident;

@@ -112,8 +112,8 @@ bool typeFiberFunc          (Type *type);
 
 bool typeEquivalent         (Type *left, Type *right);
 bool typeAssertEquivalent   (Types *types, Type *left, Type *right);
-bool typeCompatible         (Type *left, Type *right);
-bool typeAssertCompatible   (Types *types, Type *left, Type *right);
+bool typeCompatible         (Type *left, Type *right, bool symmetric);
+bool typeAssertCompatible   (Types *types, Type *left, Type *right, bool symmetric);
 
 bool typeValidOperator      (Type *type, TokenKind op);
 bool typeAssertValidOperator(Types *types, Type *type, TokenKind op);

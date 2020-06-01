@@ -108,7 +108,7 @@ static void parseSignature(Compiler *comp, Signature *sig)
                     comp->error("Structured default values are not allowed");
 
                 doImplicitTypeConv(comp, paramType, &defaultType, &defaultConstant, false);
-                typeAssertCompatible(&comp->types, paramType, defaultType);
+                typeAssertCompatible(&comp->types, paramType, defaultType, false);
                 numDefaultParams++;
             }
             else
@@ -217,7 +217,7 @@ static Type *parseArrayType(Compiler *comp)
         typeKind = TYPE_ARRAY;
         Type *indexType;
         parseExpr(comp, &indexType, &len);
-        typeAssertCompatible(&comp->types, comp->intType, indexType);
+        typeAssertCompatible(&comp->types, comp->intType, indexType, false);
         if (len.intVal < 0)
             comp->error("Array length cannot be negative");
     }
@@ -245,7 +245,7 @@ static Type *parseStrType(Compiler *comp)
     {
         lexNext(&comp->lex);
         parseExpr(comp, &indexType, &len);
-        typeAssertCompatible(&comp->types, comp->intType, indexType);
+        typeAssertCompatible(&comp->types, comp->intType, indexType, false);
         if (len.intVal < 0)
             comp->error("String length cannot be negative");
 
