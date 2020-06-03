@@ -69,6 +69,7 @@ static char *builtinSpelling [] =
     "make",
     "makefrom",
     "append",
+    "delete",
     "len",
     "sizeof",
     "fiberspawn",
@@ -610,6 +611,27 @@ static void doBuiltinAppend(Fiber *fiber, HeapPages *pages, ErrorFunc error)
 }
 
 
+// fn delete(array: [var] type, index: int): [var] type
+static void doBuiltinDelete(Fiber *fiber, HeapPages *pages, ErrorFunc error)
+{
+    DynArray *result = (fiber->top++)->ptrVal;
+    int index        = (fiber->top++)->intVal;
+    DynArray *array  = (fiber->top++)->ptrVal;
+
+    if (!array->data)
+        error("Dynamic array is not initialized");
+
+    result->len      = array->len - 1;
+    result->itemSize = array->itemSize;
+    result->data     = chunkAlloc(pages, result->len * result->itemSize, error);
+
+    memcpy(result->data, array->data, index * array->itemSize);
+    memcpy(result->data + index * result->itemSize, array->data + (index + 1) * result->itemSize, (result->len - index) * result->itemSize);
+
+    (--fiber->top)->ptrVal = result;
+}
+
+
 static void doBuiltinLen(Fiber *fiber, ErrorFunc error)
 {
     switch (fiber->code[fiber->ip].typeKind)
@@ -624,53 +646,46 @@ static void doBuiltinLen(Fiber *fiber, ErrorFunc error)
 
 // type FiberFunc = fn(parent: ^fiber, anyParam: ^type)
 // fn fiberspawn(childFunc: FiberFunc, anyParam: ^type): ^fiber
-// fn fibercall(child: ^fiber)
-// fn fiberalive(child: ^fiber)
-static void doBuiltinFiber(Fiber *fiber, Fiber **newFiber, HeapPages *pages, BuiltinFunc builtin, ErrorFunc error)
+static void doBuiltinFiberspawn(Fiber *fiber, HeapPages *pages, ErrorFunc error)
 {
-    switch (builtin)
-    {
-        case BUILTIN_FIBERSPAWN:
-        {
-            void *anyParam = (fiber->top++)->ptrVal;
-            int childEntryOffset = (fiber->top++)->intVal;
+    void *anyParam = (fiber->top++)->ptrVal;
+    int childEntryOffset = (fiber->top++)->intVal;
 
-            // Copy whole fiber context
-            Fiber *child = chunkAlloc(pages, sizeof(Fiber), error);
-            *child = *fiber;
+    // Copy whole fiber context
+    Fiber *child = chunkAlloc(pages, sizeof(Fiber), error);
+    *child = *fiber;
 
-            child->stack = malloc(fiber->stackSize * sizeof(Slot));
-            *(child->stack) = *(fiber->stack);
+    child->stack = malloc(fiber->stackSize * sizeof(Slot));
+    *(child->stack) = *(fiber->stack);
 
-            child->top  = child->stack + (fiber->top  - fiber->stack);
-            child->base = child->stack + (fiber->base - fiber->stack);
+    child->top  = child->stack + (fiber->top  - fiber->stack);
+    child->base = child->stack + (fiber->base - fiber->stack);
 
-            // Call child fiber function
-            (--child->top)->ptrVal = fiber;                  // Push parent fiber pointer
-            (--child->top)->ptrVal = anyParam;               // Push arbitrary pointer parameter
-            (--child->top)->intVal = VM_FIBER_KILL_SIGNAL;   // Push fiber kill signal instead of return address
-            child->ip = childEntryOffset;                    // Call
+    // Call child fiber function
+    (--child->top)->ptrVal = fiber;                  // Push parent fiber pointer
+    (--child->top)->ptrVal = anyParam;               // Push arbitrary pointer parameter
+    (--child->top)->intVal = VM_FIBER_KILL_SIGNAL;   // Push fiber kill signal instead of return address
+    child->ip = childEntryOffset;                    // Call
 
-            // Return child fiber pointer to parent fiber as result
-            (--fiber->top)->ptrVal = child;
-            break;
-        }
-        case BUILTIN_FIBERCALL:
-        {
-            *newFiber = (fiber->top++)->ptrVal;
-            if (!(*newFiber)->alive)
-                error("Fiber is dead");
-            break;
-        }
-        case BUILTIN_FIBERALIVE:
-        {
-            Fiber *child = fiber->top->ptrVal;
-            fiber->top->intVal = child->alive;
-            break;
-        }
-        default: error("Illegal instruction"); return;
+    // Return child fiber pointer to parent fiber as result
+    (--fiber->top)->ptrVal = child;
+}
 
-    }
+
+// fn fibercall(child: ^fiber)
+static void doBuiltinFibercall(Fiber *fiber, Fiber **newFiber, HeapPages *pages, ErrorFunc error)
+{
+    *newFiber = (fiber->top++)->ptrVal;
+    if (!(*newFiber)->alive)
+        error("Fiber is dead");
+}
+
+
+// fn fiberalive(child: ^fiber)
+static void doBuiltinFiberalive(Fiber *fiber, HeapPages *pages, ErrorFunc error)
+{
+    Fiber *child = fiber->top->ptrVal;
+    fiber->top->intVal = child->alive;
 }
 
 
@@ -1131,13 +1146,14 @@ static void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages *pages, Erro
         case BUILTIN_MAKE:          doBuiltinMake(fiber, pages, error); break;
         case BUILTIN_MAKEFROM:      doBuiltinMakeFrom(fiber, pages, error); break;
         case BUILTIN_APPEND:        doBuiltinAppend(fiber, pages, error); break;
+        case BUILTIN_DELETE:        doBuiltinDelete(fiber, pages, error); break;
         case BUILTIN_LEN:           doBuiltinLen(fiber, error); break;
         case BUILTIN_SIZEOF:        error("Illegal instruction"); return;   // Done at compile time
 
         // Fibers
-        case BUILTIN_FIBERSPAWN:
-        case BUILTIN_FIBERCALL:
-        case BUILTIN_FIBERALIVE:    doBuiltinFiber(fiber, newFiber, pages, builtin, error); break;
+        case BUILTIN_FIBERSPAWN:    doBuiltinFiberspawn(fiber, pages, error); break;
+        case BUILTIN_FIBERCALL:     doBuiltinFibercall(fiber, newFiber, pages, error); break;
+        case BUILTIN_FIBERALIVE:    doBuiltinFiberalive(fiber, pages, error); break;
     }
     fiber->ip++;
 }
@@ -1145,7 +1161,7 @@ static void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages *pages, Erro
 
 static void doReturn(Fiber *fiber, Fiber **newFiber)
 {
-    // Pop return address, remove parameters and entry point address from stack and go back
+    // Pop return address
     int returnOffset = (fiber->top++)->intVal;
 
     if (returnOffset == VM_FIBER_KILL_SIGNAL)

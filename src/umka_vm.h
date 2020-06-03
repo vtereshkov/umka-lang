@@ -94,6 +94,7 @@ typedef enum
     BUILTIN_MAKE,
     BUILTIN_MAKEFROM,       // Array to dynamic array - implicit calls only
     BUILTIN_APPEND,
+    BUILTIN_DELETE,
     BUILTIN_LEN,
     BUILTIN_SIZEOF,
 

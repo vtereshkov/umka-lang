@@ -74,7 +74,7 @@ fn tan(x: real): real {return sin(x) / cos(x)}
 Built-in functions:
     printf fprintf sprintf scanf fscanf sscanf
     round trunc fabs sqrt sin cos atan exp log
-    new make append len sizeof
+    new make append delete len sizeof
     fiberspawn fibercall fiberalive
 */
 
