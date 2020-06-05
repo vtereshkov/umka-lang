@@ -31,7 +31,6 @@ void doResolveExtern(Compiler *comp)
 
 static void doGarbageCollection(Compiler *comp, int block)
 {
-    // TODO: Eliminate memory leak when a heap-allocated structure with a heap-allocated field is converted to an interface (type info gets lost)
     for (Ident *ident = comp->idents.first; ident; ident = ident->next)
         if (ident->kind == IDENT_VAR && ident->block == block && typeGarbageCollected(ident->type))
         {

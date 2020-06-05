@@ -762,7 +762,7 @@ static void parsePrimary(Compiler *comp, Ident *ident, Type **type, Const *const
             parseBuiltinCall(comp, type, constant, ident->builtin);
 
             // Copy result to a temporary local variable to collect it as garbage when leaving the block
-            if ((*type)->kind == TYPE_PTR || typeStructured(*type))
+            if (typeGarbageCollected(*type))
                 doCopyResultToTempVar(comp, *type);
 
             *isVar = false;

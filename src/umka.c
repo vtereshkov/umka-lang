@@ -13,15 +13,6 @@ enum
 };
 
 
-// Umka extension example
-void meow(UmkaStackSlot *params, UmkaStackSlot *result)
-{
-    int i = params[0].intVal;
-    printf("Meow! (%d)\n", i);
-    result->intVal = i;
-}
-
-
 int main(int argc, char **argv)
 {
     if (argc < 2)
@@ -88,10 +79,7 @@ int main(int argc, char **argv)
 
     bool ok = umkaInit(argv[1], storageSize, stackSize, argc, argv);
     if (ok)
-    {
-        umkaAddFunc("meow", &meow);
         ok = umkaCompile();
-    }
 
     if (ok)
     {
