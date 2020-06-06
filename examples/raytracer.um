@@ -250,14 +250,14 @@ fn main() {
     printf("Threads (recommended 1, 2, 4, 8, 16): ");  scanf("{d}", &fibers)
     
     // Define fibers
-    fiber := make([var]^fiber, fibers)
+    renderer := make([var]^fiber, fibers)
     renderData := make([var]RenderData, fibers)
 
-    for i := 0; i < len(fiber); i++ {
+    for i := 0; i < len(renderer); i++ {
         // Define eye
         renderData[i] = RenderData {
-            startHeight:  height / len(fiber) * i,
-            stopHeight:   height / len(fiber) * (i + 1),
+            startHeight:  height / len(renderer) * i,
+            stopHeight:   height / len(renderer) * (i + 1),
             pos:          Vec{0, 0, 0},
             azimuth:      30.0 * std.pi / 180.0,
             focal:        500,
@@ -267,7 +267,7 @@ fn main() {
             pixels:       &pixels}
         
         // Spawn fiber
-        fiber[i] = fiberspawn(render, &renderData[i])
+        renderer[i] = fiberspawn(render, &renderData[i])
     }    
 
     // Render scene
@@ -275,10 +275,10 @@ fn main() {
     
     for true {
         working := false
-        for i := 0; i < len(fiber); i++ {
-            fiberWorking := fiberalive(fiber[i]) 
+        for i := 0; i < len(renderer); i++ {
+            fiberWorking := fiberalive(renderer[i]) 
             if fiberWorking {
-                fibercall(fiber[i])
+                fibercall(renderer[i])
             }
             working = working || fiberWorking
         }
