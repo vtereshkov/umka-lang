@@ -76,6 +76,7 @@ Built-in functions:
     round trunc fabs sqrt sin cos atan exp log
     new make append delete len sizeof
     fiberspawn fibercall fiberalive
+    error
 */
 
 // Methods

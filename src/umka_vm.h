@@ -102,6 +102,9 @@ typedef enum
     BUILTIN_FIBERSPAWN,
     BUILTIN_FIBERCALL,
     BUILTIN_FIBERALIVE,
+
+    // Misc
+    BUILTIN_ERROR
 } BuiltinFunc;
 
 

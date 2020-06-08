@@ -94,6 +94,9 @@ fn time*(): int {return rtltime()}
 fn argc*(): int {return rtlargc}
 
 fn argv*(i: int): str {
+    if i < 0 || i >= rtlargc {
+        error("Command line parameter not found")
+    }
     s := ^[]^str(rtlargv)
     return s[i]^
 }

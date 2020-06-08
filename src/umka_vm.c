@@ -74,7 +74,8 @@ static char *builtinSpelling [] =
     "sizeof",
     "fiberspawn",
     "fibercall",
-    "fiberalive"
+    "fiberalive",
+    "error"
 };
 
 
@@ -1154,6 +1155,9 @@ static void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages *pages, Erro
         case BUILTIN_FIBERSPAWN:    doBuiltinFiberspawn(fiber, pages, error); break;
         case BUILTIN_FIBERCALL:     doBuiltinFibercall(fiber, newFiber, pages, error); break;
         case BUILTIN_FIBERALIVE:    doBuiltinFiberalive(fiber, pages, error); break;
+
+        // Misc
+        case BUILTIN_ERROR:         error(fiber->top->ptrVal); return;
     }
     fiber->ip++;
 }

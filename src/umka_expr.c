@@ -267,8 +267,6 @@ Ident *parseQualIdent(Compiler *comp)
 
 static void parseBuiltinIOCall(Compiler *comp, Type **type, Const *constant, BuiltinFunc builtin)
 {
-    lexEat(&comp->lex, TOK_LPAR);
-
     if (constant)
         comp->error("Function is not allowed in constant expressions");
 
@@ -336,13 +334,11 @@ static void parseBuiltinIOCall(Compiler *comp, Type **type, Const *constant, Bui
     genPushReg(&comp->gen, VM_IO_COUNT_REG);
 
     *type = comp->intType;
-    lexEat(&comp->lex, TOK_RPAR);
 }
 
 
 static void parseBuiltinMathCall(Compiler *comp, Type **type, Const *constant, BuiltinFunc builtin)
 {
-    lexEat(&comp->lex, TOK_LPAR);
     parseExpr(comp, type, constant);
     doImplicitTypeConv(comp, comp->realType, type, constant, false);
     typeAssertCompatible(&comp->types, comp->realType, *type, false);
@@ -356,15 +352,12 @@ static void parseBuiltinMathCall(Compiler *comp, Type **type, Const *constant, B
         *type = comp->intType;
     else
         *type = comp->realType;
-    lexEat(&comp->lex, TOK_RPAR);
 }
 
 
 // fn new(type (actually size: int)): ^type
 static void parseBuiltinNewCall(Compiler *comp, Type **type, Const *constant)
 {
-    lexEat(&comp->lex, TOK_LPAR);
-
     if (constant)
         comp->error("Function is not allowed in constant expressions");
 
@@ -375,15 +368,12 @@ static void parseBuiltinNewCall(Compiler *comp, Type **type, Const *constant)
     genCallBuiltin(&comp->gen, TYPE_PTR, BUILTIN_NEW);
 
     *type = typeAddPtrTo(&comp->types, &comp->blocks, *type);
-    lexEat(&comp->lex, TOK_RPAR);
 }
 
 
 // fn make([] type (actually itemSize: int), len: int): [var] type
 static void parseBuiltinMakeCall(Compiler *comp, Type **type, Const *constant)
 {
-    lexEat(&comp->lex, TOK_LPAR);
-
     if (constant)
         comp->error("Function is not allowed in constant expressions");
 
@@ -407,15 +397,12 @@ static void parseBuiltinMakeCall(Compiler *comp, Type **type, Const *constant)
     genPushLocalPtr(&comp->gen, resultOffset);
 
     genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_MAKE);
-    lexEat(&comp->lex, TOK_RPAR);
 }
 
 
 // fn append(array: [var] type, item: ^type): [var] type
 static void parseBuiltinAppendCall(Compiler *comp, Type **type, Const *constant)
 {
-    lexEat(&comp->lex, TOK_LPAR);
-
     if (constant)
         comp->error("Function is not allowed in constant expressions");
 
@@ -447,15 +434,12 @@ static void parseBuiltinAppendCall(Compiler *comp, Type **type, Const *constant)
     genPushLocalPtr(&comp->gen, resultOffset);
 
     genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_APPEND);
-    lexEat(&comp->lex, TOK_RPAR);
 }
 
 
 // fn delete(array: [var] type, index: int): [var] type
 static void parseBuiltinDeleteCall(Compiler *comp, Type **type, Const *constant)
 {
-    lexEat(&comp->lex, TOK_LPAR);
-
     if (constant)
         comp->error("Function is not allowed in constant expressions");
 
@@ -477,13 +461,11 @@ static void parseBuiltinDeleteCall(Compiler *comp, Type **type, Const *constant)
     genPushLocalPtr(&comp->gen, resultOffset);
 
     genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_DELETE);
-    lexEat(&comp->lex, TOK_RPAR);
 }
 
 
 static void parseBuiltinLenCall(Compiler *comp, Type **type, Const *constant)
 {
-    lexEat(&comp->lex, TOK_LPAR);
     parseExpr(comp, type, constant);
 
     switch ((*type)->kind)
@@ -521,13 +503,11 @@ static void parseBuiltinLenCall(Compiler *comp, Type **type, Const *constant)
     }
 
     *type = comp->intType;
-    lexEat(&comp->lex, TOK_RPAR);
 }
 
 
 static void parseBuiltinSizeofCall(Compiler *comp, Type **type, Const *constant)
 {
-    lexEat(&comp->lex, TOK_LPAR);
     parseExpr(comp, type, constant);
     int size = typeSize(&comp->types, *type);
 
@@ -540,7 +520,6 @@ static void parseBuiltinSizeofCall(Compiler *comp, Type **type, Const *constant)
     }
 
     *type = comp->intType;
-    lexEat(&comp->lex, TOK_RPAR);
 }
 
 
@@ -550,8 +529,6 @@ static void parseBuiltinSizeofCall(Compiler *comp, Type **type, Const *constant)
 // fn fiberalive(child: ^fiber)
 static void parseBuiltinFiberCall(Compiler *comp, Type **type, Const *constant, BuiltinFunc builtin)
 {
-    lexEat(&comp->lex, TOK_LPAR);
-
     if (constant)
         comp->error("Function is not allowed in constant expressions");
 
@@ -587,13 +564,27 @@ static void parseBuiltinFiberCall(Compiler *comp, Type **type, Const *constant, 
     }
 
     genCallBuiltin(&comp->gen, TYPE_NONE, builtin);
-    lexEat(&comp->lex, TOK_RPAR);
+}
+
+
+static void parseBuiltinErrorCall(Compiler *comp, Type **type, Const *constant)
+{
+    if (constant)
+        comp->error("Function is not allowed in constant expressions");
+
+    parseExpr(comp, type, constant);
+    doImplicitTypeConv(comp, comp->strType, type, constant, false);
+    typeAssertCompatible(&comp->types, comp->strType, *type, false);
+
+    genCallBuiltin(&comp->gen, TYPE_STR, BUILTIN_ERROR);
+    *type = comp->voidType;
 }
 
 
 // builtinCall = qualIdent "(" [expr {"," expr}] ")".
 static void parseBuiltinCall(Compiler *comp, Type **type, Const *constant, BuiltinFunc builtin)
 {
+    lexEat(&comp->lex, TOK_LPAR);
     switch (builtin)
     {
         // I/O
@@ -628,8 +619,12 @@ static void parseBuiltinCall(Compiler *comp, Type **type, Const *constant, Built
         case BUILTIN_FIBERCALL:
         case BUILTIN_FIBERALIVE:    parseBuiltinFiberCall(comp, type, constant, builtin); break;
 
+        // Misc
+        case BUILTIN_ERROR:         parseBuiltinErrorCall(comp, type, constant); break;
+
         default: comp->error("Illegal built-in function");
     }
+    lexEat(&comp->lex, TOK_RPAR);
 }
 
 
