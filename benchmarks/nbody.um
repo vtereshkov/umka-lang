@@ -20,26 +20,28 @@ fn offsetMomentum(b: ^Body, px, py, pz: real) {
 
 type System = []^Body
 
-fn NewSystem(body: ^[]Body, len: int, sys: ^System) {
-   for i := 0; i < len; i++ {
+fn NewSystem(body: ^[]Body): System {
+   sys := make([]^Body, len(body^))
+   for i := 0; i < len(sys); i++ {
       sys[i] = &body[i]
    }
    var px, py, pz: real
-   for i := 0; i < len; i++ {
+   for i := 0; i < len(sys); i++ {
       body := sys[i]
       px += body.vx * body.mass
       py += body.vy * body.mass
       pz += body.vz * body.mass
    }
    offsetMomentum(sys[0], px, py, pz)
+   return sys
 }
 
-fn energy(sys: ^System, len: int): real {
+fn energy(sys: ^System): real {
    var e: real
-   for i := 0; i < len; i++ {
+   for i := 0; i < len(sys^); i++ {
       body := sys[i]
       e += 0.5 * body.mass * (body.vx*body.vx + body.vy*body.vy + body.vz*body.vz)
-      for j := i + 1; j < len; j++ {
+      for j := i + 1; j < len(sys^); j++ {
          body2 := sys[j]
          dx := body.x - body2.x
          dy := body.y - body2.y
@@ -51,10 +53,10 @@ fn energy(sys: ^System, len: int): real {
    return e
 }
 
-fn advance(sys: ^System, len: int, dt: real) {
-   for i := 0; i < len; i++ {
+fn advance(sys: ^System, dt: real) {
+   for i := 0; i < len(sys^); i++ {
       body := sys[i]
-      for j := i + 1; j < len; j++ {
+      for j := i + 1; j < len(sys^); j++ {
          body2 := sys[j]
          dx := body.x - body2.x
          dy := body.y - body2.y
@@ -74,7 +76,7 @@ fn advance(sys: ^System, len: int, dt: real) {
       }
    }
 
-   for i := 0; i < len; i++ {
+   for i := 0; i < len(sys^); i++ {
       body := sys[i]
       body.x += dt * body.vx
       body.y += dt * body.vy
@@ -127,15 +129,13 @@ fn main() {
    if std.argc() == 3 {
       iter := std.atoi(std.argv(2))
       
-      const num = 5
-      bodies := [num]Body{sun, jupiter, saturn, uranus, neptune}
-      var system: [num]^Body
-      NewSystem(&bodies, num, &system)
-      printf("{.9f}\n", energy(&system, num))
+      var bodies: []Body = [5]Body{sun, jupiter, saturn, uranus, neptune}
+      system := NewSystem(&bodies)
+      printf("{.9f}\n", energy(&system))
       for i := 0; i < iter; i++ {
-         advance(&system, num, 0.01)
+         advance(&system, 0.01)
       }
-      printf("{.9f}\n", energy(&system, num))
+      printf("{.9f}\n", energy(&system))
    }   
 }
 

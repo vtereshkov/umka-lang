@@ -101,7 +101,7 @@ fn (s: ^Sphere) intersect(ray: ^Ray, point, normal: ^Vec): bool {
 
 type Scene = struct {
     ambientColor: Color
-    body:         [var]Body
+    body:         []Body
 }
 
 fn (sc: ^Scene) trace(ray: ^Ray, depth: int): Color {
@@ -165,7 +165,7 @@ type RenderData = struct {
     antialiasing: real
     rays:         int
     scene:        ^Scene
-    pixels:       ^[][width][3] uint8
+    pixels:       ^[height][width][3] uint8
 }
 
 fn render(parent: ^fiber, buf: ^RenderData) {
@@ -250,8 +250,8 @@ fn main() {
     printf("Threads (recommended 1, 2, 4, 8, 16): ");  scanf("{d}", &fibers)
     
     // Define fibers
-    renderer := make([var]^fiber, fibers)
-    renderData := make([var]RenderData, fibers)
+    renderer := make([]^fiber, fibers)
+    renderData := make([]RenderData, fibers)
 
     for i := 0; i < len(renderer); i++ {
         // Define eye

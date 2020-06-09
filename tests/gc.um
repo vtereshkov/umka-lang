@@ -34,15 +34,13 @@ fn h2(): st {
     return st{x: 7, p: d, y: 5, q: d}
 }
 
-var a: ^[]int
-
 fn main() {
     std.println("See any memory leak warnings?")
  
-    a = new([1000] int)
+    a := new([1000] int)
     b := a
     c := &a[10]
-    b = new([10] int)
+    b = new([1000] int)
     f(&a[6])
     e := new([3]real)
     e[2] = 7
@@ -51,9 +49,8 @@ fn main() {
     s := st {x: 2, p: new(int), y: 3, q: &a[11]}
     h(s)
     
-    var a: ^[]int
     for i := 0; i < 1000; i++ {
-        a = new([1000] int)
+        a := new([1000] int)
         a[2] = 7
         b := new(int)
         if i > 10 {break}

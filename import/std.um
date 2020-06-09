@@ -97,14 +97,6 @@ fn argv*(i: int): str {
     if i < 0 || i >= rtlargc {
         error("Command line parameter not found")
     }
-    s := ^[]^str(rtlargv)
+    s := ^[64]^str(rtlargv)
     return s[i]^
 }
-    
-// Memory management
-
-fn rtlmalloc (size: int): ^void
-fn malloc*   (size: int): ^void {return rtlmalloc(size)}
-
-fn rtlfree   (ptr: ^void)
-fn free*     (ptr: ^void) {rtlfree(ptr)}

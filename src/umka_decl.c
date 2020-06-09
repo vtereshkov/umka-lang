@@ -189,8 +189,8 @@ static Type *parsePtrType(Compiler *comp)
 }
 
 
-// arrayType = "[" [expr] "]" type.
-// dynArrayType = "[" "var" "]" type.
+// arrayType = "[" expr "]" type.
+// dynArrayType = "[" "]" type.
 static Type *parseArrayType(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_LBRACKET);
@@ -198,18 +198,11 @@ static Type *parseArrayType(Compiler *comp)
     TypeKind typeKind;
     Const len;
 
-    if (comp->lex.tok.kind == TOK_VAR)
+    if (comp->lex.tok.kind == TOK_RBRACKET)
     {
         // Dynamic array
         typeKind = TYPE_DYNARRAY;
         len.intVal = 0;
-        lexNext(&comp->lex);
-    }
-    else if (comp->lex.tok.kind == TOK_RBRACKET)
-    {
-        // Open array
-        typeKind = TYPE_ARRAY;
-        len.intVal = -1;
     }
     else
     {

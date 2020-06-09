@@ -25,8 +25,8 @@ static char *spelling [] =
     "real32",
     "real",
     "^",
+    "[...]",
     "[]",
-    "[var]",
     "str",
     "struct",
     "interface",
@@ -162,13 +162,8 @@ int typeSizeRuntime(Type *type)
         case TYPE_REAL:     return sizeof(double);
         case TYPE_PTR:      return sizeof(void *);
         case TYPE_ARRAY:
-        {
-            if (type->numItems == -1)
-                return -1;
-            return type->numItems * typeSizeRuntime(type->base);
-        }
-        case TYPE_DYNARRAY: return sizeof(DynArray);
         case TYPE_STR:      return type->numItems * typeSizeRuntime(type->base);
+        case TYPE_DYNARRAY: return sizeof(DynArray);
         case TYPE_STRUCT:
         case TYPE_INTERFACE:
         {
@@ -417,17 +412,6 @@ bool typeCompatible(Type *left, Type *right, bool symmetric)
         // Null can be compared to any pointer
         if (left->base->kind == TYPE_NULL && symmetric)
             return true;
-
-        if (left->base->kind  == TYPE_ARRAY && right->base->kind == TYPE_ARRAY)
-        {
-            // Any pointer to array can be assigned to a pointer to open array
-            if (left->base->numItems == -1)
-                return typeEquivalent(left->base->base, right->base->base);
-
-            // Any pointer to array can be compared to a pointer to open array
-            if (right->base->numItems == -1 && symmetric)
-                return typeEquivalent(left->base->base, right->base->base);
-        }
     }
     return false;
 }
@@ -543,9 +527,6 @@ Field *typeAddField(Types *types, Type *structType, Type *fieldType, char *name)
 
     if (fieldType->kind == TYPE_VOID)
         types->error("Void field %s is not allowed", name);
-
-    if (fieldType->kind == TYPE_ARRAY && fieldType->numItems == -1)
-        types->error("Open array field %s is not allowed", name);
 
     if (structType->numItems > MAX_FIELDS)
         types->error("Too many fields");

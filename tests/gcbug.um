@@ -1,5 +1,5 @@
 type (
-    st = struct {p: ^[] int}
+    st = struct {p: []^int}
     fooable = interface {foo()}
 )
 
@@ -7,7 +7,10 @@ fn (s: ^st) foo() {}
 
 fn main() {
     s := new(st)
-    s.p = new([100] int)
+    s.p = make([]^int, 100)
+    for i := 0; i < len(s.p); i++ {
+        s.p[i] = new(int)
+    }
     f := fooable(s^)
     f.foo()
 }

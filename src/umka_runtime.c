@@ -71,16 +71,3 @@ void rtltime(Slot *params, Slot *result)
     result->intVal = time(NULL);
 }
 
-
-void rtlmalloc(Slot *params, Slot *result)
-{
-    int size = params[0].intVal;
-    result->ptrVal = malloc(size);
-}
-
-
-void rtlfree(Slot *params, Slot *result)
-{
-    void *ptr = params[0].ptrVal;
-    free(ptr);
-}

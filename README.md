@@ -63,7 +63,7 @@ var e: int
 var f: str = d + "!"
 var (
     g: Arr = [3]real{2.3, -4.1 / 2, b}
-    h: [var][5]int  // Dynamic arrays require calling make()
+    h: [][5]int  // Dynamic arrays require calling make()
 )
 q := Quat{q: [4]real{1, 0, 0, 0}, normalized: true}
 
@@ -88,7 +88,7 @@ fn (a: ^Arr) print(): int {
 ### Statements
 ```
 // Assignment
-h = make([var][5]int, 3)
+h = make([][5]int, 3)
 
 // Declaration via assignment (with type inference)
 sum := 0.0

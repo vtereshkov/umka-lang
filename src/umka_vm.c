@@ -566,7 +566,7 @@ static void doBuiltinScanf(Fiber *fiber, bool console, bool string, ErrorFunc er
 }
 
 
-// fn make([] type (actually itemSize: int), len: int): [var] type
+// fn make([...] type (actually itemSize: int), len: int): [] type
 static void doBuiltinMake(Fiber *fiber, HeapPages *pages, ErrorFunc error)
 {
     DynArray *result = (fiber->top++)->ptrVal;
@@ -578,7 +578,7 @@ static void doBuiltinMake(Fiber *fiber, HeapPages *pages, ErrorFunc error)
 }
 
 
-// fn makefrom(array: [] type, itemSize: int, len: int): [var] type
+// fn makefrom(array: [...] type, itemSize: int, len: int): [] type
 static void doBuiltinMakeFrom(Fiber *fiber, HeapPages *pages, ErrorFunc error)
 {
     doBuiltinMake(fiber, pages, error);
@@ -591,7 +591,7 @@ static void doBuiltinMakeFrom(Fiber *fiber, HeapPages *pages, ErrorFunc error)
 }
 
 
-// fn append(array: [var] type, item: ^type): [var] type
+// fn append(array: [] type, item: ^type): [] type
 static void doBuiltinAppend(Fiber *fiber, HeapPages *pages, ErrorFunc error)
 {
     DynArray *result = (fiber->top++)->ptrVal;
@@ -612,7 +612,7 @@ static void doBuiltinAppend(Fiber *fiber, HeapPages *pages, ErrorFunc error)
 }
 
 
-// fn delete(array: [var] type, index: int): [var] type
+// fn delete(array: [] type, index: int): [] type
 static void doBuiltinDelete(Fiber *fiber, HeapPages *pages, ErrorFunc error)
 {
     DynArray *result = (fiber->top++)->ptrVal;

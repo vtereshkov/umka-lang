@@ -53,7 +53,7 @@ static void doArrayToDynArrayConv(Compiler *comp, Type *dest, Type **src, Const 
     if (constant)
         comp->error("Conversion to array is not allowed in constant expressions");
 
-    // fn makefrom(array: [] type, itemSize: int, len: int): [var] type
+    // fn makefrom(array: [...] type, itemSize: int, len: int): [] type
 
     genPushIntConst(&comp->gen, typeSize(&comp->types, (*src)->base));  // Dynamic array item size
     genPushIntConst(&comp->gen, (*src)->numItems);                      // Dynamic array length
@@ -182,7 +182,7 @@ void doImplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant,
         doArrayToDynArrayConv(comp, dest, src, constant);
     }
 
-    // Dynamic array pointer to (open) array pointer
+    // Dynamic array pointer to array pointer
     else if (dest->kind == TYPE_PTR && dest->base->kind == TYPE_ARRAY &&
             (*src)->kind == TYPE_PTR && (*src)->base->kind == TYPE_DYNARRAY &&
              typeEquivalent(dest->base->base, (*src)->base->base))
@@ -371,7 +371,7 @@ static void parseBuiltinNewCall(Compiler *comp, Type **type, Const *constant)
 }
 
 
-// fn make([] type (actually itemSize: int), len: int): [var] type
+// fn make([...] type (actually itemSize: int), len: int): [] type
 static void parseBuiltinMakeCall(Compiler *comp, Type **type, Const *constant)
 {
     if (constant)
@@ -400,7 +400,7 @@ static void parseBuiltinMakeCall(Compiler *comp, Type **type, Const *constant)
 }
 
 
-// fn append(array: [var] type, item: ^type): [var] type
+// fn append(array: [] type, item: ^type): [] type
 static void parseBuiltinAppendCall(Compiler *comp, Type **type, Const *constant)
 {
     if (constant)
@@ -437,7 +437,7 @@ static void parseBuiltinAppendCall(Compiler *comp, Type **type, Const *constant)
 }
 
 
-// fn delete(array: [var] type, index: int): [var] type
+// fn delete(array: [] type, index: int): [] type
 static void parseBuiltinDeleteCall(Compiler *comp, Type **type, Const *constant)
 {
     if (constant)
@@ -475,12 +475,8 @@ static void parseBuiltinLenCall(Compiler *comp, Type **type, Const *constant)
             if (constant)
                 comp->error("Function is not allowed in constant expressions");
 
-            int len = (*type)->numItems;
-            if (len == -1)
-                comp->error("Unknown open array length");
-
             genPop(&comp->gen);
-            genPushIntConst(&comp->gen, len);
+            genPushIntConst(&comp->gen, (*type)->numItems);
             break;
         }
         case TYPE_DYNARRAY:
@@ -813,12 +809,7 @@ static void parseIndexSelector(Compiler *comp, Type **type, Const *constant, boo
         genGetDynArrayPtr(&comp->gen);
     else
     {
-        // Length (for range checking)
-        int len = (*type)->numItems;
-        if (len == -1)
-            len = INT_MAX;
-        genPushIntConst(&comp->gen, len);
-
+        genPushIntConst(&comp->gen, (*type)->numItems);                     // Length (for range checking)
         genGetArrayPtr(&comp->gen, typeSize(&comp->types, (*type)->base));
     }
 
