@@ -624,7 +624,7 @@ static void parseBuiltinCall(Compiler *comp, Type **type, Const *constant, Built
 }
 
 
-// call = designator "(" [expr {"," expr}] ")".
+// actualParams = "(" [expr {"," expr}] ")".
 static void parseCall(Compiler *comp, Type **type, Const *constant)
 {
     lexEat(&comp->lex, TOK_LPAR);
@@ -886,7 +886,7 @@ static void parseFieldSelector(Compiler *comp, Type **type, Const *constant, boo
 }
 
 
-// callSelector = "(" actualParams ")".
+// callSelector = actualParams.
 static void parseCallSelector(Compiler *comp, Type **type, Const *constant, bool *isVar, bool *isCall)
 {
     // Implicit dereferencing
@@ -1058,7 +1058,7 @@ static void parseTypeCastOrCompositeLiteral(Compiler *comp, Ident *ident, Type *
 }
 
 
-// factor = designator | intNumber | realNumber | charLiteral | stringLiteral |
+// factor = designator | intNumber | realNumber | charLiteral | stringLiteral | compositeLiteral | typeCast |
 //          ("+" | "-" | "!" | "~" | "&") factor | "(" expr ")".
 static void parseFactor(Compiler *comp, Type **type, Const *constant)
 {
