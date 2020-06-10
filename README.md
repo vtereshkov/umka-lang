@@ -35,84 +35,111 @@ fn main() {
 }
 ```
 ### Declarations
+#### Constants
 ```
-// Constants
 const a = 3
-const b* = 2.38  // Exported identifier
+const b* = 2.38                         // Exported identifier
 const (
     c = sin(b) / 5
     d = "Hello" + " World"
 )
-
-// Types
-type IntPtr = ^uint16
-type Arr = [a]real
+```
+_Built-in constants_
+```
+    true false
+    null
+```
+#### Types
+```
+type IntPtr = ^uint16                   // Pointer
+type Arr = [a]real                      // Array
 type (
-    Quat = struct {
+    DynArr = [][5]int                   // Dynamic array
+    String = str                        // String
+    Quat = struct {                     // Structure
         q: [4]real
         normalized: bool
     }
-    Printable = interface {
+    Printable = interface {             // Interface
         print(): int
     }
-    ErrFn = fn(code: int)
+    ErrFn = fn(code: int)               // Function
 )        
-
-// Variables
+```
+_Built-in types_
+```
+    void
+    int8 int16 int32 int
+    uint8 uint16 uint32
+    bool
+    char
+    real32 real
+    fiber
+```
+#### Variables
+```
 var e: int
-var f: str = d + "!"
+var f: String = d + "!"
 var (
     g: Arr = [3]real{2.3, -4.1 / 2, b}
-    h: [][5]int  // Dynamic arrays require calling make()
+    h: DynArr
 )
 q := Quat{q: [4]real{1, 0, 0, 0}, normalized: true}
-
-// Functions
+```
+#### Functions
+```
 fn tan(x: real): real {return sin(x) / cos(x)}
-
-/*
-Built-in functions:
+```
+_Built-in functions_
+```
     printf fprintf sprintf scanf fscanf sscanf
     round trunc fabs sqrt sin cos atan exp log
     new make append delete len sizeof
     fiberspawn fibercall fiberalive
     error
-*/
-
-// Methods
+```
+#### Methods
+```
 fn (a: ^Arr) print(): int {
     printf("Arr: {8.3lf} {8.3lf} {8.3lf}\n", a[0], a[1], a[2])
     return 0
 }
 ```
 ### Statements
+#### Assignment
 ```
-// Assignment
-h = make([][5]int, 3)
-
-// Declaration via assignment (with type inference)
+h = make([][5]int, 3)                     // Dynamic arrays require calling make()
+```
+#### Declaration via assignment (with type inference)
+```
 sum := 0.0
-
-// Function call
+```
+#### Function call
+```
 y := tan(30 * std.pi / 180)
 h = append(h, [5]int{10, 20, 30, 40, 50})
-
-// Method call
+```
+#### Method call
+```
 g.print()
-
-// Conditional execution
+```
+#### Condition
+```
 if err := getError(); !err {
     std.println("Done")
 }
-
-// Switch
+```
+#### Switch
+```
 switch a {
     case 1, 3, 5, 7: std.println(std.itoa(a) + " is odd")
     case 2, 4, 6, 8: std.println(std.itoa(a) + " is even")
     default:         std.println("I don't know")
 }
+```
 
-// Loop
+#### Loop
+```
 for i := 0; i < len(g); i++ {
     if fabs(g[i]) > 1e12 {break}
     if g[i] < 0 {continue}
