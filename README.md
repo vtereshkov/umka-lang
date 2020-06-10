@@ -46,8 +46,8 @@ const (
 ```
 _Built-in constants_
 ```
-    true false
-    null
+true false
+null
 ```
 #### Types
 ```
@@ -68,13 +68,13 @@ type (
 ```
 _Built-in types_
 ```
-    void
-    int8 int16 int32 int
-    uint8 uint16 uint32
-    bool
-    char
-    real32 real
-    fiber
+void
+int8 int16 int32 int
+uint8 uint16 uint32
+bool
+char
+real32 real
+fiber
 ```
 #### Variables
 ```
@@ -92,11 +92,11 @@ fn tan(x: real): real {return sin(x) / cos(x)}
 ```
 _Built-in functions_
 ```
-    printf fprintf sprintf scanf fscanf sscanf
-    round trunc fabs sqrt sin cos atan exp log
-    new make append delete len sizeof
-    fiberspawn fibercall fiberalive
-    error
+printf fprintf sprintf scanf fscanf sscanf
+round trunc fabs sqrt sin cos atan exp log
+new make append delete len sizeof
+fiberspawn fibercall fiberalive
+error
 ```
 #### Methods
 ```
@@ -108,7 +108,7 @@ fn (a: ^Arr) print(): int {
 ### Statements
 #### Assignment
 ```
-h = make([][5]int, 3)                     // Dynamic arrays require calling make()
+h = make([][5]int, 3)      // Dynamic arrays are initialized with make() or by assignment of an array or dynamic array 
 ```
 #### Declaration via assignment (with type inference)
 ```
@@ -118,6 +118,7 @@ sum := 0.0
 ```
 y := tan(30 * std.pi / 180)
 h = append(h, [5]int{10, 20, 30, 40, 50})
+h = delete(h, 1)
 ```
 #### Method call
 ```
@@ -137,7 +138,6 @@ switch a {
     default:         std.println("I don't know")
 }
 ```
-
 #### Loop
 ```
 for i := 0; i < len(g); i++ {
