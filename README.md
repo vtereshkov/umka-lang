@@ -169,7 +169,7 @@ fn parentFunc() {
     }    
 }
 ```
-## Language Grammar
+## Grammar
 ```
 program             = module.
 module              = [import ";"] decls.
