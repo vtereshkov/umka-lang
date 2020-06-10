@@ -168,7 +168,7 @@ fn parentFunc() {
     }    
 }
 ```
-## Language grammar
+## Language Grammar
 ```
 program             = module.
 module              = [import ";"] decls.
@@ -238,7 +238,7 @@ actualParams        = "(" [expr {"," expr}] ")".
 compositeLiteral    = arrayLiteral | structLiteral.
 arrayLiteral        = "{" [expr {"," expr}] "}".
 structLiteral       = "{" [ident ":" expr {"," ident ":" expr}] "}".
-
+typeCast            = type "(" expr ")".
 ident               = (letter | "_") {letter | "_" | digit}.
 intNumber           = decNumber | hexHumber.
 decNumber           = digit {digit}.
