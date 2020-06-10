@@ -108,7 +108,7 @@ fn (a: ^Arr) print(): int {
 ### Statements
 #### Assignment
 ```
-h = make([][5]int, 3)   // Dynamic arrays are initialized with make() or by assignment of an array or dynamic array 
+h = make([][5]int, 3)          // Dynamic arrays are initialized with make()
 ```
 #### Declaration via assignment (with type inference)
 ```
@@ -170,82 +170,84 @@ fn parentFunc() {
 ```
 ## Language grammar
 ```
-program = module.
-module = [import ";"] decls.
-import = "import" (importItem | "(" {importItem ";"} ")").
-importItem = stringLiteral.
-decls = decl {";" decl}.
-decl = typeDecl | constDecl | varDecl | fnDecl.
-typeDecl = "type" (typeDeclItem | "(" {typeDeclItem ";"} ")").
-typeDeclItem = ident exportMark "=" type.
-constDecl = "const" (constDeclItem | "(" {constDeclItem ";"} ")").
-constDeclItem = ident exportMark "=" expr.
-varDecl = "var" (varDeclItem | "(" {varDeclItem ";"} ")").
-varDeclItem = typedIdentList | ident ":" type "=" expr.
-shortVarDecl = declAssignmentStmt.
-fnDecl = "fn" [rcvSignature] ident exportMark signature [block].
-rcvSignature = "(" ident ":" type ")".
-signature = "(" [typedIdentList ["=" expr] {"," typedIdentList ["=" expr]}] ")" [":" type].
-exportMark = ["*"].
-identList = ident exportMark {"," ident exportMark}.
-typedIdentList = identList ":" type.
-type = qualIdent | ptrType | arrayType | dynArrayType | strType | structType | fnType.
-ptrType = "^" type.
-arrayType = "[" expr "]" type.
-dynArrayType = "[" "]" type.
-strType = "str" ["[" expr "]"].
-structType = "struct" "{" {typedIdentList ";"} "}".
-interfaceType = "interface" "{" {ident signature ";"} "}".
-fnType = "fn" signature.
-block = "{" StmtList "}".
-fnBlock = block.
-fnPrototype = .
-stmtList = Stmt {";" Stmt}.
-stmt = decl | block | simpleStmt | ifStmt | switchStmt | forStmt | breakStmt | continueStmt | returnStmt.
-simpleStmt     = assignmentStmt | shortAssignmentStmt | incDecStmt | callStmt.
-assignmentStmt = designator "=" expr.
+program             = module.
+module              = [import ";"] decls.
+import              = "import" (importItem | "(" {importItem ";"} ")").
+importItem          = stringLiteral.
+decls               = decl {";" decl}.
+decl                = typeDecl | constDecl | varDecl | fnDecl.
+typeDecl            = "type" (typeDeclItem | "(" {typeDeclItem ";"} ")").
+typeDeclItem        = ident exportMark "=" type.
+constDecl           = "const" (constDeclItem | "(" {constDeclItem ";"} ")").
+constDeclItem       = ident exportMark "=" expr.
+varDecl             = "var" (varDeclItem | "(" {varDeclItem ";"} ")").
+varDeclItem         = typedIdentList | ident ":" type "=" expr.
+shortVarDecl        = declAssignmentStmt.
+fnDecl              = "fn" [rcvSignature] ident exportMark signature [block].
+rcvSignature        = "(" ident ":" type ")".
+signature           = "(" [typedIdentList ["=" expr] {"," typedIdentList ["=" expr]}] ")" [":" type].
+exportMark          = ["*"].
+identList           = ident exportMark {"," ident exportMark}.
+typedIdentList      = identList ":" type.
+type                = qualIdent | ptrType | arrayType | dynArrayType | strType | structType | fnType.
+ptrType             = "^" type.
+arrayType           = "[" expr "]" type.
+dynArrayType        = "[" "]" type.
+strType             = "str" ["[" expr "]"].
+structType          = "struct" "{" {typedIdentList ";"} "}".
+interfaceType       = "interface" "{" {ident signature ";"} "}".
+fnType              = "fn" signature.
+block               = "{" StmtList "}".
+fnBlock             = block.
+fnPrototype         = .
+stmtList            = Stmt {";" Stmt}.
+stmt                = decl | block | simpleStmt | 
+                      ifStmt | switchStmt | forStmt | breakStmt | continueStmt | returnStmt.
+simpleStmt          = assignmentStmt | shortAssignmentStmt | incDecStmt | callStmt.
+assignmentStmt      = designator "=" expr.
 shortAssignmentStmt = designator ("+=" | "-=" | "*=" | "/=" | "%=" | "&=" | "|=" | "~=") expr.
-declAssignmentStmt = ident ":=" expr.
-incDecStmt = designator ("++" | "--").
-callStmt       = designator.
-ifStmt = "if" [shortVarDecl ";"] expr block ["else" (ifStmt | block)].
-switchStmt = "switch" [shortVarDecl ";"] expr "{" {case} [default] "}".
-case = "case" expr {"," expr} ":" stmtList.
-default = "default" ":" stmtList.
-forStmt = "for" [shortVarDecl ";"] expr [";" simpleStmt] block.
-breakStmt = "break".
-continueStmt = "continue".
-returnStmt = "return" [expr].
-expr = logicalTerm {"||" logicalTerm}.
-logicalTerm = relation {"&&" relation}.
-relation = relationTerm [("==" | "!=" | "<" | "<=" | ">" | ">=") relationTerm].
-relationTerm = term {("+" | "-" | "|" | "^") term}.
-term = factor {("*" | "/" | "%" | "<<" | ">>" | "&") factor}.
-factor = designator | intNumber | realNumber | charLiteral | stringLiteral | compositeLiteral | typeCast |
-         ("+" | "-" | "!" | "~" | "&") factor | "(" expr ")".
-designator = primary selectors.
-primary = qualIdent | builtinCall.
-qualIdent = [ident "."] ident.
-builtinCall = qualIdent "(" [expr {"," expr}] ")".
-selectors = {derefSelector | indexSelector | fieldSelector | callSelector}.
-derefSelector = "^".
-indexSelector = "[" expr "]".
-fieldSelector = "." ident.
-callSelector = "(" actualParams ")".
-actualParams = "(" [expr {"," expr}] ")".
-compositeLiteral = arrayLiteral | structLiteral.
-arrayLiteral     = "{" [expr {"," expr}] "}".
-structLiteral    = "{" [ident ":" expr {"," ident ":" expr}] "}".
+declAssignmentStmt  = ident ":=" expr.
+incDecStmt          = designator ("++" | "--").
+callStmt            = designator.
+ifStmt              = "if" [shortVarDecl ";"] expr block ["else" (ifStmt | block)].
+switchStmt          = "switch" [shortVarDecl ";"] expr "{" {case} [default] "}".
+case                = "case" expr {"," expr} ":" stmtList.
+default             = "default" ":" stmtList.
+forStmt             = "for" [shortVarDecl ";"] expr [";" simpleStmt] block.
+breakStmt           = "break".
+continueStmt        = "continue".
+returnStmt          = "return" [expr].
+expr                = logicalTerm {"||" logicalTerm}.
+logicalTerm         = relation {"&&" relation}.
+relation            = relationTerm [("==" | "!=" | "<" | "<=" | ">" | ">=") relationTerm].
+relationTerm        = term {("+" | "-" | "|" | "^") term}.
+term                = factor {("*" | "/" | "%" | "<<" | ">>" | "&") factor}.
+factor              = designator | intNumber | realNumber | 
+                      charLiteral | stringLiteral | compositeLiteral | typeCast |
+                      ("+" | "-" | "!" | "~" | "&") factor | "(" expr ")".
+designator          = primary selectors.
+primary             = qualIdent | builtinCall.
+qualIdent           = [ident "."] ident.
+builtinCall         = qualIdent "(" [expr {"," expr}] ")".
+selectors           = {derefSelector | indexSelector | fieldSelector | callSelector}.
+derefSelector       = "^".
+indexSelector       = "[" expr "]".
+fieldSelector       = "." ident.
+callSelector        = "(" actualParams ")".
+actualParams        = "(" [expr {"," expr}] ")".
+compositeLiteral    = arrayLiteral | structLiteral.
+arrayLiteral        = "{" [expr {"," expr}] "}".
+structLiteral       = "{" [ident ":" expr {"," ident ":" expr}] "}".
 
-ident = (letter | "_") {letter | "_" | digit}.
-intNumber = decNumber | hexHumber.
-decNumber = digit {digit}.
-hexNumber = "0" "x" hexDigit {hexDigit}.
-realNumber = decNumber ["." decNumber] [("E" | "e") decNumber].
-charLiteral = "'" (char | escSeq) "'".
-stringLiteral = """ {char | escSeq} """.
-escSeq = "\" ("a" | "b" | "e" | "f" | "n" | "r" | "t" | "v" | "x" hexNumber).
-letter = "A".."Z" | "a".."z".
-digit = "0".."9".
-hexDigit = digit | "A".."F" | "a"..f".
-char = "\x00".."\xFF".
+ident               = (letter | "_") {letter | "_" | digit}.
+intNumber           = decNumber | hexHumber.
+decNumber           = digit {digit}.
+hexNumber           = "0" "x" hexDigit {hexDigit}.
+realNumber          = decNumber ["." decNumber] [("E" | "e") decNumber].
+charLiteral         = "'" (char | escSeq) "'".
+stringLiteral       = """ {char | escSeq} """.
+escSeq              = "\" ("a" | "b" | "e" | "f" | "n" | "r" | "t" | "v" | "x" hexNumber).
+letter              = "A".."Z" | "a".."z".
+digit               = "0".."9".
+hexDigit            = digit | "A".."F" | "a"..f".
+char                = "\x00".."\xFF".
