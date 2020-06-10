@@ -496,7 +496,7 @@ void parseVarDecl(Compiler *comp)
 }
 
 
-// shortVarDecl = declAssignment.
+// shortVarDecl = declAssignmentStmt.
 void parseShortVarDecl(Compiler *comp)
 {
     lexCheck(&comp->lex, TOK_IDENT);
