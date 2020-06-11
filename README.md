@@ -169,7 +169,7 @@ fn parentFunc() {
     }    
 }
 ```
-## Grammar
+## Language Grammar
 ```
 program             = module.
 module              = [import ";"] decls.
@@ -221,7 +221,7 @@ returnStmt          = "return" [expr].
 expr                = logicalTerm {"||" logicalTerm}.
 logicalTerm         = relation {"&&" relation}.
 relation            = relationTerm [("==" | "!=" | "<" | "<=" | ">" | ">=") relationTerm].
-relationTerm        = term {("+" | "-" | "|" | "^") term}.
+relationTerm        = term {("+" | "-" | "|" | "~") term}.
 term                = factor {("*" | "/" | "%" | "<<" | ">>" | "&") factor}.
 factor              = designator | intNumber | realNumber | 
                       charLiteral | stringLiteral | compositeLiteral | typeCast |
