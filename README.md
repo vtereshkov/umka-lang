@@ -16,6 +16,7 @@ Umka is a statically typed embeddable scripting language. It combines the simpli
 ## Performance
 Due to the efficient `for` loop implementation and support for static data types, Umka demonstrates high performance in multidimensional array operations and similar tasks.
 
+_Matrix multiplication (AMD A4-3300M @ 1.9 GHz, Windows 7)_
 ![](perf.png)
 
 ## Getting Started
