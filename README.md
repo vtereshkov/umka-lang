@@ -13,6 +13,11 @@ Umka is a statically typed embeddable scripting language. It combines the simpli
 * Distribution as a dynamic library with a simple C API
 * C99 source
 
+## Performance
+Due to the efficient `for` loop implementation and support for static data types, Umka demonstrates high performance in multidimensional array operations and similar tasks.
+
+![](perf.png)
+
 ## Getting Started
 * Download the [latest release](https://github.com/vtereshkov/umka-lang/releases) for Windows and Linux (_Note:_ both versions use `/` as path separator)
 * Take a [tour of Umka](https://github.com/vtereshkov/umka-lang/blob/master/README.md#a-tour-of-umka)
