@@ -432,12 +432,7 @@ static void parseReturnStmt(Compiler *comp)
     if (comp->lex.tok.kind != TOK_SEMICOLON && comp->lex.tok.kind != TOK_RBRACE)
         parseExpr(comp, &type, NULL);
     else
-    {
         type = comp->voidType;
-
-        if (comp->lex.tok.kind == TOK_SEMICOLON)
-            lexNext(&comp->lex);
-    }
 
     // Get function signature
     Signature *sig = NULL;
@@ -539,6 +534,9 @@ void parseFnBlock(Compiler *comp, Ident *fn)
     bool mainFn = false;
     if (strcmp(fn->name, "main") == 0)
     {
+        if (fn->type->sig.method || fn->type->sig.numParams != 0 || fn->type->sig.resultType[0]->kind != TYPE_VOID)
+            comp->error("Illegal main() signature");
+
         genEntryPoint(&comp->gen, 0);
         mainFn = true;
     }

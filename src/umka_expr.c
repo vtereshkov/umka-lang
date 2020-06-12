@@ -1141,6 +1141,7 @@ static void parseFactor(Compiler *comp, Type **type, Const *constant)
 
         case TOK_CARET:
         case TOK_LBRACKET:
+        case TOK_STRUCT:
         {
             parseTypeCastOrCompositeLiteral(comp, NULL, type, constant);
             break;
