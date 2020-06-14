@@ -151,9 +151,16 @@ static void parseSignature(Compiler *comp, Signature *sig)
 }
 
 
-// ptrType = "^" type.
+// ptrType = ["weak"] "^" type.
 static Type *parsePtrType(Compiler *comp)
 {
+    bool weak = false;
+    if (comp->lex.tok.kind == TOK_WEAK)
+    {
+        weak = true;
+        lexNext(&comp->lex);
+    }
+
     lexEat(&comp->lex, TOK_CARET);
     Type *type;
 
@@ -185,7 +192,9 @@ static Type *parsePtrType(Compiler *comp)
     if (!forward)
         type = parseType(comp, NULL);
 
-    return typeAddPtrTo(&comp->types, &comp->blocks, type);
+    type = typeAddPtrTo(&comp->types, &comp->blocks, type);
+    type->weak = weak;
+    return type;
 }
 
 
@@ -348,7 +357,8 @@ Type *parseType(Compiler *comp, Ident *ident)
     switch (comp->lex.tok.kind)
     {
         case TOK_IDENT:     return parseType(comp, parseQualIdent(comp));
-        case TOK_CARET:     return parsePtrType(comp);
+        case TOK_CARET:
+        case TOK_WEAK:      return parsePtrType(comp);
         case TOK_LBRACKET:  return parseArrayType(comp);
         case TOK_STR:       return parseStrType(comp);
         case TOK_STRUCT:    return parseStructType(comp);

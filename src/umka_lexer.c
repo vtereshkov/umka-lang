@@ -30,6 +30,7 @@ static const char *spelling [] =
     "switch",
     "type",
     "var",
+    "weak",
 
     // Operators
     "+",
@@ -91,7 +92,7 @@ static const char *spelling [] =
 
 enum
 {
-    NUM_KEYWORDS = TOK_VAR - TOK_BREAK + 1
+    NUM_KEYWORDS = TOK_WEAK - TOK_BREAK + 1
 };
 
 

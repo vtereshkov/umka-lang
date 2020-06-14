@@ -1140,6 +1140,7 @@ static void parseFactor(Compiler *comp, Type **type, Const *constant)
         }
 
         case TOK_CARET:
+        case TOK_WEAK:
         case TOK_LBRACKET:
         case TOK_STRUCT:
         {

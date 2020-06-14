@@ -75,6 +75,7 @@ typedef struct tagType
     int block;
     struct tagType *base;                   // For pointers and arrays
     int numItems;                           // For arrays, structures and interfaces
+    bool weak;                              // For pointers
     union
     {
         Field *field[MAX_FIELDS];           // For structures and interfaces

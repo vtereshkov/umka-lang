@@ -26,6 +26,7 @@ typedef enum
     TOK_SWITCH,
     TOK_TYPE,
     TOK_VAR,
+    TOK_WEAK,
 
     // Operators
     TOK_PLUS,
