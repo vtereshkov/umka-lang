@@ -89,7 +89,7 @@
 
 1588579706 t.h"
 
-1592134376 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_decl.c
+1592260284 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_decl.c
 	<stdio.h>
 	<string.h>
 	"umka_expr.h"
@@ -107,7 +107,7 @@
 1591966510 c:\users\vasiliy\desktop\umka-lang-master\src\umka_decl.h
 	"umka_compiler.h"
 
-1592133924 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_expr.c
+1592262343 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_expr.c
 	<string.h>
 	<limits.h>
 	<stddef.h>
@@ -154,7 +154,7 @@
 	"umka_types.h"
 	"umka_ident.h"
 
-1592135033 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_vm.c
+1592262892 source:c:\users\vasiliy\desktop\umka-lang-master\src\umka_vm.c
 	<stdio.h>
 	<stdlib.h>
 	<string.h>

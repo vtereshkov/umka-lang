@@ -1,0 +1,26 @@
+fn intref(val: int): ^int {
+    p := new(int)
+    p^ = val
+    return p
+}
+
+fn (x: ^int) print() {printf("int: {d}\n", x^)}
+
+fn (x: ^[]int) print() {
+    printf("vec: [")
+    for i := 0; i < len(x^); i++ {
+        printf("{d} ", x[i])
+    } 
+    printf("]\n")
+}
+
+type printable = interface {print()}
+
+fn main() {
+    var b: []int = [3]int {7, 8, 9}    
+    var d: []printable    
+    {
+       d = [2]printable {intref(5), b}
+    }    
+    for i := 0; i < len(d); i++ {d[i].print()}         
+}

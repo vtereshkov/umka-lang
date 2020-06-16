@@ -87,7 +87,10 @@ static void doConcreteToInterfaceConv(Compiler *comp, Type *dest, Type **src, Co
     if (constant)
         comp->error("Conversion to interface is not allowed in constant expressions");
 
-    Type *rcvType  = typeAddPtrTo(&comp->types, &comp->blocks, *src);
+    Type *rcvType = *src;
+    if (typeStructured(rcvType))
+        rcvType = typeAddPtrTo(&comp->types, &comp->blocks, rcvType);
+
     int destSize   = typeSize(&comp->types, dest);
     int destOffset = identAllocStack(&comp->idents, &comp->blocks, destSize);
 
@@ -191,7 +194,7 @@ void doImplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant,
     }
 
     // Concrete to interface or interface to interface
-    else if (dest->kind == TYPE_INTERFACE && typeStructured(*src))
+    else if (dest->kind == TYPE_INTERFACE && ((*src)->kind == TYPE_PTR || typeStructured(*src)))
     {
         if ((*src)->kind == TYPE_INTERFACE)
         {
@@ -838,7 +841,9 @@ static void parseFieldSelector(Compiler *comp, Type **type, Const *constant, boo
     lexNext(&comp->lex);
     lexCheck(&comp->lex, TOK_IDENT);
 
-    Type *rcvType = typeAddPtrTo(&comp->types, &comp->blocks, *type);
+    Type *rcvType = *type;
+    if (typeStructured(rcvType))
+        rcvType = typeAddPtrTo(&comp->types, &comp->blocks, rcvType);
 
     Ident *method = identFind(&comp->idents, &comp->modules, &comp->blocks,
                                comp->blocks.module, comp->lex.tok.name, rcvType);
