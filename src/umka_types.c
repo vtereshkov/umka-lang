@@ -463,7 +463,7 @@ bool typeValidOperator(Type *type, TokenKind op)
         case TOK_GREATER:   return typeOrdinal(type) || typeReal(type) || type->kind == TYPE_STR;
         case TOK_EQ:        return true;
         case TOK_NOT:       return type->kind == TYPE_BOOL;
-        case TOK_NOTEQ:
+        case TOK_NOTEQ:     return typeOrdinal(type) || typeReal(type) || type->kind == TYPE_PTR || type->kind == TYPE_STR;
         case TOK_LESSEQ:
         case TOK_GREATEREQ: return typeOrdinal(type) || typeReal(type) || type->kind == TYPE_STR;
         default:            return false;

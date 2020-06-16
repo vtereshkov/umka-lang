@@ -337,6 +337,13 @@ void genGetFieldPtr(CodeGen *gen, int fieldOffset)
 }
 
 
+void genAssertType(CodeGen *gen, Type *type)
+{
+    const Instruction instr = {.opcode = OP_ASSERT_TYPE, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.ptrVal = type};
+    genAddInstr(gen, &instr);
+}
+
+
 void genGoto(CodeGen *gen, int dest)
 {
     const Instruction instr = {.opcode = OP_GOTO, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = dest};

@@ -11,7 +11,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="../test.um" />
+				<Option parameters="../tests/interfaces2.um" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>

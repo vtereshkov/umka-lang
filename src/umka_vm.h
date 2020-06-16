@@ -54,6 +54,7 @@ typedef enum
     OP_GET_ARRAY_PTR,
     OP_GET_DYNARRAY_PTR,
     OP_GET_FIELD_PTR,
+    OP_ASSERT_TYPE,
     OP_GOTO,
     OP_GOTO_IF,
     OP_CALL,

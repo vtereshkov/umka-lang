@@ -34,6 +34,7 @@ static char *opcodeSpelling [] =
     "GET_ARRAY_PTR",
     "GET_DYNARRAY_PTR",
     "GET_FIELD_PTR",
+    "ASSERT_TYPE",
     "GOTO",
     "GOTO_IF",
     "CALL",
@@ -1060,6 +1061,20 @@ static void doGetFieldPtr(Fiber *fiber, ErrorFunc error)
 }
 
 
+static void doAssertType(Fiber *fiber)
+{
+    void *interface = (fiber->top++)->ptrVal;
+    Type *type = fiber->code[fiber->ip].operand.ptrVal;
+
+    // Interface layout: __self, __selftype, methods
+    void *__self = *(void **)interface;
+    Type *__selftype = *(Type **)(interface + sizeof(__self));
+
+    (--fiber->top)->ptrVal = (__selftype && typeEquivalent(type, __selftype)) ? __self : NULL;
+    fiber->ip++;
+}
+
+
 static void doGoto(Fiber *fiber)
 {
     fiber->ip = fiber->code[fiber->ip].operand.intVal;
@@ -1259,6 +1274,7 @@ static void vmLoop(VM *vm)
             case OP_GET_ARRAY_PTR:          doGetArrayPtr(fiber, error);                   break;
             case OP_GET_DYNARRAY_PTR:       doGetDynArrayPtr(fiber, error);                break;
             case OP_GET_FIELD_PTR:          doGetFieldPtr(fiber, error);                   break;
+            case OP_ASSERT_TYPE:            doAssertType(fiber);                           break;
             case OP_GOTO:                   doGoto(fiber);                                 break;
             case OP_GOTO_IF:                doGotoIf(fiber);                               break;
             case OP_CALL:                   doCall(fiber, error);                          break;
@@ -1368,6 +1384,7 @@ int vmAsm(int ip, Instruction *instr, char *buf)
         case OP_CALL_BUILTIN:           chars += sprintf(buf + chars, " %s",   builtinSpelling[instr->operand.builtinVal]); break;
         case OP_CHANGE_REF_CNT:
         case OP_CHANGE_REF_CNT_ASSIGN:
+        case OP_ASSERT_TYPE:
         {
             char typeBuf[DEFAULT_STR_LEN + 1];
             chars += sprintf(buf + chars, " %s", typeSpelling(instr->operand.ptrVal, typeBuf));

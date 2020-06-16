@@ -63,6 +63,8 @@ void genGetArrayPtr   (CodeGen *gen, int itemSize);
 void genGetDynArrayPtr(CodeGen *gen);
 void genGetFieldPtr   (CodeGen *gen, int fieldOffset);
 
+void genAssertType(CodeGen *gen, Type *type);
+
 void genGoto  (CodeGen *gen, int dest);
 void genGotoIf(CodeGen *gen, int dest);
 

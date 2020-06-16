@@ -48,6 +48,18 @@ static void doIntToRealConv(Compiler *comp, Type *dest, Type **src, Const *const
 }
 
 
+static void doDynArrayPtrToArrayPtrConv(Compiler *comp, Type *dest, Type **src, Const *constant)
+{
+    if (constant)
+        comp->error("Conversion to array is not allowed in constant expressions");
+
+    genGetFieldPtr(&comp->gen, offsetof(DynArray, data));
+    genDeref(&comp->gen, TYPE_PTR);
+
+    *src = dest;
+}
+
+
 static void doArrayToDynArrayConv(Compiler *comp, Type *dest, Type **src, Const *constant)
 {
     if (constant)
@@ -65,18 +77,6 @@ static void doArrayToDynArrayConv(Compiler *comp, Type *dest, Type **src, Const 
 
     // Copy result to a temporary local variable to collect it as garbage when leaving the block
     doCopyResultToTempVar(comp, dest);
-
-    *src = dest;
-}
-
-
-static void doDynArrayPtrToArrayPtrConv(Compiler *comp, Type *dest, Type **src, Const *constant)
-{
-    if (constant)
-        comp->error("Conversion to array is not allowed in constant expressions");
-
-    genGetFieldPtr(&comp->gen, offsetof(DynArray, data));
-    genDeref(&comp->gen, TYPE_PTR);
 
     *src = dest;
 }
@@ -171,6 +171,16 @@ static void doInterfaceToInterfaceConv(Compiler *comp, Type *dest, Type **src, C
 }
 
 
+static void doInterfaceToConcreteConv(Compiler *comp, Type *dest, Type **src, Const *constant)
+{
+    if (constant)
+        comp->error("Conversion from interface is not allowed in constant expressions");
+
+    genAssertType(&comp->gen, dest);
+    *src = dest;
+}
+
+
 void doImplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant, bool lhs)
 {
     // Integer to real
@@ -184,14 +194,14 @@ void doImplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant,
     {
         doArrayToDynArrayConv(comp, dest, src, constant);
     }
-
+    
     // Dynamic array pointer to array pointer
     else if (dest->kind == TYPE_PTR && dest->base->kind == TYPE_ARRAY &&
             (*src)->kind == TYPE_PTR && (*src)->base->kind == TYPE_DYNARRAY &&
              typeEquivalent(dest->base->base, (*src)->base->base))
     {
         doDynArrayPtrToArrayPtrConv(comp, dest, src, constant);
-    }
+    }    
 
     // Concrete to interface or interface to interface
     else if (dest->kind == TYPE_INTERFACE && ((*src)->kind == TYPE_PTR || typeStructured(*src)))
@@ -203,6 +213,12 @@ void doImplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant,
         }
         else
             doConcreteToInterfaceConv(comp, dest, src, constant);
+    }
+
+    // Interface to concrete (type assertion)
+    else if (dest->kind == TYPE_PTR && (*src)->kind == TYPE_INTERFACE)
+    {
+        doInterfaceToConcreteConv(comp, dest, src, constant);
     }
 }
 

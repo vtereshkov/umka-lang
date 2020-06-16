@@ -16,11 +16,32 @@ fn (x: ^[]int) print() {
 
 type printable = interface {print()}
 
+fn printany(x: interface{}) {
+    if p := ^int(x); p != null {
+        printf("{d}\n",   p^)
+    } else if p := ^real(x); p != null {
+        printf("{.3f}\n", p^)
+    } else if p := ^str(x);  p != null {
+        printf("{s}\n",   p^)
+    }
+}
+
 fn main() {
     var b: []int = [3]int {7, 8, 9}    
     var d: []printable    
     {
        d = [2]printable {intref(5), b}
     }    
-    for i := 0; i < len(d); i++ {d[i].print()}         
+    for i := 0; i < len(d); i++ {d[i].print()}
+
+    p := ^[]int(d[1])
+    if p != null {p.print()}
+    
+    u := 17
+    v := 18.3
+    var s: str = "Hello!"
+    
+    printany(&u)
+    printany(&v)
+    printany(s)
 }
