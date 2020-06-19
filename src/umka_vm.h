@@ -8,19 +8,18 @@
 
 enum
 {
-    VM_NUM_REGS          = 64,
+    VM_NUM_REGS          = 16,
 
     // General-purpose registers
-    VM_RESULT_REG_0      = 0,
-    VM_DYNARRAY_REG      = 30,
-    VM_SELF_REG          = 31,
-    VM_COMMON_REG_0      = 32,
-    VM_COMMON_REG_1      = VM_COMMON_REG_0 + 1,
+    VM_REG_RESULT        = 0,
+    VM_REG_SELF          = 1,
+    VM_REG_COMMON_0      = 2,
+    VM_REG_COMMON_1      = VM_REG_COMMON_0 + 1,
 
     // Registers for special use by printf() / scanf()
-    VM_IO_STREAM_REG     = VM_NUM_REGS - 3,
-    VM_IO_FORMAT_REG     = VM_NUM_REGS - 2,
-    VM_IO_COUNT_REG      = VM_NUM_REGS - 1,
+    VM_REG_IO_STREAM     = VM_NUM_REGS - 3,
+    VM_REG_IO_FORMAT     = VM_NUM_REGS - 2,
+    VM_REG_IO_COUNT      = VM_NUM_REGS - 1,
 
     VM_MIN_FREE_STACK    = 1024,                    // Slots
     VM_MIN_HEAP_PAGE     = 1024 * 1024,             // Bytes

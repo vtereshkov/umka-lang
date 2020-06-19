@@ -503,8 +503,8 @@ static void doConvertFormatStringToC(char *formatC, char **format, ErrorFunc err
 
 static void doBuiltinPrintf(Fiber *fiber, bool console, bool string, ErrorFunc error)
 {
-    void *stream = console ? stdout : fiber->reg[VM_IO_STREAM_REG].ptrVal;
-    char *format = fiber->reg[VM_IO_FORMAT_REG].ptrVal;
+    void *stream = console ? stdout : fiber->reg[VM_REG_IO_STREAM].ptrVal;
+    char *format = fiber->reg[VM_REG_IO_FORMAT].ptrVal;
 
     char *formatC = malloc(strlen(format) + 1);
     doConvertFormatStringToC(formatC, &format, error);
@@ -527,10 +527,10 @@ static void doBuiltinPrintf(Fiber *fiber, bool console, bool string, ErrorFunc e
         else        len = fprintf((FILE *)stream, formatC, fiber->top->intVal);
     }
 
-    fiber->reg[VM_IO_FORMAT_REG].ptrVal = format;
-    fiber->reg[VM_IO_COUNT_REG].intVal += len;
+    fiber->reg[VM_REG_IO_FORMAT].ptrVal = format;
+    fiber->reg[VM_REG_IO_COUNT].intVal += len;
     if (string)
-        fiber->reg[VM_IO_STREAM_REG].ptrVal += len;
+        fiber->reg[VM_REG_IO_STREAM].ptrVal += len;
 
     free(formatC);
 }
@@ -538,8 +538,8 @@ static void doBuiltinPrintf(Fiber *fiber, bool console, bool string, ErrorFunc e
 
 static void doBuiltinScanf(Fiber *fiber, bool console, bool string, ErrorFunc error)
 {
-    void *stream = console ? stdin : fiber->reg[VM_IO_STREAM_REG].ptrVal;
-    char *format = fiber->reg[VM_IO_FORMAT_REG].ptrVal;
+    void *stream = console ? stdin : fiber->reg[VM_REG_IO_STREAM].ptrVal;
+    char *format = fiber->reg[VM_REG_IO_FORMAT].ptrVal;
 
     char *formatC = malloc(strlen(format) + 2 + 1);     // + 2 for "%n"
     doConvertFormatStringToC(formatC, &format, error);
@@ -558,10 +558,10 @@ static void doBuiltinScanf(Fiber *fiber, bool console, bool string, ErrorFunc er
         else        cnt = fscanf((FILE *)stream, formatC, fiber->top->ptrVal, &len);
     }
 
-    fiber->reg[VM_IO_FORMAT_REG].ptrVal = format;
-    fiber->reg[VM_IO_COUNT_REG].intVal += cnt;
+    fiber->reg[VM_REG_IO_FORMAT].ptrVal = format;
+    fiber->reg[VM_REG_IO_COUNT].intVal += cnt;
     if (string)
-        fiber->reg[VM_IO_STREAM_REG].ptrVal += len;
+        fiber->reg[VM_REG_IO_STREAM].ptrVal += len;
 
     free(formatC);
 }
@@ -599,8 +599,8 @@ static void doBuiltinAppend(Fiber *fiber, HeapPages *pages, ErrorFunc error)
     void *item       = (fiber->top++)->ptrVal;
     DynArray *array  = (fiber->top++)->ptrVal;
 
-    if (!array->data)
-        error("Dynamic array is not initialized");
+    if (!array || !array->data)
+        error("Dynamic array is null");
 
     result->len      = array->len + 1;
     result->itemSize = array->itemSize;
@@ -620,8 +620,8 @@ static void doBuiltinDelete(Fiber *fiber, HeapPages *pages, ErrorFunc error)
     int index        = (fiber->top++)->intVal;
     DynArray *array  = (fiber->top++)->ptrVal;
 
-    if (!array->data)
-        error("Dynamic array is not initialized");
+    if (!array || !array->data)
+        error("Dynamic array is null");
 
     result->len      = array->len - 1;
     result->itemSize = array->itemSize;
@@ -1014,6 +1014,9 @@ static void doGetArrayPtr(Fiber *fiber, ErrorFunc error)
     int len      = (fiber->top++)->intVal;
     int index    = (fiber->top++)->intVal;
 
+    if (!fiber->top->ptrVal)
+        error("Array is null");
+
     if (index < 0 || index > len - 1)
         error("Index is out of range");
 
@@ -1029,13 +1032,13 @@ static void doGetArrayPtr(Fiber *fiber, ErrorFunc error)
 static void doGetDynArrayPtr(Fiber *fiber, ErrorFunc error)
 {
     int index       = (fiber->top++)->intVal;
-
     DynArray *array = (fiber->top++)->ptrVal;
+
+    if (!array || !array->data)
+        error("Dynamic array is null");
+
     int itemSize    = array->itemSize;
     int len         = array->len;
-
-    if (!array->data)
-        error("Dynamic array is not initialized");
 
     if (index < 0 || index > len - 1)
         error("Index is out of range");
@@ -1052,6 +1055,10 @@ static void doGetDynArrayPtr(Fiber *fiber, ErrorFunc error)
 static void doGetFieldPtr(Fiber *fiber, ErrorFunc error)
 {
     int fieldOffset = fiber->code[fiber->ip].operand.intVal;
+
+    if (!fiber->top->ptrVal)
+        error("Array or structure is null");
+
     fiber->top->ptrVal += fieldOffset;
 
     if (fiber->code[fiber->ip].inlineDeref)
@@ -1108,7 +1115,7 @@ static void doCall(Fiber *fiber, ErrorFunc error)
 static void doCallExtern(Fiber *fiber)
 {
     ExternFunc fn = fiber->code[fiber->ip].operand.ptrVal;
-    fn(fiber->top + 1, &fiber->reg[VM_RESULT_REG_0]);       // + 1 for return address
+    fn(fiber->top + 1, &fiber->reg[VM_REG_RESULT]);       // + 1 for return address
     fiber->ip++;
 }
 
@@ -1218,9 +1225,9 @@ static void doEnterFrame(Fiber *fiber, ErrorFunc error)
         memset(fiber->top, 0, slots * sizeof(Slot));
 
     // Push I/O registers
-    *(--fiber->top) = fiber->reg[VM_IO_STREAM_REG];
-    *(--fiber->top) = fiber->reg[VM_IO_FORMAT_REG];
-    *(--fiber->top) = fiber->reg[VM_IO_COUNT_REG];
+    *(--fiber->top) = fiber->reg[VM_REG_IO_STREAM];
+    *(--fiber->top) = fiber->reg[VM_REG_IO_FORMAT];
+    *(--fiber->top) = fiber->reg[VM_REG_IO_COUNT];
 
     fiber->ip++;
 }
@@ -1229,9 +1236,9 @@ static void doEnterFrame(Fiber *fiber, ErrorFunc error)
 static void doLeaveFrame(Fiber *fiber)
 {
     // Pop I/O registers
-    fiber->reg[VM_IO_COUNT_REG]  = *(fiber->top++);
-    fiber->reg[VM_IO_FORMAT_REG] = *(fiber->top++);
-    fiber->reg[VM_IO_STREAM_REG] = *(fiber->top++);
+    fiber->reg[VM_REG_IO_COUNT]  = *(fiber->top++);
+    fiber->reg[VM_REG_IO_FORMAT] = *(fiber->top++);
+    fiber->reg[VM_REG_IO_STREAM] = *(fiber->top++);
 
     // Restore stack top, pop old stack frame base pointer
     fiber->top = fiber->base;
@@ -1338,7 +1345,7 @@ void vmRun(VM *vm, int entryOffset, int numParamSlots, Slot *params, Slot *resul
 
     // Save result
     if (entryOffset > 0 && result)
-        *result = vm->fiber->reg[VM_RESULT_REG_0];
+        *result = vm->fiber->reg[VM_REG_RESULT];
 }
 
 

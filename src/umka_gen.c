@@ -463,27 +463,27 @@ void genIfElseEpilog(CodeGen *gen)
 
 void genSwitchCondEpilog(CodeGen *gen)
 {
-    genPopReg(gen, VM_COMMON_REG_0);                     // Save switch expression
+    genPopReg(gen, VM_REG_COMMON_0);                     // Save switch expression
     genPushIntConst(gen, 0);                             // Initialize comparison accumulator
-    genPopReg(gen, VM_COMMON_REG_1);
+    genPopReg(gen, VM_REG_COMMON_1);
 }
 
 
 void genCaseExprEpilog(CodeGen *gen, Const *constant)
 {
-    genPushReg(gen, VM_COMMON_REG_0);                    // Compare switch expression with case constant
+    genPushReg(gen, VM_REG_COMMON_0);                    // Compare switch expression with case constant
     genPushIntConst(gen, constant->intVal);
     genBinary(gen, TOK_EQEQ, TYPE_INT, 0);
 
-    genPushReg(gen, VM_COMMON_REG_1);                    // Update comparison accumulator
+    genPushReg(gen, VM_REG_COMMON_1);                    // Update comparison accumulator
     genBinary(gen, TOK_OR, TYPE_BOOL, 0);
-    genPopReg(gen, VM_COMMON_REG_1);
+    genPopReg(gen, VM_REG_COMMON_1);
 }
 
 
 void genCaseBlockProlog(CodeGen *gen)
 {
-    genPushReg(gen, VM_COMMON_REG_1);                    // Push comparison accumulator
+    genPushReg(gen, VM_REG_COMMON_1);                    // Push comparison accumulator
     genGotoIf(gen, gen->ip + 2);                         // Goto "case" block start
     genSavePos(gen);
     genNop(gen);                                         // Goto next "case" or "default" (stub)
@@ -564,7 +564,7 @@ void genForEpilog(CodeGen *gen)
 void genShortCircuitProlog(CodeGen *gen, TokenKind op)
 {
     genDup(gen);
-    genPopReg(gen, VM_COMMON_REG_0);
+    genPopReg(gen, VM_REG_COMMON_0);
 
     if (op == TOK_OROR)
         genUnary(gen, TOK_NOT, TYPE_BOOL);
@@ -577,9 +577,9 @@ void genShortCircuitProlog(CodeGen *gen, TokenKind op)
 
 void genShortCircuitEpilog(CodeGen *gen)
 {
-    genPopReg(gen, VM_COMMON_REG_0);
+    genPopReg(gen, VM_REG_COMMON_0);
     genGoFromTo(gen, genRestorePos(gen), gen->ip);       // Goto expression end (fixup)
-    genPushReg(gen, VM_COMMON_REG_0);
+    genPushReg(gen, VM_REG_COMMON_0);
 }
 
 

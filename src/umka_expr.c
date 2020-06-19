@@ -194,14 +194,14 @@ void doImplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant,
     {
         doArrayToDynArrayConv(comp, dest, src, constant);
     }
-    
+
     // Dynamic array pointer to array pointer
     else if (dest->kind == TYPE_PTR && dest->base->kind == TYPE_ARRAY &&
             (*src)->kind == TYPE_PTR && (*src)->base->kind == TYPE_DYNARRAY &&
              typeEquivalent(dest->base->base, (*src)->base->base))
     {
         doDynArrayPtrToArrayPtrConv(comp, dest, src, constant);
-    }    
+    }
 
     // Concrete to interface or interface to interface
     else if (dest->kind == TYPE_INTERFACE && ((*src)->kind == TYPE_PTR || typeStructured(*src)))
@@ -291,7 +291,7 @@ static void parseBuiltinIOCall(Compiler *comp, Type **type, Const *constant, Bui
 
     // Count (number of characters for printf(), number of items for scanf())
     genPushIntConst(&comp->gen, 0);
-    genPopReg(&comp->gen, VM_IO_COUNT_REG);
+    genPopReg(&comp->gen, VM_REG_IO_COUNT);
 
     // File/string pointer
     if (builtin == BUILTIN_FPRINTF || builtin == BUILTIN_SPRINTF ||
@@ -305,14 +305,14 @@ static void parseBuiltinIOCall(Compiler *comp, Type **type, Const *constant, Bui
 
         parseExpr(comp, type, constant);
         typeAssertCompatible(&comp->types, expectedType, *type, false);
-        genPopReg(&comp->gen, VM_IO_STREAM_REG);
+        genPopReg(&comp->gen, VM_REG_IO_STREAM);
         lexEat(&comp->lex, TOK_COMMA);
     }
 
     // Format string
     parseExpr(comp, type, constant);
     typeAssertCompatible(&comp->types, comp->strType, *type, false);
-    genPopReg(&comp->gen, VM_IO_FORMAT_REG);
+    genPopReg(&comp->gen, VM_REG_IO_FORMAT);
 
     // Values, if any
     while (comp->lex.tok.kind == TOK_COMMA)
@@ -350,7 +350,7 @@ static void parseBuiltinIOCall(Compiler *comp, Type **type, Const *constant, Bui
     genPop(&comp->gen);  // Manually remove parameter
 
     // Result
-    genPushReg(&comp->gen, VM_IO_COUNT_REG);
+    genPushReg(&comp->gen, VM_REG_IO_COUNT);
 
     *type = comp->intType;
 }
@@ -658,7 +658,7 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
     // Method receiver
     if ((*type)->sig.method)
     {
-        genPushReg(&comp->gen, VM_SELF_REG);
+        genPushReg(&comp->gen, VM_REG_SELF);
 
         // Increase receiver's reference count
         genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, (*type)->sig.param[0]->type);
@@ -869,7 +869,7 @@ static void parseFieldSelector(Compiler *comp, Type **type, Const *constant, boo
         lexNext(&comp->lex);
 
         // Save concrete method's receiver to dedicated register and push method's entry point
-        genPopReg(&comp->gen, VM_SELF_REG);
+        genPopReg(&comp->gen, VM_REG_SELF);
         doPushConst(comp, method->type, &method->constant);
 
         *type = method->type;
@@ -893,7 +893,7 @@ static void parseFieldSelector(Compiler *comp, Type **type, Const *constant, boo
             genDup(&comp->gen);
             genGetFieldPtr(&comp->gen, -field->type->sig.offsetFromSelf);
             genDeref(&comp->gen, TYPE_PTR);
-            genPopReg(&comp->gen, VM_SELF_REG);
+            genPopReg(&comp->gen, VM_REG_SELF);
         }
 
         if (typeStructured(field->type))
@@ -924,7 +924,7 @@ static void parseCallSelector(Compiler *comp, Type **type, Const *constant, bool
 
     // Push result
     if ((*type)->kind != TYPE_VOID)
-        genPushReg(&comp->gen, VM_RESULT_REG_0);
+        genPushReg(&comp->gen, VM_REG_RESULT);
 
     // Copy result to a temporary local variable to collect it as garbage when leaving the block
     if (typeGarbageCollected(*type))

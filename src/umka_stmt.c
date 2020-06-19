@@ -465,7 +465,7 @@ static void parseReturnStmt(Compiler *comp)
     {
         // Increase result reference count
         genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, sig->resultType[0]);
-        genPopReg(&comp->gen, VM_RESULT_REG_0);
+        genPopReg(&comp->gen, VM_REG_RESULT);
     }
 
     doGarbageCollectionDownToBlock(comp, comp->gen.returns->block);
