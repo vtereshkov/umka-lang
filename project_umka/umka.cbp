@@ -34,7 +34,7 @@
 		</Compiler>
 		<Linker>
 			<Add library="libumka" />
-			<Add directory="../cbplibumka/bin/Debug" />
+			<Add directory="../project_libumka/bin/Debug" />
 		</Linker>
 		<Unit filename="../src/umka.c">
 			<Option compilerVar="CC" />
