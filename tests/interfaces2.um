@@ -1,47 +1,37 @@
-fn intref(val: int): ^int {
-    p := new(int)
-    p^ = val
-    return p
-}
-
-fn (x: ^int) print() {printf("int: {d}\n", x^)}
-
-fn (x: ^[]int) print() {
-    printf("vec: [")
-    for i := 0; i < len(x^); i++ {
-        printf("{d} ", x[i])
-    } 
-    printf("]\n")
-}
-
-type printable = interface {print()}
-
-fn printany(x: interface{}) {
-    if p := ^int(x); p != null {
-        printf("{d}\n",   p^)
-    } else if p := ^real(x); p != null {
-        printf("{.3f}\n", p^)
-    } else if p := ^str(x);  p != null {
-        printf("{s}\n",   p^)
+fn sort(a: []interface{}, ordered: fn (x, y: interface{}): bool) {
+    for sorted := false; !sorted {
+        sorted = true
+        for i := 0; i < len(a) - 1; i++ {
+            if !ordered(a[i], a[i + 1]) {
+                buf := a[i]
+                a[i] = a[i + 1]
+                a[i + 1] = buf
+                sorted = false
+            }
+        }
     }
 }
 
-fn main() {
-    var b: []int = [3]int {7, 8, 9}    
-    var d: []printable    
-    {
-       d = [2]printable {intref(5), b}
-    }    
-    for i := 0; i < len(d); i++ {d[i].print()}
+fn ordered(x, y: interface{}): bool {
+    p := ^str(x)
+    q := ^str(y)
+    if p == null || q == null {error("Illegal type")}
+    return p^ < q^            
+}
 
-    p := ^[]int(d[1])
-    if p != null {p.print()}
+fn main() {
+    a := [10]str{"red", "green", "blue", "yellow", "gray", "brown", "black", "cyan", "magenta", "white"}
     
-    u := 17
-    v := 18.3
-    var s: str = "Hello!"
+    b := make([]interface{}, len(a))
+    for i := 0; i < len(b); i++ {
+        b[i] = &a[i]
+    }
+
+    sort(b, ordered)
     
-    printany(&u)
-    printany(&v)
-    printany(s)
+    for i := 0; i < len(b); i++ {        
+        if p := ^str(b[i]); p != null {
+            printf("{s}\n", p^)
+        }
+    }    
 }
