@@ -131,7 +131,7 @@ h = delete(h, 1)
 ```
 g.print()
 ```
-#### Condition
+#### Conditional
 ```
 if err := getError(); !err {
     std.println("Done")
