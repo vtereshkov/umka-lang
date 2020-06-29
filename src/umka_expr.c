@@ -538,6 +538,20 @@ static void parseBuiltinSizeofCall(Compiler *comp, Type **type, Const *constant)
 }
 
 
+static void parseBuiltinSizeofselfCall(Compiler *comp, Type **type, Const *constant)
+{
+    if (constant)
+        comp->error("Function is not allowed in constant expressions");
+
+    parseExpr(comp, type, constant);
+    if ((*type)->kind != TYPE_INTERFACE)
+        comp->error("Incompatible type in sizeofself()");
+
+    genCallBuiltin(&comp->gen, TYPE_INTERFACE, BUILTIN_SIZEOFSELF);
+    *type = comp->intType;
+}
+
+
 // type FiberFunc = fn(parent: ^fiber, anyParam: ^type)
 // fn fiberspawn(childFunc: FiberFunc, anyParam: ^type): ^fiber
 // fn fibercall(child: ^fiber)
@@ -608,7 +622,7 @@ static void parseBuiltinCall(Compiler *comp, Type **type, Const *constant, Built
         case BUILTIN_SPRINTF:
         case BUILTIN_SCANF:
         case BUILTIN_FSCANF:
-        case BUILTIN_SSCANF:        parseBuiltinIOCall(comp, type, constant, builtin); break;
+        case BUILTIN_SSCANF:        parseBuiltinIOCall(comp, type, constant, builtin);      break;
 
         // Math
         case BUILTIN_ROUND:
@@ -619,23 +633,24 @@ static void parseBuiltinCall(Compiler *comp, Type **type, Const *constant, Built
         case BUILTIN_COS:
         case BUILTIN_ATAN:
         case BUILTIN_EXP:
-        case BUILTIN_LOG:           parseBuiltinMathCall(comp, type, constant, builtin); break;
+        case BUILTIN_LOG:           parseBuiltinMathCall(comp, type, constant, builtin);    break;
 
         // Memory
-        case BUILTIN_NEW:           parseBuiltinNewCall(comp, type, constant); break;
-        case BUILTIN_MAKE:          parseBuiltinMakeCall(comp, type, constant); break;
-        case BUILTIN_APPEND:        parseBuiltinAppendCall(comp, type, constant); break;
-        case BUILTIN_DELETE:        parseBuiltinDeleteCall(comp, type, constant); break;
-        case BUILTIN_LEN:           parseBuiltinLenCall(comp, type, constant); break;
-        case BUILTIN_SIZEOF:        parseBuiltinSizeofCall(comp, type, constant); break;
+        case BUILTIN_NEW:           parseBuiltinNewCall(comp, type, constant);              break;
+        case BUILTIN_MAKE:          parseBuiltinMakeCall(comp, type, constant);             break;
+        case BUILTIN_APPEND:        parseBuiltinAppendCall(comp, type, constant);           break;
+        case BUILTIN_DELETE:        parseBuiltinDeleteCall(comp, type, constant);           break;
+        case BUILTIN_LEN:           parseBuiltinLenCall(comp, type, constant);              break;
+        case BUILTIN_SIZEOF:        parseBuiltinSizeofCall(comp, type, constant);           break;
+        case BUILTIN_SIZEOFSELF:    parseBuiltinSizeofselfCall(comp, type, constant);       break;
 
         // Fibers
         case BUILTIN_FIBERSPAWN:
         case BUILTIN_FIBERCALL:
-        case BUILTIN_FIBERALIVE:    parseBuiltinFiberCall(comp, type, constant, builtin); break;
+        case BUILTIN_FIBERALIVE:    parseBuiltinFiberCall(comp, type, constant, builtin);   break;
 
         // Misc
-        case BUILTIN_ERROR:         parseBuiltinErrorCall(comp, type, constant); break;
+        case BUILTIN_ERROR:         parseBuiltinErrorCall(comp, type, constant);            break;
 
         default: comp->error("Illegal built-in function");
     }
@@ -1164,6 +1179,7 @@ static void parseFactor(Compiler *comp, Type **type, Const *constant)
         case TOK_WEAK:
         case TOK_LBRACKET:
         case TOK_STRUCT:
+        case TOK_INTERFACE:
         {
             parseTypeCastOrCompositeLiteral(comp, NULL, type, constant);
             break;

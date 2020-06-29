@@ -97,6 +97,7 @@ typedef enum
     BUILTIN_DELETE,
     BUILTIN_LEN,
     BUILTIN_SIZEOF,
+    BUILTIN_SIZEOFSELF,
 
     // Fibers
     BUILTIN_FIBERSPAWN,

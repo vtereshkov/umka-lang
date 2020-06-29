@@ -88,9 +88,8 @@ fn (s: ^Sphere) intersect(ray: ^Ray, point, normal: ^Vec): bool {
     proj := displacement.dot(ray.dir)
     discr := s.radius * s.radius + proj * proj - displacement.dot(displacement)
 
-    if discr > 0 {
-        factor := proj - sqrt(discr)
-        if factor > 0.1 {
+    if discr > 0 {        
+        if factor := proj - sqrt(discr); factor > 0.1 {
             point^ = ray.origin.add(ray.dir.mul(factor))
             normal^ = point.sub(s.body.center).mul(1.0 / s.radius)
             return true
@@ -115,10 +114,9 @@ fn (sc: ^Scene) trace(ray: ^Ray, depth: int): Color {
     var bestPoint, bestNormal: Vec
 
     for i := 0; i < len(sc.body); i++ {
-        b := sc.body[i]
         var point, normal: Vec
         
-        if found := b.intersect(ray, &point, &normal); found {
+        if found := sc.body[i].intersect(ray, &point, &normal); found {
             dist := norm(point.sub(ray.origin))
             if dist < bestDist {
                 bestDist = dist
@@ -292,7 +290,7 @@ fn main() {
     const fileName = "scene.ppm"
     f := std.fopen(fileName, "wb")
     fprintf(f, "P6\n{d} {d}\n255\n", width, height)
-    std.fwrite(f, &pixels, sizeof(pixels))
+    std.fwrite(f, &pixels)
     std.fclose(f)
     std.println("Done. See " + fileName)
     std.getchar()

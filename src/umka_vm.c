@@ -73,6 +73,7 @@ static char *builtinSpelling [] =
     "delete",
     "len",
     "sizeof",
+    "sizeofself",
     "fiberspawn",
     "fibercall",
     "fiberalive",
@@ -580,7 +581,7 @@ static void doBuiltinMake(Fiber *fiber, HeapPages *pages, ErrorFunc error)
 
 
 // fn makefrom(array: [...] type, itemSize: int, len: int): [] type
-static void doBuiltinMakeFrom(Fiber *fiber, HeapPages *pages, ErrorFunc error)
+static void doBuiltinMakefrom(Fiber *fiber, HeapPages *pages, ErrorFunc error)
 {
     doBuiltinMake(fiber, pages, error);
 
@@ -643,6 +644,19 @@ static void doBuiltinLen(Fiber *fiber, ErrorFunc error)
         case TYPE_STR:      fiber->top->intVal = strlen(fiber->top->ptrVal); break;
         default:            error("Illegal type"); return;
     }
+}
+
+
+static void doBuiltinSizeofself(Fiber *fiber, ErrorFunc error)
+{
+    int size = 0;
+
+    // Interface layout: __self, __selftype, methods
+    Type *__selftype = *(Type **)(fiber->top->ptrVal + sizeof(void *));
+    if (__selftype)
+        size = typeSizeRuntime(__selftype->base);
+
+    fiber->top->intVal = size;
 }
 
 
@@ -1167,11 +1181,12 @@ static void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages *pages, Erro
         // Memory
         case BUILTIN_NEW:           fiber->top->ptrVal = chunkAlloc(pages, fiber->top->intVal, error); break;
         case BUILTIN_MAKE:          doBuiltinMake(fiber, pages, error); break;
-        case BUILTIN_MAKEFROM:      doBuiltinMakeFrom(fiber, pages, error); break;
+        case BUILTIN_MAKEFROM:      doBuiltinMakefrom(fiber, pages, error); break;
         case BUILTIN_APPEND:        doBuiltinAppend(fiber, pages, error); break;
         case BUILTIN_DELETE:        doBuiltinDelete(fiber, pages, error); break;
         case BUILTIN_LEN:           doBuiltinLen(fiber, error); break;
-        case BUILTIN_SIZEOF:        error("Illegal instruction"); return;   // Done at compile time
+        case BUILTIN_SIZEOF:        error("Illegal instruction"); return;       // Done at compile time
+        case BUILTIN_SIZEOFSELF:    doBuiltinSizeofself(fiber, error); break;
 
         // Fibers
         case BUILTIN_FIBERSPAWN:    doBuiltinFiberspawn(fiber, pages, error); break;
