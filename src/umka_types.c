@@ -174,7 +174,7 @@ int typeSizeRuntime(Type *type)
             return size;
         }
         case TYPE_FIBER:    return sizeof(Fiber);
-        case TYPE_FN:       return sizeof(void *);
+        case TYPE_FN:       return sizeof(int64_t);
         default:            return -1;
     }
 }
