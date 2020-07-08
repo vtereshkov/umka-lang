@@ -41,7 +41,7 @@ void constAssign(Consts *consts, void *lhs, Const *rhs, TypeKind typeKind, int s
         case TYPE_STR:          strcpy(lhs, rhs->ptrVal); break;
         case TYPE_STRUCT:       memcpy(lhs, rhs->ptrVal, size); break;
         case TYPE_INTERFACE:    memcpy(lhs, rhs->ptrVal, size); break;
-        case TYPE_FN:           *(void *   *)lhs = rhs->ptrVal; break;
+        case TYPE_FN:           *(int64_t  *)lhs = rhs->intVal; break;
 
         default:          consts->error("Illegal type"); return;
     }

@@ -286,8 +286,8 @@ static void doBasicDeref(Slot *slot, TypeKind typeKind, ErrorFunc error)
         case TYPE_STR:
         case TYPE_STRUCT:
         case TYPE_INTERFACE:
-        case TYPE_FIBER:        slot->intVal  =  (int64_t   )slot->ptrVal; break;  // Always represented by pointer, not dereferenced
-        case TYPE_FN:           slot->ptrVal  = *(void *   *)slot->ptrVal; break;
+        case TYPE_FIBER:        break;  // Always represented by pointer, not dereferenced
+        case TYPE_FN:           slot->intVal  = *(int64_t  *)slot->ptrVal; break;
 
         default:                error("Illegal type"); return;
     }
@@ -319,7 +319,7 @@ static void doBasicAssign(void *lhs, Slot rhs, TypeKind typeKind, int structSize
         case TYPE_INTERFACE:
         case TYPE_FIBER:        memcpy(lhs, rhs.ptrVal, structSize); break;
         case TYPE_STR:          strcpy(lhs, rhs.ptrVal); break;
-        case TYPE_FN:           *(void *   *)lhs = rhs.ptrVal; break;
+        case TYPE_FN:           *(int64_t  *)lhs = rhs.intVal; break;
 
         default:                error("Illegal type"); return;
     }
