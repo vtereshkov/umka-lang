@@ -91,21 +91,28 @@ static void doConcreteToInterfaceConv(Compiler *comp, Type *dest, Type **src, Co
     if (typeStructured(rcvType))
         rcvType = typeAddPtrTo(&comp->types, &comp->blocks, rcvType);
 
+    // Allocate src on the heap and copy concrete data to it
+    /*int srcSize = typeSize(&comp->types, *src);
+    genPushIntConst(&comp->gen, srcSize);
+    genCallBuiltin(&comp->gen, TYPE_PTR, BUILTIN_NEW);
+    genSwapAssign(&comp->gen, (*src)->kind, srcSize);**/
+
+    // Allocate dest on the stack
     int destSize   = typeSize(&comp->types, dest);
     int destOffset = identAllocStack(&comp->idents, &comp->blocks, destSize);
 
-    // Assign __self (offset 0)
-    // Assignment to an anonymous stack area does not require updating reference counts
-    genPushLocalPtr(&comp->gen, destOffset);                    // Push dest pointer
-    genSwapAssignOfs(&comp->gen, 0);                            // Assign to dest with zero offset
+    // Assign to __self
+    genPushLocalPtr(&comp->gen, destOffset);                                // Push dest.__self pointer
+    genSwapAssign(&comp->gen, TYPE_PTR, 0);                                 // Assign to dest.__self
 
-    // Assign __selftype (RTTI)
+    // Assign to __selftype (RTTI)
     Field *__selftype = typeAssertFindField(&comp->types, dest, "__selftype");
-    genPushGlobalPtr(&comp->gen, rcvType);                      // Push src type pointer
-    genPushLocalPtr(&comp->gen, destOffset);                    // Push dest pointer
-    genSwapAssignOfs(&comp->gen, __selftype->offset);           // Assign to dest with offset
 
-    // Assign methods
+    genPushGlobalPtr(&comp->gen, rcvType);                                  // Push src type
+    genPushLocalPtr(&comp->gen, destOffset + __selftype->offset);           // Push dest.__selftype pointer
+    genSwapAssign(&comp->gen, TYPE_PTR, 0);                                 // Assign to dest.__selftype
+
+    // Assign to methods
     for (int i = 2; i < dest->numItems; i++)
     {
         char *name = dest->field[i]->name;
@@ -115,9 +122,9 @@ static void doConcreteToInterfaceConv(Compiler *comp, Type *dest, Type **src, Co
 
         typeAssertCompatible(&comp->types, dest->field[i]->type, srcMethod->type, false);
 
-        genPushLocalPtr(&comp->gen, destOffset);                // Push dest pointer
-        genPushIntConst(&comp->gen, srcMethod->offset);         // Push src value
-        genAssignOfs(&comp->gen, dest->field[i]->offset);       // Assign to dest with non-zero offset
+        genPushIntConst(&comp->gen, srcMethod->offset);                     // Push src value
+        genPushLocalPtr(&comp->gen, destOffset + dest->field[i]->offset);   // Push dest.method pointer
+        genSwapAssign(&comp->gen, TYPE_FN, 0);                              // Assign to dest.method
     }
 
     genPushLocalPtr(&comp->gen, destOffset);
@@ -133,22 +140,22 @@ static void doInterfaceToInterfaceConv(Compiler *comp, Type *dest, Type **src, C
     int destSize = typeSize(&comp->types, dest);
     int destOffset = identAllocStack(&comp->idents, &comp->blocks, destSize);
 
-    // Assign __self (offset 0)
-    // Assignment to an anonymous stack area does not require updating reference counts
-    genDup(&comp->gen);                                         // Duplicate src pointer
-    genDeref(&comp->gen, TYPE_PTR);                             // Get __self value
-    genPushLocalPtr(&comp->gen, destOffset);                    // Push dest pointer
-    genSwapAssignOfs(&comp->gen, 0);                            // Assign to dest with zero offset
+    // Assign to __self
+    genDup(&comp->gen);                                                     // Duplicate src pointer
+    genDeref(&comp->gen, TYPE_PTR);                                         // Get src.__self value
+    genPushLocalPtr(&comp->gen, destOffset);                                // Push dest pointer
+    genSwapAssign(&comp->gen, TYPE_PTR, 0);                                 // Assign to dest.__self (NULL means a dynamic type)
 
-    // Assign __selftype (RTTI)
+    // Assign to __selftype (RTTI)
     Field *__selftype = typeAssertFindField(&comp->types, dest, "__selftype");
-    genDup(&comp->gen);                                         // Duplicate src pointer
-    genGetFieldPtr(&comp->gen, __selftype->offset);             // Get src __selftype pointer
-    genDeref(&comp->gen, TYPE_PTR);                             // Get src __selftype
-    genPushLocalPtr(&comp->gen, destOffset);                    // Push dest pointer
-    genSwapAssignOfs(&comp->gen, __selftype->offset);           // Assign to dest with offset
 
-    // Assign methods
+    genDup(&comp->gen);                                                     // Duplicate src pointer
+    genGetFieldPtr(&comp->gen, __selftype->offset);                         // Get src.__selftype pointer
+    genDeref(&comp->gen, TYPE_PTR);                                         // Get src.__selftype value
+    genPushLocalPtr(&comp->gen, destOffset + __selftype->offset);           // Push dest.__selftype pointer
+    genSwapAssign(&comp->gen, TYPE_PTR, 0);                                 // Assign to dest.__selftype
+
+    // Assign to methods
     for (int i = 2; i < dest->numItems; i++)
     {
         char *name = dest->field[i]->name;
@@ -158,14 +165,14 @@ static void doInterfaceToInterfaceConv(Compiler *comp, Type *dest, Type **src, C
 
         typeAssertCompatible(&comp->types, dest->field[i]->type, srcMethod->type, false);
 
-        genDup(&comp->gen);                                     // Duplicate src pointer
-        genGetFieldPtr(&comp->gen, srcMethod->offset);          // Get src method entry point
-        genDeref(&comp->gen, TYPE_PTR);                         // Get method entry point
-        genPushLocalPtr(&comp->gen, destOffset);                // Push dest pointer
-        genSwapAssignOfs(&comp->gen, dest->field[i]->offset);   // Assign to dest with non-zero offset
+        genDup(&comp->gen);                                                 // Duplicate src pointer
+        genGetFieldPtr(&comp->gen, srcMethod->offset);                      // Get src.method pointer
+        genDeref(&comp->gen, TYPE_PTR);                                     // Get src.method value (entry point)
+        genPushLocalPtr(&comp->gen, destOffset + dest->field[i]->offset);   // Push dest.method pointer
+        genSwapAssign(&comp->gen, TYPE_FN, 0);                              // Assign to dest.method
     }
 
-    genPop(&comp->gen);                                         // Remove src pointer
+    genPop(&comp->gen);                                                     // Remove src pointer
     genPushLocalPtr(&comp->gen, destOffset);
     *src = dest;
 }

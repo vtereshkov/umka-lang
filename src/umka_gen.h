@@ -46,15 +46,13 @@ void genPopReg(CodeGen *gen, int regIndex);
 void genDup   (CodeGen *gen);
 void genSwap  (CodeGen *gen);
 
-
 void genDeref        (CodeGen *gen, TypeKind typeKind);
 void genAssign       (CodeGen *gen, TypeKind typeKind, int structSize);
 void genSwapAssign   (CodeGen *gen, TypeKind typeKind, int structSize);
-void genAssignOfs    (CodeGen *gen, int offset);
-void genSwapAssignOfs(CodeGen *gen, int offset);
 
-void genChangeRefCnt      (CodeGen *gen, TokenKind tokKind, Type *type);
-void genChangeRefCntAssign(CodeGen *gen, Type *type);
+void genChangeRefCnt            (CodeGen *gen, TokenKind tokKind, Type *type);
+void genChangeRefCntAssign      (CodeGen *gen, Type *type);
+void genSwapChangeRefCntAssign  (CodeGen *gen, Type *type);
 
 void genUnary (CodeGen *gen, TokenKind tokKind, TypeKind typeKind);
 void genBinary(CodeGen *gen, TokenKind tokKind, TypeKind typeKind, int bufOffset /*bytes*/);

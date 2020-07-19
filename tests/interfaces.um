@@ -11,8 +11,8 @@ type (
     }
     
     fooable_barable = interface {
-        foo(z: int)
         bar(z: int)
+        foo(z: int)        
     }
 )
 

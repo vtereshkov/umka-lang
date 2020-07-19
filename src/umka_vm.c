@@ -24,9 +24,6 @@ static char *opcodeSpelling [] =
     "SWAP",
     "DEREF",
     "ASSIGN",
-    "SWAP_ASSIGN",
-    "ASSIGN_OFS",
-    "SWAP_ASSIGN_OFS",
     "CHANGE_REF_CNT",
     "CHANGE_REF_CNT_ASSIGN",
     "UNARY",
@@ -259,6 +256,14 @@ void vmReset(VM *vm, Instruction *code)
     vm->fiber->code = code;
     vm->fiber->ip = 0;
     vm->fiber->top = vm->fiber->base = vm->fiber->stack + vm->fiber->stackSize - 1;
+}
+
+
+static void doBasicSwap(Slot *slot)
+{
+    Slot val = slot[0];
+    slot[0] = slot[1];
+    slot[1] = val;
 }
 
 
@@ -709,7 +714,7 @@ static void doPush(Fiber *fiber, ErrorFunc error)
 {
     (--fiber->top)->intVal = fiber->code[fiber->ip].operand.intVal;
 
-    if (fiber->code[fiber->ip].inlineDeref)
+    if (fiber->code[fiber->ip].inlineOpcode == OP_DEREF)
         doBasicDeref(fiber->top, fiber->code[fiber->ip].typeKind, error);
 
     fiber->ip++;
@@ -721,7 +726,7 @@ static void doPushLocalPtr(Fiber *fiber, ErrorFunc error)
     // Local variable addresses are offsets (in bytes) from the stack frame base pointer
     (--fiber->top)->ptrVal = (int8_t *)fiber->base + fiber->code[fiber->ip].operand.intVal;
 
-    if (fiber->code[fiber->ip].inlineDeref)
+    if (fiber->code[fiber->ip].inlineOpcode == OP_DEREF)
         doBasicDeref(fiber->top, fiber->code[fiber->ip].typeKind, error);
 
     fiber->ip++;
@@ -775,9 +780,7 @@ static void doDup(Fiber *fiber)
 
 static void doSwap(Fiber *fiber)
 {
-    Slot val = *fiber->top;
-    *fiber->top = *(fiber->top + 1);
-    *(fiber->top + 1) = val;
+    doBasicSwap(fiber->top);
     fiber->ip++;
 }
 
@@ -791,40 +794,13 @@ static void doDeref(Fiber *fiber, ErrorFunc error)
 
 static void doAssign(Fiber *fiber, ErrorFunc error)
 {
+    if (fiber->code[fiber->ip].inlineOpcode == OP_SWAP)
+        doBasicSwap(fiber->top);
+
     Slot rhs = *fiber->top++;
-    void *lhs = (fiber->top++)->ptrVal;
+    void *lhs = (fiber->top++)->ptrVal;;
+
     doBasicAssign(lhs, rhs, fiber->code[fiber->ip].typeKind, fiber->code[fiber->ip].operand.intVal, error);
-    fiber->ip++;
-}
-
-
-static void doSwapAssign(Fiber *fiber, ErrorFunc error)
-{
-    void *lhs = (fiber->top++)->ptrVal;
-    Slot rhs = *fiber->top++;
-    doBasicAssign(lhs, rhs, fiber->code[fiber->ip].typeKind, fiber->code[fiber->ip].operand.intVal, error);
-    fiber->ip++;
-}
-
-
-static void doAssignOfs(Fiber *fiber)
-{
-    Slot rhs = *fiber->top++;
-    void *lhs = (fiber->top++)->ptrVal;
-    int offset = fiber->code[fiber->ip].operand.intVal;
-
-    *(Slot *)(lhs + offset) = rhs;
-    fiber->ip++;
-}
-
-
-static void doSwapAssignOfs(Fiber *fiber)
-{
-    void *lhs = (fiber->top++)->ptrVal;
-    Slot rhs = *fiber->top++;
-    int offset = fiber->code[fiber->ip].operand.intVal;
-
-    *(Slot *)(lhs + offset) = rhs;
     fiber->ip++;
 }
 
@@ -837,7 +813,7 @@ static void doChangeRefCnt(Fiber *fiber, HeapPages *pages, ErrorFunc error)
 
     doBasicChangeRefCnt(fiber, pages, ptr, type, tokKind, error);
 
-    if (fiber->code[fiber->ip].inlinePop)
+    if (fiber->code[fiber->ip].inlineOpcode == OP_POP)
         fiber->top++;
 
     fiber->ip++;
@@ -846,6 +822,9 @@ static void doChangeRefCnt(Fiber *fiber, HeapPages *pages, ErrorFunc error)
 
 static void doChangeRefCntAssign(Fiber *fiber, HeapPages *pages, ErrorFunc error)
 {
+    if (fiber->code[fiber->ip].inlineOpcode == OP_SWAP)
+        doBasicSwap(fiber->top);
+
     Slot rhs   = *fiber->top++;
     void *lhs  = (fiber->top++)->ptrVal;
     Type *type = fiber->code[fiber->ip].operand.ptrVal;
@@ -1036,7 +1015,7 @@ static void doGetArrayPtr(Fiber *fiber, ErrorFunc error)
 
     fiber->top->ptrVal += itemSize * index;
 
-    if (fiber->code[fiber->ip].inlineDeref)
+    if (fiber->code[fiber->ip].inlineOpcode == OP_DEREF)
         doBasicDeref(fiber->top, fiber->code[fiber->ip].typeKind, error);
 
     fiber->ip++;
@@ -1059,7 +1038,7 @@ static void doGetDynArrayPtr(Fiber *fiber, ErrorFunc error)
 
     (--fiber->top)->ptrVal = array->data + itemSize * index;
 
-    if (fiber->code[fiber->ip].inlineDeref)
+    if (fiber->code[fiber->ip].inlineOpcode == OP_DEREF)
         doBasicDeref(fiber->top, fiber->code[fiber->ip].typeKind, error);
 
     fiber->ip++;
@@ -1075,7 +1054,7 @@ static void doGetFieldPtr(Fiber *fiber, ErrorFunc error)
 
     fiber->top->ptrVal += fieldOffset;
 
-    if (fiber->code[fiber->ip].inlineDeref)
+    if (fiber->code[fiber->ip].inlineOpcode == OP_DEREF)
         doBasicDeref(fiber->top, fiber->code[fiber->ip].typeKind, error);
 
     fiber->ip++;
@@ -1276,31 +1255,28 @@ static void vmLoop(VM *vm)
 
         switch (fiber->code[fiber->ip].opcode)
         {
-            case OP_PUSH:                   doPush(fiber, error);                          break;
-            case OP_PUSH_LOCAL_PTR:         doPushLocalPtr(fiber, error);                  break;
-            case OP_PUSH_REG:               doPushReg(fiber);                              break;
-            case OP_PUSH_STRUCT:            doPushStruct(fiber, error);                    break;
-            case OP_POP:                    doPop(fiber);                                  break;
-            case OP_POP_REG:                doPopReg(fiber);                               break;
-            case OP_DUP:                    doDup(fiber);                                  break;
-            case OP_SWAP:                   doSwap(fiber);                                 break;
-            case OP_DEREF:                  doDeref(fiber, error);                         break;
-            case OP_ASSIGN:                 doAssign(fiber, error);                        break;
-            case OP_SWAP_ASSIGN:            doSwapAssign(fiber, error);                    break;
-            case OP_ASSIGN_OFS:             doAssignOfs(fiber);                            break;
-            case OP_SWAP_ASSIGN_OFS:        doSwapAssignOfs(fiber);                        break;
-            case OP_CHANGE_REF_CNT:         doChangeRefCnt(fiber, pages, error);           break;
-            case OP_CHANGE_REF_CNT_ASSIGN:  doChangeRefCntAssign(fiber, pages, error);     break;
-            case OP_UNARY:                  doUnary(fiber, error);                         break;
-            case OP_BINARY:                 doBinary(fiber, error);                        break;
-            case OP_GET_ARRAY_PTR:          doGetArrayPtr(fiber, error);                   break;
-            case OP_GET_DYNARRAY_PTR:       doGetDynArrayPtr(fiber, error);                break;
-            case OP_GET_FIELD_PTR:          doGetFieldPtr(fiber, error);                   break;
-            case OP_ASSERT_TYPE:            doAssertType(fiber);                           break;
-            case OP_GOTO:                   doGoto(fiber);                                 break;
-            case OP_GOTO_IF:                doGotoIf(fiber);                               break;
-            case OP_CALL:                   doCall(fiber, error);                          break;
-            case OP_CALL_EXTERN:            doCallExtern(fiber);                           break;
+            case OP_PUSH:                           doPush(fiber, error);                         break;
+            case OP_PUSH_LOCAL_PTR:                 doPushLocalPtr(fiber, error);                 break;
+            case OP_PUSH_REG:                       doPushReg(fiber);                             break;
+            case OP_PUSH_STRUCT:                    doPushStruct(fiber, error);                   break;
+            case OP_POP:                            doPop(fiber);                                 break;
+            case OP_POP_REG:                        doPopReg(fiber);                              break;
+            case OP_DUP:                            doDup(fiber);                                 break;
+            case OP_SWAP:                           doSwap(fiber);                                break;
+            case OP_DEREF:                          doDeref(fiber, error);                        break;
+            case OP_ASSIGN:                         doAssign(fiber, error);                       break;
+            case OP_CHANGE_REF_CNT:                 doChangeRefCnt(fiber, pages, error);          break;
+            case OP_CHANGE_REF_CNT_ASSIGN:          doChangeRefCntAssign(fiber, pages, error);    break;
+            case OP_UNARY:                          doUnary(fiber, error);                        break;
+            case OP_BINARY:                         doBinary(fiber, error);                       break;
+            case OP_GET_ARRAY_PTR:                  doGetArrayPtr(fiber, error);                  break;
+            case OP_GET_DYNARRAY_PTR:               doGetDynArrayPtr(fiber, error);               break;
+            case OP_GET_FIELD_PTR:                  doGetFieldPtr(fiber, error);                  break;
+            case OP_ASSERT_TYPE:                    doAssertType(fiber);                          break;
+            case OP_GOTO:                           doGoto(fiber);                                break;
+            case OP_GOTO_IF:                        doGotoIf(fiber);                              break;
+            case OP_CALL:                           doCall(fiber, error);                         break;
+            case OP_CALL_EXTERN:                    doCallExtern(fiber);                          break;
             case OP_CALL_BUILTIN:
             {
                 Fiber *newFiber = NULL;
@@ -1327,9 +1303,9 @@ static void vmLoop(VM *vm)
 
                 break;
             }
-            case OP_ENTER_FRAME:            doEnterFrame(fiber, error);                    break;
-            case OP_LEAVE_FRAME:            doLeaveFrame(fiber);                           break;
-            case OP_HALT:                   return;
+            case OP_ENTER_FRAME:                    doEnterFrame(fiber, error);                   break;
+            case OP_LEAVE_FRAME:                    doLeaveFrame(fiber);                          break;
+            case OP_HALT:                           return;
 
             default: error("Illegal instruction"); return;
         } // switch
@@ -1366,7 +1342,9 @@ void vmRun(VM *vm, int entryOffset, int numParamSlots, Slot *params, Slot *resul
 
 int vmAsm(int ip, Instruction *instr, char *buf)
 {
-    int chars = sprintf(buf, "%09d %6d %22s", ip, instr->debug.line, opcodeSpelling[instr->opcode]);
+    char opcodeBuf[DEFAULT_STR_LEN + 1];
+    sprintf(opcodeBuf, "%s%s", instr->inlineOpcode == OP_SWAP ? "SWAP; " : "", opcodeSpelling[instr->opcode]);
+    int chars = sprintf(buf, "%09d %6d %28s", ip, instr->debug.line, opcodeBuf);
 
     if (instr->tokKind != TOK_NONE)
         chars += sprintf(buf + chars, " %s", lexSpelling(instr->tokKind));
@@ -1391,9 +1369,6 @@ int vmAsm(int ip, Instruction *instr, char *buf)
         case OP_PUSH_STRUCT:
         case OP_POP_REG:
         case OP_ASSIGN:
-        case OP_SWAP_ASSIGN:
-        case OP_ASSIGN_OFS:
-        case OP_SWAP_ASSIGN_OFS:
         case OP_BINARY:
         case OP_GET_ARRAY_PTR:
         case OP_GET_FIELD_PTR:
@@ -1415,10 +1390,10 @@ int vmAsm(int ip, Instruction *instr, char *buf)
         default: break;
     }
 
-    if (instr->inlineDeref)
+    if (instr->inlineOpcode == OP_DEREF)
         chars += sprintf(buf + chars, "; DEREF");
 
-    if (instr->inlinePop)
+    else if (instr->inlineOpcode == OP_POP)
         chars += sprintf(buf + chars, "; POP");
 
     return chars;

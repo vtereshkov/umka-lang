@@ -43,9 +43,6 @@ typedef enum
     OP_SWAP,
     OP_DEREF,
     OP_ASSIGN,
-    OP_SWAP_ASSIGN,
-    OP_ASSIGN_OFS,
-    OP_SWAP_ASSIGN_OFS,
     OP_CHANGE_REF_CNT,
     OP_CHANGE_REF_CNT_ASSIGN,
     OP_UNARY,
@@ -121,11 +118,10 @@ typedef union
 typedef struct
 {
     Opcode opcode;
+    Opcode inlineOpcode;            // Inlined instruction (DEREF, POP, SWAP): PUSH + DEREF, CHANGE_REF_CNT + POP, SWAP + ASSIGN etc.
     TokenKind tokKind;              // Unary/binary operation token
     TypeKind typeKind;              // Slot type kind
     Slot operand;
-    bool inlineDeref;               // Compound instruction flag (PUSH + DEREF etc.)
-    bool inlinePop;                 // Compound instruction flag (CHANGE_REF_CNT + POP)
     DebugInfo debug;
 } Instruction;
 
