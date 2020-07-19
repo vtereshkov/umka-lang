@@ -91,13 +91,6 @@ static void doConcreteToInterfaceConv(Compiler *comp, Type *dest, Type **src, Co
     if (typeStructured(rcvType))
         rcvType = typeAddPtrTo(&comp->types, &comp->blocks, rcvType);
 
-    // Allocate src on the heap and copy concrete data to it
-    /*int srcSize = typeSize(&comp->types, *src);
-    genPushIntConst(&comp->gen, srcSize);
-    genCallBuiltin(&comp->gen, TYPE_PTR, BUILTIN_NEW);
-    genSwapAssign(&comp->gen, (*src)->kind, srcSize);**/
-
-    // Allocate dest on the stack
     int destSize   = typeSize(&comp->types, dest);
     int destOffset = identAllocStack(&comp->idents, &comp->blocks, destSize);
 
