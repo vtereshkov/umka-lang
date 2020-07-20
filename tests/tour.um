@@ -113,7 +113,7 @@ fn main() {
     
     
     // Interfaces
-    var printable: Printable = Arr{0.5, 0.7, 0.9}
+    var printable: Printable = &Arr{0.5, 0.7, 0.9}
     printable.print()
     
     // Fibers

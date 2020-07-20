@@ -229,10 +229,9 @@ logicalTerm         = relation {"&&" relation}.
 relation            = relationTerm [("==" | "!=" | "<" | "<=" | ">" | ">=") relationTerm].
 relationTerm        = term {("+" | "-" | "|" | "~") term}.
 term                = factor {("*" | "/" | "%" | "<<" | ">>" | "&") factor}.
-factor              = designator | intNumber | realNumber | 
-                      charLiteral | stringLiteral | compositeLiteral | typeCast |
-                      ("+" | "-" | "!" | "~" | "&") factor | "(" expr ")".
-designator          = primary selectors.
+factor              = designator | intNumber | realNumber | charLiteral | stringLiteral |
+                      ("+" | "-" | "!" | "~") factor | "&" designator | "(" expr ")".
+designator          = (primary | typeCast | compositeLiteral) selectors.
 primary             = qualIdent | builtinCall.
 qualIdent           = [ident "."] ident.
 builtinCall         = qualIdent "(" [expr {"," expr}] ")".

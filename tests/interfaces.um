@@ -43,7 +43,7 @@ fn main() {
         v := new(vec)                
         v.x = 3
         v.y = 5
-        fb = v^
+        fb = v
     }
     
     proc_fooable(fb)

@@ -162,10 +162,9 @@ static void parseSimpleStmt(Compiler *comp)
         parseShortVarDecl(comp);
     else
     {
-        Ident *ident = parseQualIdent(comp);
         Type *type;
         bool isVar, isCall;
-        parseDesignator(comp, ident, &type, NULL, &isVar, &isCall);
+        parseDesignator(comp, &type, NULL, &isVar, &isCall);
 
         TokenKind op = comp->lex.tok.kind;
         if (op == TOK_EQ || lexShortAssignment(op) != TOK_NONE)

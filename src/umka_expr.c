@@ -87,10 +87,6 @@ static void doConcreteToInterfaceConv(Compiler *comp, Type *dest, Type **src, Co
     if (constant)
         comp->error("Conversion to interface is not allowed in constant expressions");
 
-    Type *rcvType = *src;
-    if (typeStructured(rcvType))
-        rcvType = typeAddPtrTo(&comp->types, &comp->blocks, rcvType);
-
     int destSize   = typeSize(&comp->types, dest);
     int destOffset = identAllocStack(&comp->idents, &comp->blocks, destSize);
 
@@ -101,7 +97,7 @@ static void doConcreteToInterfaceConv(Compiler *comp, Type *dest, Type **src, Co
     // Assign to __selftype (RTTI)
     Field *__selftype = typeAssertFindField(&comp->types, dest, "__selftype");
 
-    genPushGlobalPtr(&comp->gen, rcvType);                                  // Push src type
+    genPushGlobalPtr(&comp->gen, *src);                                     // Push src type
     genPushLocalPtr(&comp->gen, destOffset + __selftype->offset);           // Push dest.__selftype pointer
     genSwapAssign(&comp->gen, TYPE_PTR, 0);                                 // Assign to dest.__selftype
 
@@ -109,7 +105,7 @@ static void doConcreteToInterfaceConv(Compiler *comp, Type *dest, Type **src, Co
     for (int i = 2; i < dest->numItems; i++)
     {
         char *name = dest->field[i]->name;
-        Ident *srcMethod = identFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, name, rcvType);
+        Ident *srcMethod = identFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, name, *src);
         if (!srcMethod)
             comp->error("Method %s is not implemented", name);
 
@@ -204,7 +200,7 @@ void doImplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant,
     }
 
     // Concrete to interface or interface to interface
-    else if (dest->kind == TYPE_INTERFACE && ((*src)->kind == TYPE_PTR || typeStructured(*src)))
+    else if (dest->kind == TYPE_INTERFACE && ((*src)->kind == TYPE_PTR || (*src)->kind == TYPE_INTERFACE))
     {
         if ((*src)->kind == TYPE_INTERFACE)
         {
@@ -800,6 +796,122 @@ static void parsePrimary(Compiler *comp, Ident *ident, Type **type, Const *const
 }
 
 
+// typeCast = type "(" expr ")".
+static void parseTypeCast(Compiler *comp, Type **type, Const *constant)
+{
+    lexEat(&comp->lex, TOK_LPAR);
+
+    Type *originalType;
+    parseExpr(comp, &originalType, constant);
+    doImplicitTypeConv(comp, *type, &originalType, constant, false);
+
+    if (!typeEquivalent(*type, originalType) &&
+        !(typeCastable(*type) && typeCastable(originalType)) &&
+        !((*type)->kind == TYPE_PTR && originalType->kind == TYPE_PTR))
+        comp->error("Invalid type cast");
+
+    lexEat(&comp->lex, TOK_RPAR);
+}
+
+
+// compositeLiteral = arrayLiteral | structLiteral.
+// arrayLiteral     = "{" [expr {"," expr}] "}".
+// structLiteral    = "{" [ident ":" expr {"," ident ":" expr}] "}".
+static void parseCompositeLiteral(Compiler *comp, Type **type, Const *constant)
+{
+    lexEat(&comp->lex, TOK_LBRACE);
+
+    if ((*type)->kind != TYPE_ARRAY && (*type)->kind != TYPE_STRUCT)
+        comp->error("Composite literal is only allowed for arrays or structures");
+
+    int bufOffset = 0;
+    if (constant)
+    {
+        constant->ptrVal = &comp->storage.data[comp->storage.len];
+        comp->storage.len += typeSize(&comp->types, *type);
+    }
+    else
+        bufOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, *type));
+
+    int numItems = 0, itemOffset = 0;
+    if (comp->lex.tok.kind != TOK_RBRACE)
+    {
+        while (1)
+        {
+            if (numItems > (*type)->numItems - 1)
+                comp->error("Too many elements in literal");
+
+            if (!constant)
+                genPushLocalPtr(&comp->gen, bufOffset + itemOffset);
+
+            Type *expectedItemType = (*type)->kind == TYPE_ARRAY ? (*type)->base : (*type)->field[numItems]->type;
+            Type *itemType;
+            Const itemConstantBuf, *itemConstant = constant ? &itemConstantBuf : NULL;
+            int itemSize = typeSize(&comp->types, expectedItemType);
+
+            // ident ":"
+            if ((*type)->kind == TYPE_STRUCT)
+            {
+                lexCheck(&comp->lex, TOK_IDENT);
+                Field *field = typeAssertFindField(&comp->types, *type, comp->lex.tok.name);
+                if (field->offset != itemOffset)
+                    comp->error("Wrong field position in literal");
+
+                lexNext(&comp->lex);
+                lexEat(&comp->lex, TOK_COLON);
+            }
+
+            // expr
+            parseExpr(comp, &itemType, itemConstant);
+
+            doImplicitTypeConv(comp, expectedItemType, &itemType, itemConstant, false);
+            typeAssertCompatible(&comp->types, expectedItemType, itemType, false);
+
+            if (constant)
+                constAssign(&comp->consts, constant->ptrVal + itemOffset, itemConstant, expectedItemType->kind, itemSize);
+            else
+                // Assignment to an anonymous stack area does not require updating reference counts
+                genAssign(&comp->gen, expectedItemType->kind, itemSize);
+
+            numItems++;
+            itemOffset += itemSize;
+
+            if (comp->lex.tok.kind != TOK_COMMA)
+                break;
+            lexNext(&comp->lex);
+        }
+    }
+    if (numItems < (*type)->numItems)
+        comp->error("Too few elements in literal");
+
+    if (!constant)
+        genPushLocalPtr(&comp->gen, bufOffset);
+
+    lexEat(&comp->lex, TOK_RBRACE);
+}
+
+
+static void parseTypeCastOrCompositeLiteral(Compiler *comp, Ident *ident, Type **type, Const *constant, bool *isVar, bool *isCall)
+{
+    *type = parseType(comp, ident);
+
+    if (comp->lex.tok.kind == TOK_LPAR)
+    {
+        parseTypeCast(comp, type, constant);
+        *isVar = typeStructured(*type);
+    }
+    else if (comp->lex.tok.kind == TOK_LBRACE)
+    {
+        parseCompositeLiteral(comp, type, constant);
+        *isVar = true;
+    }
+    else
+        comp->error("Type cast or composite literal expected");
+
+    *isCall = false;
+}
+
+
 // derefSelector = "^".
 static void parseDerefSelector(Compiler *comp, Type **type, Const *constant, bool *isVar, bool *isCall)
 {
@@ -978,152 +1090,46 @@ static void parseSelectors(Compiler *comp, Type **type, Const *constant, bool *i
 }
 
 
-// designator = primary selectors.
-void parseDesignator(Compiler *comp, Ident *ident, Type **type, Const *constant, bool *isVar, bool *isCall)
+// designator = (primary | typeCast | compositeLiteral) selectors.
+void parseDesignator(Compiler *comp, Type **type, Const *constant, bool *isVar, bool *isCall)
 {
-    parsePrimary(comp, ident, type, constant, isVar, isCall);
+    Ident *ident = NULL;
+    if (comp->lex.tok.kind == TOK_IDENT && (ident = parseQualIdent(comp)) && ident->kind != IDENT_TYPE)
+        parsePrimary(comp, ident, type, constant, isVar, isCall);
+    else
+        parseTypeCastOrCompositeLiteral(comp, ident, type, constant, isVar, isCall);
+
     parseSelectors(comp, type, constant, isVar, isCall);
 }
 
 
-// typeCast = type "(" expr ")".
-static void parseTypeCast(Compiler *comp, Type **type, Const *constant)
-{
-    lexEat(&comp->lex, TOK_LPAR);
-
-    Type *originalType;
-    parseExpr(comp, &originalType, constant);
-    doImplicitTypeConv(comp, *type, &originalType, constant, false);
-
-    if (!typeEquivalent(*type, originalType) &&
-        !(typeCastable(*type) && typeCastable(originalType)) &&
-        !((*type)->kind == TYPE_PTR && originalType->kind == TYPE_PTR))
-        comp->error("Invalid type cast");
-
-    lexEat(&comp->lex, TOK_RPAR);
-}
-
-
-// compositeLiteral = arrayLiteral | structLiteral.
-// arrayLiteral     = "{" [expr {"," expr}] "}".
-// structLiteral    = "{" [ident ":" expr {"," ident ":" expr}] "}".
-static void parseCompositeLiteral(Compiler *comp, Type **type, Const *constant)
-{
-    lexEat(&comp->lex, TOK_LBRACE);
-
-    if ((*type)->kind != TYPE_ARRAY && (*type)->kind != TYPE_STRUCT)
-        comp->error("Composite literal is only allowed for arrays or structures");
-
-    int bufOffset = 0;
-    if (constant)
-    {
-        constant->ptrVal = &comp->storage.data[comp->storage.len];
-        comp->storage.len += typeSize(&comp->types, *type);
-    }
-    else
-        bufOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, *type));
-
-    int numItems = 0, itemOffset = 0;
-    if (comp->lex.tok.kind != TOK_RBRACE)
-    {
-        while (1)
-        {
-            if (numItems > (*type)->numItems - 1)
-                comp->error("Too many elements in literal");
-
-            if (!constant)
-                genPushLocalPtr(&comp->gen, bufOffset + itemOffset);
-
-            Type *expectedItemType = (*type)->kind == TYPE_ARRAY ? (*type)->base : (*type)->field[numItems]->type;
-            Type *itemType;
-            Const itemConstantBuf, *itemConstant = constant ? &itemConstantBuf : NULL;
-            int itemSize = typeSize(&comp->types, expectedItemType);
-
-            // ident ":"
-            if ((*type)->kind == TYPE_STRUCT)
-            {
-                lexCheck(&comp->lex, TOK_IDENT);
-                Field *field = typeAssertFindField(&comp->types, *type, comp->lex.tok.name);
-                if (field->offset != itemOffset)
-                    comp->error("Wrong field position in literal");
-
-                lexNext(&comp->lex);
-                lexEat(&comp->lex, TOK_COLON);
-            }
-
-            // expr
-            parseExpr(comp, &itemType, itemConstant);
-
-            doImplicitTypeConv(comp, expectedItemType, &itemType, itemConstant, false);
-            typeAssertCompatible(&comp->types, expectedItemType, itemType, false);
-
-            if (constant)
-                constAssign(&comp->consts, constant->ptrVal + itemOffset, itemConstant, expectedItemType->kind, itemSize);
-            else
-                // Assignment to an anonymous stack area does not require updating reference counts
-                genAssign(&comp->gen, expectedItemType->kind, itemSize);
-
-            numItems++;
-            itemOffset += itemSize;
-
-            if (comp->lex.tok.kind != TOK_COMMA)
-                break;
-            lexNext(&comp->lex);
-        }
-    }
-    if (numItems < (*type)->numItems)
-        comp->error("Too few elements in literal");
-
-    if (!constant)
-        genPushLocalPtr(&comp->gen, bufOffset);
-
-    lexEat(&comp->lex, TOK_RBRACE);
-}
-
-
-static void parseTypeCastOrCompositeLiteral(Compiler *comp, Ident *ident, Type **type, Const *constant)
-{
-    *type = parseType(comp, ident);
-
-    if (comp->lex.tok.kind == TOK_LPAR)
-        parseTypeCast(comp, type, constant);
-    else if (comp->lex.tok.kind == TOK_LBRACE)
-        parseCompositeLiteral(comp, type, constant);
-    else
-        comp->error("Type cast or composite literal expected");
-}
-
-
-// factor = designator | intNumber | realNumber | charLiteral | stringLiteral | compositeLiteral | typeCast |
-//          ("+" | "-" | "!" | "~" | "&") factor | "(" expr ")".
+// factor = designator | intNumber | realNumber | charLiteral | stringLiteral |
+//          ("+" | "-" | "!" | "~" ) factor | "&" designator | "(" expr ")".
 static void parseFactor(Compiler *comp, Type **type, Const *constant)
 {
     switch (comp->lex.tok.kind)
     {
         case TOK_IDENT:
+        case TOK_CARET:
+        case TOK_WEAK:
+        case TOK_LBRACKET:
+        case TOK_STRUCT:
+        case TOK_INTERFACE:
         {
-            Ident *ident = parseQualIdent(comp);
-            if (ident->kind == IDENT_TYPE)
-                parseTypeCastOrCompositeLiteral(comp, ident, type, constant);
-            else
+            // A designator that isVar is always an addressable quantity (a structured type or a pointer to a value type)
+            bool isVar, isCall;
+            parseDesignator(comp, type, constant, &isVar, &isCall);
+            if (isVar)
             {
-                // A designator that isVar is always an addressable quantity
-                // (a structured type or a pointer to a value type)
-
-                bool isVar, isCall;
-                parseDesignator(comp, ident, type, constant, &isVar, &isCall);
-                if (isVar)
+                if (!typeStructured(*type))
                 {
-                    if (!typeStructured(*type))
-                    {
-                        genDeref(&comp->gen, (*type)->base->kind);
-                        *type = (*type)->base;
-                    }
-
-                    // All temporary reals are 64-bit
-                    if ((*type)->kind == TYPE_REAL32)
-                        *type = comp->realType;
+                    genDeref(&comp->gen, (*type)->base->kind);
+                    *type = (*type)->base;
                 }
+
+                // All temporary reals are 64-bit
+                if ((*type)->kind == TYPE_REAL32)
+                    *type = comp->realType;
             }
             break;
         }
@@ -1175,16 +1181,6 @@ static void parseFactor(Compiler *comp, Type **type, Const *constant)
             break;
         }
 
-        case TOK_CARET:
-        case TOK_WEAK:
-        case TOK_LBRACKET:
-        case TOK_STRUCT:
-        case TOK_INTERFACE:
-        {
-            parseTypeCastOrCompositeLiteral(comp, NULL, type, constant);
-            break;
-        }
-
         case TOK_PLUS:
         case TOK_MINUS:
         case TOK_NOT:
@@ -1210,9 +1206,8 @@ static void parseFactor(Compiler *comp, Type **type, Const *constant)
 
             lexNext(&comp->lex);
 
-            Ident *ident = parseQualIdent(comp);
             bool isVar, isCall;
-            parseDesignator(comp, ident, type, constant, &isVar, &isCall);
+            parseDesignator(comp, type, constant, &isVar, &isCall);
             if (!isVar)
                 comp->error("Unable to take address");
 
