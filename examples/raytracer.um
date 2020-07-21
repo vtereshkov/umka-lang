@@ -274,11 +274,10 @@ fn main() {
     for true {
         working := false
         for i := 0; i < len(renderer); i++ {
-            fiberWorking := fiberalive(renderer[i]) 
-            if fiberWorking {
+            if fiberalive(renderer[i]) { 
                 fibercall(renderer[i])
+                working = true
             }
-            working = working || fiberWorking
         }
         if !working {break}
     }    
