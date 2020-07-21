@@ -816,7 +816,7 @@ static void parseTypeCast(Compiler *comp, Type **type, Const *constant)
 
 // compositeLiteral = arrayLiteral | structLiteral.
 // arrayLiteral     = "{" [expr {"," expr}] "}".
-// structLiteral    = "{" [ident ":" expr {"," ident ":" expr}] "}".
+// structLiteral    = "{" [[ident ":"] expr {"," [ident ":"] expr}] "}".
 static void parseCompositeLiteral(Compiler *comp, Type **type, Const *constant)
 {
     lexEat(&comp->lex, TOK_LBRACE);
@@ -849,16 +849,21 @@ static void parseCompositeLiteral(Compiler *comp, Type **type, Const *constant)
             Const itemConstantBuf, *itemConstant = constant ? &itemConstantBuf : NULL;
             int itemSize = typeSize(&comp->types, expectedItemType);
 
-            // ident ":"
-            if ((*type)->kind == TYPE_STRUCT)
+            // [ident ":"]
+            if ((*type)->kind == TYPE_STRUCT && comp->lex.tok.kind == TOK_IDENT)
             {
-                lexCheck(&comp->lex, TOK_IDENT);
-                Field *field = typeAssertFindField(&comp->types, *type, comp->lex.tok.name);
-                if (field->offset != itemOffset)
-                    comp->error("Wrong field position in literal");
+                Lexer lookaheadLex = comp->lex;
+                lexNext(&lookaheadLex);
 
-                lexNext(&comp->lex);
-                lexEat(&comp->lex, TOK_COLON);
+                if (lookaheadLex.tok.kind == TOK_COLON)
+                {
+                    Field *field = typeAssertFindField(&comp->types, *type, comp->lex.tok.name);
+                    if (field->offset != itemOffset)
+                        comp->error("Wrong field position in literal");
+
+                    lexNext(&comp->lex);
+                    lexEat(&comp->lex, TOK_COLON);
+                }
             }
 
             // expr

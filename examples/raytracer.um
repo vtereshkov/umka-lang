@@ -144,7 +144,7 @@ fn (sc: ^Scene) trace(ray: ^Ray, depth: int): Color {
             lambert = -lambert
         }
 
-        diffuseRay := Ray{origin: bestPoint, dir: diffuseDir}
+        diffuseRay := Ray{bestPoint, diffuseDir}
 
         return sc.trace(&diffuseRay, depth + 1).mul(bestBody.lambertFactor(lambert)).elementwise(bestBody.color)
     }
@@ -182,7 +182,7 @@ fn render(parent: ^fiber, buf: ^RenderData) {
 
             for r := 0; r < buf.rays; r++ {
                 randomDir := rotDir.add(randn().mul(buf.antialiasing))
-                ray := Ray{origin: buf.pos, dir: normalize(randomDir)}
+                ray := Ray{buf.pos, normalize(randomDir)}
                 color = color.add(buf.scene.trace(&ray, 0))
             }
             color = color.mul(255.0 / buf.rays)
@@ -238,7 +238,7 @@ fn main() {
                 isLamp: true},
             radius: 800}}
             
-    scene := Scene{ambientColor: Color{0.2, 0.2, 0.2}, body: body}
+    scene := Scene{Color{0.2, 0.2, 0.2}, body}
     
     var pixels: [height][width][3]uint8            
 
