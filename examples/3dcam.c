@@ -44,8 +44,8 @@ int main(void)
     if (umkaOk)
     {
         printf("Umka initialized\n");
-        umkaInitBodies = umkaGetFunc("initBodies"); 
-        umkaDrawBodies = umkaGetFunc("drawBodies");
+        umkaInitBodies = umkaGetFunc(NULL, "initBodies"); 
+        umkaDrawBodies = umkaGetFunc(NULL, "drawBodies");
     }
     else
     {

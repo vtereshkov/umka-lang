@@ -188,9 +188,13 @@ void compilerAsm(Compiler *comp, char *buf)
 }
 
 
-int compilerGetFunc(Compiler *comp, char *name)
+int compilerGetFunc(Compiler *comp, char *moduleName, char *funcName)
 {
-    Ident *fn = identFind(&comp->idents, &comp->modules, &comp->blocks, 1, name, NULL);
+    int module = 1;
+    if (moduleName)
+        module = moduleFindByPath(&comp->modules, moduleName);
+
+    Ident *fn = identFind(&comp->idents, &comp->modules, &comp->blocks, module, funcName, NULL);
     if (fn && fn->kind == IDENT_CONST && fn->type->kind == TYPE_FN)
         return fn->offset;
     return -1;

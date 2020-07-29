@@ -38,6 +38,6 @@ void umkaFree(void);
 void umkaGetError(UmkaError *err);
 void umkaAsm(char *buf);
 void umkaAddFunc(char *name, UmkaExternFunc entry);
-int  umkaGetFunc(char *name);
+int  umkaGetFunc(char *moduleName, char *funcName);
 
 #endif // UMKA_API_H_INCLUDED

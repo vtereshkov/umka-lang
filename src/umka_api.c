@@ -133,8 +133,8 @@ void umkaAddFunc(char *name, UmkaExternFunc entry)
 }
 
 
-int umkaGetFunc(char *name)
+int umkaGetFunc(char *moduleName, char *funcName)
 {
-    return compilerGetFunc(&comp, name);
+    return compilerGetFunc(&comp, moduleName, funcName);
 }
 
