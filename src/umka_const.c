@@ -4,7 +4,7 @@
 #include "umka_const.h"
 
 
-void constInit(Consts *consts, ErrorFunc error)
+void constInit(Consts *consts, Error *error)
 {
     consts->error = error;
 }
@@ -43,7 +43,7 @@ void constAssign(Consts *consts, void *lhs, Const *rhs, TypeKind typeKind, int s
         case TYPE_INTERFACE:    memcpy(lhs, rhs->ptrVal, size); break;
         case TYPE_FN:           *(int64_t  *)lhs = rhs->intVal; break;
 
-        default:          consts->error("Illegal type"); return;
+        default:          consts->error->handler(consts->error->context, "Illegal type"); return;
     }
 }
 
@@ -54,7 +54,7 @@ void constUnary(Consts *consts, Const *arg, TokenKind tokKind, TypeKind typeKind
         switch (tokKind)
         {
             case TOK_MINUS: arg->realVal = -arg->realVal; break;
-            default:        consts->error("Illegal operator");
+            default:        consts->error->handler(consts->error->context, "Illegal operator");
         }
     else
         switch (tokKind)
@@ -62,7 +62,7 @@ void constUnary(Consts *consts, Const *arg, TokenKind tokKind, TypeKind typeKind
             case TOK_MINUS: arg->intVal = -arg->intVal; break;
             case TOK_NOT:   arg->intVal = !arg->intVal; break;
             case TOK_XOR:   arg->intVal = ~arg->intVal; break;
-            default:        consts->error("Illegal operator");
+            default:        consts->error->handler(consts->error->context, "Illegal operator");
         }
 }
 
@@ -81,7 +81,7 @@ void constBinary(Consts *consts, Const *lhs, const Const *rhs, TokenKind tokKind
             case TOK_GREATEREQ: lhs->intVal = strcmp(lhs->ptrVal, rhs->ptrVal) >= 0; break;
             case TOK_LESSEQ:    lhs->intVal = strcmp(lhs->ptrVal, rhs->ptrVal) <= 0; break;
 
-            default:            consts->error("Illegal operator");
+            default:            consts->error->handler(consts->error->context, "Illegal operator");
         }
     else if (typeKind == TYPE_REAL || typeKind == TYPE_REAL32)
         switch (tokKind)
@@ -92,7 +92,7 @@ void constBinary(Consts *consts, Const *lhs, const Const *rhs, TokenKind tokKind
             case TOK_DIV:
             {
                 if (rhs->realVal == 0)
-                    consts->error("Division by zero");
+                    consts->error->handler(consts->error->context, "Division by zero");
                 lhs->realVal /= rhs->realVal;
                 break;
             }
@@ -104,7 +104,7 @@ void constBinary(Consts *consts, Const *lhs, const Const *rhs, TokenKind tokKind
             case TOK_GREATEREQ: lhs->intVal = lhs->realVal >= rhs->realVal; break;
             case TOK_LESSEQ:    lhs->intVal = lhs->realVal <= rhs->realVal; break;
 
-            default:            consts->error("Illegal operator");
+            default:            consts->error->handler(consts->error->context, "Illegal operator");
         }
     else
         switch (tokKind)
@@ -115,14 +115,14 @@ void constBinary(Consts *consts, Const *lhs, const Const *rhs, TokenKind tokKind
             case TOK_DIV:
             {
                 if (rhs->intVal == 0)
-                    consts->error("Division by zero");
+                    consts->error->handler(consts->error->context, "Division by zero");
                 lhs->intVal /= rhs->intVal;
                 break;
             }
             case TOK_MOD:
             {
                 if (rhs->intVal == 0)
-                    consts->error("Division by zero");
+                    consts->error->handler(consts->error->context, "Division by zero");
                 lhs->intVal %= rhs->intVal;
                 break;
             }
@@ -140,7 +140,7 @@ void constBinary(Consts *consts, Const *lhs, const Const *rhs, TokenKind tokKind
             case TOK_GREATEREQ: lhs->intVal = lhs->intVal >= rhs->intVal; break;
             case TOK_LESSEQ:    lhs->intVal = lhs->intVal <= rhs->intVal; break;
 
-            default:            consts->error("Illegal operator");
+            default:            consts->error->handler(consts->error->context, "Illegal operator");
         }
 }
 
@@ -157,7 +157,7 @@ void constCallBuiltin(Consts *consts, Const *arg, BuiltinFunc builtinVal)
         case BUILTIN_SQRT:
         {
             if (arg->realVal < 0)
-                consts->error("sqrt() domain error");
+                consts->error->handler(consts->error->context, "sqrt() domain error");
             arg->realVal = sqrt(arg->realVal);
             break;
         }
@@ -168,13 +168,13 @@ void constCallBuiltin(Consts *consts, Const *arg, BuiltinFunc builtinVal)
         case BUILTIN_LOG:
         {
             if (arg->realVal <= 0)
-                consts->error("log() domain error");
+                consts->error->handler(consts->error->context, "log() domain error");
             arg->realVal = sqrt(arg->realVal);
             break;
         }
         case BUILTIN_LEN:       arg->intVal  = strlen(arg->ptrVal); break;
 
-        default: consts->error("Illegal function");
+        default: consts->error->handler(consts->error->context, "Illegal function");
     }
 }
 

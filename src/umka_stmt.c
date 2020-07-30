@@ -24,7 +24,7 @@ void doResolveExtern(Compiler *comp)
                 genReturn(&comp->gen, paramSlots);
             }
             else
-                comp->error("Unresolved prototype of %s", ident->name);
+                comp->error.handler(comp->error.context, "Unresolved prototype of %s", ident->name);
         }
 }
 
@@ -60,7 +60,7 @@ void parseAssignmentStmt(Compiler *comp, Type *type, void *initializedVarPtr)
     if (!typeStructured(type))
     {
         if (type->kind != TYPE_PTR || type->base->kind == TYPE_VOID)
-            comp->error("Left side cannot be assigned to");
+            comp->error.handler(comp->error.context, "Left side cannot be assigned to");
         type = type->base;
     }
 
@@ -88,7 +88,7 @@ static void parseShortAssignmentStmt(Compiler *comp, Type *type, TokenKind op)
     if (!typeStructured(type))
     {
         if (type->kind != TYPE_PTR || type->base->kind == TYPE_VOID)
-            comp->error("Left side cannot be assigned to");
+            comp->error.handler(comp->error.context, "Left side cannot be assigned to");
         type = type->base;
     }
 
@@ -141,7 +141,7 @@ static void parseIncDecStmt(Compiler *comp, Type *type, TokenKind op)
     if (!typeStructured(type))
     {
         if (type->kind != TYPE_PTR || type->base->kind == TYPE_VOID)
-            comp->error("Left side cannot be assigned to");
+            comp->error.handler(comp->error.context, "Left side cannot be assigned to");
         type = type->base;
     }
 
@@ -171,7 +171,7 @@ static void parseSimpleStmt(Compiler *comp)
         {
             // Assignment
             if (!isVar)
-                comp->error("Left side cannot be assigned to");
+                comp->error.handler(comp->error.context, "Left side cannot be assigned to");
             lexNext(&comp->lex);
 
             if (op == TOK_EQ)
@@ -188,7 +188,7 @@ static void parseSimpleStmt(Compiler *comp)
         {
             // Call
             if (!isCall)
-                comp->error("Assignment or function call expected");
+                comp->error.handler(comp->error.context, "Assignment or function call expected");
             if (type->kind != TYPE_VOID)
                 genPop(&comp->gen);  // Manually remove result
         }
@@ -304,7 +304,7 @@ static void parseSwitchStmt(Compiler *comp)
     Type *type;
     parseExpr(comp, &type, NULL);
     if (!typeOrdinal(type))
-        comp->error("Ordinal type expected");
+        comp->error.handler(comp->error.context, "Ordinal type expected");
 
     genSwitchCondEpilog(&comp->gen);
 
@@ -402,7 +402,7 @@ static void parseBreakStmt(Compiler *comp)
     lexEat(&comp->lex, TOK_BREAK);
 
     if (!comp->gen.breaks)
-        comp->error("No loop to break");
+        comp->error.handler(comp->error.context, "No loop to break");
 
     doGarbageCollectionDownToBlock(comp, comp->gen.breaks->block);
     genGotosAddStub(&comp->gen, comp->gen.breaks);
@@ -415,7 +415,7 @@ static void parseContinueStmt(Compiler *comp)
     lexEat(&comp->lex, TOK_CONTINUE);
 
     if (!comp->gen.continues)
-        comp->error("No loop to continue");
+        comp->error.handler(comp->error.context, "No loop to continue");
 
     doGarbageCollectionDownToBlock(comp, comp->gen.continues->block);
     genGotosAddStub(&comp->gen, comp->gen.continues);
@@ -534,7 +534,7 @@ void parseFnBlock(Compiler *comp, Ident *fn)
     if (strcmp(fn->name, "main") == 0)
     {
         if (fn->type->sig.method || fn->type->sig.numParams != 0 || fn->type->sig.resultType[0]->kind != TYPE_VOID)
-            comp->error("Illegal main() signature");
+            comp->error.handler(comp->error.context, "Illegal main() signature");
 
         genEntryPoint(&comp->gen, 0);
         mainFn = true;

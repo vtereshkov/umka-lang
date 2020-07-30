@@ -32,25 +32,26 @@ int main(void)
 {
     // Umka initialization
     int umkaInitBodies = 0, umkaDrawBodies = 0;
-    bool umkaOk = umkaInit("3dcam.um", 1024 * 1024, 1024 * 1024, 0, NULL);
+    void *umka = umkaAlloc();
+    bool umkaOk = umkaInit(umka, "3dcam.um", 1024 * 1024, 1024 * 1024, 0, NULL);
     
     if (umkaOk)
     {
-        umkaAddFunc("drawPlane", &rlDrawPlane);
-        umkaAddFunc("drawCube", &rlDrawCube);
-        umkaOk = umkaCompile();
+        umkaAddFunc(umka, "drawPlane", &rlDrawPlane);
+        umkaAddFunc(umka, "drawCube", &rlDrawCube);
+        umkaOk = umkaCompile(umka);
     }
         
     if (umkaOk)
     {
         printf("Umka initialized\n");
-        umkaInitBodies = umkaGetFunc(NULL, "initBodies"); 
-        umkaDrawBodies = umkaGetFunc(NULL, "drawBodies");
+        umkaInitBodies = umkaGetFunc(umka, NULL, "initBodies"); 
+        umkaDrawBodies = umkaGetFunc(umka, NULL, "drawBodies");
     }
     else
     {
         UmkaError error;
-        umkaGetError(&error);
+        umkaGetError(umka, &error);
         printf("Umka error %s (%d, %d): %s\n", error.fileName, error.line, error.pos, error.msg);
     }
     
@@ -69,12 +70,12 @@ int main(void)
     camera.type = CAMERA_PERSPECTIVE;
 
     if (umkaOk)
-        umkaOk = umkaCall(umkaInitBodies, 0, NULL, NULL);
+        umkaOk = umkaCall(umka, umkaInitBodies, 0, NULL, NULL);
         
     if (!umkaOk)
     {
         UmkaError error;
-        umkaGetError(&error);
+        umkaGetError(umka, &error);
         printf("Umka runtime error %s (%d): %s\n", error.fileName, error.line, error.msg);
     }        
 
@@ -92,11 +93,11 @@ int main(void)
 
                 BeginMode3D(camera);
 
-                bool umkaOk = umkaCall(umkaDrawBodies, 0, NULL, NULL);
+                bool umkaOk = umkaCall(umka, umkaDrawBodies, 0, NULL, NULL);
                 if (!umkaOk)
                 {
                     UmkaError error;
-                    umkaGetError(&error);
+                    umkaGetError(umka, &error);
                     printf("Umka runtime error %s (%d): %s\n", error.fileName, error.line, error.msg);
                     break;
                 }            
@@ -117,8 +118,7 @@ int main(void)
     CloseWindow();        // Close window and OpenGL context
 
     // Umka de-initialization
-    if (umkaOk)
-        umkaFree();
+    umkaFree(umka);
         
     return 0;
 }

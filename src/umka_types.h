@@ -89,11 +89,11 @@ typedef struct tagType
 typedef struct
 {
     Type *first, *last;
-    ErrorFunc error;
+    Error *error;
 } Types;
 
 
-void typeInit(Types *types, ErrorFunc error);
+void typeInit(Types *types, Error *error);
 void typeFree(Types *types, int startBlock /* < 0 to free in all blocks*/);
 
 Type *typeAdd       (Types *types, Blocks *blocks, TypeKind kind);

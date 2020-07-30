@@ -35,7 +35,7 @@ static char *spelling [] =
 };
 
 
-void typeInit(Types *types, ErrorFunc error)
+void typeInit(Types *types, Error *error)
 {
     types->first = types->last = NULL;
     types->error = error;
@@ -186,7 +186,7 @@ int typeSize(Types *types, Type *type)
     if (size < 0)
     {
         char buf[DEFAULT_STR_LEN + 1];
-        types->error("Illegal type %s", typeSpelling(type, buf));
+        types->error->handler(types->error->context, "Illegal type %s", typeSpelling(type, buf));
     }
     return size;
 }
@@ -367,7 +367,7 @@ bool typeAssertEquivalent(Types *types, Type *left, Type *right)
     if (!res)
     {
         char leftBuf[DEFAULT_STR_LEN + 1], rightBuf[DEFAULT_STR_LEN + 1];
-        types->error("Incompatible types %s and %s", typeSpelling(left, leftBuf), typeSpelling(right, rightBuf));
+        types->error->handler(types->error->context, "Incompatible types %s and %s", typeSpelling(left, leftBuf), typeSpelling(right, rightBuf));
 
     }
     return res;
@@ -424,7 +424,7 @@ bool typeAssertCompatible(Types *types, Type *left, Type *right, bool symmetric)
     if (!res)
     {
         char leftBuf[DEFAULT_STR_LEN + 1], rightBuf[DEFAULT_STR_LEN + 1];
-        types->error("Incompatible types %s and %s", typeSpelling(left, leftBuf), typeSpelling(right, rightBuf));
+        types->error->handler(types->error->context, "Incompatible types %s and %s", typeSpelling(left, leftBuf), typeSpelling(right, rightBuf));
     }
     return res;
 }
@@ -477,7 +477,7 @@ bool typeAssertValidOperator(Types *types, Type *type, TokenKind op)
     if (!res)
     {
         char buf[DEFAULT_STR_LEN + 1];
-        types->error("Operator %s is not applicable to %s", lexSpelling(op), typeSpelling(type, buf));
+        types->error->handler(types->error->context, "Operator %s is not applicable to %s", lexSpelling(op), typeSpelling(type, buf));
     }
     return res;
 }
@@ -488,7 +488,7 @@ bool typeAssertForwardResolved(Types *types)
     for (Type *type = types->first; type; type = type->next)
         if (type->kind == TYPE_FORWARD)
         {
-            types->error("Unresolved forward declaration of %s", (Ident *)(type->forwardIdent)->name);
+            types->error->handler(types->error->context, "Unresolved forward declaration of %s", (Ident *)(type->forwardIdent)->name);
             return false;
         }
     return true;
@@ -512,7 +512,7 @@ Field *typeAssertFindField(Types *types, Type *structType, char *name)
 {
     Field *res = typeFindField(structType, name);
     if (!res)
-        types->error("Unknown field %s", name);
+        types->error->handler(types->error->context, "Unknown field %s", name);
     return res;
 }
 
@@ -521,16 +521,16 @@ Field *typeAddField(Types *types, Type *structType, Type *fieldType, char *name)
 {
     Field *field = typeFindField(structType, name);
     if (field)
-        types->error("Duplicate field %s", name);
+        types->error->handler(types->error->context, "Duplicate field %s", name);
 
     if (fieldType->kind == TYPE_FORWARD)
-        types->error("Unresolved forward type declaration for field %s", name);
+        types->error->handler(types->error->context, "Unresolved forward type declaration for field %s", name);
 
     if (fieldType->kind == TYPE_VOID)
-        types->error("Void field %s is not allowed", name);
+        types->error->handler(types->error->context, "Void field %s is not allowed", name);
 
     if (structType->numItems > MAX_FIELDS)
-        types->error("Too many fields");
+        types->error->handler(types->error->context, "Too many fields");
 
     field = malloc(sizeof(Field));
 
@@ -559,10 +559,10 @@ Param *typeAddParam(Types *types, Signature *sig, Type *type, char *name)
 {
     Param *param = typeFindParam(sig, name);
     if (param)
-        types->error("Duplicate parameter %s", name);
+        types->error->handler(types->error->context, "Duplicate parameter %s", name);
 
     if (sig->numParams > MAX_PARAMS)
-        types->error("Too many parameters");
+        types->error->handler(types->error->context, "Too many parameters");
 
     param = malloc(sizeof(Param));
 

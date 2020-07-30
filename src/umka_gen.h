@@ -23,11 +23,11 @@ typedef struct
     Gotos *breaks, *continues, *returns;
     bool mainDefined;
     DebugInfo *debug;
-    ErrorFunc error;
+    Error *error;
 } CodeGen;
 
 
-void genInit(CodeGen *gen, DebugInfo *debug, ErrorFunc error);
+void genInit(CodeGen *gen, DebugInfo *debug, Error *error);
 void genFree(CodeGen *gen);
 
 // Atomic VM instructions

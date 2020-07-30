@@ -6,7 +6,7 @@
 
 // Common functions
 
-void genInit(CodeGen *gen, DebugInfo *debug, ErrorFunc error)
+void genInit(CodeGen *gen, DebugInfo *debug, Error *error)
 {
     gen->capacity = 1000;
     gen->ip = 0;
@@ -138,7 +138,7 @@ static bool optimizeGetArrayPtr(CodeGen *gen, int itemSize)
         int index = prev2->operand.intVal;
 
         if (index < 0 || index > len - 1)
-            gen->error("Index is out of range");
+            gen->error->handler(gen->error->context, "Index is out of range");
 
         gen->ip -= 2;
         genGetFieldPtr(gen, itemSize * index);
@@ -616,7 +616,7 @@ void genGotosProlog(CodeGen *gen, Gotos *gotos, int block)
 void genGotosAddStub(CodeGen *gen, Gotos *gotos)
 {
     if (gotos->numGotos >= MAX_GOTOS)
-        gen->error("To many break/continue/return statements");
+        gen->error->handler(gen->error->context, "To many break/continue/return statements");
 
     gotos->start[gotos->numGotos++] = gen->ip;
     genNop(gen);                                        // Goto block/function end (stub)

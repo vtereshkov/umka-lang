@@ -167,11 +167,11 @@ typedef struct
 {
     Fiber *fiber;
     HeapPages pages;
-    ErrorFunc error;
+    Error *error;
 } VM;
 
 
-void vmInit(VM *vm, int stackSize /* slots */, ErrorFunc error);
+void vmInit(VM *vm, int stackSize /* slots */, Error *error);
 void vmFree(VM *vm);
 void vmReset(VM *vm, Instruction *code);
 void vmRun(VM *vm, int entryOffset, int numParamSlots, Slot *params, Slot *result);

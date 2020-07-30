@@ -99,7 +99,7 @@ enum
 static int keywordHash[NUM_KEYWORDS];
 
 
-int lexInit(Lexer *lex, Storage *storage, DebugInfo *debug, const char *fileName, ErrorFunc error)
+int lexInit(Lexer *lex, Storage *storage, DebugInfo *debug, const char *fileName, Error *error)
 {
     // Fill keyword hashes
     for (int i = 0; i < NUM_KEYWORDS; i++)
@@ -107,7 +107,7 @@ int lexInit(Lexer *lex, Storage *storage, DebugInfo *debug, const char *fileName
 
     // Initialize lexer
     if (storage->len + strlen(fileName) + 1 > storage->capacity)
-        error("Storage overflow");
+        error->handler(error->context, "Storage overflow");
 
     strcpy(&storage->data[storage->len], fileName);
     lex->fileName = &storage->data[storage->len];
@@ -130,7 +130,7 @@ int lexInit(Lexer *lex, Storage *storage, DebugInfo *debug, const char *fileName
 
     if (!file)
     {
-        lex->error("Cannot open file %s", lex->fileName);
+        lex->error->handler(lex->error->context, "Cannot open file %s", lex->fileName);
         return 0;
     }
 
@@ -142,7 +142,7 @@ int lexInit(Lexer *lex, Storage *storage, DebugInfo *debug, const char *fileName
 
     if (fread(lex->buf, bufLen, 1, file) != 1)
     {
-        lex->error("Cannot read file %s", lex->fileName);
+        lex->error->handler(lex->error->context, "Cannot read file %s", lex->fileName);
         return 0;
     }
 
@@ -211,7 +211,7 @@ static char lexEscChar(Lexer *lex, bool *escaped)
 
                 if (items < 1 || hex > 0xFF)
                 {
-                    lex->error("Illegal character code");
+                    lex->error->handler(lex->error->context, "Illegal character code");
                     lex->tok.kind = TOK_NONE;
                     return 0;
                 }
@@ -297,7 +297,7 @@ static void lexKeywordOrIdent(Lexer *lex)
 
         if (len > MAX_IDENT_LEN)
         {
-            lex->error("Identifier is too long");
+            lex->error->handler(lex->error->context, "Identifier is too long");
             lex->tok.kind = TOK_NONE;
             return;
         }
@@ -631,7 +631,7 @@ static void lexNumber(Lexer *lex)
     if (tail == lex->buf + lex->bufPos && ch != '.')
     {
         if (errno == ERANGE)
-            lex->error("Number is too large");
+            lex->error->handler(lex->error->context, "Number is too large");
 
         lex->tok.kind = TOK_NONE;
         return;
@@ -646,7 +646,7 @@ static void lexNumber(Lexer *lex)
         if (tail == lex->buf + lex->bufPos)
         {
             if (lex->tok.realVal == HUGE_VAL)
-                lex->error("Number is too large");
+                lex->error->handler(lex->error->context, "Number is too large");
 
             lex->tok.kind = TOK_NONE;
             return;
@@ -667,7 +667,7 @@ static void lexCharLiteral(Lexer *lex)
     const char ch = lexChar(lex);
     if (ch != '\'')
     {
-        lex->error("Character literal is not found");
+        lex->error->handler(lex->error->context, "Character literal is not found");
         lex->tok.kind = TOK_NONE;
     }
     lexChar(lex);
@@ -685,7 +685,7 @@ static void lexStrLiteral(Lexer *lex)
     {
         if (ch == '\n' && !escaped)
         {
-            lex->error("Unterminated string");
+            lex->error->handler(lex->error->context, "Unterminated string");
             lex->tok.kind = TOK_NONE;
             return;
         }
@@ -693,7 +693,7 @@ static void lexStrLiteral(Lexer *lex)
         lex->storage->data[lex->storage->len++] = ch;
         if (lex->storage->len >= lex->storage->capacity)
         {
-            lex->error("String is too long");
+            lex->error->handler(lex->error->context, "String is too long");
             lex->tok.kind = TOK_NONE;
             return;
         }
@@ -728,7 +728,7 @@ static void lexNextWithEOLN(Lexer *lex)
         if (!lex->buf[lex->bufPos])
             lex->tok.kind = TOK_EOF;
         else
-            lex->error("Unexpected character or end of file");
+            lex->error->handler(lex->error->context, "Unexpected character or end of file");
     }
 }
 
@@ -769,7 +769,7 @@ bool lexCheck(Lexer *lex, TokenKind kind)
 {
     bool res = lex->tok.kind == kind;
     if (!res)
-        lex->error("%s expected but %s found", lexSpelling(kind), lexSpelling(lex->tok.kind));
+        lex->error->handler(lex->error->context, "%s expected but %s found", lexSpelling(kind), lexSpelling(lex->tok.kind));
     return res;
 }
 

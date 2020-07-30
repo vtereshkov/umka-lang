@@ -51,7 +51,7 @@ static void doIntToRealConv(Compiler *comp, Type *dest, Type **src, Const *const
 static void doDynArrayPtrToArrayPtrConv(Compiler *comp, Type *dest, Type **src, Const *constant)
 {
     if (constant)
-        comp->error("Conversion to array is not allowed in constant expressions");
+        comp->error.handler(comp->error.context, "Conversion to array is not allowed in constant expressions");
 
     genGetFieldPtr(&comp->gen, offsetof(DynArray, data));
     genDeref(&comp->gen, TYPE_PTR);
@@ -63,7 +63,7 @@ static void doDynArrayPtrToArrayPtrConv(Compiler *comp, Type *dest, Type **src, 
 static void doArrayToDynArrayConv(Compiler *comp, Type *dest, Type **src, Const *constant)
 {
     if (constant)
-        comp->error("Conversion to array is not allowed in constant expressions");
+        comp->error.handler(comp->error.context, "Conversion to array is not allowed in constant expressions");
 
     // fn makefrom(array: [...] type, itemSize: int, len: int): [] type
 
@@ -85,7 +85,7 @@ static void doArrayToDynArrayConv(Compiler *comp, Type *dest, Type **src, Const 
 static void doConcreteToInterfaceConv(Compiler *comp, Type *dest, Type **src, Const *constant)
 {
     if (constant)
-        comp->error("Conversion to interface is not allowed in constant expressions");
+        comp->error.handler(comp->error.context, "Conversion to interface is not allowed in constant expressions");
 
     int destSize   = typeSize(&comp->types, dest);
     int destOffset = identAllocStack(&comp->idents, &comp->blocks, destSize);
@@ -107,7 +107,7 @@ static void doConcreteToInterfaceConv(Compiler *comp, Type *dest, Type **src, Co
         char *name = dest->field[i]->name;
         Ident *srcMethod = identFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, name, *src);
         if (!srcMethod)
-            comp->error("Method %s is not implemented", name);
+            comp->error.handler(comp->error.context, "Method %s is not implemented", name);
 
         typeAssertCompatible(&comp->types, dest->field[i]->type, srcMethod->type, false);
 
@@ -124,7 +124,7 @@ static void doConcreteToInterfaceConv(Compiler *comp, Type *dest, Type **src, Co
 static void doInterfaceToInterfaceConv(Compiler *comp, Type *dest, Type **src, Const *constant)
 {
     if (constant)
-        comp->error("Conversion to interface is not allowed in constant expressions");
+        comp->error.handler(comp->error.context, "Conversion to interface is not allowed in constant expressions");
 
     int destSize = typeSize(&comp->types, dest);
     int destOffset = identAllocStack(&comp->idents, &comp->blocks, destSize);
@@ -150,7 +150,7 @@ static void doInterfaceToInterfaceConv(Compiler *comp, Type *dest, Type **src, C
         char *name = dest->field[i]->name;
         Field *srcMethod = typeFindField(*src, name);
         if (!srcMethod)
-            comp->error("Method %s is not implemented", name);
+            comp->error.handler(comp->error.context, "Method %s is not implemented", name);
 
         typeAssertCompatible(&comp->types, dest->field[i]->type, srcMethod->type, false);
 
@@ -170,7 +170,7 @@ static void doInterfaceToInterfaceConv(Compiler *comp, Type *dest, Type **src, C
 static void doInterfaceToConcreteConv(Compiler *comp, Type *dest, Type **src, Const *constant)
 {
     if (constant)
-        comp->error("Conversion from interface is not allowed in constant expressions");
+        comp->error.handler(comp->error.context, "Conversion from interface is not allowed in constant expressions");
 
     genAssertType(&comp->gen, dest);
     *src = dest;
@@ -283,7 +283,7 @@ Ident *parseQualIdent(Compiler *comp)
 static void parseBuiltinIOCall(Compiler *comp, Type **type, Const *constant, BuiltinFunc builtin)
 {
     if (constant)
-        comp->error("Function is not allowed in constant expressions");
+        comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
 
     // Count (number of characters for printf(), number of items for scanf())
     genPushIntConst(&comp->gen, 0);
@@ -325,7 +325,7 @@ static void parseBuiltinIOCall(Compiler *comp, Type **type, Const *constant, Bui
             else if ((*type)->kind == TYPE_STR)
                 genCallBuiltin(&comp->gen, TYPE_STR, builtin);
             else
-                comp->error("Incompatible type in printf()");
+                comp->error.handler(comp->error.context, "Incompatible type in printf()");
         }
         else  // BUILTIN_SCANF, BUILTIN_FSCANF
         {
@@ -334,7 +334,7 @@ static void parseBuiltinIOCall(Compiler *comp, Type **type, Const *constant, Bui
             else if ((*type)->base->kind == TYPE_STR)
                 genCallBuiltin(&comp->gen, TYPE_STR, builtin);
             else
-                comp->error("Incompatible type in scanf()");
+                comp->error.handler(comp->error.context, "Incompatible type in scanf()");
         }
         genPop(&comp->gen); // Manually remove parameter
 
@@ -374,7 +374,7 @@ static void parseBuiltinMathCall(Compiler *comp, Type **type, Const *constant, B
 static void parseBuiltinNewCall(Compiler *comp, Type **type, Const *constant)
 {
     if (constant)
-        comp->error("Function is not allowed in constant expressions");
+        comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
 
     *type = parseType(comp, NULL);
     int size = typeSize(&comp->types, *type);
@@ -390,12 +390,12 @@ static void parseBuiltinNewCall(Compiler *comp, Type **type, Const *constant)
 static void parseBuiltinMakeCall(Compiler *comp, Type **type, Const *constant)
 {
     if (constant)
-        comp->error("Function is not allowed in constant expressions");
+        comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
 
     // Dynamic array type and item size
     *type = parseType(comp, NULL);
     if ((*type)->kind != TYPE_DYNARRAY)
-        comp->error("Incompatible type in make()");
+        comp->error.handler(comp->error.context, "Incompatible type in make()");
 
     int itemSize = typeSize(&comp->types, (*type)->base);
     genPushIntConst(&comp->gen, itemSize);
@@ -419,12 +419,12 @@ static void parseBuiltinMakeCall(Compiler *comp, Type **type, Const *constant)
 static void parseBuiltinAppendCall(Compiler *comp, Type **type, Const *constant)
 {
     if (constant)
-        comp->error("Function is not allowed in constant expressions");
+        comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
 
     // Dynamic array
     parseExpr(comp, type, NULL);
     if ((*type)->kind != TYPE_DYNARRAY)
-        comp->error("Incompatible type in append()");
+        comp->error.handler(comp->error.context, "Incompatible type in append()");
 
     lexEat(&comp->lex, TOK_COMMA);
 
@@ -456,12 +456,12 @@ static void parseBuiltinAppendCall(Compiler *comp, Type **type, Const *constant)
 static void parseBuiltinDeleteCall(Compiler *comp, Type **type, Const *constant)
 {
     if (constant)
-        comp->error("Function is not allowed in constant expressions");
+        comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
 
     // Dynamic array
     parseExpr(comp, type, NULL);
     if ((*type)->kind != TYPE_DYNARRAY)
-        comp->error("Incompatible type in delete()");
+        comp->error.handler(comp->error.context, "Incompatible type in delete()");
 
     lexEat(&comp->lex, TOK_COMMA);
 
@@ -488,7 +488,7 @@ static void parseBuiltinLenCall(Compiler *comp, Type **type, Const *constant)
         case TYPE_ARRAY:
         {
             if (constant)
-                comp->error("Function is not allowed in constant expressions");
+                comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
 
             genPop(&comp->gen);
             genPushIntConst(&comp->gen, (*type)->numItems);
@@ -497,7 +497,7 @@ static void parseBuiltinLenCall(Compiler *comp, Type **type, Const *constant)
         case TYPE_DYNARRAY:
         {
             if (constant)
-                comp->error("Function is not allowed in constant expressions");
+                comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
 
             genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_LEN);
             break;
@@ -510,7 +510,7 @@ static void parseBuiltinLenCall(Compiler *comp, Type **type, Const *constant)
                 genCallBuiltin(&comp->gen, TYPE_STR, BUILTIN_LEN);
             break;
         }
-        default: comp->error("Incompatible type in len()"); return;
+        default: comp->error.handler(comp->error.context, "Incompatible type in len()"); return;
     }
 
     *type = comp->intType;
@@ -537,11 +537,11 @@ static void parseBuiltinSizeofCall(Compiler *comp, Type **type, Const *constant)
 static void parseBuiltinSizeofselfCall(Compiler *comp, Type **type, Const *constant)
 {
     if (constant)
-        comp->error("Function is not allowed in constant expressions");
+        comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
 
     parseExpr(comp, type, constant);
     if ((*type)->kind != TYPE_INTERFACE)
-        comp->error("Incompatible type in sizeofself()");
+        comp->error.handler(comp->error.context, "Incompatible type in sizeofself()");
 
     genCallBuiltin(&comp->gen, TYPE_INTERFACE, BUILTIN_SIZEOFSELF);
     *type = comp->intType;
@@ -555,14 +555,14 @@ static void parseBuiltinSizeofselfCall(Compiler *comp, Type **type, Const *const
 static void parseBuiltinFiberCall(Compiler *comp, Type **type, Const *constant, BuiltinFunc builtin)
 {
     if (constant)
-        comp->error("Function is not allowed in constant expressions");
+        comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
 
     if (builtin == BUILTIN_FIBERSPAWN)
     {
         // Parent fiber pointer
         parseExpr(comp, type, constant);
         if (!typeFiberFunc(*type))
-            comp->error("Incompatible function type in fiberspawn()");
+            comp->error.handler(comp->error.context, "Incompatible function type in fiberspawn()");
 
         lexEat(&comp->lex, TOK_COMMA);
 
@@ -595,7 +595,7 @@ static void parseBuiltinFiberCall(Compiler *comp, Type **type, Const *constant, 
 static void parseBuiltinErrorCall(Compiler *comp, Type **type, Const *constant)
 {
     if (constant)
-        comp->error("Function is not allowed in constant expressions");
+        comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
 
     parseExpr(comp, type, constant);
     doImplicitTypeConv(comp, comp->strType, type, constant, false);
@@ -648,7 +648,7 @@ static void parseBuiltinCall(Compiler *comp, Type **type, Const *constant, Built
         // Misc
         case BUILTIN_ERROR:         parseBuiltinErrorCall(comp, type, constant);            break;
 
-        default: comp->error("Illegal built-in function");
+        default: comp->error.handler(comp->error.context, "Illegal built-in function");
     }
     lexEat(&comp->lex, TOK_RPAR);
 }
@@ -660,7 +660,7 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
     lexEat(&comp->lex, TOK_LPAR);
 
     if (constant)
-        comp->error("Function is not allowed in constant expressions");
+        comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
 
     // Actual parameters: [__self,] param1, param2 ...[__result]
     int numExplicitParams = 0, numPreHiddenParams = 0, numPostHiddenParams = 0;
@@ -687,7 +687,7 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
         while (1)
         {
             if (numPreHiddenParams + numExplicitParams + numPostHiddenParams > (*type)->sig.numParams - 1)
-                comp->error("Too many actual parameters");
+                comp->error.handler(comp->error.context, "Too many actual parameters");
 
             Type *formalParamType = (*type)->sig.param[i]->type;
             Type *actualParamType;
@@ -714,7 +714,7 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
     }
 
     if (numPreHiddenParams + numExplicitParams + numPostHiddenParams + (*type)->sig.numDefaultParams < (*type)->sig.numParams)
-        comp->error("Too few actual parameters");
+        comp->error.handler(comp->error.context, "Too few actual parameters");
 
     // Push default parameters, if not specified explicitly
     while (i < (*type)->sig.numParams - numPostHiddenParams)
@@ -762,7 +762,7 @@ static void parsePrimary(Compiler *comp, Ident *ident, Type **type, Const *const
         case IDENT_VAR:
         {
             if (constant)
-                comp->error("Constant expected but variable %s found", ident->name);
+                comp->error.handler(comp->error.context, "Constant expected but variable %s found", ident->name);
 
             doPushVarPtr(comp, ident);
 
@@ -791,7 +791,7 @@ static void parsePrimary(Compiler *comp, Ident *ident, Type **type, Const *const
             break;
         }
 
-        default: comp->error("Illegal identifier");
+        default: comp->error.handler(comp->error.context, "Illegal identifier");
     }
 }
 
@@ -808,7 +808,7 @@ static void parseTypeCast(Compiler *comp, Type **type, Const *constant)
     if (!typeEquivalent(*type, originalType) &&
         !(typeCastable(*type) && typeCastable(originalType)) &&
         !((*type)->kind == TYPE_PTR && originalType->kind == TYPE_PTR))
-        comp->error("Invalid type cast");
+        comp->error.handler(comp->error.context, "Invalid type cast");
 
     lexEat(&comp->lex, TOK_RPAR);
 }
@@ -822,7 +822,7 @@ static void parseCompositeLiteral(Compiler *comp, Type **type, Const *constant)
     lexEat(&comp->lex, TOK_LBRACE);
 
     if ((*type)->kind != TYPE_ARRAY && (*type)->kind != TYPE_STRUCT)
-        comp->error("Composite literal is only allowed for arrays or structures");
+        comp->error.handler(comp->error.context, "Composite literal is only allowed for arrays or structures");
 
     int bufOffset = 0;
     if (constant)
@@ -839,7 +839,7 @@ static void parseCompositeLiteral(Compiler *comp, Type **type, Const *constant)
         while (1)
         {
             if (numItems > (*type)->numItems - 1)
-                comp->error("Too many elements in literal");
+                comp->error.handler(comp->error.context, "Too many elements in literal");
 
             if (!constant)
                 genPushLocalPtr(&comp->gen, bufOffset + itemOffset);
@@ -859,7 +859,7 @@ static void parseCompositeLiteral(Compiler *comp, Type **type, Const *constant)
                 {
                     Field *field = typeAssertFindField(&comp->types, *type, comp->lex.tok.name);
                     if (field->offset != itemOffset)
-                        comp->error("Wrong field position in literal");
+                        comp->error.handler(comp->error.context, "Wrong field position in literal");
 
                     lexNext(&comp->lex);
                     lexEat(&comp->lex, TOK_COLON);
@@ -887,7 +887,7 @@ static void parseCompositeLiteral(Compiler *comp, Type **type, Const *constant)
         }
     }
     if (numItems < (*type)->numItems)
-        comp->error("Too few elements in literal");
+        comp->error.handler(comp->error.context, "Too few elements in literal");
 
     if (!constant)
         genPushLocalPtr(&comp->gen, bufOffset);
@@ -911,7 +911,7 @@ static void parseTypeCastOrCompositeLiteral(Compiler *comp, Ident *ident, Type *
         *isVar = true;
     }
     else
-        comp->error("Type cast or composite literal expected");
+        comp->error.handler(comp->error.context, "Type cast or composite literal expected");
 
     *isCall = false;
 }
@@ -922,7 +922,7 @@ static void parseDerefSelector(Compiler *comp, Type **type, Const *constant, boo
 {
     if ((*type)->kind != TYPE_PTR || (*type)->base->kind != TYPE_PTR ||
         (*type)->base->base->kind == TYPE_VOID || (*type)->base->base->kind == TYPE_NULL)
-        comp->error("Typed pointer expected");
+        comp->error.handler(comp->error.context, "Typed pointer expected");
 
     lexNext(&comp->lex);
     genDeref(&comp->gen, TYPE_PTR);
@@ -947,7 +947,7 @@ static void parseIndexSelector(Compiler *comp, Type **type, Const *constant, boo
         *type = (*type)->base;
 
     if ((*type)->kind != TYPE_ARRAY && (*type)->kind != TYPE_DYNARRAY && (*type)->kind != TYPE_STR)
-        comp->error("Array or string expected");
+        comp->error.handler(comp->error.context, "Array or string expected");
 
     // Index
     lexNext(&comp->lex);
@@ -1012,7 +1012,7 @@ static void parseFieldSelector(Compiler *comp, Type **type, Const *constant, boo
     {
         // Field
         if ((*type)->kind != TYPE_STRUCT && (*type)->kind != TYPE_INTERFACE)
-            comp->error("Structure expected");
+            comp->error.handler(comp->error.context, "Structure expected");
 
         Field *field = typeAssertFindField(&comp->types, *type, comp->lex.tok.name);
         lexNext(&comp->lex);
@@ -1050,7 +1050,7 @@ static void parseCallSelector(Compiler *comp, Type **type, Const *constant, bool
     }
 
     if ((*type)->kind != TYPE_FN)
-        comp->error("Function expected");
+        comp->error.handler(comp->error.context, "Function expected");
 
     parseCall(comp, type, constant);
 
@@ -1081,7 +1081,7 @@ static void parseSelectors(Compiler *comp, Type **type, Const *constant, bool *i
            comp->lex.tok.kind == TOK_PERIOD || comp->lex.tok.kind == TOK_LPAR)
     {
         if (constant)
-            comp->error("%s is not allowed for constants", lexSpelling(comp->lex.tok.kind));
+            comp->error.handler(comp->error.context, "%s is not allowed for constants", lexSpelling(comp->lex.tok.kind));
 
         switch (comp->lex.tok.kind)
         {
@@ -1207,14 +1207,14 @@ static void parseFactor(Compiler *comp, Type **type, Const *constant)
         case TOK_AND:
         {
             if (constant)
-                comp->error("Address operator is not allowed in constant expressions");
+                comp->error.handler(comp->error.context, "Address operator is not allowed in constant expressions");
 
             lexNext(&comp->lex);
 
             bool isVar, isCall;
             parseDesignator(comp, type, constant, &isVar, &isCall);
             if (!isVar)
-                comp->error("Unable to take address");
+                comp->error.handler(comp->error.context, "Unable to take address");
 
             // A value type is already a pointer, a structured type needs to have it added
             if (typeStructured(*type))
@@ -1230,7 +1230,7 @@ static void parseFactor(Compiler *comp, Type **type, Const *constant)
             break;
         }
 
-        default: comp->error("Illegal expression");
+        default: comp->error.handler(comp->error.context, "Illegal expression");
     }
 }
 

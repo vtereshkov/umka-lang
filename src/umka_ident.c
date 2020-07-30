@@ -5,7 +5,7 @@
 #include "umka_ident.h"
 
 
-void identInit(Idents *idents, ErrorFunc error)
+void identInit(Idents *idents, Error *error)
 {
     idents->first = idents->last = NULL;
     idents->tempVarNameSuffix = 0;
@@ -76,7 +76,7 @@ Ident *identAssertFind(Idents *idents, Modules *modules, Blocks *blocks, int mod
 {
     Ident *res = identFind(idents, modules, blocks, module, name, rcvType);
     if (!res)
-        idents->error("Unknown identifier %s", name);
+        idents->error->handler(idents->error->context, "Unknown identifier %s", name);
     return res;
 }
 
@@ -112,19 +112,19 @@ static Ident *identAdd(Idents *idents, Modules *modules, Blocks *blocks, IdentKi
             return ident;
         }
 
-        idents->error("Duplicate identifier %s", name);
+        idents->error->handler(idents->error->context, "Duplicate identifier %s", name);
     }
 
     if (exported && blocks->top != 0)
-        idents->error("Local identifier %s cannot be exported", name);
+        idents->error->handler(idents->error->context, "Local identifier %s cannot be exported", name);
 
     if (kind == IDENT_CONST || kind == IDENT_VAR)
     {
         if (type->kind == TYPE_FORWARD)
-            idents->error("Unresolved forward type declaration for %s", name);
+            idents->error->handler(idents->error->context, "Unresolved forward type declaration for %s", name);
 
         if (type->kind == TYPE_VOID)
-            idents->error("Void variable or constant %s is not allowed", name);
+            idents->error->handler(idents->error->context, "Void variable or constant %s is not allowed", name);
     }
 
     ident = malloc(sizeof(Ident));
@@ -202,7 +202,7 @@ int identAllocStack(Idents *idents, Blocks *blocks, int size)
             break;
         }
     if (!localVarSize)
-        idents->error("No stack frame");
+        idents->error->handler(idents->error->context, "No stack frame");
 
     (*localVarSize) += size;
     return -(*localVarSize);

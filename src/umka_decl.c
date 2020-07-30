@@ -30,7 +30,7 @@ static void parseIdentList(Compiler *comp, IdentName *names, bool *exported, int
         lexCheck(&comp->lex, TOK_IDENT);
 
         if (*num >= capacity)
-            comp->error("Too many identifiers");
+            comp->error.handler(comp->error.context, "Too many identifiers");
         strcpy(names[*num], comp->lex.tok.name);
 
         lexNext(&comp->lex);
@@ -66,7 +66,7 @@ static void parseRcvSignature(Compiler *comp, Signature *sig)
     Type *rcvType = parseType(comp, NULL);
 
     if (rcvType->kind != TYPE_PTR)
-        comp->error("Receiver should be a pointer");
+        comp->error.handler(comp->error.context, "Receiver should be a pointer");
 
     sig->method = true;
     typeAddParam(&comp->types, sig, rcvType, rcvName);
@@ -97,7 +97,7 @@ static void parseSignature(Compiler *comp, Signature *sig)
             if (comp->lex.tok.kind == TOK_EQ)
             {
                 if (numParams != 1)
-                    comp->error("Parameter list cannot have common default value");
+                    comp->error.handler(comp->error.context, "Parameter list cannot have common default value");
 
                 lexNext(&comp->lex);
 
@@ -105,7 +105,7 @@ static void parseSignature(Compiler *comp, Signature *sig)
                 parseExpr(comp, &defaultType, &defaultConstant);
 
                 if (typeStructured(defaultType))
-                    comp->error("Structured default values are not allowed");
+                    comp->error.handler(comp->error.context, "Structured default values are not allowed");
 
                 doImplicitTypeConv(comp, paramType, &defaultType, &defaultConstant, false);
                 typeAssertCompatible(&comp->types, paramType, defaultType, false);
@@ -114,13 +114,13 @@ static void parseSignature(Compiler *comp, Signature *sig)
             else
             {
                 if (numDefaultParams != 0)
-                    comp->error("Parameters with default values should be the last ones");
+                    comp->error.handler(comp->error.context, "Parameters with default values should be the last ones");
             }
 
             for (int i = 0; i < numParams; i++)
             {
                 if (paramExported[i])
-                    comp->error("Parameter %s cannot be exported", paramNames[i]);
+                    comp->error.handler(comp->error.context, "Parameter %s cannot be exported", paramNames[i]);
 
                 Param *param = typeAddParam(&comp->types, sig, paramType, paramNames[i]);
                 if (numDefaultParams > 0)
@@ -221,7 +221,7 @@ static Type *parseArrayType(Compiler *comp)
         parseExpr(comp, &indexType, &len);
         typeAssertCompatible(&comp->types, comp->intType, indexType, false);
         if (len.intVal < 0)
-            comp->error("Array length cannot be negative");
+            comp->error.handler(comp->error.context, "Array length cannot be negative");
     }
 
     lexEat(&comp->lex, TOK_RBRACKET);
@@ -249,7 +249,7 @@ static Type *parseStrType(Compiler *comp)
         parseExpr(comp, &indexType, &len);
         typeAssertCompatible(&comp->types, comp->intType, indexType, false);
         if (len.intVal < 0)
-            comp->error("String length cannot be negative");
+            comp->error.handler(comp->error.context, "String length cannot be negative");
 
         lexEat(&comp->lex, TOK_RBRACKET);
     }
@@ -287,7 +287,7 @@ static Type *parseStructType(Compiler *comp)
         {
             typeAddField(&comp->types, type, fieldType, fieldNames[i]);
             if (fieldExported[i])
-                comp->error("Field %s cannot be exported", fieldNames[i]);
+                comp->error.handler(comp->error.context, "Field %s cannot be exported", fieldNames[i]);
         }
 
         lexEat(&comp->lex, TOK_SEMICOLON);
@@ -349,7 +349,7 @@ Type *parseType(Compiler *comp, Ident *ident)
     if (ident)
     {
         if (ident->kind != IDENT_TYPE)
-            comp->error("Type expected");
+            comp->error.handler(comp->error.context, "Type expected");
         lexNext(&comp->lex);
         return ident->type;
     }
@@ -365,7 +365,7 @@ Type *parseType(Compiler *comp, Ident *ident)
         case TOK_INTERFACE: return parseInterfaceType(comp);
         case TOK_FN:        return parseFnType(comp);
 
-        default:            comp->error("Type expected"); return NULL;
+        default:            comp->error.handler(comp->error.context, "Type expected"); return NULL;
     }
 }
 
@@ -465,7 +465,7 @@ static void parseVarDeclItem(Compiler *comp)
     if (comp->lex.tok.kind == TOK_EQ)
     {
         if (numVars != 1)
-            comp->error("Unable to initialize multiple variables");
+            comp->error.handler(comp->error.context, "Unable to initialize multiple variables");
 
         Type *designatorType = typeAddPtrTo(&comp->types, &comp->blocks, var[0]->type);
 
@@ -526,7 +526,7 @@ void parseShortVarDecl(Compiler *comp)
 void parseFnDecl(Compiler *comp)
 {
     if (comp->blocks.top != 0)
-        comp->error("Nested functions are not allowed");
+        comp->error.handler(comp->error.context, "Nested functions are not allowed");
 
     lexEat(&comp->lex, TOK_FN);
     Type *fnType = typeAdd(&comp->types, &comp->blocks, TYPE_FN);
@@ -543,7 +543,7 @@ void parseFnDecl(Compiler *comp)
     {
         Field *field = typeFindField(fnType->sig.param[0]->type, name);
         if (field)
-            comp->error("Structure already has field %s", name);
+            comp->error.handler(comp->error.context, "Structure already has field %s", name);
     }
 
     lexNext(&comp->lex);
@@ -575,7 +575,7 @@ void parseDecl(Compiler *comp)
         case TOK_EOF:    if (comp->blocks.top == 0)
                              break;
 
-        default: comp->error("Declaration expected but %s found", lexSpelling(comp->lex.tok.kind)); break;
+        default: comp->error.handler(comp->error.context, "Declaration expected but %s found", lexSpelling(comp->lex.tok.kind)); break;
     }
 }
 
@@ -609,7 +609,7 @@ static void parseImportItem(Compiler *comp)
         int currentModule       = comp->blocks.module;
         DebugInfo currentDebug  = comp->debug;
         Lexer currentLex        = comp->lex;
-        lexInit(&comp->lex, &comp->storage, &comp->debug, path, comp->error);
+        lexInit(&comp->lex, &comp->storage, &comp->debug, path, &comp->error);
 
         lexNext(&comp->lex);
         importedModule = parseModule(comp);
@@ -672,5 +672,5 @@ void parseProgram(Compiler *comp)
     doResolveExtern(comp);
 
     if (!comp->gen.mainDefined)
-        comp->error("main() is not defined");
+        comp->error.handler(comp->error.context, "main() is not defined");
 }

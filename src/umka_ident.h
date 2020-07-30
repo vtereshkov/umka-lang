@@ -39,11 +39,11 @@ typedef struct
 {
     Ident *first, *last;
     int tempVarNameSuffix;
-    ErrorFunc error;
+    Error *error;
 } Idents;
 
 
-void identInit(Idents *idents, ErrorFunc error);
+void identInit(Idents *idents, Error *error);
 void identFree(Idents *idents, int startBlock /* < 0 to free in all blocks*/);
 
 Ident *identFind          (Idents *idents, Modules *modules, Blocks *blocks, int module, char *name, Type *rcvType);

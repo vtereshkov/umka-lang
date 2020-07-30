@@ -4,137 +4,148 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
-#include <setjmp.h>
+
 
 #include "umka_compiler.h"
 #include "umka_api.h"
 
 
-Compiler comp;
-UmkaError error;
-jmp_buf jumper;
-
-
-void compileError(const char *format, ...)
+void compileError(void *context, const char *format, ...)
 {
     va_list args;
     va_start(args, format);
 
-    strcpy(error.fileName, comp.lex.fileName);
-    error.line = comp.lex.line;
-    error.pos = comp.lex.pos;
-    vsprintf(error.msg, format, args);
+    Compiler *comp = context;
 
-    longjmp(jumper, 1);
+    strcpy(comp->error.fileName, comp->lex.fileName);
+    comp->error.line = comp->lex.line;
+    comp->error.pos = comp->lex.pos;
+    vsprintf(comp->error.msg, format, args);
+
+    longjmp(comp->error.jumper, 1);
     va_end(args);
 }
 
 
-void runtimeError(const char *format, ...)
+void runtimeError(void *context, const char *format, ...)
 {
     va_list args;
     va_start(args, format);
 
-    Instruction *instr = &comp.vm.fiber->code[comp.vm.fiber->ip];
+    Compiler *comp = context;
+    Instruction *instr = &comp->vm.fiber->code[comp->vm.fiber->ip];
 
-    strcpy(error.fileName, instr->debug.fileName);
-    error.line = instr->debug.line;
-    error.pos = 1;
-    vsprintf(error.msg, format, args);
+    strcpy(comp->error.fileName, instr->debug.fileName);
+    comp->error.line = instr->debug.line;
+    comp->error.pos = 1;
+    vsprintf(comp->error.msg, format, args);
 
-    longjmp(jumper, 1);
+    longjmp(comp->error.jumper, 1);
     va_end(args);
 }
 
 
 // API functions
 
-bool umkaInit(char *fileName, int storageSize, int stackSize, int argc, char **argv)
+void *umkaAlloc(void)
 {
-    if (setjmp(jumper) == 0)
+    return malloc(sizeof(Compiler));
+}
+
+
+bool umkaInit(void *umka, char *fileName, int storageSize, int stackSize, int argc, char **argv)
+{
+    Compiler *comp = umka;
+    memset(comp, 0, sizeof(Compiler));
+
+    // First set error handlers
+    comp->error.handler = compileError;
+    comp->error.handlerRuntime = runtimeError;
+    comp->error.context = comp;
+
+    if (setjmp(comp->error.jumper) == 0)
     {
-        compilerInit(&comp, fileName, storageSize, stackSize, argc, argv, compileError, runtimeError);
+        compilerInit(comp, fileName, storageSize, stackSize, argc, argv);
         return true;
     }
-    else
-    {
-        compilerFree(&comp);
-        return false;
-    }
+    return false;
 }
 
 
-bool umkaCompile(void)
+bool umkaCompile(void *umka)
 {
-    if (setjmp(jumper) == 0)
+    Compiler *comp = umka;
+
+    if (setjmp(comp->error.jumper) == 0)
     {
-        compilerCompile(&comp);
+        compilerCompile(comp);
         return true;
     }
-    else
-    {
-        compilerFree(&comp);
-        return false;
-    }
+    return false;
 }
 
 
-bool umkaRun(void)
+bool umkaRun(void *umka)
 {
-    if (setjmp(jumper) == 0)
+    Compiler *comp = umka;
+
+    if (setjmp(comp->error.jumper) == 0)
     {
-        compilerRun(&comp);
+        compilerRun(comp);
         return true;
     }
-    else
-    {
-        compilerFree(&comp);
-        return false;
-    }
+    return false;
 }
 
 
-bool umkaCall(int entryOffset, int numParamSlots, UmkaStackSlot *params, UmkaStackSlot *result)
+bool umkaCall(void *umka, int entryOffset, int numParamSlots, UmkaStackSlot *params, UmkaStackSlot *result)
 {
-    if (setjmp(jumper) == 0)
+    Compiler *comp = umka;
+
+    if (setjmp(comp->error.jumper) == 0)
     {
-        compilerCall(&comp, entryOffset, numParamSlots, (Slot *)params, (Slot *)result);
+        compilerCall(comp, entryOffset, numParamSlots, (Slot *)params, (Slot *)result);
         return true;
     }
-    else
-    {
-        compilerFree(&comp);
-        return false;
-    }
+    return false;
 }
 
 
-void umkaFree(void)
+void umkaFree(void *umka)
 {
-    compilerFree(&comp);
+    Compiler *comp = umka;
+    compilerFree(comp);
+    free(comp);
 }
 
 
-void umkaGetError(UmkaError *err)
+void umkaGetError(void *umka, UmkaError *err)
 {
-    *err = error;
+    Compiler *comp = umka;
+    strcpy(err->fileName, comp->error.fileName);
+    err->line = comp->error.line;
+    err->pos = comp->error.pos;
+    strcpy(err->msg, comp->error.msg);
 }
 
 
-void umkaAsm(char *buf)
+void umkaAsm(void *umka, char *buf)
 {
-    compilerAsm(&comp, buf);
+    Compiler *comp = umka;
+    compilerAsm(comp, buf);
 }
 
 
-void umkaAddFunc(char *name, UmkaExternFunc entry)
+void umkaAddFunc(void *umka, char *name, UmkaExternFunc entry)
 {
-    externalAdd(&comp.externals, name, entry);
+    Compiler *comp = umka;
+    externalAdd(&comp->externals, name, entry);
 }
 
 
-int umkaGetFunc(char *moduleName, char *funcName)
+int umkaGetFunc(void *umka, char *moduleName, char *funcName)
 {
-    return compilerGetFunc(&comp, moduleName, funcName);
+    Compiler *comp = umka;
+    return compilerGetFunc(comp, moduleName, funcName);
 }
 

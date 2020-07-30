@@ -30,14 +30,15 @@ typedef struct
 } UmkaError;
 
 
-bool umkaInit(char *fileName, int storageSize, int stackSize, int argc, char **argv);
-bool umkaCompile(void);
-bool umkaRun(void);
-bool umkaCall(int entryOffset, int numParamSlots, UmkaStackSlot *params, UmkaStackSlot *result);
-void umkaFree(void);
-void umkaGetError(UmkaError *err);
-void umkaAsm(char *buf);
-void umkaAddFunc(char *name, UmkaExternFunc entry);
-int  umkaGetFunc(char *moduleName, char *funcName);
+void *umkaAlloc     (void);
+bool umkaInit       (void *umka, char *fileName, int storageSize, int stackSize, int argc, char **argv);
+bool umkaCompile    (void *umka);
+bool umkaRun        (void *umka);
+bool umkaCall       (void *umka, int entryOffset, int numParamSlots, UmkaStackSlot *params, UmkaStackSlot *result);
+void umkaFree       (void *umka);
+void umkaGetError   (void *umka, UmkaError *err);
+void umkaAsm        (void *umka, char *buf);
+void umkaAddFunc    (void *umka, char *name, UmkaExternFunc entry);
+int  umkaGetFunc    (void *umka, char *moduleName, char *funcName);
 
 #endif // UMKA_API_H_INCLUDED

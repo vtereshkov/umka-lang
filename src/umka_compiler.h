@@ -24,7 +24,7 @@ typedef struct
     CodeGen     gen;
     VM          vm;
     DebugInfo   debug;
-    ErrorFunc   error;
+    Error       error;
 
     // Pointers to built-in types
     Type *voidType,
@@ -45,7 +45,7 @@ typedef struct
 } Compiler;
 
 
-void compilerInit   (Compiler *comp, char *fileName, int storageSize, int stackSize, int argc, char **argv, ErrorFunc compileError, ErrorFunc runtimeError);
+void compilerInit   (Compiler *comp, char *fileName, int storageSize, int stackSize, int argc, char **argv);
 void compilerFree   (Compiler *comp);
 void compilerCompile(Compiler *comp);
 void compilerRun    (Compiler *comp);

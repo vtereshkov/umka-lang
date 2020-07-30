@@ -170,7 +170,7 @@ static HeapPage *pageFind(HeapPages *pages, void *ptr)
 }
 
 
-static void *chunkAlloc(HeapPages *pages, int size, ErrorFunc error)
+static void *chunkAlloc(HeapPages *pages, int size, Error *error)
 {
     // Page layout: header, data, header, data...
     int chunkSize = sizeof(HeapChunkHeader) + size;
@@ -232,7 +232,7 @@ static bool typeGarbageCollectedRuntime(Type *type)
 
 // Virtual machine
 
-void vmInit(VM *vm, int stackSize, ErrorFunc error)
+void vmInit(VM *vm, int stackSize, Error *error)
 {
     vm->fiber = malloc(sizeof(Fiber));
     vm->fiber->stack = malloc(stackSize * sizeof(Slot));
@@ -267,10 +267,10 @@ static void doBasicSwap(Slot *slot)
 }
 
 
-static void doBasicDeref(Slot *slot, TypeKind typeKind, ErrorFunc error)
+static void doBasicDeref(Slot *slot, TypeKind typeKind, Error *error)
 {
     if (!slot->ptrVal)
-        error("Pointer is null");
+        error->handlerRuntime(error->context, "Pointer is null");
 
     switch (typeKind)
     {
@@ -294,15 +294,15 @@ static void doBasicDeref(Slot *slot, TypeKind typeKind, ErrorFunc error)
         case TYPE_FIBER:        break;  // Always represented by pointer, not dereferenced
         case TYPE_FN:           slot->intVal  = *(int64_t  *)slot->ptrVal; break;
 
-        default:                error("Illegal type"); return;
+        default:                error->handlerRuntime(error->context, "Illegal type"); return;
     }
 }
 
 
-static void doBasicAssign(void *lhs, Slot rhs, TypeKind typeKind, int structSize, ErrorFunc error)
+static void doBasicAssign(void *lhs, Slot rhs, TypeKind typeKind, int structSize, Error *error)
 {
     if (!lhs)
-        error("Pointer is null");
+        error->handlerRuntime(error->context, "Pointer is null");
 
     switch (typeKind)
     {
@@ -326,12 +326,12 @@ static void doBasicAssign(void *lhs, Slot rhs, TypeKind typeKind, int structSize
         case TYPE_STR:          strcpy(lhs, rhs.ptrVal); break;
         case TYPE_FN:           *(int64_t  *)lhs = rhs.intVal; break;
 
-        default:                error("Illegal type"); return;
+        default:                error->handlerRuntime(error->context, "Illegal type"); return;
     }
 }
 
 
-static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type *type, TokenKind tokKind, ErrorFunc error)
+static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type *type, TokenKind tokKind, Error *error)
 {
     // Update ref counts for pointers (including static/dynamic array items and structure/interface fields) if allocated dynamically
     // Among garbage collected types, all types except the pointer type are represented by pointers by default
@@ -461,7 +461,7 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
 }
 
 
-static void doConvertFormatStringToC(char *formatC, char **format, ErrorFunc error) // "{d}" -> "%d"
+static void doConvertFormatStringToC(char *formatC, char **format, Error *error) // "{d}" -> "%d"
 {
     bool leftBraceFound = false, rightBraceFound = false, slashFound = false;
     while (**format)
@@ -483,7 +483,7 @@ static void doConvertFormatStringToC(char *formatC, char **format, ErrorFunc err
         {
             if (!leftBraceFound)
             {
-                error("Illegal format string");
+                error->handlerRuntime(error->context, "Illegal format string");
                 return;
             }
             rightBraceFound = true;
@@ -501,13 +501,13 @@ static void doConvertFormatStringToC(char *formatC, char **format, ErrorFunc err
 
     if (leftBraceFound && !rightBraceFound)
     {
-        error("Illegal format string");
+        error->handlerRuntime(error->context, "Illegal format string");
         return;
     }
 }
 
 
-static void doBuiltinPrintf(Fiber *fiber, bool console, bool string, ErrorFunc error)
+static void doBuiltinPrintf(Fiber *fiber, bool console, bool string, Error *error)
 {
     void *stream = console ? stdout : fiber->reg[VM_REG_IO_STREAM].ptrVal;
     char *format = fiber->reg[VM_REG_IO_FORMAT].ptrVal;
@@ -542,7 +542,7 @@ static void doBuiltinPrintf(Fiber *fiber, bool console, bool string, ErrorFunc e
 }
 
 
-static void doBuiltinScanf(Fiber *fiber, bool console, bool string, ErrorFunc error)
+static void doBuiltinScanf(Fiber *fiber, bool console, bool string, Error *error)
 {
     void *stream = console ? stdin : fiber->reg[VM_REG_IO_STREAM].ptrVal;
     char *format = fiber->reg[VM_REG_IO_FORMAT].ptrVal;
@@ -574,7 +574,7 @@ static void doBuiltinScanf(Fiber *fiber, bool console, bool string, ErrorFunc er
 
 
 // fn make([...] type (actually itemSize: int), len: int): [] type
-static void doBuiltinMake(Fiber *fiber, HeapPages *pages, ErrorFunc error)
+static void doBuiltinMake(Fiber *fiber, HeapPages *pages, Error *error)
 {
     DynArray *result = (fiber->top++)->ptrVal;
     result->len      = (fiber->top++)->intVal;
@@ -586,7 +586,7 @@ static void doBuiltinMake(Fiber *fiber, HeapPages *pages, ErrorFunc error)
 
 
 // fn makefrom(array: [...] type, itemSize: int, len: int): [] type
-static void doBuiltinMakefrom(Fiber *fiber, HeapPages *pages, ErrorFunc error)
+static void doBuiltinMakefrom(Fiber *fiber, HeapPages *pages, Error *error)
 {
     doBuiltinMake(fiber, pages, error);
 
@@ -599,14 +599,14 @@ static void doBuiltinMakefrom(Fiber *fiber, HeapPages *pages, ErrorFunc error)
 
 
 // fn append(array: [] type, item: ^type): [] type
-static void doBuiltinAppend(Fiber *fiber, HeapPages *pages, ErrorFunc error)
+static void doBuiltinAppend(Fiber *fiber, HeapPages *pages, Error *error)
 {
     DynArray *result = (fiber->top++)->ptrVal;
     void *item       = (fiber->top++)->ptrVal;
     DynArray *array  = (fiber->top++)->ptrVal;
 
     if (!array || !array->data)
-        error("Dynamic array is null");
+        error->handlerRuntime(error->context, "Dynamic array is null");
 
     result->len      = array->len + 1;
     result->itemSize = array->itemSize;
@@ -620,14 +620,14 @@ static void doBuiltinAppend(Fiber *fiber, HeapPages *pages, ErrorFunc error)
 
 
 // fn delete(array: [] type, index: int): [] type
-static void doBuiltinDelete(Fiber *fiber, HeapPages *pages, ErrorFunc error)
+static void doBuiltinDelete(Fiber *fiber, HeapPages *pages, Error *error)
 {
     DynArray *result = (fiber->top++)->ptrVal;
     int index        = (fiber->top++)->intVal;
     DynArray *array  = (fiber->top++)->ptrVal;
 
     if (!array || !array->data)
-        error("Dynamic array is null");
+        error->handlerRuntime(error->context, "Dynamic array is null");
 
     result->len      = array->len - 1;
     result->itemSize = array->itemSize;
@@ -640,19 +640,19 @@ static void doBuiltinDelete(Fiber *fiber, HeapPages *pages, ErrorFunc error)
 }
 
 
-static void doBuiltinLen(Fiber *fiber, ErrorFunc error)
+static void doBuiltinLen(Fiber *fiber, Error *error)
 {
     switch (fiber->code[fiber->ip].typeKind)
     {
         // Done at compile time for arrays
         case TYPE_DYNARRAY: fiber->top->intVal = ((DynArray *)(fiber->top->ptrVal))->len; break;
         case TYPE_STR:      fiber->top->intVal = strlen(fiber->top->ptrVal); break;
-        default:            error("Illegal type"); return;
+        default:            error->handlerRuntime(error->context, "Illegal type"); return;
     }
 }
 
 
-static void doBuiltinSizeofself(Fiber *fiber, ErrorFunc error)
+static void doBuiltinSizeofself(Fiber *fiber, Error *error)
 {
     int size = 0;
 
@@ -667,7 +667,7 @@ static void doBuiltinSizeofself(Fiber *fiber, ErrorFunc error)
 
 // type FiberFunc = fn(parent: ^fiber, anyParam: ^type)
 // fn fiberspawn(childFunc: FiberFunc, anyParam: ^type): ^fiber
-static void doBuiltinFiberspawn(Fiber *fiber, HeapPages *pages, ErrorFunc error)
+static void doBuiltinFiberspawn(Fiber *fiber, HeapPages *pages, Error *error)
 {
     void *anyParam = (fiber->top++)->ptrVal;
     int childEntryOffset = (fiber->top++)->intVal;
@@ -694,23 +694,23 @@ static void doBuiltinFiberspawn(Fiber *fiber, HeapPages *pages, ErrorFunc error)
 
 
 // fn fibercall(child: ^fiber)
-static void doBuiltinFibercall(Fiber *fiber, Fiber **newFiber, HeapPages *pages, ErrorFunc error)
+static void doBuiltinFibercall(Fiber *fiber, Fiber **newFiber, HeapPages *pages, Error *error)
 {
     *newFiber = (fiber->top++)->ptrVal;
     if (!(*newFiber)->alive)
-        error("Fiber is dead");
+        error->handlerRuntime(error->context, "Fiber is dead");
 }
 
 
 // fn fiberalive(child: ^fiber)
-static void doBuiltinFiberalive(Fiber *fiber, HeapPages *pages, ErrorFunc error)
+static void doBuiltinFiberalive(Fiber *fiber, HeapPages *pages, Error *error)
 {
     Fiber *child = fiber->top->ptrVal;
     fiber->top->intVal = child->alive;
 }
 
 
-static void doPush(Fiber *fiber, ErrorFunc error)
+static void doPush(Fiber *fiber, Error *error)
 {
     (--fiber->top)->intVal = fiber->code[fiber->ip].operand.intVal;
 
@@ -721,7 +721,7 @@ static void doPush(Fiber *fiber, ErrorFunc error)
 }
 
 
-static void doPushLocalPtr(Fiber *fiber, ErrorFunc error)
+static void doPushLocalPtr(Fiber *fiber, Error *error)
 {
     // Local variable addresses are offsets (in bytes) from the stack frame base pointer
     (--fiber->top)->ptrVal = (int8_t *)fiber->base + fiber->code[fiber->ip].operand.intVal;
@@ -740,14 +740,14 @@ static void doPushReg(Fiber *fiber)
 }
 
 
-static void doPushStruct(Fiber *fiber, ErrorFunc error)
+static void doPushStruct(Fiber *fiber, Error *error)
 {
     void *src = (fiber->top++)->ptrVal;
     int size  = fiber->code[fiber->ip].operand.intVal;
     int slots = alignRuntime(size, sizeof(Slot)) / sizeof(Slot);
 
     if (fiber->top - slots - fiber->stack < VM_MIN_FREE_STACK)
-        error("Stack overflow");
+        error->handlerRuntime(error->context, "Stack overflow");
 
     fiber->top -= slots;
     memcpy(fiber->top, src, size);
@@ -785,14 +785,14 @@ static void doSwap(Fiber *fiber)
 }
 
 
-static void doDeref(Fiber *fiber, ErrorFunc error)
+static void doDeref(Fiber *fiber, Error *error)
 {
     doBasicDeref(fiber->top, fiber->code[fiber->ip].typeKind, error);
     fiber->ip++;
 }
 
 
-static void doAssign(Fiber *fiber, ErrorFunc error)
+static void doAssign(Fiber *fiber, Error *error)
 {
     if (fiber->code[fiber->ip].inlineOpcode == OP_SWAP)
         doBasicSwap(fiber->top);
@@ -805,7 +805,7 @@ static void doAssign(Fiber *fiber, ErrorFunc error)
 }
 
 
-static void doChangeRefCnt(Fiber *fiber, HeapPages *pages, ErrorFunc error)
+static void doChangeRefCnt(Fiber *fiber, HeapPages *pages, Error *error)
 {
     void *ptr         = fiber->top->ptrVal;
     TokenKind tokKind = fiber->code[fiber->ip].tokKind;
@@ -820,7 +820,7 @@ static void doChangeRefCnt(Fiber *fiber, HeapPages *pages, ErrorFunc error)
 }
 
 
-static void doChangeRefCntAssign(Fiber *fiber, HeapPages *pages, ErrorFunc error)
+static void doChangeRefCntAssign(Fiber *fiber, HeapPages *pages, Error *error)
 {
     if (fiber->code[fiber->ip].inlineOpcode == OP_SWAP)
         doBasicSwap(fiber->top);
@@ -842,13 +842,13 @@ static void doChangeRefCntAssign(Fiber *fiber, HeapPages *pages, ErrorFunc error
 }
 
 
-static void doUnary(Fiber *fiber, ErrorFunc error)
+static void doUnary(Fiber *fiber, Error *error)
 {
     if (fiber->code[fiber->ip].typeKind == TYPE_REAL || fiber->code[fiber->ip].typeKind == TYPE_REAL32)
         switch (fiber->code[fiber->ip].tokKind)
         {
             case TOK_MINUS: fiber->top->realVal = -fiber->top->realVal; break;
-            default:        error("Illegal instruction"); return;
+            default:        error->handlerRuntime(error->context, "Illegal instruction"); return;
         }
     else
         switch (fiber->code[fiber->ip].tokKind)
@@ -872,7 +872,7 @@ static void doUnary(Fiber *fiber, ErrorFunc error)
                     case TYPE_CHAR:   (*(char     *)ptr)++; break;
                     case TYPE_PTR:    (*(void *   *)ptr)++; break;
                     // Structured, boolean and real types are not incremented/decremented
-                    default:          error("Illegal type"); return;
+                    default:          error->handlerRuntime(error->context, "Illegal type"); return;
                 }
             break;
             }
@@ -892,18 +892,18 @@ static void doUnary(Fiber *fiber, ErrorFunc error)
                     case TYPE_CHAR:   (*(char     *)ptr)--; break;
                     case TYPE_PTR:    (*(void *   *)ptr)--; break;
                     // Structured, boolean and real types are not incremented/decremented
-                    default:          error("Illegal type"); return;
+                    default:          error->handlerRuntime(error->context, "Illegal type"); return;
                 }
             break;
             }
 
-            default: error("Illegal instruction"); return;
+            default: error->handlerRuntime(error->context, "Illegal instruction"); return;
         }
     fiber->ip++;
 }
 
 
-static void doBinary(Fiber *fiber, ErrorFunc error)
+static void doBinary(Fiber *fiber, Error *error)
 {
     Slot rhs = *fiber->top++;
 
@@ -927,7 +927,7 @@ static void doBinary(Fiber *fiber, ErrorFunc error)
             case TOK_GREATEREQ: fiber->top->intVal = strcmp(fiber->top->ptrVal, rhs.ptrVal) >= 0; break;
             case TOK_LESSEQ:    fiber->top->intVal = strcmp(fiber->top->ptrVal, rhs.ptrVal) <= 0; break;
 
-            default:            error("Illegal instruction"); return;
+            default:            error->handlerRuntime(error->context, "Illegal instruction"); return;
         }
     else if (fiber->code[fiber->ip].typeKind == TYPE_REAL || fiber->code[fiber->ip].typeKind == TYPE_REAL32)
         switch (fiber->code[fiber->ip].tokKind)
@@ -939,7 +939,7 @@ static void doBinary(Fiber *fiber, ErrorFunc error)
             {
                 if (rhs.realVal == 0)
                 {
-                    error("Division by zero");
+                    error->handlerRuntime(error->context, "Division by zero");
                     return;
                 }
                 fiber->top->realVal /= rhs.realVal;
@@ -953,7 +953,7 @@ static void doBinary(Fiber *fiber, ErrorFunc error)
             case TOK_GREATEREQ: fiber->top->intVal = fiber->top->realVal >= rhs.realVal; break;
             case TOK_LESSEQ:    fiber->top->intVal = fiber->top->realVal <= rhs.realVal; break;
 
-            default:            error("Illegal instruction"); return;
+            default:            error->handlerRuntime(error->context, "Illegal instruction"); return;
         }
     else
         switch (fiber->code[fiber->ip].tokKind)
@@ -965,7 +965,7 @@ static void doBinary(Fiber *fiber, ErrorFunc error)
             {
                 if (rhs.intVal == 0)
                 {
-                    error("Division by zero");
+                    error->handlerRuntime(error->context, "Division by zero");
                     return;
                 }
                 fiber->top->intVal /= rhs.intVal;
@@ -975,7 +975,7 @@ static void doBinary(Fiber *fiber, ErrorFunc error)
             {
                 if (rhs.intVal == 0)
                 {
-                    error("Division by zero");
+                    error->handlerRuntime(error->context, "Division by zero");
                     return;
                 }
                 fiber->top->intVal %= rhs.intVal;
@@ -995,23 +995,23 @@ static void doBinary(Fiber *fiber, ErrorFunc error)
             case TOK_GREATEREQ: fiber->top->intVal = fiber->top->intVal >= rhs.intVal; break;
             case TOK_LESSEQ:    fiber->top->intVal = fiber->top->intVal <= rhs.intVal; break;
 
-            default:            error("Illegal instruction"); return;
+            default:            error->handlerRuntime(error->context, "Illegal instruction"); return;
         }
     fiber->ip++;
 }
 
 
-static void doGetArrayPtr(Fiber *fiber, ErrorFunc error)
+static void doGetArrayPtr(Fiber *fiber, Error *error)
 {
     int itemSize = fiber->code[fiber->ip].operand.intVal;
     int len      = (fiber->top++)->intVal;
     int index    = (fiber->top++)->intVal;
 
     if (!fiber->top->ptrVal)
-        error("Array is null");
+        error->handlerRuntime(error->context, "Array is null");
 
     if (index < 0 || index > len - 1)
-        error("Index is out of range");
+        error->handlerRuntime(error->context, "Index is out of range");
 
     fiber->top->ptrVal += itemSize * index;
 
@@ -1022,19 +1022,19 @@ static void doGetArrayPtr(Fiber *fiber, ErrorFunc error)
 }
 
 
-static void doGetDynArrayPtr(Fiber *fiber, ErrorFunc error)
+static void doGetDynArrayPtr(Fiber *fiber, Error *error)
 {
     int index       = (fiber->top++)->intVal;
     DynArray *array = (fiber->top++)->ptrVal;
 
     if (!array || !array->data)
-        error("Dynamic array is null");
+        error->handlerRuntime(error->context, "Dynamic array is null");
 
     int itemSize    = array->itemSize;
     int len         = array->len;
 
     if (index < 0 || index > len - 1)
-        error("Index is out of range");
+        error->handlerRuntime(error->context, "Index is out of range");
 
     (--fiber->top)->ptrVal = array->data + itemSize * index;
 
@@ -1045,12 +1045,12 @@ static void doGetDynArrayPtr(Fiber *fiber, ErrorFunc error)
 }
 
 
-static void doGetFieldPtr(Fiber *fiber, ErrorFunc error)
+static void doGetFieldPtr(Fiber *fiber, Error *error)
 {
     int fieldOffset = fiber->code[fiber->ip].operand.intVal;
 
     if (!fiber->top->ptrVal)
-        error("Array or structure is null");
+        error->handlerRuntime(error->context, "Array or structure is null");
 
     fiber->top->ptrVal += fieldOffset;
 
@@ -1090,14 +1090,14 @@ static void doGotoIf(Fiber *fiber)
 }
 
 
-static void doCall(Fiber *fiber, ErrorFunc error)
+static void doCall(Fiber *fiber, Error *error)
 {
     // All calls are indirect, entry point address is below the parameters
     int paramSlots = fiber->code[fiber->ip].operand.intVal;
     int entryOffset = (fiber->top + paramSlots)->intVal;
 
     if (entryOffset == 0)
-        error("Called function is not defined");
+        error->handlerRuntime(error->context, "Called function is not defined");
 
     // Push return address and go to the entry point
     (--fiber->top)->intVal = fiber->ip + 1;
@@ -1113,7 +1113,7 @@ static void doCallExtern(Fiber *fiber)
 }
 
 
-static void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages *pages, ErrorFunc error)
+static void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages *pages, Error *error)
 {
     BuiltinFunc builtin = fiber->code[fiber->ip].operand.builtinVal;
     switch (builtin)
@@ -1136,7 +1136,7 @@ static void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages *pages, Erro
         {
             if (fiber->top->realVal < 0)
             {
-                error("sqrt() domain error");
+                error->handlerRuntime(error->context, "sqrt() domain error");
                 return;
             }
             fiber->top->realVal = sqrt(fiber->top->realVal);
@@ -1150,7 +1150,7 @@ static void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages *pages, Erro
         {
             if (fiber->top->realVal <= 0)
             {
-                error("log() domain error");
+                error->handlerRuntime(error->context, "log() domain error");
                 return;
             }
             fiber->top->realVal = sqrt(fiber->top->realVal);
@@ -1164,7 +1164,7 @@ static void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages *pages, Erro
         case BUILTIN_APPEND:        doBuiltinAppend(fiber, pages, error); break;
         case BUILTIN_DELETE:        doBuiltinDelete(fiber, pages, error); break;
         case BUILTIN_LEN:           doBuiltinLen(fiber, error); break;
-        case BUILTIN_SIZEOF:        error("Illegal instruction"); return;       // Done at compile time
+        case BUILTIN_SIZEOF:        error->handlerRuntime(error->context, "Illegal instruction"); return;       // Done at compile time
         case BUILTIN_SIZEOFSELF:    doBuiltinSizeofself(fiber, error); break;
 
         // Fibers
@@ -1173,7 +1173,7 @@ static void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages *pages, Erro
         case BUILTIN_FIBERALIVE:    doBuiltinFiberalive(fiber, pages, error); break;
 
         // Misc
-        case BUILTIN_ERROR:         error(fiber->top->ptrVal); return;
+        case BUILTIN_ERROR:         error->handlerRuntime(error->context, fiber->top->ptrVal); return;
     }
     fiber->ip++;
 }
@@ -1199,14 +1199,14 @@ static void doReturn(Fiber *fiber, Fiber **newFiber)
 }
 
 
-static void doEnterFrame(Fiber *fiber, ErrorFunc error)
+static void doEnterFrame(Fiber *fiber, Error *error)
 {
     // Push old stack frame base pointer, move new one to stack top, shift stack top by local variables' size
     int size = fiber->code[fiber->ip].operand.intVal;
     int slots = alignRuntime(size, sizeof(Slot)) / sizeof(Slot);
 
     if (fiber->top - slots - fiber->stack < VM_MIN_FREE_STACK)
-        error("Stack overflow");
+        error->handlerRuntime(error->context, "Stack overflow");
 
     (--fiber->top)->ptrVal = fiber->base;
     fiber->base = fiber->top;
@@ -1246,12 +1246,12 @@ static void vmLoop(VM *vm)
 {
     Fiber *fiber = vm->fiber;
     HeapPages *pages = &vm->pages;
-    ErrorFunc error = vm->error;
+    Error *error = vm->error;
 
     while (1)
     {
         if (fiber->top - fiber->stack < VM_MIN_FREE_STACK)
-            error("Stack overflow");
+            error->handlerRuntime(error->context, "Stack overflow");
 
         switch (fiber->code[fiber->ip].opcode)
         {
@@ -1307,7 +1307,7 @@ static void vmLoop(VM *vm)
             case OP_LEAVE_FRAME:                    doLeaveFrame(fiber);                          break;
             case OP_HALT:                           return;
 
-            default: error("Illegal instruction"); return;
+            default: error->handlerRuntime(error->context, "Illegal instruction"); return;
         } // switch
     }
 }
@@ -1316,7 +1316,7 @@ static void vmLoop(VM *vm)
 void vmRun(VM *vm, int entryOffset, int numParamSlots, Slot *params, Slot *result)
 {
     if (entryOffset < 0)
-        vm->error("Called function is not defined");
+        vm->error->handlerRuntime(vm->error->context, "Called function is not defined");
 
     // Individual function call
     if (entryOffset > 0)

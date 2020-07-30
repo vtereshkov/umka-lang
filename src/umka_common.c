@@ -22,7 +22,7 @@ void storageFree(Storage *storage)
 
 // Modules
 
-void moduleInit(Modules *modules, ErrorFunc error)
+void moduleInit(Modules *modules, Error *error)
 {
     for (int i = 0; i < MAX_MODULES; i++)
         modules->module[i] = NULL;
@@ -53,7 +53,7 @@ int moduleAssertFind(Modules *modules, char *name)
 {
     int res = moduleFind(modules, name);
     if (res < 0)
-        modules->error("Unknown module %s", name);
+        modules->error->handler(modules->error->context, "Unknown module %s", name);
     return res;
 }
 
@@ -77,7 +77,7 @@ static void moduleNameFromPath(Modules *modules, char *path, char *folder, char 
     char *stop = dot ? dot : (path + strlen(path));
 
     if (stop <= start)
-        modules->error("Illegal module path %s", path);
+        modules->error->handler(modules->error->context, "Illegal module path %s", path);
 
     strncpy(folder, path, start - path);
     strncpy(name, start, stop - start);
@@ -93,7 +93,7 @@ int moduleAdd(Modules *modules, char *path)
 
     int res = moduleFind(modules, name);
     if (res >= 0)
-        modules->error("Duplicate module %s", name);
+        modules->error->handler(modules->error->context, "Duplicate module %s", name);
 
     Module *module = malloc(sizeof(Module));
 
@@ -114,7 +114,7 @@ int moduleAdd(Modules *modules, char *path)
 
 // Blocks
 
-void blocksInit(Blocks *blocks, ErrorFunc error)
+void blocksInit(Blocks *blocks, Error *error)
 {
     blocks->numBlocks = 0;
     blocks->top = -1;
@@ -133,7 +133,7 @@ void blocksFree(Blocks *blocks)
 void blocksEnter(Blocks *blocks, struct tagIdent *fn)
 {
     if (blocks->top >= MAX_BLOCK_NESTING)
-        blocks->error("Block nesting is too deep");
+        blocks->error->handler(blocks->error->context, "Block nesting is too deep");
 
     blocks->top++;
     blocks->item[blocks->top].block = blocks->numBlocks++;
@@ -145,7 +145,7 @@ void blocksEnter(Blocks *blocks, struct tagIdent *fn)
 void blocksLeave(Blocks *blocks)
 {
     if (blocks->top <= 0)
-        blocks->error("No block to leave");
+        blocks->error->handler(blocks->error->context, "No block to leave");
     blocks->top--;
 }
 

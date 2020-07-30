@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <setjmp.h>
 
 
 enum
@@ -26,7 +27,18 @@ typedef struct
 } DynArray;
 
 
-typedef void (*ErrorFunc)(const char *format, ...);
+typedef struct
+{
+    void (*handler)(void *context, const char *format, ...);
+    void (*handlerRuntime)(void *context, const char *format, ...);
+    void *context;
+    jmp_buf jumper;
+
+    // Error report
+    char fileName[DEFAULT_STR_LEN];
+    int line, pos;
+    char msg[DEFAULT_STR_LEN];
+} Error;
 
 
 typedef struct
@@ -48,7 +60,7 @@ typedef struct
 {
     Module *module[MAX_MODULES];
     int numModules;
-    ErrorFunc error;
+    Error *error;
 } Modules;
 
 
@@ -65,7 +77,7 @@ typedef struct
     BlockStackSlot item[MAX_BLOCK_NESTING];
     int numBlocks, top;
     int module;
-    ErrorFunc error;
+    Error *error;
 } Blocks;
 
 
@@ -94,14 +106,14 @@ typedef struct
 void storageInit(Storage *storage, int capacity);
 void storageFree(Storage *storage);
 
-void moduleInit         (Modules *modules, ErrorFunc error);
+void moduleInit         (Modules *modules, Error *error);
 void moduleFree         (Modules *modules);
 int  moduleFind         (Modules *modules, char *name);
 int  moduleAssertFind   (Modules *modules, char *name);
 int  moduleFindByPath   (Modules *modules, char *path);
 int  moduleAdd          (Modules *modules, char *path);
 
-void blocksInit   (Blocks *blocks, ErrorFunc error);
+void blocksInit   (Blocks *blocks, Error *error);
 void blocksFree   (Blocks *blocks);
 void blocksEnter  (Blocks *blocks, struct tagIdent *fn);
 void blocksLeave  (Blocks *blocks);

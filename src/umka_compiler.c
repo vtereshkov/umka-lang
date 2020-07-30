@@ -113,24 +113,21 @@ static void compilerDeclareExternalFuncs(Compiler *comp)
 }
 
 
-void compilerInit(Compiler *comp, char *fileName, int storageSize, int stackSize, int argc, char **argv, ErrorFunc compileError, ErrorFunc runtimeError)
+void compilerInit(Compiler *comp, char *fileName, int storageSize, int stackSize, int argc, char **argv)
 {
-    memset(comp, 0, sizeof(Compiler));
-
     storageInit  (&comp->storage, storageSize);
-    moduleInit   (&comp->modules, compileError);
-    blocksInit   (&comp->blocks, compileError);
+    moduleInit   (&comp->modules, &comp->error);
+    blocksInit   (&comp->blocks, &comp->error);
     externalInit (&comp->externals);
-    typeInit     (&comp->types, compileError);
-    identInit    (&comp->idents, compileError);
-    constInit    (&comp->consts, compileError);
-    genInit      (&comp->gen, &comp->debug, compileError);
-    vmInit       (&comp->vm, stackSize, runtimeError);
-    lexInit      (&comp->lex, &comp->storage, &comp->debug, fileName, compileError);
+    typeInit     (&comp->types, &comp->error);
+    identInit    (&comp->idents, &comp->error);
+    constInit    (&comp->consts, &comp->error);
+    genInit      (&comp->gen, &comp->debug, &comp->error);
+    vmInit       (&comp->vm, stackSize, &comp->error);
+    lexInit      (&comp->lex, &comp->storage, &comp->debug, fileName, &comp->error);
 
     comp->argc  = argc;
     comp->argv  = argv;
-    comp->error = compileError;
 
     comp->blocks.module = moduleAdd(&comp->modules, "__universe");
 

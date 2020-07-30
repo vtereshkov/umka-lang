@@ -7,11 +7,11 @@
 
 typedef struct
 {
-    ErrorFunc error;
+    Error *error;
 } Consts;
 
 
-void constInit(Consts *consts, ErrorFunc error);
+void constInit(Consts *consts, Error *error);
 void constFree(Consts *consts);
 void constZero(void *lhs, int size);
 void constAssign(Consts *consts, void *lhs, Const *rhs, TypeKind typeKind, int size);
