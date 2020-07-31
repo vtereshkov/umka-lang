@@ -1,9 +1,9 @@
 cd src
 
-gcc -O3 -Wall -Wno-format-security -c umka_api.c umka_common.c umka_compiler.c umka_const.c umka_decl.c umka_expr.c umka_gen.c umka_ident.c umka_lexer.c umka_runtime.c umka_stmt.c umka_types.c umka_vm.c 
+gcc -O3 -Wall -Wno-format-security -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast -c umka_api.c umka_common.c umka_compiler.c umka_const.c umka_decl.c umka_expr.c umka_gen.c umka_ident.c umka_lexer.c umka_runtime.c umka_stmt.c umka_types.c umka_vm.c 
 gcc -shared -Wl,--output-def=libumka.def -Wl,--out-implib=libumka.a -Wl,--dll *.o -o libumka.dll -static-libgcc -static  
 
-gcc -O3 -Wall -Wno-format-security -c umka.c 
+gcc -O3 -Wall -c umka.c 
 gcc umka.o -o umka.exe -static-libgcc -static -L%cd% -lm -lumka 
 
 del *.o

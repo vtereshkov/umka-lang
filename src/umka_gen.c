@@ -174,7 +174,7 @@ void genPushRealConst(CodeGen *gen, double realVal)
 
 void genPushGlobalPtr(CodeGen *gen, void *ptrVal)
 {
-    const Instruction instr = {.opcode = OP_PUSH, .tokKind = TOK_NONE, .typeKind = TYPE_PTR, .operand.ptrVal = ptrVal};
+    const Instruction instr = {.opcode = OP_PUSH, .tokKind = TOK_NONE, .typeKind = TYPE_PTR, .operand.ptrVal = (int64_t)ptrVal};
     genAddInstr(gen, &instr);
 }
 
@@ -262,7 +262,7 @@ void genChangeRefCnt(CodeGen *gen, TokenKind tokKind, Type *type)
 {
     if (typeGarbageCollected(type))
     {
-        const Instruction instr = {.opcode = OP_CHANGE_REF_CNT, .tokKind = tokKind, .typeKind = TYPE_NONE, .operand.ptrVal = type};
+        const Instruction instr = {.opcode = OP_CHANGE_REF_CNT, .tokKind = tokKind, .typeKind = TYPE_NONE, .operand.ptrVal = (int64_t)type};
         genAddInstr(gen, &instr);
     }
 }
@@ -272,7 +272,7 @@ void genChangeRefCntAssign(CodeGen *gen, Type *type)
 {
     if (typeGarbageCollected(type))
     {
-        const Instruction instr = {.opcode = OP_CHANGE_REF_CNT_ASSIGN, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.ptrVal = type};
+        const Instruction instr = {.opcode = OP_CHANGE_REF_CNT_ASSIGN, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.ptrVal = (int64_t)type};
         genAddInstr(gen, &instr);
     }
     else
@@ -284,7 +284,7 @@ void genSwapChangeRefCntAssign(CodeGen *gen, Type *type)
 {
     if (typeGarbageCollected(type))
     {
-        const Instruction instr = {.opcode = OP_CHANGE_REF_CNT_ASSIGN, .inlineOpcode = OP_SWAP, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.ptrVal = type};
+        const Instruction instr = {.opcode = OP_CHANGE_REF_CNT_ASSIGN, .inlineOpcode = OP_SWAP, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.ptrVal = (int64_t)type};
         genAddInstr(gen, &instr);
     }
     else
@@ -335,7 +335,7 @@ void genGetFieldPtr(CodeGen *gen, int fieldOffset)
 
 void genAssertType(CodeGen *gen, Type *type)
 {
-    const Instruction instr = {.opcode = OP_ASSERT_TYPE, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.ptrVal = type};
+    const Instruction instr = {.opcode = OP_ASSERT_TYPE, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.ptrVal = (int64_t)type};
     genAddInstr(gen, &instr);
 }
 
@@ -363,7 +363,7 @@ void genCall(CodeGen *gen, int paramSlots)
 
 void genCallExtern(CodeGen *gen, void *entry)
 {
-    const Instruction instr = {.opcode = OP_CALL_EXTERN, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.ptrVal = entry};
+    const Instruction instr = {.opcode = OP_CALL_EXTERN, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.ptrVal = (int64_t)entry};
     genAddInstr(gen, &instr);
 }
 

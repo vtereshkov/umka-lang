@@ -7,27 +7,27 @@
 
 void rtlfopen(Slot *params, Slot *result)
 {
-    char *name = params[1].ptrVal;
-    char *mode = params[0].ptrVal;
+    char *name = (char *)params[1].ptrVal;
+    char *mode = (char *)params[0].ptrVal;
 
     FILE *file = fopen(name, mode);
-    result->ptrVal = file;
+    result->ptrVal = (int64_t)file;
 }
 
 
 void rtlfclose(Slot *params, Slot *result)
 {
-    FILE *file = params[0].ptrVal;
+    FILE *file = (FILE *)params[0].ptrVal;
     result->intVal = fclose(file);
 }
 
 
 void rtlfread(Slot *params, Slot *result)
 {
-    void *buf  = params[3].ptrVal;
+    void *buf  = (void *)params[3].ptrVal;
     int   size = params[2].intVal;
     int   cnt  = params[1].intVal;
-    FILE *file = params[0].ptrVal;
+    FILE *file = (FILE *)params[0].ptrVal;
 
     result->intVal = fread(buf, size, cnt, file);
 }
@@ -35,10 +35,10 @@ void rtlfread(Slot *params, Slot *result)
 
 void rtlfwrite(Slot *params, Slot *result)
 {
-    void *buf  = params[3].ptrVal;
+    void *buf  = (void *)params[3].ptrVal;
     int   size = params[2].intVal;
     int   cnt  = params[1].intVal;
-    FILE *file = params[0].ptrVal;
+    FILE *file = (FILE *)params[0].ptrVal;
 
     result->intVal = fwrite(buf, size, cnt, file);
 }
@@ -46,7 +46,7 @@ void rtlfwrite(Slot *params, Slot *result)
 
 void rtlfseek(Slot *params, Slot *result)
 {
-    FILE *file   = params[2].ptrVal;
+    FILE *file   = (FILE *)params[2].ptrVal;
     int   offset = params[1].intVal;
     int   origin = params[0].intVal;
 
@@ -61,7 +61,7 @@ void rtlfseek(Slot *params, Slot *result)
 
 void rtlremove(Slot *params, Slot *result)
 {
-    char *name = params[0].ptrVal;
+    char *name = (char *)params[0].ptrVal;
     result->intVal = remove(name);
 }
 
