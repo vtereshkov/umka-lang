@@ -697,8 +697,8 @@ static void doBuiltinFiberspawn(Fiber *fiber, HeapPages *pages, Error *error)
 static void doBuiltinFibercall(Fiber *fiber, Fiber **newFiber, HeapPages *pages, Error *error)
 {
     *newFiber = (Fiber *)(fiber->top++)->ptrVal;
-    if (!(*newFiber)->alive)
-        error->handlerRuntime(error->context, "Fiber is dead");
+    if (!(*newFiber) || !(*newFiber)->alive)
+        error->handlerRuntime(error->context, "Fiber is null");
 }
 
 
@@ -706,6 +706,9 @@ static void doBuiltinFibercall(Fiber *fiber, Fiber **newFiber, HeapPages *pages,
 static void doBuiltinFiberalive(Fiber *fiber, HeapPages *pages, Error *error)
 {
     Fiber *child = (Fiber *)fiber->top->ptrVal;
+    if (!child)
+        error->handlerRuntime(error->context, "Fiber is null");
+
     fiber->top->intVal = child->alive;
 }
 
