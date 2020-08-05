@@ -240,29 +240,27 @@ static Type *parseStrType(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_STR);
 
-    Const len;
-    Type *indexType;
-
+    // ["[" expr "]"]
     if (comp->lex.tok.kind == TOK_LBRACKET)
     {
         lexNext(&comp->lex);
+
+        Const len;
+        Type *indexType;
         parseExpr(comp, &indexType, &len);
         typeAssertCompatible(&comp->types, comp->intType, indexType, false);
         if (len.intVal < 0)
             comp->error.handler(comp->error.context, "String length cannot be negative");
 
         lexEat(&comp->lex, TOK_RBRACKET);
-    }
-    else    // Default string
-    {
-        len.intVal = DEFAULT_STR_LEN + 1;
-        indexType = comp->intType;
+
+        Type *type = typeAdd(&comp->types, &comp->blocks, TYPE_STR);
+        type->base = comp->charType;
+        type->numItems = len.intVal + 1;
+        return type;
     }
 
-    Type *type = typeAdd(&comp->types, &comp->blocks, TYPE_STR);
-    type->base = comp->charType;
-    type->numItems = len.intVal;
-    return type;
+    return comp->strType;
 }
 
 

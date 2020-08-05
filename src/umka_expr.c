@@ -219,21 +219,29 @@ void doImplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant,
 }
 
 
-static void doApplyStrCat(Compiler *comp, Const *constant, Const *rightConstant)
+static void doApplyStrCat(Compiler *comp, Type **type, Type **rightType, Const *constant, Const *rightConstant)
 {
+    int bufLen = 0;
     if (constant)
     {
+        bufLen = strlen(constant->ptrVal) + strlen(rightConstant->ptrVal) + 1;
         char *buf = &comp->storage.data[comp->storage.len];
-        comp->storage.len += DEFAULT_STR_LEN + 1;
+        comp->storage.len += bufLen;
+
         strcpy(buf, constant->ptrVal);
         constant->ptrVal = buf;
         constBinary(&comp->consts, constant, rightConstant, TOK_PLUS, TYPE_STR);
     }
     else
     {
-        int bufOffset = identAllocStack(&comp->idents, &comp->blocks, DEFAULT_STR_LEN + 1);
+        bufLen = (*type)->numItems + (*rightType)->numItems - 1;
+        int bufOffset = identAllocStack(&comp->idents, &comp->blocks, bufLen);
         genBinary(&comp->gen, TOK_PLUS, TYPE_STR, bufOffset);
     }
+
+    *type = typeAdd(&comp->types, &comp->blocks, TYPE_STR);
+    (*type)->base = comp->charType;
+    (*type)->numItems = bufLen;
 }
 
 
@@ -250,7 +258,7 @@ void doApplyOperator(Compiler *comp, Type **type, Type **rightType, Const *const
     if (apply)
     {
         if ((*type)->kind == TYPE_STR && op == TOK_PLUS)
-            doApplyStrCat(comp, constant, rightConstant);
+            doApplyStrCat(comp, type, rightType, constant, rightConstant);
         else
         {
             if (constant)
