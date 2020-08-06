@@ -10,7 +10,7 @@
 #include "umka_api.h"
 
 
-void compileError(void *context, const char *format, ...)
+static void compileError(void *context, const char *format, ...)
 {
     va_list args;
     va_start(args, format);
@@ -27,7 +27,7 @@ void compileError(void *context, const char *format, ...)
 }
 
 
-void runtimeError(void *context, const char *format, ...)
+static void runtimeError(void *context, const char *format, ...)
 {
     va_list args;
     va_start(args, format);
