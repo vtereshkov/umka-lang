@@ -215,7 +215,7 @@ static void chunkChangeRefCnt(HeapPages *pages, HeapPage *page, void *ptr, int d
 }
 
 
-// Static copies of some external functions that allow inlining
+// Static counterparts of some external functions that allow inlining
 
 static int alignRuntime(int size, int alignment)
 {
@@ -223,10 +223,23 @@ static int alignRuntime(int size, int alignment)
 }
 
 
-static bool typeGarbageCollectedRuntime(Type *type)
+static bool typeKindIntegerRuntime(TypeKind typeKind)
 {
-    return type->kind == TYPE_PTR    || type->kind == TYPE_ARRAY     || type->kind == TYPE_DYNARRAY ||
-           type->kind == TYPE_STRUCT || type->kind == TYPE_INTERFACE || type->kind == TYPE_FIBER;
+    return typeKind == TYPE_INT8  || typeKind == TYPE_INT16  || typeKind == TYPE_INT32  || typeKind == TYPE_INT ||
+           typeKind == TYPE_UINT8 || typeKind == TYPE_UINT16 || typeKind == TYPE_UINT32;
+}
+
+
+static bool typeKindRealRuntime(TypeKind typeKind)
+{
+    return typeKind == TYPE_REAL32 || typeKind == TYPE_REAL;
+}
+
+
+static bool typeKindGarbageCollectedRuntime(TypeKind typeKind)
+{
+    return typeKind == TYPE_PTR    || typeKind == TYPE_ARRAY     || typeKind == TYPE_DYNARRAY ||
+           typeKind == TYPE_STRUCT || typeKind == TYPE_INTERFACE || typeKind == TYPE_FIBER;
 }
 
 
@@ -350,7 +363,7 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
                 {
                     // Traverse children only before removing the last remaining ref
                     HeapChunkHeader *chunk = ptr - sizeof(HeapChunkHeader);
-                    if (chunk->refCnt == 1 && typeGarbageCollectedRuntime(type->base))
+                    if (chunk->refCnt == 1 && typeKindGarbageCollectedRuntime(type->base->kind))
                     {
                         void *data = ptr;
                         if (type->base->kind == TYPE_PTR)
@@ -366,7 +379,7 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
 
         case TYPE_ARRAY:
         {
-            if (typeGarbageCollectedRuntime(type->base))
+            if (typeKindGarbageCollectedRuntime(type->base->kind))
             {
                 void *itemPtr = ptr;
                 int itemSize = typeSizeRuntime(type->base);
@@ -396,7 +409,7 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
                 {
                     // Traverse children only before removing the last remaining ref
                     HeapChunkHeader *chunk = array->data - sizeof(HeapChunkHeader);
-                    if (chunk->refCnt == 1 && typeGarbageCollectedRuntime(type->base))
+                    if (chunk->refCnt == 1 && typeKindGarbageCollectedRuntime(type->base->kind))
                     {
                         void *itemPtr = array->data;
 
@@ -420,7 +433,7 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
         {
             for (int i = 0; i < type->numItems; i++)
             {
-                if (typeGarbageCollectedRuntime(type->field[i]->type))
+                if (typeKindGarbageCollectedRuntime(type->field[i]->type->kind))
                 {
                     void *field = ptr + type->field[i]->offset;
                     if (type->field[i]->type->kind == TYPE_PTR)
@@ -461,115 +474,197 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
 }
 
 
-static void doConvertFormatStringToC(char *formatC, char **format, Error *error) // "{d}" -> "%d"
+static void doCheckFormatString(char *format, int *formatLen, TypeKind *typeKind, Error *error)
 {
-    bool leftBraceFound = false, rightBraceFound = false, slashFound = false;
-    while (**format)
-    {
-        if (**format == '/' && !slashFound)
-        {
-            slashFound = true;
-            (*format)++;
-        }
-        else if (**format == '{' && !slashFound)
-        {
-            *formatC = '%';
-            leftBraceFound = true;
-            slashFound = false;
-            (*format)++;
-            formatC++;
-        }
-        else if (**format == '}' && !slashFound)
-        {
-            if (!leftBraceFound)
-            {
-                error->handlerRuntime(error->context, "Illegal format string");
-                return;
-            }
-            rightBraceFound = true;
-            slashFound = false;
-            (*format)++;
-            break;
-        }
-        else
-        {
-            *formatC++ = *(*format)++;
-            slashFound = false;
-        }
-    }
-    *formatC = 0;
+    enum {SIZE_SHORT_SHORT, SIZE_SHORT, SIZE_NORMAL, SIZE_LONG, SIZE_LONG_LONG} size;
+    *typeKind = TYPE_VOID;
+    int i = 0;
 
-    if (leftBraceFound && !rightBraceFound)
+    while (format[i])
     {
-        error->handlerRuntime(error->context, "Illegal format string");
-        return;
+        size = SIZE_NORMAL;
+        *typeKind = TYPE_VOID;
+
+        while (format[i] && format[i] != '%')
+            i++;
+
+        // "%" [flags] [width] ["." precision] [length] type
+        // "%"
+        if (format[i] == '%')
+        {
+            i++;
+
+            // [flags]
+            while (format[i] == '+' || format[i] == '-'  || format[i] == ' ' ||
+                   format[i] == '0' || format[i] == '\'' || format[i] == '#')
+                i++;
+
+            // [width]
+            while (format[i] >= '0' && format[i] <= '9')
+                i++;
+
+            // [.precision]
+            if (format[i] == '.')
+            {
+                i++;
+                while (format[i] >= '0' && format[i] <= '9')
+                    i++;
+            }
+
+            // [length]
+            if (format[i] == 'h')
+            {
+                size = SIZE_SHORT;
+                i++;
+
+                if (format[i] == 'h')
+                {
+                    size = SIZE_SHORT_SHORT;
+                    i++;
+                }
+            }
+            else if (format[i] == 'l')
+            {
+                size = SIZE_LONG;
+                i++;
+
+                if (format[i] == 'l')
+                {
+                    size = SIZE_LONG_LONG;
+                    i++;
+                }
+            }
+
+            // type
+            switch (format[i])
+            {
+                case '%': i++; continue;
+                case 'd':
+                case 'i':
+                {
+                    switch (size)
+                    {
+                        case SIZE_SHORT_SHORT:  *typeKind = TYPE_INT8;      break;
+                        case SIZE_SHORT:        *typeKind = TYPE_INT16;     break;
+                        case SIZE_NORMAL:
+                        case SIZE_LONG:         *typeKind = TYPE_INT32;     break;
+                        case SIZE_LONG_LONG:    *typeKind = TYPE_INT;       break;
+                    }
+                    break;
+                }
+                case 'u':
+                case 'x':
+                case 'X':
+                {
+                    switch (size)
+                    {
+                        case SIZE_SHORT_SHORT:  *typeKind = TYPE_UINT8;      break;
+                        case SIZE_SHORT:        *typeKind = TYPE_UINT16;     break;
+                        case SIZE_NORMAL:
+                        case SIZE_LONG:         *typeKind = TYPE_UINT32;     break;
+                        case SIZE_LONG_LONG:    *typeKind = TYPE_INT;        break;
+                    }
+                    break;
+                }
+                case 'f':
+                case 'F':
+                case 'e':
+                case 'E':
+                case 'g':
+                case 'G': *typeKind = (size == SIZE_NORMAL) ? TYPE_REAL32 : TYPE_REAL;      break;
+                case 's': *typeKind = TYPE_STR;                                             break;
+                case 'c': *typeKind = TYPE_CHAR;                                            break;
+
+                default : error->handlerRuntime(error->context, "Illegal type character %c in format string", format[i]);
+            }
+            i++;
+        }
+        break;
     }
+    *formatLen = i;
 }
 
 
 static void doBuiltinPrintf(Fiber *fiber, bool console, bool string, Error *error)
 {
-    void *stream = console ? stdout : (void *)fiber->reg[VM_REG_IO_STREAM].ptrVal;
-    char *format = (char *)fiber->reg[VM_REG_IO_FORMAT].ptrVal;
+    void *stream      = console ? stdout : (void *)fiber->reg[VM_REG_IO_STREAM].ptrVal;
+    char *format      = (char *)fiber->reg[VM_REG_IO_FORMAT].ptrVal;
+    TypeKind typeKind = fiber->code[fiber->ip].typeKind;
 
-    char *formatC = malloc(strlen(format) + 1);
-    doConvertFormatStringToC(formatC, &format, error);
+    int formatLen;
+    TypeKind expectedTypeKind;
+    doCheckFormatString(format, &formatLen, &expectedTypeKind, error);
 
-    // Proxy to C fprintf()/sprintf()
+    if (typeKind != expectedTypeKind && !(typeKindIntegerRuntime(typeKind) && typeKindIntegerRuntime(expectedTypeKind)) &&
+                                        !(typeKindRealRuntime(typeKind)    && typeKindRealRuntime(expectedTypeKind)))
+        error->handlerRuntime(error->context, "Incompatible types %s and %s in printf()", typeKindSpelling(expectedTypeKind), typeKindSpelling(typeKind));
+
+    char *curFormat = malloc(formatLen + 1);
+    strncpy(curFormat, format, formatLen);
+    curFormat[formatLen] = 0;
+
     int len = 0;
-    if (fiber->code[fiber->ip].typeKind == TYPE_VOID)
+    if (typeKind == TYPE_VOID)
     {
-        if (string) len = sprintf((char *)stream, formatC);
-        else        len = fprintf((FILE *)stream, formatC);
+        if (string) len = sprintf((char *)stream, curFormat);
+        else        len = fprintf((FILE *)stream, curFormat);
     }
-    else if (fiber->code[fiber->ip].typeKind == TYPE_REAL || fiber->code[fiber->ip].typeKind == TYPE_REAL32)
+    else if (typeKind == TYPE_REAL || typeKind == TYPE_REAL32)
     {
-        if (string) len = sprintf((char *)stream, formatC, fiber->top->realVal);
-        else        len = fprintf((FILE *)stream, formatC, fiber->top->realVal);
+        if (string) len = sprintf((char *)stream, curFormat, fiber->top->realVal);
+        else        len = fprintf((FILE *)stream, curFormat, fiber->top->realVal);
     }
     else
     {
-        if (string) len = sprintf((char *)stream, formatC, fiber->top->intVal);
-        else        len = fprintf((FILE *)stream, formatC, fiber->top->intVal);
+        if (string) len = sprintf((char *)stream, curFormat, fiber->top->intVal);
+        else        len = fprintf((FILE *)stream, curFormat, fiber->top->intVal);
     }
 
-    fiber->reg[VM_REG_IO_FORMAT].ptrVal = (int64_t)format;
+    fiber->reg[VM_REG_IO_FORMAT].ptrVal += formatLen;
     fiber->reg[VM_REG_IO_COUNT].intVal += len;
     if (string)
         fiber->reg[VM_REG_IO_STREAM].ptrVal += len;
 
-    free(formatC);
+    free(curFormat);
 }
 
 
 static void doBuiltinScanf(Fiber *fiber, bool console, bool string, Error *error)
 {
-    void *stream = console ? stdin : (void *)fiber->reg[VM_REG_IO_STREAM].ptrVal;
-    char *format = (char *)fiber->reg[VM_REG_IO_FORMAT].ptrVal;
+    void *stream      = console ? stdin : (void *)fiber->reg[VM_REG_IO_STREAM].ptrVal;
+    char *format      = (char *)fiber->reg[VM_REG_IO_FORMAT].ptrVal;
+    TypeKind typeKind = fiber->code[fiber->ip].typeKind;
 
-    char *formatC = malloc(strlen(format) + 2 + 1);     // + 2 for "%n"
-    doConvertFormatStringToC(formatC, &format, error);
-    strcat(formatC, "%n");
+    int formatLen;
+    TypeKind expectedTypeKind;
+    doCheckFormatString(format, &formatLen, &expectedTypeKind, error);
 
-    // Proxy to C fscanf()/sscanf()
+    if (typeKind != expectedTypeKind)
+        error->handlerRuntime(error->context, "Incompatible types %s and %s in scanf()", typeKindSpelling(expectedTypeKind), typeKindSpelling(typeKind));
+
+    char *curFormat = malloc(formatLen + 2 + 1);     // + 2 for "%n"
+    strncpy(curFormat, format, formatLen);
+    curFormat[formatLen] = 0;
+    strcat(curFormat, "%n");
+
     int len = 0, cnt = 0;
     if (fiber->code[fiber->ip].typeKind == TYPE_VOID)
     {
-        if (string) cnt = sscanf((char *)stream, formatC, &len);
-        else        cnt = fscanf((FILE *)stream, formatC, &len);
+        if (string) cnt = sscanf((char *)stream, curFormat, &len);
+        else        cnt = fscanf((FILE *)stream, curFormat, &len);
     }
     else
     {
-        if (string) cnt = sscanf((char *)stream, formatC, (void *)fiber->top->ptrVal, &len);
-        else        cnt = fscanf((FILE *)stream, formatC, (void *)fiber->top->ptrVal, &len);
+        if (string) cnt = sscanf((char *)stream, curFormat, (void *)fiber->top->ptrVal, &len);
+        else        cnt = fscanf((FILE *)stream, curFormat, (void *)fiber->top->ptrVal, &len);
     }
 
-    fiber->reg[VM_REG_IO_FORMAT].ptrVal = (int64_t)format;
+    fiber->reg[VM_REG_IO_FORMAT].ptrVal += formatLen;
     fiber->reg[VM_REG_IO_COUNT].intVal += cnt;
     if (string)
         fiber->reg[VM_REG_IO_STREAM].ptrVal += len;
 
-    free(formatC);
+    free(curFormat);
 }
 
 

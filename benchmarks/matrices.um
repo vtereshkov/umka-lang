@@ -25,7 +25,7 @@ fn main() {
         }
     }    
     
-    printf("elapsed: {d}\n", std.time() - start)
+    printf("elapsed: %d\n", std.time() - start)
     
     // Check result
     check := 0.0
@@ -33,5 +33,5 @@ fn main() {
         for j := 0; j < size; j++ {check += c[i][j]}
     }
 
-    printf("check: {lf}\n", check / size / size)
+    printf("check: %lf\n", check / size / size)
 }

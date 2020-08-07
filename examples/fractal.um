@@ -38,7 +38,7 @@ fn main() {
           }
         }
 
-        printf("{c}", pixel)
+        printf("%c", pixel)
       }
 
       printf("\n")

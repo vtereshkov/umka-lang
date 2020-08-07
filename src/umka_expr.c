@@ -326,21 +326,15 @@ static void parseBuiltinIOCall(Compiler *comp, Type **type, Const *constant, Bui
 
         if (builtin == BUILTIN_PRINTF || builtin == BUILTIN_FPRINTF || builtin == BUILTIN_SPRINTF)
         {
-            if (typeOrdinal(*type))
-                genCallBuiltin(&comp->gen, TYPE_INT, builtin);
-            else if (typeReal(*type))
-                genCallBuiltin(&comp->gen, TYPE_REAL, builtin);
-            else if ((*type)->kind == TYPE_STR)
-                genCallBuiltin(&comp->gen, TYPE_STR, builtin);
+            if (typeOrdinal(*type) || typeReal(*type) || (*type)->kind == TYPE_STR)
+                genCallBuiltin(&comp->gen, (*type)->kind, builtin);
             else
                 comp->error.handler(comp->error.context, "Incompatible type in printf()");
         }
         else  // BUILTIN_SCANF, BUILTIN_FSCANF
         {
-            if ((*type)->kind == TYPE_PTR && (typeOrdinal((*type)->base) || typeReal((*type)->base)))
+            if ((*type)->kind == TYPE_PTR && (typeOrdinal((*type)->base) || typeReal((*type)->base) || (*type)->base->kind == TYPE_STR))
                 genCallBuiltin(&comp->gen, (*type)->base->kind, builtin);
-            else if ((*type)->base->kind == TYPE_STR)
-                genCallBuiltin(&comp->gen, TYPE_STR, builtin);
             else
                 comp->error.handler(comp->error.context, "Incompatible type in scanf()");
         }

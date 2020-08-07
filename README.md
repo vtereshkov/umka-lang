@@ -108,7 +108,7 @@ error
 #### Methods
 ```
 fn (a: ^Arr) print(): int {
-    printf("Arr: {8.3lf} {8.3lf} {8.3lf}\n", a[0], a[1], a[2])
+    printf("Arr: %8.3lf %8.3lf %8.3lf\n", a[0], a[1], a[2])
     return 0
 }
 ```

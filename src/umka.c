@@ -110,7 +110,7 @@ int main(int argc, char **argv)
         {
             UmkaError error;
             umkaGetError(umka, &error);
-            printf("Runtime error %s (%d): %s\n", error.fileName, error.line, error.msg);
+            printf("\nRuntime error %s (%d): %s\n", error.fileName, error.line, error.msg);
         }
     }
     else

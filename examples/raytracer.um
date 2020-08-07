@@ -189,7 +189,7 @@ fn render(parent: ^fiber, buf: ^RenderData) {
             
             buf.pixels[i][j] = [3]uint8 {round(color[0]), round(color[1]), round(color[2])}
         }
-        printf("{3d}//{3d}\n", i + 1, height)
+        printf("%3d/%3d\n", i + 1, height)
         fibercall(parent)
     }
 }
@@ -244,8 +244,8 @@ fn main() {
 
     var rays, fibers: int
     printf("Raytracer demo\n")
-    printf("Rays per pixel (recommended 1 to 20): ");  scanf("{d}", &rays)
-    printf("Threads (recommended 1, 2, 4, 8, 16): ");  scanf("{d}", &fibers)
+    printf("Rays per pixel (recommended 1 to 20): ");  scanf("%lld", &rays)
+    printf("Threads (recommended 1, 2, 4, 8, 16): ");  scanf("%lld", &fibers)
     
     // Define fibers
     renderer := make([]^fiber, fibers)
@@ -283,12 +283,12 @@ fn main() {
     }    
         
     endTime := std.time()    
-    printf("Rendering time = {d} s\n", endTime - startTime)
+    printf("Rendering time = %d s\n", endTime - startTime)
     
     // Write output file
     const fileName = "scene.ppm"
     f := std.fopen(fileName, "wb")
-    fprintf(f, "P6\n{d} {d}\n255\n", width, height)
+    fprintf(f, "P6\n%d %d\n255\n", width, height)
     std.fwrite(f, &pixels)
     std.fclose(f)
     std.println("Done. See " + fileName)

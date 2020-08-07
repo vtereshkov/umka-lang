@@ -31,7 +31,7 @@ fn main() {
     
     for i := 0; i < len(b); i++ {        
         if p := ^str(b[i]); p != null {
-            printf("{s}\n", p^)
+            printf("%s\n", p^)
         }
     }    
 }

@@ -131,11 +131,11 @@ fn main() {
       
       var bodies: []Body = [5]Body{sun, jupiter, saturn, uranus, neptune}
       system := NewSystem(&bodies)
-      printf("{.9f}\n", energy(&system))
+      printf("%.9f\n", energy(&system))
       for i := 0; i < iter; i++ {
          advance(&system, 0.01)
       }
-      printf("{.9f}\n", energy(&system))
+      printf("%.9f\n", energy(&system))
    }   
 }
 
