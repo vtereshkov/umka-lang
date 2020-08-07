@@ -36,7 +36,7 @@ typedef enum
 typedef union
 {
     int64_t intVal;
-    void *ptrVal;
+    int64_t ptrVal;
     double realVal;
 } Const;
 

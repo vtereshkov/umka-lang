@@ -224,12 +224,12 @@ static void doApplyStrCat(Compiler *comp, Type **type, Type **rightType, Const *
     int bufLen = 0;
     if (constant)
     {
-        bufLen = strlen(constant->ptrVal) + strlen(rightConstant->ptrVal) + 1;
+        bufLen = strlen((char *)constant->ptrVal) + strlen((char *)rightConstant->ptrVal) + 1;
         char *buf = &comp->storage.data[comp->storage.len];
         comp->storage.len += bufLen;
 
-        strcpy(buf, constant->ptrVal);
-        constant->ptrVal = buf;
+        strcpy(buf, (char *)constant->ptrVal);
+        constant->ptrVal = (int64_t)buf;
         constBinary(&comp->consts, constant, rightConstant, TOK_PLUS, TYPE_STR);
     }
     else
@@ -829,7 +829,7 @@ static void parseCompositeLiteral(Compiler *comp, Type **type, Const *constant)
     int bufOffset = 0;
     if (constant)
     {
-        constant->ptrVal = &comp->storage.data[comp->storage.len];
+        constant->ptrVal = (int64_t)&comp->storage.data[comp->storage.len];
         comp->storage.len += typeSize(&comp->types, *type);
     }
     else
@@ -875,7 +875,7 @@ static void parseCompositeLiteral(Compiler *comp, Type **type, Const *constant)
             typeAssertCompatible(&comp->types, expectedItemType, itemType, false);
 
             if (constant)
-                constAssign(&comp->consts, constant->ptrVal + itemOffset, itemConstant, expectedItemType->kind, itemSize);
+                constAssign(&comp->consts, (void *)(constant->ptrVal + itemOffset), itemConstant, expectedItemType->kind, itemSize);
             else
                 // Assignment to an anonymous stack area does not require updating reference counts
                 genAssign(&comp->gen, expectedItemType->kind, itemSize);
@@ -1177,7 +1177,7 @@ static void parseFactor(Compiler *comp, Type **type, Const *constant)
         case TOK_STRLITERAL:
         {
             if (constant)
-                constant->ptrVal = comp->lex.tok.strVal;
+                constant->ptrVal = (int64_t)comp->lex.tok.strVal;
             else
                 genPushGlobalPtr(&comp->gen, comp->lex.tok.strVal);
             lexNext(&comp->lex);

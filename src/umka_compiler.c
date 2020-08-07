@@ -41,7 +41,7 @@ static void compilerDeclareBuiltinIdents(Compiler *comp)
     // Constants
     Const trueConst  = {.intVal = true};
     Const falseConst = {.intVal = false};
-    Const nullConst  = {.ptrVal = NULL};
+    Const nullConst  = {.ptrVal = 0};
 
     identAddConst(&comp->idents, &comp->modules, &comp->blocks, "true",  comp->boolType,    true, trueConst);
     identAddConst(&comp->idents, &comp->modules, &comp->blocks, "false", comp->boolType,    true, falseConst);

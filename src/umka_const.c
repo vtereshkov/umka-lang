@@ -25,23 +25,23 @@ void constAssign(Consts *consts, void *lhs, Const *rhs, TypeKind typeKind, int s
 {
     switch (typeKind)
     {
-        case TYPE_INT8:         *(int8_t   *)lhs = rhs->intVal; break;
-        case TYPE_INT16:        *(int16_t  *)lhs = rhs->intVal; break;
-        case TYPE_INT32:        *(int32_t  *)lhs = rhs->intVal; break;
-        case TYPE_INT:          *(int64_t  *)lhs = rhs->intVal; break;
-        case TYPE_UINT8:        *(uint8_t  *)lhs = rhs->intVal; break;
-        case TYPE_UINT16:       *(uint16_t *)lhs = rhs->intVal; break;
-        case TYPE_UINT32:       *(uint32_t *)lhs = rhs->intVal; break;
-        case TYPE_BOOL:         *(bool     *)lhs = rhs->intVal; break;
-        case TYPE_CHAR:         *(char     *)lhs = rhs->intVal; break;
-        case TYPE_REAL32:       *(float    *)lhs = rhs->realVal; break;
-        case TYPE_REAL:         *(double   *)lhs = rhs->realVal; break;
-        case TYPE_PTR:          *(void *   *)lhs = rhs->ptrVal; break;
-        case TYPE_ARRAY:        memcpy(lhs, rhs->ptrVal, size); break;
-        case TYPE_STR:          strcpy(lhs, rhs->ptrVal); break;
-        case TYPE_STRUCT:       memcpy(lhs, rhs->ptrVal, size); break;
-        case TYPE_INTERFACE:    memcpy(lhs, rhs->ptrVal, size); break;
-        case TYPE_FN:           *(int64_t  *)lhs = rhs->intVal; break;
+        case TYPE_INT8:         *(int8_t   *)lhs = rhs->intVal;         break;
+        case TYPE_INT16:        *(int16_t  *)lhs = rhs->intVal;         break;
+        case TYPE_INT32:        *(int32_t  *)lhs = rhs->intVal;         break;
+        case TYPE_INT:          *(int64_t  *)lhs = rhs->intVal;         break;
+        case TYPE_UINT8:        *(uint8_t  *)lhs = rhs->intVal;         break;
+        case TYPE_UINT16:       *(uint16_t *)lhs = rhs->intVal;         break;
+        case TYPE_UINT32:       *(uint32_t *)lhs = rhs->intVal;         break;
+        case TYPE_BOOL:         *(bool     *)lhs = rhs->intVal;         break;
+        case TYPE_CHAR:         *(char     *)lhs = rhs->intVal;         break;
+        case TYPE_REAL32:       *(float    *)lhs = rhs->realVal;        break;
+        case TYPE_REAL:         *(double   *)lhs = rhs->realVal;        break;
+        case TYPE_PTR:          *(void *   *)lhs = (void *)rhs->ptrVal; break;
+        case TYPE_ARRAY:        memcpy(lhs, (void *)rhs->ptrVal, size); break;
+        case TYPE_STR:          strcpy(lhs, (char *)rhs->ptrVal);       break;
+        case TYPE_STRUCT:       memcpy(lhs, (void *)rhs->ptrVal, size); break;
+        case TYPE_INTERFACE:    memcpy(lhs, (void *)rhs->ptrVal, size); break;
+        case TYPE_FN:           *(int64_t  *)lhs = rhs->intVal;         break;
 
         default:          consts->error->handler(consts->error->context, "Illegal type"); return;
     }
@@ -72,14 +72,14 @@ void constBinary(Consts *consts, Const *lhs, const Const *rhs, TokenKind tokKind
     if (typeKind == TYPE_STR)
         switch (tokKind)
         {
-            case TOK_PLUS:      strcat(lhs->ptrVal, rhs->ptrVal); break;
+            case TOK_PLUS:      strcat((char *)lhs->ptrVal, (char *)rhs->ptrVal); break;
 
-            case TOK_EQEQ:      lhs->intVal = strcmp(lhs->ptrVal, rhs->ptrVal) == 0; break;
-            case TOK_NOTEQ:     lhs->intVal = strcmp(lhs->ptrVal, rhs->ptrVal) != 0; break;
-            case TOK_GREATER:   lhs->intVal = strcmp(lhs->ptrVal, rhs->ptrVal) >  0; break;
-            case TOK_LESS:      lhs->intVal = strcmp(lhs->ptrVal, rhs->ptrVal) <  0; break;
-            case TOK_GREATEREQ: lhs->intVal = strcmp(lhs->ptrVal, rhs->ptrVal) >= 0; break;
-            case TOK_LESSEQ:    lhs->intVal = strcmp(lhs->ptrVal, rhs->ptrVal) <= 0; break;
+            case TOK_EQEQ:      lhs->intVal = strcmp((char *)lhs->ptrVal, (char *)rhs->ptrVal) == 0; break;
+            case TOK_NOTEQ:     lhs->intVal = strcmp((char *)lhs->ptrVal, (char *)rhs->ptrVal) != 0; break;
+            case TOK_GREATER:   lhs->intVal = strcmp((char *)lhs->ptrVal, (char *)rhs->ptrVal) >  0; break;
+            case TOK_LESS:      lhs->intVal = strcmp((char *)lhs->ptrVal, (char *)rhs->ptrVal) <  0; break;
+            case TOK_GREATEREQ: lhs->intVal = strcmp((char *)lhs->ptrVal, (char *)rhs->ptrVal) >= 0; break;
+            case TOK_LESSEQ:    lhs->intVal = strcmp((char *)lhs->ptrVal, (char *)rhs->ptrVal) <= 0; break;
 
             default:            consts->error->handler(consts->error->context, "Illegal operator");
         }
@@ -172,7 +172,7 @@ void constCallBuiltin(Consts *consts, Const *arg, BuiltinFunc builtinVal)
             arg->realVal = sqrt(arg->realVal);
             break;
         }
-        case BUILTIN_LEN:       arg->intVal  = strlen(arg->ptrVal); break;
+        case BUILTIN_LEN:       arg->intVal  = strlen((char *)arg->ptrVal); break;
 
         default: consts->error->handler(consts->error->context, "Illegal function");
     }

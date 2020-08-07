@@ -28,7 +28,7 @@ typedef struct tagIdent
     {
         BuiltinFunc builtin;            // For built-in functions
         void *ptr;                      // For global variables
-        int offset;                     // For functions (code offset) or local variables (stack offset)
+        int64_t offset;                 // For functions (code offset) or local variables (stack offset)
         Const constant;                 // For constants
     };
     struct tagIdent *next;
