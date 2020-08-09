@@ -161,9 +161,9 @@ int typeSizeRuntime(Type *type)
         case TYPE_CHAR:     return sizeof(char);
         case TYPE_REAL32:   return sizeof(float);
         case TYPE_REAL:     return sizeof(double);
-        case TYPE_PTR:      return sizeof(void *);
-        case TYPE_ARRAY:
-        case TYPE_STR:      return type->numItems * typeSizeRuntime(type->base);
+        case TYPE_PTR:
+        case TYPE_STR:      return sizeof(void *);
+        case TYPE_ARRAY:    return type->numItems * typeSizeRuntime(type->base);
         case TYPE_DYNARRAY: return sizeof(DynArray);
         case TYPE_STRUCT:
         case TYPE_INTERFACE:
@@ -219,14 +219,14 @@ bool typeReal(Type *type)
 
 bool typeStructured(Type *type)
 {
-    return type->kind == TYPE_ARRAY  || type->kind == TYPE_DYNARRAY  || type->kind == TYPE_STR  ||
+    return type->kind == TYPE_ARRAY  || type->kind == TYPE_DYNARRAY  ||
            type->kind == TYPE_STRUCT || type->kind == TYPE_INTERFACE || type->kind == TYPE_FIBER;
 }
 
 
 bool typeGarbageCollected(Type *type)
 {
-    if (type->kind == TYPE_PTR || type->kind == TYPE_DYNARRAY || type->kind == TYPE_INTERFACE || type->kind == TYPE_FIBER)
+    if (type->kind == TYPE_PTR || type->kind == TYPE_STR || type->kind == TYPE_DYNARRAY || type->kind == TYPE_INTERFACE || type->kind == TYPE_FIBER)
         return true;
 
     if (type->kind == TYPE_ARRAY)
@@ -238,6 +238,12 @@ bool typeGarbageCollected(Type *type)
                 return true;
 
     return false;
+}
+
+
+bool typeCharArrayPtr(Type *type)
+{
+    return type->kind == TYPE_PTR && type->base->kind == TYPE_ARRAY && type->base->base->kind == TYPE_CHAR;
 }
 
 
@@ -283,13 +289,7 @@ bool typeEquivalent(Type *left, Type *right)
 
         // Strings
         else if (left->kind == TYPE_STR)
-        {
-            // Number of elements
-            if (left->numItems != right->numItems)
-                return false;
-
             return true;
-        }
 
         // Structures or interfaces
         else if (left->kind == TYPE_STRUCT || left->kind == TYPE_INTERFACE)
@@ -387,17 +387,9 @@ bool typeCompatible(Type *left, Type *right, bool symmetric)
     if (typeReal(left) && typeReal(right))
         return true;
 
-    // Strings
-    if (left->kind == TYPE_STR && right->kind == TYPE_STR)
-        return true;
-
     // Pointers
     if (left->kind == TYPE_PTR && right->kind == TYPE_PTR)
     {
-        // All pointers to strings are compatible
-        if (left->base->kind == TYPE_STR && right->base->kind == TYPE_STR)
-            return true;
-
         // Any pointer can be assigned to an untyped pointer
         if (left->base->kind == TYPE_VOID)
             return true;

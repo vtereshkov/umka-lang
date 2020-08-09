@@ -221,10 +221,11 @@ void doImplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant,
 
 static void doApplyStrCat(Compiler *comp, Type **type, Type **rightType, Const *constant, Const *rightConstant)
 {
-    int bufLen = 0;
+    *type = typeAdd(&comp->types, &comp->blocks, TYPE_STR);
+
     if (constant)
     {
-        bufLen = strlen((char *)constant->ptrVal) + strlen((char *)rightConstant->ptrVal) + 1;
+        int bufLen = strlen((char *)constant->ptrVal) + strlen((char *)rightConstant->ptrVal) + 1;
         char *buf = &comp->storage.data[comp->storage.len];
         comp->storage.len += bufLen;
 
@@ -234,14 +235,9 @@ static void doApplyStrCat(Compiler *comp, Type **type, Type **rightType, Const *
     }
     else
     {
-        bufLen = (*type)->numItems + (*rightType)->numItems - 1;
-        int bufOffset = identAllocStack(&comp->idents, &comp->blocks, bufLen);
-        genBinary(&comp->gen, TOK_PLUS, TYPE_STR, bufOffset);
+        genBinary(&comp->gen, TOK_PLUS, TYPE_STR, 0);
+        doCopyResultToTempVar(comp, *type);
     }
-
-    *type = typeAdd(&comp->types, &comp->blocks, TYPE_STR);
-    (*type)->base = comp->charType;
-    (*type)->numItems = bufLen;
 }
 
 
@@ -331,10 +327,15 @@ static void parseBuiltinIOCall(Compiler *comp, Type **type, Const *constant, Bui
             else
                 comp->error.handler(comp->error.context, "Incompatible type in printf()");
         }
-        else  // BUILTIN_SCANF, BUILTIN_FSCANF
+        else  // BUILTIN_SCANF, BUILTIN_FSCANF, BUILTIN_SSCANF
         {
             if ((*type)->kind == TYPE_PTR && (typeOrdinal((*type)->base) || typeReal((*type)->base) || (*type)->base->kind == TYPE_STR))
+            {
+                if ((*type)->base->kind == TYPE_STR)
+                    genDeref(&comp->gen, TYPE_STR);
+
                 genCallBuiltin(&comp->gen, (*type)->base->kind, builtin);
+            }
             else
                 comp->error.handler(comp->error.context, "Incompatible type in scanf()");
         }
@@ -807,9 +808,11 @@ static void parseTypeCast(Compiler *comp, Type **type, Const *constant)
     parseExpr(comp, &originalType, constant);
     doImplicitTypeConv(comp, *type, &originalType, constant, false);
 
-    if (!typeEquivalent(*type, originalType) &&
-        !(typeCastable(*type) && typeCastable(originalType)) &&
-        !((*type)->kind == TYPE_PTR && originalType->kind == TYPE_PTR))
+    if (!typeEquivalent(*type, originalType)                           &&
+        !(typeCastable(*type)       && typeCastable(originalType))     &&
+        !((*type)->kind == TYPE_PTR && originalType->kind == TYPE_PTR) &&
+        !(typeCharArrayPtr(*type)   && originalType->kind == TYPE_STR) &&
+        !((*type)->kind == TYPE_STR && typeCharArrayPtr(originalType)))
         comp->error.handler(comp->error.context, "Invalid type cast");
 
     lexEat(&comp->lex, TOK_RPAR);
@@ -944,6 +947,10 @@ static void parseIndexSelector(Compiler *comp, Type **type, Const *constant, boo
         *type = (*type)->base;
     }
 
+    // Explicit dereferencing for a string, since it is just a pointer, not a structured type
+    if ((*type)->kind == TYPE_PTR && (*type)->base->kind == TYPE_STR)
+        genDeref(&comp->gen, TYPE_STR);
+
     if ((*type)->kind == TYPE_PTR &&
        ((*type)->base->kind == TYPE_ARRAY || (*type)->base->kind == TYPE_DYNARRAY || (*type)->base->kind == TYPE_STR))
         *type = (*type)->base;
@@ -959,17 +966,27 @@ static void parseIndexSelector(Compiler *comp, Type **type, Const *constant, boo
     lexEat(&comp->lex, TOK_RBRACKET);
 
     if ((*type)->kind == TYPE_DYNARRAY)
-        genGetDynArrayPtr(&comp->gen);
-    else
     {
-        genPushIntConst(&comp->gen, (*type)->numItems);                     // Length (for range checking)
+        genGetDynArrayPtr(&comp->gen);
+    }
+    else if ((*type)->kind == TYPE_STR)
+    {
+        genPushIntConst(&comp->gen, -1);                     // Use actual length for range checking
+        genGetArrayPtr(&comp->gen, typeSize(&comp->types, comp->charType));
+    }
+    else // TYPE_ARRAY
+    {
+        genPushIntConst(&comp->gen, (*type)->numItems);      // Use nominal length for range checking
         genGetArrayPtr(&comp->gen, typeSize(&comp->types, (*type)->base));
     }
 
-    if (typeStructured((*type)->base))
+    if ((*type)->kind == TYPE_STR)
+        *type = typeAddPtrTo(&comp->types, &comp->blocks, comp->charType);
+    else if (typeStructured((*type)->base))
         *type = (*type)->base;
     else
         *type = typeAddPtrTo(&comp->types, &comp->blocks, (*type)->base);
+
     *isVar = true;
     *isCall = false;
 }
@@ -1120,6 +1137,7 @@ static void parseFactor(Compiler *comp, Type **type, Const *constant)
         case TOK_CARET:
         case TOK_WEAK:
         case TOK_LBRACKET:
+        case TOK_STR:
         case TOK_STRUCT:
         case TOK_INTERFACE:
         {
@@ -1183,8 +1201,6 @@ static void parseFactor(Compiler *comp, Type **type, Const *constant)
             lexNext(&comp->lex);
 
             *type = typeAdd(&comp->types, &comp->blocks, TYPE_STR);
-            (*type)->base = comp->charType;
-            (*type)->numItems = strlen(comp->lex.tok.strVal) + 1;
             break;
         }
 

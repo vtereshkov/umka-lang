@@ -238,7 +238,7 @@ static bool typeKindRealRuntime(TypeKind typeKind)
 
 static bool typeKindGarbageCollectedRuntime(TypeKind typeKind)
 {
-    return typeKind == TYPE_PTR    || typeKind == TYPE_ARRAY     || typeKind == TYPE_DYNARRAY ||
+    return typeKind == TYPE_PTR    || typeKind == TYPE_STR       || typeKind == TYPE_ARRAY  || typeKind == TYPE_DYNARRAY ||
            typeKind == TYPE_STRUCT || typeKind == TYPE_INTERFACE || typeKind == TYPE_FIBER;
 }
 
@@ -298,10 +298,10 @@ static void doBasicDeref(Slot *slot, TypeKind typeKind, Error *error)
         case TYPE_CHAR:         slot->intVal  = *(char     *)slot->ptrVal; break;
         case TYPE_REAL32:       slot->realVal = *(float    *)slot->ptrVal; break;
         case TYPE_REAL:         slot->realVal = *(double   *)slot->ptrVal; break;
-        case TYPE_PTR:          slot->ptrVal  = (int64_t)(*(void *   *)slot->ptrVal); break;
+        case TYPE_PTR:
+        case TYPE_STR:          slot->ptrVal  = (int64_t)(*(void *   *)slot->ptrVal); break;
         case TYPE_ARRAY:
         case TYPE_DYNARRAY:
-        case TYPE_STR:
         case TYPE_STRUCT:
         case TYPE_INTERFACE:
         case TYPE_FIBER:        break;  // Always represented by pointer, not dereferenced
@@ -330,13 +330,13 @@ static void doBasicAssign(void *lhs, Slot rhs, TypeKind typeKind, int structSize
         case TYPE_CHAR:         *(char     *)lhs = rhs.intVal; break;
         case TYPE_REAL32:       *(float    *)lhs = rhs.realVal; break;
         case TYPE_REAL:         *(double   *)lhs = rhs.realVal; break;
-        case TYPE_PTR:          *(void *   *)lhs = (void *)rhs.ptrVal; break;
+        case TYPE_PTR:
+        case TYPE_STR:          *(void *   *)lhs = (void *)rhs.ptrVal; break;
         case TYPE_ARRAY:
         case TYPE_DYNARRAY:
         case TYPE_STRUCT:
         case TYPE_INTERFACE:
         case TYPE_FIBER:        memcpy(lhs, (void *)rhs.ptrVal, structSize); break;
-        case TYPE_STR:          strcpy(lhs, (void *)rhs.ptrVal); break;
         case TYPE_FN:           *(int64_t  *)lhs = rhs.intVal; break;
 
         default:                error->handlerRuntime(error->context, "Illegal type"); return;
@@ -347,7 +347,7 @@ static void doBasicAssign(void *lhs, Slot rhs, TypeKind typeKind, int structSize
 static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type *type, TokenKind tokKind, Error *error)
 {
     // Update ref counts for pointers (including static/dynamic array items and structure/interface fields) if allocated dynamically
-    // Among garbage collected types, all types except the pointer type are represented by pointers by default
+    // Among garbage collected types, all types except the pointer and string types are represented by pointers by default
     // RTTI is required for lists, trees, etc., since the propagation depth for the root ref count is unknown at compile time
 
     switch (type->kind)
@@ -374,6 +374,14 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
                     chunkChangeRefCnt(pages, page, ptr, -1);
                 }
             }
+            break;
+        }
+
+        case TYPE_STR:
+        {
+            HeapPage *page = pageFind(pages, ptr);
+            if (page)
+                chunkChangeRefCnt(pages, page, ptr, (tokKind == TOK_PLUSPLUS) ? 1 : -1);
             break;
         }
 
@@ -591,6 +599,12 @@ static void doBuiltinPrintf(Fiber *fiber, bool console, bool string, Error *erro
     char *format      = (char *)fiber->reg[VM_REG_IO_FORMAT].ptrVal;
     TypeKind typeKind = fiber->code[fiber->ip].typeKind;
 
+    if (!stream)
+        error->handlerRuntime(error->context, "printf() destination is null");
+
+    if (!format)
+        error->handlerRuntime(error->context, "printf() format string is null");
+
     int formatLen;
     TypeKind expectedTypeKind;
     doCheckFormatString(format, &formatLen, &expectedTypeKind, error);
@@ -635,6 +649,12 @@ static void doBuiltinScanf(Fiber *fiber, bool console, bool string, Error *error
     char *format      = (char *)fiber->reg[VM_REG_IO_FORMAT].ptrVal;
     TypeKind typeKind = fiber->code[fiber->ip].typeKind;
 
+    if (!stream)
+        error->handlerRuntime(error->context, "scanf() source is null");
+
+    if (!format)
+        error->handlerRuntime(error->context, "scanf() format string is null");
+
     int formatLen;
     TypeKind expectedTypeKind;
     doCheckFormatString(format, &formatLen, &expectedTypeKind, error);
@@ -648,13 +668,16 @@ static void doBuiltinScanf(Fiber *fiber, bool console, bool string, Error *error
     strcat(curFormat, "%n");
 
     int len = 0, cnt = 0;
-    if (fiber->code[fiber->ip].typeKind == TYPE_VOID)
+    if (typeKind == TYPE_VOID)
     {
         if (string) cnt = sscanf((char *)stream, curFormat, &len);
         else        cnt = fscanf((FILE *)stream, curFormat, &len);
     }
     else
     {
+        if (!fiber->top->ptrVal)
+            error->handlerRuntime(error->context, "scanf() destination is null");
+
         if (string) cnt = sscanf((char *)stream, curFormat, (void *)fiber->top->ptrVal, &len);
         else        cnt = fscanf((FILE *)stream, curFormat, (void *)fiber->top->ptrVal, &len);
     }
@@ -737,6 +760,9 @@ static void doBuiltinDelete(Fiber *fiber, HeapPages *pages, Error *error)
 
 static void doBuiltinLen(Fiber *fiber, Error *error)
 {
+    if (!fiber->top->ptrVal)
+        error->handlerRuntime(error->context, "Dynamic array or string is null");
+
     switch (fiber->code[fiber->ip].typeKind)
     {
         // Done at compile time for arrays
@@ -1001,17 +1027,20 @@ static void doUnary(Fiber *fiber, Error *error)
 }
 
 
-static void doBinary(Fiber *fiber, Error *error)
+static void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
 {
     Slot rhs = *fiber->top++;
 
     if (fiber->code[fiber->ip].typeKind == TYPE_STR)
+    {
+        if (!fiber->top->ptrVal || !rhs.ptrVal)
+            error->handlerRuntime(error->context, "String is null");
+
         switch (fiber->code[fiber->ip].tokKind)
         {
             case TOK_PLUS:
             {
-                int bufOffset = fiber->code[fiber->ip].operand.intVal;
-                char *buf = (char *)fiber->base + bufOffset;
+                char *buf = chunkAlloc(pages, strlen((char *)fiber->top->ptrVal) + strlen((char *)rhs.ptrVal) + 1, error);
                 strcpy(buf, (char *)fiber->top->ptrVal);
                 strcat(buf, (char *)rhs.ptrVal);
                 fiber->top->ptrVal = (int64_t)buf;
@@ -1027,6 +1056,7 @@ static void doBinary(Fiber *fiber, Error *error)
 
             default:            error->handlerRuntime(error->context, "Illegal instruction"); return;
         }
+    }
     else if (fiber->code[fiber->ip].typeKind == TYPE_REAL || fiber->code[fiber->ip].typeKind == TYPE_REAL32)
         switch (fiber->code[fiber->ip].tokKind)
         {
@@ -1106,7 +1136,11 @@ static void doGetArrayPtr(Fiber *fiber, Error *error)
     int index    = (fiber->top++)->intVal;
 
     if (!fiber->top->ptrVal)
-        error->handlerRuntime(error->context, "Array is null");
+        error->handlerRuntime(error->context, "Array or string is null");
+
+    // For strings, negative length means that the actual string length is to be used
+    if (len < 0)
+        len = strlen((char *)fiber->top->ptrVal);
 
     if (index < 0 || index > len - 1)
         error->handlerRuntime(error->context, "Index is out of range");
@@ -1366,7 +1400,7 @@ static void vmLoop(VM *vm)
             case OP_CHANGE_REF_CNT:                 doChangeRefCnt(fiber, pages, error);          break;
             case OP_CHANGE_REF_CNT_ASSIGN:          doChangeRefCntAssign(fiber, pages, error);    break;
             case OP_UNARY:                          doUnary(fiber, error);                        break;
-            case OP_BINARY:                         doBinary(fiber, error);                       break;
+            case OP_BINARY:                         doBinary(fiber, pages, error);                break;
             case OP_GET_ARRAY_PTR:                  doGetArrayPtr(fiber, error);                  break;
             case OP_GET_DYNARRAY_PTR:               doGetDynArrayPtr(fiber, error);               break;
             case OP_GET_FIELD_PTR:                  doGetFieldPtr(fiber, error);                  break;

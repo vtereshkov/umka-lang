@@ -10,8 +10,8 @@ const (
     seekEnd*   = 2
 )    
 
-fn rtlfopen  (name: ^str, mode: ^str): File;  
-fn fopen*    (name: str, mode: str): File {return rtlfopen(&name, &mode)}
+fn rtlfopen  (name: str, mode: str): File;  
+fn fopen*    (name: str, mode: str): File {return rtlfopen(name, mode)}
 
 fn rtlfclose (f: File): int
 fn fclose*   (f: File): int {return rtlfclose(f)}
@@ -25,8 +25,8 @@ fn fwrite*   (f: File, buf: interface{}): int {return rtlfwrite(buf.__self, size
 fn rtlfseek  (f: File, offset, origin: int): int
 fn fseek*    (f: File, offset, origin: int): int {return rtlfseek(f, offset, origin)}
 
-fn rtlremove (name: ^str): int
-fn remove*   (name: str): int {return rtlremove(&name)}
+fn rtlremove (name: str): int
+fn remove*   (name: str): int {return rtlremove(name)}
 
 // I/O utilities
 
@@ -54,13 +54,14 @@ fn atof*(s: str): real {
 }
 
 fn itoa*(x: int): str {
-    var s: str
+    s := str(new([256]char))
     sprintf(s, "%lld", x)
     return s
 }
 
 fn ftoa*(x: real, decimals: int): str {
-    var fmt, s: str
+    fmt := str(new([256]char))
+    s := str(new([256]char))
     sprintf(fmt, "%%.%dlf", decimals)
     sprintf(s, fmt, x)
     return s
@@ -97,6 +98,6 @@ fn argv*(i: int): str {
     if i < 0 || i >= rtlargc {
         error("Command line parameter not found")
     }
-    s := ^[64]^str(rtlargv)
-    return s[i]^
+    s := ^[64]str(rtlargv)
+    return s[i]
 }

@@ -10,7 +10,7 @@ typedef enum
     TYPE_NONE,
     TYPE_FORWARD,
     TYPE_VOID,
-    TYPE_NULL,      // Base type for 'null' constant only
+    TYPE_NULL,          // Base type for 'null' constant only
     TYPE_INT8,
     TYPE_INT16,
     TYPE_INT32,
@@ -25,7 +25,7 @@ typedef enum
     TYPE_PTR,
     TYPE_ARRAY,
     TYPE_DYNARRAY,
-    TYPE_STR,
+    TYPE_STR,           // Pointer of a special kind that admits assignment of string literals, concatenation and comparison by content
     TYPE_STRUCT,
     TYPE_INTERFACE,
     TYPE_FIBER,
@@ -109,6 +109,7 @@ bool typeCastable           (Type *type);
 bool typeReal               (Type *type);
 bool typeStructured         (Type *type);
 bool typeGarbageCollected   (Type *type);
+bool typeCharArrayPtr       (Type *type);
 bool typeFiberFunc          (Type *type);
 
 bool typeEquivalent         (Type *left, Type *right);

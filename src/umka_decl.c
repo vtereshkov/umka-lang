@@ -235,31 +235,10 @@ static Type *parseArrayType(Compiler *comp)
 }
 
 
-// strType = "str" ["[" expr "]"].
+// strType = "str".
 static Type *parseStrType(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_STR);
-
-    // ["[" expr "]"]
-    if (comp->lex.tok.kind == TOK_LBRACKET)
-    {
-        lexNext(&comp->lex);
-
-        Const len;
-        Type *indexType;
-        parseExpr(comp, &indexType, &len);
-        typeAssertCompatible(&comp->types, comp->intType, indexType, false);
-        if (len.intVal < 0)
-            comp->error.handler(comp->error.context, "String length cannot be negative");
-
-        lexEat(&comp->lex, TOK_RBRACKET);
-
-        Type *type = typeAdd(&comp->types, &comp->blocks, TYPE_STR);
-        type->base = comp->charType;
-        type->numItems = len.intVal + 1;
-        return type;
-    }
-
     return comp->strType;
 }
 

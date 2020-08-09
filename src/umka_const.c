@@ -36,10 +36,10 @@ void constAssign(Consts *consts, void *lhs, Const *rhs, TypeKind typeKind, int s
         case TYPE_CHAR:         *(char     *)lhs = rhs->intVal;         break;
         case TYPE_REAL32:       *(float    *)lhs = rhs->realVal;        break;
         case TYPE_REAL:         *(double   *)lhs = rhs->realVal;        break;
-        case TYPE_PTR:          *(void *   *)lhs = (void *)rhs->ptrVal; break;
-        case TYPE_ARRAY:        memcpy(lhs, (void *)rhs->ptrVal, size); break;
-        case TYPE_STR:          strcpy(lhs, (char *)rhs->ptrVal);       break;
-        case TYPE_STRUCT:       memcpy(lhs, (void *)rhs->ptrVal, size); break;
+        case TYPE_PTR:
+        case TYPE_STR:          *(void *   *)lhs = (void *)rhs->ptrVal; break;
+        case TYPE_ARRAY:
+        case TYPE_STRUCT:
         case TYPE_INTERFACE:    memcpy(lhs, (void *)rhs->ptrVal, size); break;
         case TYPE_FN:           *(int64_t  *)lhs = rhs->intVal;         break;
 

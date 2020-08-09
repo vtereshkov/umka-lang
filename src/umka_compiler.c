@@ -23,11 +23,7 @@ static void compilerDeclareBuiltinTypes(Compiler *comp)
     comp->charType          = typeAdd(&comp->types, &comp->blocks, TYPE_CHAR);
     comp->real32Type        = typeAdd(&comp->types, &comp->blocks, TYPE_REAL32);
     comp->realType          = typeAdd(&comp->types, &comp->blocks, TYPE_REAL);
-
     comp->strType           = typeAdd(&comp->types, &comp->blocks, TYPE_STR);
-    comp->strType->base     = comp->charType;
-    comp->strType->numItems = DEFAULT_STR_LEN + 1;
-
     comp->fiberType         = typeAdd(&comp->types, &comp->blocks, TYPE_FIBER);
 
     comp->ptrVoidType       = typeAddPtrTo(&comp->types, &comp->blocks, comp->voidType);

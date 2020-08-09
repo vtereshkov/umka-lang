@@ -132,7 +132,7 @@ static bool optimizeGetArrayPtr(CodeGen *gen, int itemSize)
     Instruction *prev2 = &gen->code[gen->ip - 2];
 
     // Optimization: PUSH + PUSH + GET_ARRAY_PTR -> GET_FIELD_PTR
-    if (prev2->opcode == OP_PUSH && prev->opcode == OP_PUSH)
+    if (prev2->opcode == OP_PUSH && prev->opcode == OP_PUSH && prev->operand.intVal >= 0)
     {
         int len   = prev->operand.intVal;
         int index = prev2->operand.intVal;
