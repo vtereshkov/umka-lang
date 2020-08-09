@@ -1,0 +1,3 @@
+*.o
+umka
+libumka.so
