@@ -9,26 +9,6 @@ static void parseStmtList(Compiler *comp);
 static void parseBlock(Compiler *comp);
 
 
-void doResolveExtern(Compiler *comp)
-{
-    for (Ident *ident = comp->idents.first; ident; ident = ident->next)
-        if (ident->prototypeOffset >= 0)
-        {
-            External *external = externalFind(&comp->externals, ident->name);
-            if (external)
-            {
-                int paramSlots = typeParamSizeTotal(&comp->types, &ident->type->sig) / sizeof(Slot);
-
-                genEntryPoint(&comp->gen, ident->prototypeOffset);
-                genCallExtern(&comp->gen, external->entry);
-                genReturn(&comp->gen, paramSlots);
-            }
-            else
-                comp->error.handler(comp->error.context, "Unresolved prototype of %s", ident->name);
-        }
-}
-
-
 static void doGarbageCollection(Compiler *comp, int block)
 {
     for (Ident *ident = comp->idents.first; ident; ident = ident->next)
@@ -51,6 +31,37 @@ static void doGarbageCollectionDownToBlock(Compiler *comp, int block)
             break;
         doGarbageCollection(comp, comp->blocks.item[i].block);
     }
+}
+
+
+void doResolveExtern(Compiler *comp)
+{
+    for (Ident *ident = comp->idents.first; ident; ident = ident->next)
+        if (ident->prototypeOffset >= 0)
+        {
+            External *external = externalFind(&comp->externals, ident->name);
+            if (!external)
+                comp->error.handler(comp->error.context, "Unresolved prototype of %s", ident->name);
+
+            // All parameters must be declared since they may require garbage collection
+            blocksEnter(&comp->blocks, ident);
+            genEntryPoint(&comp->gen, ident->prototypeOffset);
+            genEnterFrameStub(&comp->gen);
+
+            for (int i = 0; i < ident->type->sig.numParams; i++)
+                identAllocParam(&comp->idents, &comp->types, &comp->modules, &comp->blocks, &ident->type->sig, i);
+
+            genCallExtern(&comp->gen, external->entry);
+
+            doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+            identFree(&comp->idents, blocksCurrent(&comp->blocks));
+            genLeaveFrameFixup(&comp->gen, 0);
+
+            int paramSlots = typeParamSizeTotal(&comp->types, &ident->type->sig) / sizeof(Slot);
+            genReturn(&comp->gen, paramSlots);
+
+            blocksLeave(&comp->blocks);
+        }
 }
 
 

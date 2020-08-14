@@ -1240,7 +1240,7 @@ static void doCall(Fiber *fiber, Error *error)
 static void doCallExtern(Fiber *fiber)
 {
     ExternFunc fn = (ExternFunc)fiber->code[fiber->ip].operand.ptrVal;
-    fn(fiber->top + 1, &fiber->reg[VM_REG_RESULT]);       // + 1 for return address
+    fn(fiber->top + 5, &fiber->reg[VM_REG_RESULT]);       // + 5 for saved I/O registers, old base pointer and return address
     fiber->ip++;
 }
 
