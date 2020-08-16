@@ -172,9 +172,6 @@ static HeapPage *pageFind(HeapPages *pages, void *ptr)
 
 static void *chunkAlloc(HeapPages *pages, int size, Error *error)
 {
-    if (size == 0)
-        return NULL;
-    
     // Page layout: header, data, header, data...
     int chunkSize = sizeof(HeapChunkHeader) + size;
     int pageSize = chunkSize > VM_MIN_HEAP_PAGE ? chunkSize : VM_MIN_HEAP_PAGE;
