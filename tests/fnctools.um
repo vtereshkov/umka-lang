@@ -1,0 +1,39 @@
+import "../import/fnc.um"
+
+fn sqr(x: fnc.Any): fnc.Any {
+    p := ^int(x)
+    if p == null {return null}    
+    q := new(int)
+    q^ = p^ * p^
+    return q 
+}
+
+fn odd(x: fnc.Any): bool {
+    p := ^int(x)
+    if p == null {return false}
+    return p^ % 2 == 1 
+}
+
+fn sum(x, y: fnc.Any): fnc.Any {
+    p := ^int(x)
+    q := ^int(y)
+    if p == null || q == null {return null}
+    r := new(int)
+    r^ = p^ + q^
+    return r   
+}
+
+fn main() {
+    num := [6]int{3, 7, 1, -4, 2, 5}
+    data := make(fnc.AnyArray, len(num))
+    
+    for i := 0; i < len(num); i++ {
+        printf("%d ", num[i])
+        data[i] = &num[i]
+    }
+    
+    out := data.map(sqr).filter(odd).reduce(sum)
+
+    p := ^int(out)
+    printf("\nSum of odd squares = %d\n", p^)       
+}

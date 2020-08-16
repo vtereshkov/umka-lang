@@ -89,7 +89,7 @@ Type *typeAdd(Types *types, Blocks *blocks, TypeKind kind)
     type->base          = NULL;
     type->numItems      = 0;
     type->weak          = false;
-    type->forwardIdent  = NULL;
+    type->typeIdent     = NULL;
     type->next          = NULL;
 
     if (kind == TYPE_FN)
@@ -480,7 +480,7 @@ bool typeAssertForwardResolved(Types *types)
     for (Type *type = types->first; type; type = type->next)
         if (type->kind == TYPE_FORWARD)
         {
-            types->error->handler(types->error->context, "Unresolved forward declaration of %s", (Ident *)(type->forwardIdent)->name);
+            types->error->handler(types->error->context, "Unresolved forward declaration of %s", (Ident *)(type->typeIdent)->name);
             return false;
         }
     return true;
@@ -599,7 +599,7 @@ static char *typeSpellingRecursive(Type *type, char *buf, int depth)
         if (depth > 0)
             strcat(buf, typeSpellingRecursive(type->base, baseBuf, depth - 1));
         else
-            strcat(buf, "...");        
+            strcat(buf, "...");
     }
     return buf;
 }

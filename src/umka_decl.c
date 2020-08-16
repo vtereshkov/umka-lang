@@ -65,8 +65,8 @@ static void parseRcvSignature(Compiler *comp, Signature *sig)
     lexEat(&comp->lex, TOK_COLON);
     Type *rcvType = parseType(comp, NULL);
 
-    if (rcvType->kind != TYPE_PTR)
-        comp->error.handler(comp->error.context, "Receiver should be a pointer");
+    if (rcvType->kind != TYPE_PTR || !rcvType->base->typeIdent)
+        comp->error.handler(comp->error.context, "Receiver should be a pointer to a defined type");
 
     sig->method = true;
     typeAddParam(&comp->types, sig, rcvType, rcvName);
@@ -181,7 +181,7 @@ static Type *parsePtrType(Compiler *comp)
                 bool exported = parseExportMark(comp);
 
                 type = typeAdd(&comp->types, &comp->blocks, TYPE_FORWARD);
-                type->forwardIdent = identAddType(&comp->idents, &comp->modules, &comp->blocks, name, type, exported);
+                type->typeIdent = identAddType(&comp->idents, &comp->modules, &comp->blocks, name, type, exported);
 
                 forward = true;
             }
@@ -360,7 +360,7 @@ static void parseTypeDeclItem(Compiler *comp)
     lexEat(&comp->lex, TOK_EQ);
     Type *type = parseType(comp, NULL);
 
-    identAddType(&comp->idents, &comp->modules, &comp->blocks, name, type, exported);
+    type->typeIdent = identAddType(&comp->idents, &comp->modules, &comp->blocks, name, type, exported);
 }
 
 

@@ -76,11 +76,11 @@ typedef struct tagType
     struct tagType *base;                   // For pointers and arrays
     int numItems;                           // For arrays, structures and interfaces
     bool weak;                              // For pointers
+    struct tagIdent *typeIdent;             // For types that have identifiers
     union
     {
         Field *field[MAX_FIELDS];           // For structures and interfaces
         Signature sig;                      // For functions, including methods
-        struct tagIdent *forwardIdent;      // For forward-declared types
     };
     struct tagType *next;
 } Type;

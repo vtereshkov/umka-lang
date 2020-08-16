@@ -1009,11 +1009,13 @@ static void parseFieldSelector(Compiler *comp, Type **type, Const *constant, boo
     lexCheck(&comp->lex, TOK_IDENT);
 
     Type *rcvType = *type;
+    int rcvTypeModule = rcvType->typeIdent ? rcvType->typeIdent->module : -1;
+
     if (typeStructured(rcvType))
         rcvType = typeAddPtrTo(&comp->types, &comp->blocks, rcvType);
 
     Ident *method = identFind(&comp->idents, &comp->modules, &comp->blocks,
-                               comp->blocks.module, comp->lex.tok.name, rcvType);
+                               rcvTypeModule, comp->lex.tok.name, rcvType);
     if (method)
     {
         // Method
