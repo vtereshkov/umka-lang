@@ -1,39 +1,36 @@
 import "../import/fnc.um"
 
+type T = int
+
 fn sqr(x: fnc.Any): fnc.Any {
-    p := ^int(x)
+    p := ^T(x)
     if p == null {return null}    
-    q := new(int)
-    q^ = p^ * p^
-    return q 
+    return p^ * p^ 
 }
 
-fn odd(x: fnc.Any): bool {
-    p := ^int(x)
+fn under30(x: fnc.Any): bool {
+    p := ^T(x)
     if p == null {return false}
-    return p^ % 2 == 1 
+    return p^ < 30 
 }
 
 fn sum(x, y: fnc.Any): fnc.Any {
-    p := ^int(x)
-    q := ^int(y)
+    p := ^T(x)
+    q := ^T(y)
     if p == null || q == null {return null}
-    r := new(int)
-    r^ = p^ + q^
-    return r   
+    return p^ + q^   
 }
 
 fn main() {
-    num := [6]int{3, 7, 1, -4, 2, 5}
-    data := make(fnc.AnyArray, len(num))
+    var data: fnc.AnyArray = [6]fnc.Any{3, 7, 1, -4, 2, 5}
     
-    for i := 0; i < len(num); i++ {
-        printf("%d ", num[i])
-        data[i] = &num[i]
+    for i := 0; i < len(data); i++ {
+        p := ^T(data[i])
+        printf("%d ", p^)
     }
     
-    out := data.map(sqr).filter(odd).reduce(sum)
+    out := data.map(sqr).filter(under30).reduce(sum)
 
-    p := ^int(out)
-    printf("\nSum of odd squares = %d\n", p^)       
+    p := ^T(out)
+    printf("\nSum of all squares under 30 = %d\n", p^)       
 }

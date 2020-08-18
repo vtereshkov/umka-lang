@@ -366,7 +366,7 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
                     if (chunk->refCnt == 1 && typeKindGarbageCollectedRuntime(type->base->kind))
                     {
                         void *data = ptr;
-                        if (type->base->kind == TYPE_PTR)
+                        if (type->base->kind == TYPE_PTR || type->base->kind == TYPE_STR)
                             data = *(void **)data;
 
                         doBasicChangeRefCnt(fiber, pages, data, type->base, tokKind, error);
@@ -395,7 +395,7 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
                 for (int i = 0; i < type->numItems; i++)
                 {
                     void *item = itemPtr;
-                    if (type->base->kind == TYPE_PTR)
+                    if (type->base->kind == TYPE_PTR || type->base->kind == TYPE_STR)
                         item = *(void **)item;
 
                     doBasicChangeRefCnt(fiber, pages, item, type->base, tokKind, error);
@@ -424,7 +424,7 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
                         for (int i = 0; i < array->len; i++)
                         {
                             void *item = itemPtr;
-                            if (type->base->kind == TYPE_PTR)
+                            if (type->base->kind == TYPE_PTR || type->base->kind == TYPE_STR)
                                 item = *(void **)item;
 
                             doBasicChangeRefCnt(fiber, pages, item, type->base, tokKind, error);
@@ -444,7 +444,7 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
                 if (typeKindGarbageCollectedRuntime(type->field[i]->type->kind))
                 {
                     void *field = ptr + type->field[i]->offset;
-                    if (type->field[i]->type->kind == TYPE_PTR)
+                    if (type->field[i]->type->kind == TYPE_PTR || type->field[i]->type->kind == TYPE_STR)
                         field = *(void **)field;
 
                     doBasicChangeRefCnt(fiber, pages, field, type->field[i]->type, tokKind, error);

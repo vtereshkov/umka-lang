@@ -82,7 +82,7 @@ static void doArrayToDynArrayConv(Compiler *comp, Type *dest, Type **src, Const 
 }
 
 
-static void doConcreteToInterfaceConv(Compiler *comp, Type *dest, Type **src, Const *constant)
+static void doPtrToInterfaceConv(Compiler *comp, Type *dest, Type **src, Const *constant)
 {
     if (constant)
         comp->error.handler(comp->error.context, "Conversion to interface is not allowed in constant expressions");
@@ -167,7 +167,7 @@ static void doInterfaceToInterfaceConv(Compiler *comp, Type *dest, Type **src, C
 }
 
 
-static void doInterfaceToConcreteConv(Compiler *comp, Type *dest, Type **src, Const *constant)
+static void doInterfaceToPtrConv(Compiler *comp, Type *dest, Type **src, Const *constant)
 {
     if (constant)
         comp->error.handler(comp->error.context, "Conversion from interface is not allowed in constant expressions");
@@ -200,21 +200,46 @@ void doImplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant,
     }
 
     // Concrete to interface or interface to interface
-    else if (dest->kind == TYPE_INTERFACE && ((*src)->kind == TYPE_PTR || (*src)->kind == TYPE_INTERFACE))
+    else if (dest->kind == TYPE_INTERFACE)
     {
         if ((*src)->kind == TYPE_INTERFACE)
         {
+            // Interface to interface
             if (!typeEquivalent(dest, *src))
                 doInterfaceToInterfaceConv(comp, dest, src, constant);
         }
+        else if ((*src)->kind == TYPE_PTR)
+        {
+            // Pointer to interface
+            doPtrToInterfaceConv(comp, dest, src, constant);
+        }
         else
-            doConcreteToInterfaceConv(comp, dest, src, constant);
+        {
+            // Value to interface
+            Type *srcPtrType = typeAddPtrTo(&comp->types, &comp->blocks, *src);
+
+            // Allocate heap
+            genPushIntConst(&comp->gen, typeSize(&comp->types, *src));
+            genCallBuiltin(&comp->gen, TYPE_PTR, BUILTIN_NEW);
+            doCopyResultToTempVar(comp, srcPtrType);
+
+            // Save heap pointer
+            genDup(&comp->gen);
+            genPopReg(&comp->gen, VM_REG_COMMON_0);
+
+            // Copy to heap and use heap pointer (interfaces accept only pointers as their dynamic types)
+            genSwapAssign(&comp->gen, (*src)->kind, typeSize(&comp->types, *src));
+            genPushReg(&comp->gen, VM_REG_COMMON_0);
+
+            *src = srcPtrType;
+            doPtrToInterfaceConv(comp, dest, src, constant);
+        }
     }
 
     // Interface to concrete (type assertion)
     else if (dest->kind == TYPE_PTR && (*src)->kind == TYPE_INTERFACE)
     {
-        doInterfaceToConcreteConv(comp, dest, src, constant);
+        doInterfaceToPtrConv(comp, dest, src, constant);
     }
 }
 

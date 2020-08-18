@@ -1,4 +1,6 @@
-fn sort(a: []interface{}, ordered: fn (x, y: interface{}): bool) {
+type any = interface{}
+
+fn sort(a: []any, ordered: fn (x, y: any): bool) {
     for sorted := false; !sorted {
         sorted = true
         for i := 0; i < len(a) - 1; i++ {
@@ -12,7 +14,7 @@ fn sort(a: []interface{}, ordered: fn (x, y: interface{}): bool) {
     }
 }
 
-fn ordered(x, y: interface{}): bool {
+fn ordered(x, y: any): bool {
     p := ^str(x)
     q := ^str(y)
     if p == null || q == null {error("Illegal type")}
@@ -20,17 +22,11 @@ fn ordered(x, y: interface{}): bool {
 }
 
 fn main() {
-    a := [10]str{"red", "green", "blue", "yellow", "gray", "brown", "black", "cyan", "magenta", "white"}
+    a := [10]any{"red", "green", "blue", "yellow", "gray", "brown", "black", "cyan", "magenta", "white"}    
+    sort(a, ordered)
     
-    b := make([]interface{}, len(a))
-    for i := 0; i < len(b); i++ {
-        b[i] = &a[i]
-    }
-
-    sort(b, ordered)
-    
-    for i := 0; i < len(b); i++ {        
-        if p := ^str(b[i]); p != null {
+    for i := 0; i < len(a); i++ {        
+        if p := ^str(a[i]); p != null {
             printf("%s\n", p^)
         }
     }    
