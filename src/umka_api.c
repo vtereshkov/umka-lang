@@ -22,8 +22,8 @@ static void compileError(void *context, const char *format, ...)
     comp->error.pos = comp->lex.pos;
     vsprintf(comp->error.msg, format, args);
 
-    longjmp(comp->error.jumper, 1);
     va_end(args);
+    longjmp(comp->error.jumper, 1);
 }
 
 
@@ -40,8 +40,8 @@ static void runtimeError(void *context, const char *format, ...)
     comp->error.pos = 1;
     vsprintf(comp->error.msg, format, args);
 
-    longjmp(comp->error.jumper, 1);
     va_end(args);
+    longjmp(comp->error.jumper, 1);
 }
 
 

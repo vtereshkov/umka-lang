@@ -102,6 +102,7 @@ typedef enum
     BUILTIN_FIBERALIVE,
 
     // Misc
+    BUILTIN_REPR,
     BUILTIN_ERROR
 } BuiltinFunc;
 

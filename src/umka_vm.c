@@ -75,6 +75,7 @@ static char *builtinSpelling [] =
     "fiberspawn",
     "fibercall",
     "fiberalive",
+    "repr",
     "error"
 };
 
@@ -509,6 +510,106 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
 }
 
 
+static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, Error *error)
+{
+    int len = 0;
+    switch (type->kind)
+    {
+        case TYPE_VOID:     len = snprintf(buf, maxLen, "void ");                                  break;
+        case TYPE_INT8:
+        case TYPE_INT16:
+        case TYPE_INT32:
+        case TYPE_INT:
+        case TYPE_UINT8:
+        case TYPE_UINT16:
+        case TYPE_UINT32:   len = snprintf(buf, maxLen, "%lld ", slot->intVal);                    break;
+        case TYPE_BOOL:     len = snprintf(buf, maxLen, slot->intVal ? "true " : "false ");        break;
+        case TYPE_CHAR:     len = snprintf(buf, maxLen, "%c ", (char)slot->intVal);                break;
+        case TYPE_REAL32:
+        case TYPE_REAL:     len = snprintf(buf, maxLen, "%lf ", slot->realVal);                    break;
+        case TYPE_PTR:      len = snprintf(buf, maxLen, "%p ", (void *)slot->ptrVal);              break;
+        case TYPE_STR:      len = snprintf(buf, maxLen, "%s ", (char *)slot->ptrVal);              break;
+
+        case TYPE_ARRAY:
+        {
+            len += snprintf(buf, maxLen, "{");
+
+            void *itemPtr = (void *)slot->ptrVal;
+            int itemSize = typeSizeRuntime(type->base);
+
+            for (int i = 0; i < type->numItems; i++)
+            {
+                Slot itemSlot = {.ptrVal = (int64_t)itemPtr};
+                doBasicDeref(&itemSlot, type->base->kind, error);
+                len += doFillReprBuf(&itemSlot, type->base, buf + len, maxLen, error);
+                itemPtr += itemSize;
+            }
+
+            len += snprintf(buf + len, maxLen, "} ");
+            break;
+        }
+
+        case TYPE_DYNARRAY:
+        {
+            len += snprintf(buf, maxLen, "{");
+
+            DynArray *array = (DynArray *)slot->ptrVal;
+            if (array && array->data)
+            {
+                void *itemPtr = array->data;
+                for (int i = 0; i < array->len; i++)
+                {
+                    Slot itemSlot = {.ptrVal = (int64_t)itemPtr};
+                    doBasicDeref(&itemSlot, type->base->kind, error);
+                    len += doFillReprBuf(&itemSlot, type->base, buf + len, maxLen, error);
+                    itemPtr += array->itemSize;
+                }
+            }
+
+            len += snprintf(buf + len, maxLen, "} ");
+            break;
+        }
+
+        case TYPE_STRUCT:
+        {
+            len += snprintf(buf, maxLen, "{");
+
+            for (int i = 0; i < type->numItems; i++)
+            {
+                Slot fieldSlot = {.ptrVal = slot->ptrVal + type->field[i]->offset};
+                doBasicDeref(&fieldSlot, type->field[i]->type->kind, error);
+                len += snprintf(buf + len, maxLen, "%s: ", type->field[i]->name);
+                len += doFillReprBuf(&fieldSlot, type->field[i]->type, buf + len, maxLen, error);
+            }
+
+            len += snprintf(buf + len, maxLen, "} ");
+            break;
+        }
+
+        case TYPE_INTERFACE:
+        {
+            // Interface layout: __self, __selftype, methods
+            void *__self = *(void **)slot->ptrVal;
+            Type *__selftype = *(Type **)(slot->ptrVal + type->field[1]->offset);
+
+            if (__self)
+            {
+                Slot selfSlot = {.ptrVal = (int64_t)__self};
+                doBasicDeref(&selfSlot, __selftype->base->kind, error);
+                len += doFillReprBuf(&selfSlot, __selftype->base, buf + len, maxLen, error);
+            }
+            break;
+        }
+
+        case TYPE_FIBER:    len = snprintf(buf, maxLen, "fiber ");                                 break;
+        case TYPE_FN:       len = snprintf(buf, maxLen, "fn ");                                    break;
+        default:            break;
+    }
+
+    return len;
+}
+
+
 static void doCheckFormatString(char *format, int *formatLen, TypeKind *typeKind, Error *error)
 {
     enum {SIZE_SHORT_SHORT, SIZE_SHORT, SIZE_NORMAL, SIZE_LONG, SIZE_LONG_LONG} size;
@@ -847,6 +948,20 @@ static void doBuiltinFiberalive(Fiber *fiber, HeapPages *pages, Error *error)
         error->handlerRuntime(error->context, "Fiber is null");
 
     fiber->top->intVal = child->alive;
+}
+
+
+// fn repr(val: type, type): str
+static void doBuiltinRepr(Fiber *fiber, HeapPages *pages, Error *error)
+{
+    Type *type = (Type *)(fiber->top++)->ptrVal;
+    Slot *val = fiber->top;
+
+    int len = doFillReprBuf(val, type, NULL, 0, error);     // Predict buffer length
+    char *buf = chunkAlloc(pages, len + 1, error);          // Allocate buffer
+    doFillReprBuf(val, type, buf, INT_MAX, error);          // Fill buffer
+
+    fiber->top->ptrVal = (int64_t)buf;
 }
 
 
@@ -1321,6 +1436,7 @@ static void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages *pages, Erro
         case BUILTIN_FIBERALIVE:    doBuiltinFiberalive(fiber, pages, error); break;
 
         // Misc
+        case BUILTIN_REPR:          doBuiltinRepr(fiber, pages, error); break;
         case BUILTIN_ERROR:         error->handlerRuntime(error->context, (char *)fiber->top->ptrVal); return;
     }
     fiber->ip++;

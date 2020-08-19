@@ -23,14 +23,9 @@ fn sum(x, y: fnc.Any): fnc.Any {
 
 fn main() {
     var data: fnc.AnyArray = [6]fnc.Any{3, 7, 1, -4, 2, 5}
+    printf("%s\n", repr(data)) 
     
-    for i := 0; i < len(data); i++ {
-        p := ^T(data[i])
-        printf("%d ", p^)
-    }
-    
-    out := data.map(sqr).filter(under30).reduce(sum)
-
-    p := ^T(out)
-    printf("\nSum of all squares under 30 = %d\n", p^)       
+    result := data.map(sqr).filter(under30).reduce(sum) 
+   
+    printf("Sum of all squares under 30 = %s\n", repr(result))       
 }

@@ -54,31 +54,20 @@ fn main() {
     }       
     
     var c: []int = [3]int {3, 4, 5}
-    
-    for i := 0; i < len(c); i++ {
-        std.println("c: " + std.itoa(c[i]))
-    }
+    std.println("c: " + repr(c))
     
     std.println("Appending...")
     c = append(c, 6)
-    
-    for i := 0; i < len(c); i++ {
-        std.println("c: " + std.itoa(c[i]))
-    } 
+    std.println("c: " + repr(c))
 
     d := make([][2]int, 2)
     d[0] = [2]int {666, 777}
     d[1] = [2]int {888, 999}
     
-    for i := 0; i < len(d); i++ {
-        std.println("d: " + std.itoa(d[i][0]) + " " + std.itoa(d[i][1]))
-    }       
+    std.println("d: " + repr(d))    
     
     std.println("Appending...")    
     d = append(d, [2]int {444, 555})
-
-    for i := 0; i < len(d); i++ {
-        std.println("d: " + std.itoa(d[i][0]) + " " + std.itoa(d[i][1]))
-    }
+    std.println("d: " + repr(d)) 
     
 }

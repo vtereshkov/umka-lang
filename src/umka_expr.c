@@ -620,6 +620,20 @@ static void parseBuiltinFiberCall(Compiler *comp, Type **type, Const *constant, 
 }
 
 
+// fn repr(val: type, type): str
+static void parseBuiltinReprCall(Compiler *comp, Type **type, Const *constant)
+{
+    if (constant)
+        comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
+
+    parseExpr(comp, type, constant);
+    genPushGlobalPtr(&comp->gen, *type);
+
+    genCallBuiltin(&comp->gen, TYPE_STR, BUILTIN_REPR);
+    *type = comp->strType;
+}
+
+
 static void parseBuiltinErrorCall(Compiler *comp, Type **type, Const *constant)
 {
     if (constant)
@@ -629,7 +643,7 @@ static void parseBuiltinErrorCall(Compiler *comp, Type **type, Const *constant)
     doImplicitTypeConv(comp, comp->strType, type, constant, false);
     typeAssertCompatible(&comp->types, comp->strType, *type, false);
 
-    genCallBuiltin(&comp->gen, TYPE_STR, BUILTIN_ERROR);
+    genCallBuiltin(&comp->gen, TYPE_VOID, BUILTIN_ERROR);
     *type = comp->voidType;
 }
 
@@ -674,6 +688,7 @@ static void parseBuiltinCall(Compiler *comp, Type **type, Const *constant, Built
         case BUILTIN_FIBERALIVE:    parseBuiltinFiberCall(comp, type, constant, builtin);   break;
 
         // Misc
+        case BUILTIN_REPR:          parseBuiltinReprCall(comp, type, constant);             break;
         case BUILTIN_ERROR:         parseBuiltinErrorCall(comp, type, constant);            break;
 
         default: comp->error.handler(comp->error.context, "Illegal built-in function");

@@ -1,6 +1,6 @@
 type any = interface{}
 
-fn sort(a: []any, ordered: fn (x, y: any): bool) {
+fn sort(a: []any, ordered: fn (x, y: any): bool): []any {
     for sorted := false; !sorted {
         sorted = true
         for i := 0; i < len(a) - 1; i++ {
@@ -12,6 +12,7 @@ fn sort(a: []any, ordered: fn (x, y: any): bool) {
             }
         }
     }
+    return a
 }
 
 fn ordered(x, y: any): bool {
@@ -22,12 +23,7 @@ fn ordered(x, y: any): bool {
 }
 
 fn main() {
-    a := [10]any{"red", "green", "blue", "yellow", "gray", "brown", "black", "cyan", "magenta", "white"}    
-    sort(a, ordered)
-    
-    for i := 0; i < len(a); i++ {        
-        if p := ^str(a[i]); p != null {
-            printf("%s\n", p^)
-        }
-    }    
+    a := [10]any{"red", "green", "blue", "yellow", "gray", "brown", "black", "cyan", "magenta", "white"}
+    b := sort(a, ordered)
+    printf("%s\n%s\n", repr(a), repr(b))
 }

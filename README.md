@@ -103,7 +103,7 @@ printf fprintf sprintf scanf fscanf sscanf
 round trunc fabs sqrt sin cos atan exp log
 new make append delete len sizeof sizeofself
 fiberspawn fibercall fiberalive
-error
+repr error
 ```
 #### Methods
 ```

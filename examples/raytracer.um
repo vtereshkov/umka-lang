@@ -266,7 +266,7 @@ fn main() {
         
         // Spawn fiber
         renderer[i] = fiberspawn(render, &renderData[i])
-    }    
+    }  
 
     // Render scene
     startTime := std.time()

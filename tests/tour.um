@@ -38,9 +38,9 @@ fn tan(x: real): real {return sin(x) / cos(x)}
 Built-in functions:
     printf fprintf sprintf scanf fscanf sscanf
     round trunc fabs sqrt sin cos atan exp log
-    new make append delete len sizeof
+    new make append delete len sizeof sizeofself
     fiberspawn fibercall fiberalive
-    error
+    repr error
 */
 
 // Methods
@@ -113,11 +113,29 @@ fn main() {
     
     
     // Interfaces
-    var printable: Printable = &Arr{0.5, 0.7, 0.9}
+    var printable: Printable = Arr{0.5, 0.7, 0.9}
     printable.print()
     
     // Fibers
-    parentFunc()    
+    parentFunc()
+
+    // Repr
+    printf("\nrepr():\n")
+    printf("%s\n", repr(a))
+    printf("%s\n", repr(b))
+    printf("%s\n", repr(c))
+    printf("%s\n", repr(d))
+    printf("%s\n", repr(e))
+    printf("%s\n", repr(f))
+    printf("%s\n", repr(g))
+    printf("%s\n", repr(h))
+    printf("%s\n", repr(q))
+    printf("%s\n", repr(sum))
+    printf("%s\n", repr('a'))
+    printf("%s\n", repr(parentFunc))
+    printf("%s\n", repr(printable))
+    printf("%s\n", repr(&q))
+    
 }
 
 
