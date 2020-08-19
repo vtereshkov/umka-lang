@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <stdarg.h>
 #include <math.h>
 
 #include "umka_vm.h"
@@ -212,6 +213,32 @@ static void chunkChangeRefCnt(HeapPages *pages, HeapPage *page, void *ptr, int d
 
     if (page->refCnt == 0)
         pageRemove(pages, page);
+}
+
+
+// I/O functions
+
+static int fsprintf(bool string, void *stream, const char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+
+    int res = string ? vsprintf((char *)stream, format, args) : vfprintf((FILE *)stream, format, args);
+
+    va_end(args);
+    return res;
+}
+
+
+static int fsscanf(bool string, void *stream, const char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+
+    int res = string ? vsscanf((char *)stream, format, args) : vfscanf((FILE *)stream, format, args);
+
+    va_end(args);
+    return res;
 }
 
 
@@ -618,21 +645,13 @@ static void doBuiltinPrintf(Fiber *fiber, bool console, bool string, Error *erro
     curFormat[formatLen] = 0;
 
     int len = 0;
+
     if (typeKind == TYPE_VOID)
-    {
-        if (string) len = sprintf((char *)stream, curFormat);
-        else        len = fprintf((FILE *)stream, curFormat);
-    }
+        len = fsprintf(string, stream, curFormat);
     else if (typeKind == TYPE_REAL || typeKind == TYPE_REAL32)
-    {
-        if (string) len = sprintf((char *)stream, curFormat, fiber->top->realVal);
-        else        len = fprintf((FILE *)stream, curFormat, fiber->top->realVal);
-    }
+        len = fsprintf(string, stream, curFormat, fiber->top->realVal);
     else
-    {
-        if (string) len = sprintf((char *)stream, curFormat, fiber->top->intVal);
-        else        len = fprintf((FILE *)stream, curFormat, fiber->top->intVal);
-    }
+        len = fsprintf(string, stream, curFormat, fiber->top->intVal);
 
     fiber->reg[VM_REG_IO_FORMAT].ptrVal += formatLen;
     fiber->reg[VM_REG_IO_COUNT].intVal += len;
@@ -668,18 +687,15 @@ static void doBuiltinScanf(Fiber *fiber, bool console, bool string, Error *error
     strcat(curFormat, "%n");
 
     int len = 0, cnt = 0;
+
     if (typeKind == TYPE_VOID)
-    {
-        if (string) cnt = sscanf((char *)stream, curFormat, &len);
-        else        cnt = fscanf((FILE *)stream, curFormat, &len);
-    }
+        cnt = fsscanf(string, stream, curFormat, &len);
     else
     {
         if (!fiber->top->ptrVal)
             error->handlerRuntime(error->context, "scanf() destination is null");
 
-        if (string) cnt = sscanf((char *)stream, curFormat, (void *)fiber->top->ptrVal, &len);
-        else        cnt = fscanf((FILE *)stream, curFormat, (void *)fiber->top->ptrVal, &len);
+        cnt = fsscanf(string, stream, curFormat, (void *)fiber->top->ptrVal, &len);
     }
 
     fiber->reg[VM_REG_IO_FORMAT].ptrVal += formatLen;
