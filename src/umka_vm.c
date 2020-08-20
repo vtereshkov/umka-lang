@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <stdarg.h>
 #include <math.h>
+#include <limits.h>
 
 #include "umka_vm.h"
 
