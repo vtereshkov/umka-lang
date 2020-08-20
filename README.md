@@ -175,6 +175,22 @@ fn parentFunc() {
     }    
 }
 ```
+### Functional tools
+```
+import "../import/fnc.um"
+
+fn sqr(x: fnc.Any): fnc.Any     {p := ^int(x); return p^ * p^}
+fn odd(x: fnc.Any): bool        {p := ^int(x); return p^ % 2 == 1} 
+fn sum(x, y: fnc.Any): fnc.Any  {p := ^int(x); q := ^int(y); return p^ + q^}   
+
+fn main() {
+    var data: fnc.AnyArray = [6]fnc.Any{3, 7, 1, -4, 2, 5}
+    printf("Array = %s\n", repr(data))
+     
+    result := data.map(sqr).filter(odd).reduce(sum)    
+    printf("Sum of all odd squares = %s\n", repr(result))       
+}
+```
 ## Language Grammar
 ```
 program             = module.
