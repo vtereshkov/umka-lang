@@ -523,7 +523,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, Error *e
         case TYPE_INT:
         case TYPE_UINT8:
         case TYPE_UINT16:
-        case TYPE_UINT32:   len = snprintf(buf, maxLen, "%lld ", slot->intVal);                    break;
+        case TYPE_UINT32:   len = snprintf(buf, maxLen, "%lld ", (long long int)slot->intVal);     break;
         case TYPE_BOOL:     len = snprintf(buf, maxLen, slot->intVal ? "true " : "false ");        break;
         case TYPE_CHAR:     len = snprintf(buf, maxLen, "%c ", (char)slot->intVal);                break;
         case TYPE_REAL32:
