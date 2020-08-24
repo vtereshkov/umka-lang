@@ -5,28 +5,28 @@ type (
     AnyArray* = []Any
 )
 
-fn (a: ^AnyArray) map*(f: fn (x: Any): Any): AnyArray {
+fn (a: ^AnyArray) map*(f: fn (x, ctx: Any): Any, ctx: Any): AnyArray {
     res := make(AnyArray, len(a^))
     for i := 0; i < len(a^); i++ {
-        res[i] = f(a[i])
+        res[i] = f(a[i], ctx)
     }
     return res
 }
 
-fn (a: ^AnyArray) filter*(f: fn (x: Any): bool): AnyArray {
+fn (a: ^AnyArray) filter*(f: fn (x, ctx: Any): bool, ctx: Any): AnyArray {
     res := make(AnyArray, 0)
     for i := 0; i < len(a^); i++ {
-        if f(a[i]) {
+        if f(a[i], ctx) {
             res = append(res, a[i])
         }
     }
     return res
 }
 
-fn (a: ^AnyArray) reduce*(f: fn (x, y: Any): Any): Any {
+fn (a: ^AnyArray) reduce*(f: fn (x, y, ctx: Any): Any, ctx: Any): Any {
     res := a[0]
     for i := 1; i < len(a^); i++ {
-        res = f(res, a[i])
+        res = f(res, a[i], ctx)
     }
     return res
 }

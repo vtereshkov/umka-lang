@@ -1,13 +1,14 @@
 import "../import/fnc.um"
 
-fn sqr(x: fnc.Any): fnc.Any     {p := ^int(x); return p^ * p^}
-fn odd(x: fnc.Any): bool        {p := ^int(x); return p^ % 2 == 1} 
-fn sum(x, y: fnc.Any): fnc.Any  {p := ^int(x); q := ^int(y); return p^ + q^}   
+fn sqr(x, ctx: fnc.Any): fnc.Any    {p := ^int(x); return p^ * p^}
+fn less(x, ctx: fnc.Any): bool      {p := ^int(x); q := ^int(ctx); return p^ < q^} 
+fn sum(x, y, ctx: fnc.Any): fnc.Any {p := ^int(x); q := ^int(y); return p^ + q^}   
 
 fn main() {
     var data: fnc.AnyArray = [6]fnc.Any{3, 7, 1, -4, 2, 5}
     printf("Array = %s\n", repr(data))
      
-    result := data.map(sqr).filter(odd).reduce(sum)    
-    printf("Sum of all odd squares = %s\n", repr(result))       
+    const max = 30
+    result := data.map(sqr, null).filter(less, max).reduce(sum, null)    
+    printf("Sum of all squares less than %d = %s\n", max, repr(result))       
 }
