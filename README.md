@@ -179,15 +179,15 @@ fn parentFunc() {
 ```
 import "../import/fnc.um"
 
-fn sqr(x, ctx: fnc.Any): fnc.Any    {p := ^int(x); return p^ * p^}
-fn less(x, ctx: fnc.Any): bool      {p := ^int(x); q := ^int(ctx); return p^ < q^} 
-fn sum(x, y, ctx: fnc.Any): fnc.Any {p := ^int(x); q := ^int(y); return p^ + q^}   
-
 fn main() {
     var data: fnc.AnyArray = [6]fnc.Any{3, 7, 1, -4, 2, 5}
     printf("Array = %s\n", repr(data))
      
-    const max = 30
+    sqr  := fn (x, ctx: fnc.Any): fnc.Any    {p := ^int(x); return p^ * p^}
+    less := fn (x, ctx: fnc.Any): bool       {p := ^int(x); q := ^int(ctx); return p^ < q^} 
+    sum  := fn (x, y, ctx: fnc.Any): fnc.Any {p := ^int(x); q := ^int(y); return p^ + q^}     
+    
+    const max = 30     
     result := data.map(sqr, null).filter(less, max).reduce(sum, null)    
     printf("Sum of all squares less than %d = %s\n", max, repr(result))       
 }
@@ -258,9 +258,10 @@ indexSelector       = "[" expr "]".
 fieldSelector       = "." ident.
 callSelector        = actualParams.
 actualParams        = "(" [expr {"," expr}] ")".
-compositeLiteral    = arrayLiteral | structLiteral.
+compositeLiteral    = arrayLiteral | structLiteral | fnLiteral.
 arrayLiteral        = "{" [expr {"," expr}] "}".
 structLiteral       = "{" [[ident ":"] expr {"," [ident ":"] expr}] "}".
+fnLiteral           = fnBlock.
 typeCast            = type "(" expr ")".
 ident               = (letter | "_") {letter | "_" | digit}.
 intNumber           = decNumber | hexHumber.

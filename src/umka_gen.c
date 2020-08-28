@@ -417,7 +417,7 @@ static int genRestorePos(CodeGen *gen)
 }
 
 
-static void genGoFromTo(CodeGen *gen, int start, int dest)
+void genGoFromTo(CodeGen *gen, int start, int dest)
 {
     int next = gen->ip;
     gen->ip = start;
@@ -426,7 +426,7 @@ static void genGoFromTo(CodeGen *gen, int start, int dest)
 }
 
 
-static void genGoFromToIf(CodeGen *gen, int start, int dest)
+void genGoFromToIf(CodeGen *gen, int start, int dest)
 {
     int next = gen->ip;
     gen->ip = start;

@@ -4,6 +4,7 @@
 
 #include "umka_expr.h"
 #include "umka_decl.h"
+#include "umka_stmt.h"
 
 
 void doPushConst(Compiler *comp, Type *type, Const *constant)
@@ -859,15 +860,11 @@ static void parseTypeCast(Compiler *comp, Type **type, Const *constant)
 }
 
 
-// compositeLiteral = arrayLiteral | structLiteral.
 // arrayLiteral     = "{" [expr {"," expr}] "}".
 // structLiteral    = "{" [[ident ":"] expr {"," [ident ":"] expr}] "}".
-static void parseCompositeLiteral(Compiler *comp, Type **type, Const *constant)
+static void parseArrayOrStructLiteral(Compiler *comp, Type **type, Const *constant)
 {
     lexEat(&comp->lex, TOK_LBRACE);
-
-    if ((*type)->kind != TYPE_ARRAY && (*type)->kind != TYPE_STRUCT)
-        comp->error.handler(comp->error.context, "Composite literal is only allowed for arrays or structures");
 
     int bufOffset = 0;
     if (constant)
@@ -941,23 +938,55 @@ static void parseCompositeLiteral(Compiler *comp, Type **type, Const *constant)
 }
 
 
+// fnLiteral = fnBlock.
+static void parseFnLiteral(Compiler *comp, Type **type, Const *constant)
+{
+    int beforeEntry = comp->gen.ip;
+
+    if (comp->blocks.top != 0)
+        genNop(&comp->gen);                                     // Jump over the nested function block (stub)
+
+    IdentName tempName;
+    identTempVarName(&comp->idents, tempName);
+
+    Const fnConstant = {.intVal = comp->gen.ip};
+    Ident *fn = identAddConst(&comp->idents, &comp->modules, &comp->blocks, tempName, *type, false, fnConstant);
+    parseFnBlock(comp, fn);
+
+    if (comp->blocks.top != 0)
+        genGoFromTo(&comp->gen, beforeEntry, comp->gen.ip);     // Jump over the nested function block (fixup)
+
+    if (constant)
+        *constant = fnConstant;
+    else
+        doPushConst(comp, fn->type, &fn->constant);
+}
+
+
+// compositeLiteral = arrayLiteral | structLiteral | fnLiteral.
+static void parseCompositeLiteral(Compiler *comp, Type **type, Const *constant)
+{
+    if ((*type)->kind == TYPE_ARRAY || (*type)->kind == TYPE_STRUCT)
+        parseArrayOrStructLiteral(comp, type, constant);
+    else if ((*type)->kind == TYPE_FN)
+        parseFnLiteral(comp, type, constant);
+    else
+        comp->error.handler(comp->error.context, "Composite literals are only allowed for arrays, structures and functions");
+}
+
+
 static void parseTypeCastOrCompositeLiteral(Compiler *comp, Ident *ident, Type **type, Const *constant, bool *isVar, bool *isCall)
 {
     *type = parseType(comp, ident);
 
     if (comp->lex.tok.kind == TOK_LPAR)
-    {
         parseTypeCast(comp, type, constant);
-        *isVar = typeStructured(*type);
-    }
     else if (comp->lex.tok.kind == TOK_LBRACE)
-    {
         parseCompositeLiteral(comp, type, constant);
-        *isVar = true;
-    }
     else
         comp->error.handler(comp->error.context, "Type cast or composite literal expected");
 
+    *isVar = typeStructured(*type);
     *isCall = false;
 }
 
@@ -1182,6 +1211,7 @@ static void parseFactor(Compiler *comp, Type **type, Const *constant)
         case TOK_STR:
         case TOK_STRUCT:
         case TOK_INTERFACE:
+        case TOK_FN:
         {
             // A designator that isVar is always an addressable quantity (a structured type or a pointer to a value type)
             bool isVar, isCall;

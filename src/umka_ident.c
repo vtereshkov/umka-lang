@@ -46,8 +46,17 @@ void identFree(Idents *idents, int startBlock)
 Ident *identFind(Idents *idents, Modules *modules, Blocks *blocks, int module, char *name, Type *rcvType)
 {
     int nameHash = hash(name);
+    int curFnBlockPos = -1;
 
     for (int i = blocks->top; i >= 0; i--)
+    {
+        // Forbid accessing locals of any function other than the current one
+        if (curFnBlockPos == -1 && blocks->item[i].fn)
+            curFnBlockPos = i;
+
+        if (i > 0 && i < curFnBlockPos)
+            continue;
+
         for (Ident *ident = idents->first; ident; ident = ident->next)
             if (ident->hash == nameHash && strcmp(ident->name, name) == 0 && ident->block == blocks->item[i].block &&
 
@@ -55,7 +64,7 @@ Ident *identFind(Idents *idents, Modules *modules, Blocks *blocks, int module, c
                (ident->module == 0 ||                                                               // Universe module
                (ident->module == module && (blocks->module == module ||                             // Current module
                (ident->exported && modules->module[blocks->module]->imports[ident->module])))))     // Imported module
-                {
+            {
                     bool method = ident->type->kind == TYPE_FN && ident->type->sig.method;
 
                     // We don't need a method and what we found is not a method
@@ -66,7 +75,8 @@ Ident *identFind(Idents *idents, Modules *modules, Blocks *blocks, int module, c
                     if (rcvType && method && (typeCompatible(ident->type->sig.param[0]->type, rcvType, false) ||
                                               typeCompatible(rcvType, ident->type->sig.param[0]->type, false)))
                         return ident;
-                }
+            }
+    }
 
     return NULL;
 }

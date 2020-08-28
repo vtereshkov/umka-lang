@@ -15,15 +15,8 @@ fn sort(a: []any, ordered: fn (x, y: any): bool): []any {
     return a
 }
 
-fn ordered(x, y: any): bool {
-    p := ^str(x)
-    q := ^str(y)
-    if p == null || q == null {error("Illegal type")}
-    return p^ < q^            
-}
-
 fn main() {
     a := [10]any{"red", "green", "blue", "yellow", "gray", "brown", "black", "cyan", "magenta", "white"}
-    b := sort(a, ordered)
+    b := sort(a, fn (x, y: any): bool {p := ^str(x); q := ^str(y); return p^ < q^})            
     printf("%s\n%s\n", repr(a), repr(b))
 }

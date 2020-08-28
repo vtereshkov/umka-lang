@@ -560,14 +560,17 @@ void parseFnBlock(Compiler *comp, Ident *fn)
     for (int i = 0; i < fn->type->sig.numParams; i++)
         identAllocParam(&comp->idents, &comp->types, &comp->modules, &comp->blocks, &fn->type->sig, i);
 
-    Gotos returns;
+    // 'return' prolog
+    Gotos returns, *outerReturns = comp->gen.returns;
     comp->gen.returns = &returns;
     genGotosProlog(&comp->gen, comp->gen.returns, blocksCurrent(&comp->blocks));
 
     // StmtList
     parseStmtList(comp);
 
+    // 'return' epilog
     genGotosEpilog(&comp->gen, comp->gen.returns);
+    comp->gen.returns = outerReturns;
 
     doGarbageCollection(comp, blocksCurrent(&comp->blocks));
     identFree(&comp->idents, blocksCurrent(&comp->blocks));

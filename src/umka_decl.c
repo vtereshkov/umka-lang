@@ -503,7 +503,7 @@ void parseShortVarDecl(Compiler *comp)
 void parseFnDecl(Compiler *comp)
 {
     if (comp->blocks.top != 0)
-        comp->error.handler(comp->error.context, "Nested functions are not allowed");
+        comp->error.handler(comp->error.context, "Nested functions should be declared as variables");
 
     lexEat(&comp->lex, TOK_FN);
     Type *fnType = typeAdd(&comp->types, &comp->blocks, TYPE_FN);

@@ -42,10 +42,6 @@ type Box = struct {
 
 fn (b: ^Box) get(): ^GenericBody { return &b.body }
 
-fn within(x, y, xmin, ymin, xmax, ymax: real): bool {
-    return (x > xmin) && (x < xmax) && (y > ymin) && (y < ymax)
-}
-
 fn (b: ^Box) intersectFace(ray: ^Ray, point, normal: ^Vec, i, j, k: int): bool {
     if fabs(ray.dir[k]) > 1e-9 {
         side := 1.0
@@ -55,6 +51,11 @@ fn (b: ^Box) intersectFace(ray: ^Ray, point, normal: ^Vec, i, j, k: int): bool {
 
         if factor := (b.body.center[k] + side * b.halfsize[k] - ray.origin[k]) / ray.dir[k]; factor > 0.1 {
             point^ = ray.origin.add(ray.dir.mul(factor))
+            
+            const within = fn (x, y, xmin, ymin, xmax, ymax: real): bool {
+                               return (x > xmin) && (x < xmax) && (y > ymin) && (y < ymax)
+                           }
+            
             if within(
                 point[i], point[j],
                 b.body.center[i] - b.halfsize[i], b.body.center[j] - b.halfsize[j],

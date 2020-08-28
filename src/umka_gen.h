@@ -78,6 +78,9 @@ void genHalt(CodeGen *gen);
 
 // Compound VM instructions
 
+void genGoFromTo(CodeGen *gen, int start, int dest);
+void genGoFromToIf(CodeGen *gen, int start, int dest);
+
 void genIfCondEpilog(CodeGen *gen);
 void genElseProlog  (CodeGen *gen);
 void genIfElseEpilog(CodeGen *gen);
