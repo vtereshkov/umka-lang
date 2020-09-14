@@ -77,7 +77,7 @@ _Built-in types_
 ```
 void
 int8 int16 int32 int
-uint8 uint16 uint32
+uint8 uint16 uint32 uint
 bool
 char
 real32 real

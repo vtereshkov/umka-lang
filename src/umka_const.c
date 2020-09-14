@@ -32,6 +32,7 @@ void constAssign(Consts *consts, void *lhs, Const *rhs, TypeKind typeKind, int s
         case TYPE_UINT8:        *(uint8_t  *)lhs = rhs->intVal;         break;
         case TYPE_UINT16:       *(uint16_t *)lhs = rhs->intVal;         break;
         case TYPE_UINT32:       *(uint32_t *)lhs = rhs->intVal;         break;
+        case TYPE_UINT:         *(uint64_t *)lhs = rhs->uintVal;        break;
         case TYPE_BOOL:         *(bool     *)lhs = rhs->intVal;         break;
         case TYPE_CHAR:         *(char     *)lhs = rhs->intVal;         break;
         case TYPE_REAL32:       *(float    *)lhs = rhs->realVal;        break;
@@ -145,12 +146,12 @@ void constBinary(Consts *consts, Const *lhs, const Const *rhs, TokenKind tokKind
 }
 
 
-void constCallBuiltin(Consts *consts, Const *arg, BuiltinFunc builtinVal)
+void constCallBuiltin(Consts *consts, Const *arg, Type *argType, BuiltinFunc builtinVal)
 {
     switch (builtinVal)
     {
         case BUILTIN_REAL:
-        case BUILTIN_REAL_LHS:  arg->realVal = arg->intVal; break;
+        case BUILTIN_REAL_LHS:  arg->realVal = (argType->kind == TYPE_UINT) ? arg->uintVal : arg->intVal; break;
         case BUILTIN_ROUND:     arg->intVal  = (int64_t)round(arg->realVal); break;
         case BUILTIN_TRUNC:     arg->intVal  = (int64_t)trunc(arg->realVal); break;
         case BUILTIN_FABS:      arg->realVal = fabs(arg->realVal); break;
@@ -169,7 +170,7 @@ void constCallBuiltin(Consts *consts, Const *arg, BuiltinFunc builtinVal)
         {
             if (arg->realVal <= 0)
                 consts->error->handler(consts->error->context, "log() domain error");
-            arg->realVal = sqrt(arg->realVal);
+            arg->realVal = log(arg->realVal);
             break;
         }
         case BUILTIN_LEN:       arg->intVal  = strlen((char *)arg->ptrVal); break;

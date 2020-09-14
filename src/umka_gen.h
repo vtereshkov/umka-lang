@@ -35,6 +35,7 @@ void genFree(CodeGen *gen);
 void genNop(CodeGen *gen);
 
 void genPushIntConst (CodeGen *gen, int64_t intVal);
+void genPushUIntConst(CodeGen *gen, uint64_t uintVal);
 void genPushRealConst(CodeGen *gen, double realVal);
 void genPushGlobalPtr(CodeGen *gen, void *ptrVal);
 void genPushLocalPtr (CodeGen *gen, int offset);

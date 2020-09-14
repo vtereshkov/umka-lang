@@ -1,6 +1,7 @@
 #include <string.h>
 #include <limits.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #include "umka_expr.h"
 #include "umka_decl.h"
@@ -41,9 +42,9 @@ static void doIntToRealConv(Compiler *comp, Type *dest, Type **src, Const *const
 {
     BuiltinFunc builtin = lhs ? BUILTIN_REAL_LHS : BUILTIN_REAL;
     if (constant)
-        constCallBuiltin(&comp->consts, constant, builtin);
+        constCallBuiltin(&comp->consts, constant, *src, builtin);
     else
-        genCallBuiltin(&comp->gen, TYPE_INT, builtin);
+        genCallBuiltin(&comp->gen, (*src)->kind, builtin);
 
     *src = dest;
 }
@@ -388,7 +389,7 @@ static void parseBuiltinMathCall(Compiler *comp, Type **type, Const *constant, B
     typeAssertCompatible(&comp->types, comp->realType, *type, false);
 
     if (constant)
-        constCallBuiltin(&comp->consts, constant, builtin);
+        constCallBuiltin(&comp->consts, constant, *type, builtin);
     else
         genCallBuiltin(&comp->gen, TYPE_REAL, builtin);
 
@@ -534,7 +535,7 @@ static void parseBuiltinLenCall(Compiler *comp, Type **type, Const *constant)
         case TYPE_STR:
         {
             if (constant)
-                constCallBuiltin(&comp->consts, constant, BUILTIN_LEN);
+                constCallBuiltin(&comp->consts, constant, comp->strType, BUILTIN_LEN);
             else
                 genCallBuiltin(&comp->gen, TYPE_STR, BUILTIN_LEN);
             break;
@@ -1233,12 +1234,23 @@ static void parseFactor(Compiler *comp, Type **type, Const *constant)
 
         case TOK_INTNUMBER:
         {
-            if (constant)
-                constant->intVal = comp->lex.tok.intVal;
+            if (comp->lex.tok.uintVal > (uint64_t)INT64_MAX)
+            {
+                if (constant)
+                    constant->uintVal = comp->lex.tok.uintVal;
+                else
+                    genPushUIntConst(&comp->gen, comp->lex.tok.uintVal);
+                *type = comp->uintType;
+            }
             else
-                genPushIntConst(&comp->gen, comp->lex.tok.intVal);
+            {
+                if (constant)
+                    constant->intVal = comp->lex.tok.intVal;
+                else
+                    genPushIntConst(&comp->gen, comp->lex.tok.intVal);
+                *type = comp->intType;
+            }
             lexNext(&comp->lex);
-            *type = comp->intType;
             break;
         }
 
@@ -1256,7 +1268,7 @@ static void parseFactor(Compiler *comp, Type **type, Const *constant)
         case TOK_CHARLITERAL:
         {
             if (constant)
-                constant->intVal = comp->lex.tok.intVal;
+                constant->uintVal = comp->lex.tok.uintVal;
             else
                 genPushIntConst(&comp->gen, comp->lex.tok.intVal);
             lexNext(&comp->lex);

@@ -19,6 +19,7 @@ static void compilerDeclareBuiltinTypes(Compiler *comp)
     comp->uint8Type         = typeAdd(&comp->types, &comp->blocks, TYPE_UINT8);
     comp->uint16Type        = typeAdd(&comp->types, &comp->blocks, TYPE_UINT16);
     comp->uint32Type        = typeAdd(&comp->types, &comp->blocks, TYPE_UINT32);
+    comp->uintType          = typeAdd(&comp->types, &comp->blocks, TYPE_UINT);
     comp->boolType          = typeAdd(&comp->types, &comp->blocks, TYPE_BOOL);
     comp->charType          = typeAdd(&comp->types, &comp->blocks, TYPE_CHAR);
     comp->real32Type        = typeAdd(&comp->types, &comp->blocks, TYPE_REAL32);
@@ -52,6 +53,7 @@ static void compilerDeclareBuiltinIdents(Compiler *comp)
     identAddType(&comp->idents, &comp->modules, &comp->blocks,  "uint8",    comp->uint8Type,   true);
     identAddType(&comp->idents, &comp->modules, &comp->blocks,  "uint16",   comp->uint16Type,  true);
     identAddType(&comp->idents, &comp->modules, &comp->blocks,  "uint32",   comp->uint32Type,  true);
+    identAddType(&comp->idents, &comp->modules, &comp->blocks,  "uint",     comp->uintType,    true);
     identAddType(&comp->idents, &comp->modules, &comp->blocks,  "bool",     comp->boolType,    true);
     identAddType(&comp->idents, &comp->modules, &comp->blocks,  "char",     comp->charType,    true);
     identAddType(&comp->idents, &comp->modules, &comp->blocks,  "real32",   comp->real32Type,  true);

@@ -20,6 +20,7 @@ static char *spelling [] =
     "uint8",
     "uint16",
     "uint32",
+    "uint",
     "bool",
     "char",
     "real32",
@@ -157,6 +158,7 @@ int typeSizeRuntime(Type *type)
         case TYPE_UINT8:    return sizeof(uint8_t);
         case TYPE_UINT16:   return sizeof(uint16_t);
         case TYPE_UINT32:   return sizeof(uint32_t);
+        case TYPE_UINT:     return sizeof(uint64_t);
         case TYPE_BOOL:     return sizeof(bool);
         case TYPE_CHAR:     return sizeof(char);
         case TYPE_REAL32:   return sizeof(float);
@@ -195,7 +197,7 @@ int typeSize(Types *types, Type *type)
 bool typeInteger(Type *type)
 {
     return type->kind == TYPE_INT8  || type->kind == TYPE_INT16  || type->kind == TYPE_INT32  || type->kind == TYPE_INT ||
-           type->kind == TYPE_UINT8 || type->kind == TYPE_UINT16 || type->kind == TYPE_UINT32;
+           type->kind == TYPE_UINT8 || type->kind == TYPE_UINT16 || type->kind == TYPE_UINT32 || type->kind == TYPE_UINT;
 }
 
 

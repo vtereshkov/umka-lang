@@ -255,7 +255,7 @@ static int alignRuntime(int size, int alignment)
 static bool typeKindIntegerRuntime(TypeKind typeKind)
 {
     return typeKind == TYPE_INT8  || typeKind == TYPE_INT16  || typeKind == TYPE_INT32  || typeKind == TYPE_INT ||
-           typeKind == TYPE_UINT8 || typeKind == TYPE_UINT16 || typeKind == TYPE_UINT32;
+           typeKind == TYPE_UINT8 || typeKind == TYPE_UINT16 || typeKind == TYPE_UINT32 || typeKind == TYPE_UINT;
 }
 
 
@@ -323,6 +323,7 @@ static void doBasicDeref(Slot *slot, TypeKind typeKind, Error *error)
         case TYPE_UINT8:        slot->intVal  = *(uint8_t  *)slot->ptrVal; break;
         case TYPE_UINT16:       slot->intVal  = *(uint16_t *)slot->ptrVal; break;
         case TYPE_UINT32:       slot->intVal  = *(uint32_t *)slot->ptrVal; break;
+        case TYPE_UINT:         slot->uintVal = *(uint64_t *)slot->ptrVal; break;
         case TYPE_BOOL:         slot->intVal  = *(bool     *)slot->ptrVal; break;
         case TYPE_CHAR:         slot->intVal  = *(char     *)slot->ptrVal; break;
         case TYPE_REAL32:       slot->realVal = *(float    *)slot->ptrVal; break;
@@ -348,15 +349,16 @@ static void doBasicAssign(void *lhs, Slot rhs, TypeKind typeKind, int structSize
 
     switch (typeKind)
     {
-        case TYPE_INT8:         *(int8_t   *)lhs = rhs.intVal; break;
-        case TYPE_INT16:        *(int16_t  *)lhs = rhs.intVal; break;
-        case TYPE_INT32:        *(int32_t  *)lhs = rhs.intVal; break;
-        case TYPE_INT:          *(int64_t  *)lhs = rhs.intVal; break;
-        case TYPE_UINT8:        *(uint8_t  *)lhs = rhs.intVal; break;
-        case TYPE_UINT16:       *(uint16_t *)lhs = rhs.intVal; break;
-        case TYPE_UINT32:       *(uint32_t *)lhs = rhs.intVal; break;
-        case TYPE_BOOL:         *(bool     *)lhs = rhs.intVal; break;
-        case TYPE_CHAR:         *(char     *)lhs = rhs.intVal; break;
+        case TYPE_INT8:         *(int8_t   *)lhs = rhs.intVal;  break;
+        case TYPE_INT16:        *(int16_t  *)lhs = rhs.intVal;  break;
+        case TYPE_INT32:        *(int32_t  *)lhs = rhs.intVal;  break;
+        case TYPE_INT:          *(int64_t  *)lhs = rhs.intVal;  break;
+        case TYPE_UINT8:        *(uint8_t  *)lhs = rhs.intVal;  break;
+        case TYPE_UINT16:       *(uint16_t *)lhs = rhs.intVal;  break;
+        case TYPE_UINT32:       *(uint32_t *)lhs = rhs.intVal;  break;
+        case TYPE_UINT:         *(uint64_t *)lhs = rhs.uintVal; break;
+        case TYPE_BOOL:         *(bool     *)lhs = rhs.intVal;  break;
+        case TYPE_CHAR:         *(char     *)lhs = rhs.intVal;  break;
         case TYPE_REAL32:       *(float    *)lhs = rhs.realVal; break;
         case TYPE_REAL:         *(double   *)lhs = rhs.realVal; break;
         case TYPE_PTR:
@@ -516,20 +518,21 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, Error *e
     int len = 0;
     switch (type->kind)
     {
-        case TYPE_VOID:     len = snprintf(buf, maxLen, "void ");                                  break;
+        case TYPE_VOID:     len = snprintf(buf, maxLen, "void ");                                           break;
         case TYPE_INT8:
         case TYPE_INT16:
         case TYPE_INT32:
         case TYPE_INT:
         case TYPE_UINT8:
         case TYPE_UINT16:
-        case TYPE_UINT32:   len = snprintf(buf, maxLen, "%lld ", (long long int)slot->intVal);     break;
-        case TYPE_BOOL:     len = snprintf(buf, maxLen, slot->intVal ? "true " : "false ");        break;
-        case TYPE_CHAR:     len = snprintf(buf, maxLen, "%c ", (char)slot->intVal);                break;
+        case TYPE_UINT32:   len = snprintf(buf, maxLen, "%lld ",  (long long int)slot->intVal);             break;
+        case TYPE_UINT:     len = snprintf(buf, maxLen, "%llu ", (unsigned long long int)slot->uintVal);   break;
+        case TYPE_BOOL:     len = snprintf(buf, maxLen, slot->intVal ? "true " : "false ");                 break;
+        case TYPE_CHAR:     len = snprintf(buf, maxLen, "%c ", (char)slot->intVal);                         break;
         case TYPE_REAL32:
-        case TYPE_REAL:     len = snprintf(buf, maxLen, "%lf ", slot->realVal);                    break;
-        case TYPE_PTR:      len = snprintf(buf, maxLen, "%p ", (void *)slot->ptrVal);              break;
-        case TYPE_STR:      len = snprintf(buf, maxLen, "%s ", (char *)slot->ptrVal);              break;
+        case TYPE_REAL:     len = snprintf(buf, maxLen, "%lf ", slot->realVal);                             break;
+        case TYPE_PTR:      len = snprintf(buf, maxLen, "%p ", (void *)slot->ptrVal);                       break;
+        case TYPE_STR:      len = snprintf(buf, maxLen, "%s ", (char *)slot->ptrVal);                       break;
 
         case TYPE_ARRAY:
         {
@@ -699,7 +702,7 @@ static void doCheckFormatString(char *format, int *formatLen, TypeKind *typeKind
                         case SIZE_SHORT:        *typeKind = TYPE_UINT16;     break;
                         case SIZE_NORMAL:
                         case SIZE_LONG:         *typeKind = TYPE_UINT32;     break;
-                        case SIZE_LONG_LONG:    *typeKind = TYPE_INT;        break;
+                        case SIZE_LONG_LONG:    *typeKind = TYPE_UINT;       break;
                     }
                     break;
                 }
@@ -1125,6 +1128,7 @@ static void doUnary(Fiber *fiber, Error *error)
                     case TYPE_UINT8:  (*(uint8_t  *)ptr)++; break;
                     case TYPE_UINT16: (*(uint16_t *)ptr)++; break;
                     case TYPE_UINT32: (*(uint32_t *)ptr)++; break;
+                    case TYPE_UINT:   (*(uint64_t *)ptr)++; break;
                     case TYPE_CHAR:   (*(char     *)ptr)++; break;
                     case TYPE_PTR:    (*(void *   *)ptr)++; break;
                     // Structured, boolean and real types are not incremented/decremented
@@ -1145,6 +1149,7 @@ static void doUnary(Fiber *fiber, Error *error)
                     case TYPE_UINT8:  (*(uint8_t  *)ptr)--; break;
                     case TYPE_UINT16: (*(uint16_t *)ptr)--; break;
                     case TYPE_UINT32: (*(uint32_t *)ptr)--; break;
+                    case TYPE_UINT:   (*(uint64_t *)ptr)--; break;
                     case TYPE_CHAR:   (*(char     *)ptr)--; break;
                     case TYPE_PTR:    (*(void *   *)ptr)--; break;
                     // Structured, boolean and real types are not incremented/decremented
@@ -1198,10 +1203,7 @@ static void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
             case TOK_DIV:
             {
                 if (rhs.realVal == 0)
-                {
                     error->handlerRuntime(error->context, "Division by zero");
-                    return;
-                }
                 fiber->top->realVal /= rhs.realVal;
                 break;
             }
@@ -1215,7 +1217,43 @@ static void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
 
             default:            error->handlerRuntime(error->context, "Illegal instruction"); return;
         }
-    else
+    else if (fiber->code[fiber->ip].typeKind == TYPE_UINT)
+        switch (fiber->code[fiber->ip].tokKind)
+        {
+            case TOK_PLUS:  fiber->top->uintVal += rhs.uintVal; break;
+            case TOK_MINUS: fiber->top->uintVal -= rhs.uintVal; break;
+            case TOK_MUL:   fiber->top->uintVal *= rhs.uintVal; break;
+            case TOK_DIV:
+            {
+                if (rhs.uintVal == 0)
+                    error->handlerRuntime(error->context, "Division by zero");
+                fiber->top->uintVal /= rhs.uintVal;
+                break;
+            }
+            case TOK_MOD:
+            {
+                if (rhs.uintVal == 0)
+                    error->handlerRuntime(error->context, "Division by zero");
+                fiber->top->uintVal %= rhs.uintVal;
+                break;
+            }
+
+            case TOK_SHL:   fiber->top->uintVal <<= rhs.uintVal; break;
+            case TOK_SHR:   fiber->top->uintVal >>= rhs.uintVal; break;
+            case TOK_AND:   fiber->top->uintVal &= rhs.uintVal; break;
+            case TOK_OR:    fiber->top->uintVal |= rhs.uintVal; break;
+            case TOK_XOR:   fiber->top->uintVal ^= rhs.uintVal; break;
+
+            case TOK_EQEQ:      fiber->top->uintVal = fiber->top->uintVal == rhs.uintVal; break;
+            case TOK_NOTEQ:     fiber->top->uintVal = fiber->top->uintVal != rhs.uintVal; break;
+            case TOK_GREATER:   fiber->top->uintVal = fiber->top->uintVal >  rhs.uintVal; break;
+            case TOK_LESS:      fiber->top->uintVal = fiber->top->uintVal <  rhs.uintVal; break;
+            case TOK_GREATEREQ: fiber->top->uintVal = fiber->top->uintVal >= rhs.uintVal; break;
+            case TOK_LESSEQ:    fiber->top->uintVal = fiber->top->uintVal <= rhs.uintVal; break;
+
+            default:            error->handlerRuntime(error->context, "Illegal instruction"); return;
+        }
+    else  // All ordinal types except TYPE_UINT
         switch (fiber->code[fiber->ip].tokKind)
         {
             case TOK_PLUS:  fiber->top->intVal += rhs.intVal; break;
@@ -1224,20 +1262,14 @@ static void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
             case TOK_DIV:
             {
                 if (rhs.intVal == 0)
-                {
                     error->handlerRuntime(error->context, "Division by zero");
-                    return;
-                }
                 fiber->top->intVal /= rhs.intVal;
                 break;
             }
             case TOK_MOD:
             {
                 if (rhs.intVal == 0)
-                {
                     error->handlerRuntime(error->context, "Division by zero");
-                    return;
-                }
                 fiber->top->intVal %= rhs.intVal;
                 break;
             }
@@ -1257,6 +1289,7 @@ static void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
 
             default:            error->handlerRuntime(error->context, "Illegal instruction"); return;
         }
+
     fiber->ip++;
 }
 
@@ -1380,6 +1413,8 @@ static void doCallExtern(Fiber *fiber)
 static void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages *pages, Error *error)
 {
     BuiltinFunc builtin = fiber->code[fiber->ip].operand.builtinVal;
+    TypeKind typeKind   = fiber->code[fiber->ip].typeKind;
+
     switch (builtin)
     {
         // I/O
@@ -1391,18 +1426,23 @@ static void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages *pages, Erro
         case BUILTIN_SSCANF:        doBuiltinScanf(fiber, false, true, error); break;
 
         // Math
-        case BUILTIN_REAL:          fiber->top->realVal = fiber->top->intVal; break;
-        case BUILTIN_REAL_LHS:      (fiber->top + 1)->realVal = (fiber->top + 1)->intVal; break;
+        case BUILTIN_REAL:
+        case BUILTIN_REAL_LHS:
+        {
+            const int depth = (builtin == BUILTIN_REAL_LHS) ? 1 : 0;
+            if (typeKind == TYPE_UINT)
+                (fiber->top + depth)->realVal = (fiber->top + depth)->uintVal;
+            else
+                (fiber->top + depth)->realVal = (fiber->top + depth)->intVal;
+            break;
+        }
         case BUILTIN_ROUND:         fiber->top->intVal = (int64_t)round(fiber->top->realVal); break;
         case BUILTIN_TRUNC:         fiber->top->intVal = (int64_t)trunc(fiber->top->realVal); break;
         case BUILTIN_FABS:          fiber->top->realVal = fabs(fiber->top->realVal); break;
         case BUILTIN_SQRT:
         {
             if (fiber->top->realVal < 0)
-            {
                 error->handlerRuntime(error->context, "sqrt() domain error");
-                return;
-            }
             fiber->top->realVal = sqrt(fiber->top->realVal);
             break;
         }
@@ -1413,11 +1453,8 @@ static void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages *pages, Erro
         case BUILTIN_LOG:
         {
             if (fiber->top->realVal <= 0)
-            {
                 error->handlerRuntime(error->context, "log() domain error");
-                return;
-            }
-            fiber->top->realVal = sqrt(fiber->top->realVal);
+            fiber->top->realVal = log(fiber->top->realVal);
             break;
         }
 

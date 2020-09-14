@@ -165,6 +165,13 @@ void genPushIntConst(CodeGen *gen, int64_t intVal)
 }
 
 
+void genPushUIntConst(CodeGen *gen, uint64_t uintVal)
+{
+    const Instruction instr = {.opcode = OP_PUSH, .tokKind = TOK_NONE, .typeKind = TYPE_UINT, .operand.uintVal = uintVal};
+    genAddInstr(gen, &instr);
+}
+
+
 void genPushRealConst(CodeGen *gen, double realVal)
 {
     const Instruction instr = {.opcode = OP_PUSH, .tokKind = TOK_NONE, .typeKind = TYPE_REAL, .operand.realVal = realVal};

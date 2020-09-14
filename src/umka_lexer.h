@@ -100,6 +100,7 @@ typedef struct
             int hash;
         };
         int64_t intVal;
+        uint64_t uintVal;
         double realVal;
         char charVal;
         char *strVal;

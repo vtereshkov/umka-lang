@@ -30,7 +30,7 @@ typedef struct
     Type *voidType,
          *nullType,
          *int8Type,  *int16Type,  *int32Type,  *intType,
-         *uint8Type, *uint16Type, *uint32Type,
+         *uint8Type, *uint16Type, *uint32Type, *uintType,
          *boolType,
          *charType,
          *real32Type, *realType,

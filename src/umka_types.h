@@ -18,6 +18,7 @@ typedef enum
     TYPE_UINT8,
     TYPE_UINT16,
     TYPE_UINT32,
+    TYPE_UINT,
     TYPE_BOOL,
     TYPE_CHAR,
     TYPE_REAL32,
@@ -36,6 +37,7 @@ typedef enum
 typedef union
 {
     int64_t intVal;
+    uint64_t uintVal;
     int64_t ptrVal;
     double realVal;
 } Const;

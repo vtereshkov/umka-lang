@@ -626,13 +626,13 @@ static void lexNumber(Lexer *lex)
 
     // Integer number
     lex->tok.kind = TOK_INTNUMBER;
-    lex->tok.intVal = strtoll(lex->buf + lex->bufPos, &tail, 0);
+    lex->tok.uintVal = strtoull(lex->buf + lex->bufPos, &tail, 0);
+
+    if (errno == ERANGE)
+        lex->error->handler(lex->error->context, "Number is too large");
 
     if (tail == lex->buf + lex->bufPos && ch != '.')
     {
-        if (errno == ERANGE)
-            lex->error->handler(lex->error->context, "Number is too large");
-
         lex->tok.kind = TOK_NONE;
         return;
     }
@@ -643,11 +643,11 @@ static void lexNumber(Lexer *lex)
         lex->tok.kind = TOK_REALNUMBER;
         lex->tok.realVal = strtod(lex->buf + lex->bufPos, &tail);
 
+        if (lex->tok.realVal == HUGE_VAL)
+            lex->error->handler(lex->error->context, "Number is too large");
+
         if (tail == lex->buf + lex->bufPos)
         {
-            if (lex->tok.realVal == HUGE_VAL)
-                lex->error->handler(lex->error->context, "Number is too large");
-
             lex->tok.kind = TOK_NONE;
             return;
         }
