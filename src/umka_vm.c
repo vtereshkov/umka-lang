@@ -63,6 +63,7 @@ static char *builtinSpelling [] =
     "sin",
     "cos",
     "atan",
+    "atan2",
     "exp",
     "log",
     "new",
@@ -1449,6 +1450,15 @@ static void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages *pages, Erro
         case BUILTIN_SIN:           fiber->top->realVal = sin (fiber->top->realVal); break;
         case BUILTIN_COS:           fiber->top->realVal = cos (fiber->top->realVal); break;
         case BUILTIN_ATAN:          fiber->top->realVal = atan(fiber->top->realVal); break;
+        case BUILTIN_ATAN2:
+        {
+            double x = (fiber->top++)->realVal;
+            double y = fiber->top->realVal;
+            if (x == 0 && y == 0)
+                error->handlerRuntime(error->context, "atan2() domain error");
+            fiber->top->realVal = atan2(y, x);
+            break;
+        }
         case BUILTIN_EXP:           fiber->top->realVal = exp (fiber->top->realVal); break;
         case BUILTIN_LOG:
         {

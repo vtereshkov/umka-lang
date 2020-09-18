@@ -83,6 +83,7 @@ typedef enum
     BUILTIN_SIN,
     BUILTIN_COS,
     BUILTIN_ATAN,
+    BUILTIN_ATAN2,
     BUILTIN_EXP,
     BUILTIN_LOG,
 
@@ -178,5 +179,6 @@ void vmFree(VM *vm);
 void vmReset(VM *vm, Instruction *code);
 void vmRun(VM *vm, int entryOffset, int numParamSlots, Slot *params, Slot *result);
 int vmAsm(int ip, Instruction *instr, char *buf);
+char *vmBuiltinSpelling(BuiltinFunc builtin);
 
 #endif // UMKA_VM_H_INCLUDED

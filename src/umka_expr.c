@@ -42,7 +42,7 @@ static void doIntToRealConv(Compiler *comp, Type *dest, Type **src, Const *const
 {
     BuiltinFunc builtin = lhs ? BUILTIN_REAL_LHS : BUILTIN_REAL;
     if (constant)
-        constCallBuiltin(&comp->consts, constant, *src, builtin);
+        constCallBuiltin(&comp->consts, constant, NULL, *src, builtin);
     else
         genCallBuiltin(&comp->gen, (*src)->kind, builtin);
 
@@ -388,8 +388,25 @@ static void parseBuiltinMathCall(Compiler *comp, Type **type, Const *constant, B
     doImplicitTypeConv(comp, comp->realType, type, constant, false);
     typeAssertCompatible(&comp->types, comp->realType, *type, false);
 
+    Const *constant2 = NULL;
+
+    // fn atan2(y, x: real): real
+    if (builtin == BUILTIN_ATAN2)
+    {
+        lexEat(&comp->lex, TOK_COMMA);
+
+        Type *type2;
+        Const constant2Val;
+        if (constant)
+            constant2 = &constant2Val;
+
+        parseExpr(comp, &type2, constant2);
+        doImplicitTypeConv(comp, comp->realType, &type2, constant2, false);
+        typeAssertCompatible(&comp->types, comp->realType, type2, false);
+    }
+
     if (constant)
-        constCallBuiltin(&comp->consts, constant, *type, builtin);
+        constCallBuiltin(&comp->consts, constant, constant2, *type, builtin);
     else
         genCallBuiltin(&comp->gen, TYPE_REAL, builtin);
 
@@ -535,7 +552,7 @@ static void parseBuiltinLenCall(Compiler *comp, Type **type, Const *constant)
         case TYPE_STR:
         {
             if (constant)
-                constCallBuiltin(&comp->consts, constant, comp->strType, BUILTIN_LEN);
+                constCallBuiltin(&comp->consts, constant, NULL, comp->strType, BUILTIN_LEN);
             else
                 genCallBuiltin(&comp->gen, TYPE_STR, BUILTIN_LEN);
             break;
@@ -672,6 +689,7 @@ static void parseBuiltinCall(Compiler *comp, Type **type, Const *constant, Built
         case BUILTIN_SIN:
         case BUILTIN_COS:
         case BUILTIN_ATAN:
+        case BUILTIN_ATAN2:
         case BUILTIN_EXP:
         case BUILTIN_LOG:           parseBuiltinMathCall(comp, type, constant, builtin);    break;
 

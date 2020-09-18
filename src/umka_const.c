@@ -146,7 +146,7 @@ void constBinary(Consts *consts, Const *lhs, const Const *rhs, TokenKind tokKind
 }
 
 
-void constCallBuiltin(Consts *consts, Const *arg, Type *argType, BuiltinFunc builtinVal)
+void constCallBuiltin(Consts *consts, Const *arg, const Const *arg2, Type *argType, BuiltinFunc builtinVal)
 {
     switch (builtinVal)
     {
@@ -165,6 +165,13 @@ void constCallBuiltin(Consts *consts, Const *arg, Type *argType, BuiltinFunc bui
         case BUILTIN_SIN:       arg->realVal = sin (arg->realVal); break;
         case BUILTIN_COS:       arg->realVal = cos (arg->realVal); break;
         case BUILTIN_ATAN:      arg->realVal = atan(arg->realVal); break;
+        case BUILTIN_ATAN2:
+        {
+            if (arg->realVal == 0 || arg2->realVal == 0)
+                consts->error->handler(consts->error->context, "atan2() domain error");
+            arg->realVal = atan2(arg->realVal, arg2->realVal);
+            break;
+        }
         case BUILTIN_EXP:       arg->realVal = exp (arg->realVal); break;
         case BUILTIN_LOG:
         {
@@ -177,5 +184,6 @@ void constCallBuiltin(Consts *consts, Const *arg, Type *argType, BuiltinFunc bui
 
         default: consts->error->handler(consts->error->context, "Illegal function");
     }
+
 }
 
