@@ -490,10 +490,16 @@ static void parseStmt(Compiler *comp)
     {
         case TOK_TYPE:
         case TOK_CONST:
-        case TOK_VAR:
-        case TOK_FN:        parseDecl(comp);            break;
+        case TOK_VAR:       parseDecl(comp);            break;
         case TOK_LBRACE:    parseBlock(comp);           break;
-        case TOK_IDENT:     parseSimpleStmt(comp);      break;
+        case TOK_IDENT:
+        case TOK_CARET:
+        case TOK_WEAK:
+        case TOK_LBRACKET:
+        case TOK_STR:
+        case TOK_STRUCT:
+        case TOK_INTERFACE:
+        case TOK_FN:        parseSimpleStmt(comp);      break;
         case TOK_IF:        parseIfStmt(comp);          break;
         case TOK_SWITCH:    parseSwitchStmt(comp);      break;
         case TOK_FOR:       parseForStmt(comp);         break;
