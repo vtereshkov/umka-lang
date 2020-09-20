@@ -50,6 +50,43 @@ static void doIntToRealConv(Compiler *comp, Type *dest, Type **src, Const *const
 }
 
 
+static void doCharToStrConv(Compiler *comp, Type *dest, Type **src, Const *constant, bool lhs)
+{
+    if (constant)
+    {
+        char *buf = &comp->storage.data[comp->storage.len];
+        comp->storage.len += 2 * typeSize(&comp->types, *src);
+
+        buf[0] = constant->intVal;
+        buf[1] = 0;
+        constant->ptrVal = (int64_t)buf;
+    }
+    else
+    {
+        if (lhs)
+            genSwap(&comp->gen);
+
+        // Allocate heap for two chars
+        genPushIntConst(&comp->gen, 2 * typeSize(&comp->types, *src));
+        genCallBuiltin(&comp->gen, TYPE_PTR, BUILTIN_NEW);
+        doCopyResultToTempVar(comp, comp->strType);
+
+        // Save heap pointer
+        genDup(&comp->gen);
+        genPopReg(&comp->gen, VM_REG_COMMON_0);
+
+        // Copy to heap and use heap pointer
+        genSwapAssign(&comp->gen, (*src)->kind, typeSize(&comp->types, *src));
+        genPushReg(&comp->gen, VM_REG_COMMON_0);
+
+        if (lhs)
+            genSwap(&comp->gen);
+    }
+
+    *src = dest;
+}
+
+
 static void doDynArrayPtrToArrayPtrConv(Compiler *comp, Type *dest, Type **src, Const *constant)
 {
     if (constant)
@@ -169,6 +206,31 @@ static void doInterfaceToInterfaceConv(Compiler *comp, Type *dest, Type **src, C
 }
 
 
+static void doValueToInterfaceConv(Compiler *comp, Type *dest, Type **src, Const *constant)
+{
+    if (constant)
+        comp->error.handler(comp->error.context, "Conversion to interface is not allowed in constant expressions");
+
+    Type *srcPtrType = typeAddPtrTo(&comp->types, &comp->blocks, *src);
+
+    // Allocate heap
+    genPushIntConst(&comp->gen, typeSize(&comp->types, *src));
+    genCallBuiltin(&comp->gen, TYPE_PTR, BUILTIN_NEW);
+    doCopyResultToTempVar(comp, srcPtrType);
+
+    // Save heap pointer
+    genDup(&comp->gen);
+    genPopReg(&comp->gen, VM_REG_COMMON_0);
+
+    // Copy to heap and use heap pointer (interfaces accept only pointers as their dynamic types)
+    genSwapAssign(&comp->gen, (*src)->kind, typeSize(&comp->types, *src));
+    genPushReg(&comp->gen, VM_REG_COMMON_0);
+
+    *src = srcPtrType;
+    doPtrToInterfaceConv(comp, dest, src, constant);
+}
+
+
 static void doInterfaceToPtrConv(Compiler *comp, Type *dest, Type **src, Const *constant)
 {
     if (constant)
@@ -185,6 +247,12 @@ void doImplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant,
     if (typeReal(dest) && typeInteger(*src))
     {
         doIntToRealConv(comp, dest, src, constant, lhs);
+    }
+
+    // Character to string
+    else if (dest->kind == TYPE_STR && (*src)->kind == TYPE_CHAR)
+    {
+        doCharToStrConv(comp, dest, src, constant, lhs);
     }
 
     // Array to dynamic array
@@ -218,23 +286,7 @@ void doImplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant,
         else
         {
             // Value to interface
-            Type *srcPtrType = typeAddPtrTo(&comp->types, &comp->blocks, *src);
-
-            // Allocate heap
-            genPushIntConst(&comp->gen, typeSize(&comp->types, *src));
-            genCallBuiltin(&comp->gen, TYPE_PTR, BUILTIN_NEW);
-            doCopyResultToTempVar(comp, srcPtrType);
-
-            // Save heap pointer
-            genDup(&comp->gen);
-            genPopReg(&comp->gen, VM_REG_COMMON_0);
-
-            // Copy to heap and use heap pointer (interfaces accept only pointers as their dynamic types)
-            genSwapAssign(&comp->gen, (*src)->kind, typeSize(&comp->types, *src));
-            genPushReg(&comp->gen, VM_REG_COMMON_0);
-
-            *src = srcPtrType;
-            doPtrToInterfaceConv(comp, dest, src, constant);
+            doValueToInterfaceConv(comp, dest, src, constant);
         }
     }
 
@@ -246,10 +298,8 @@ void doImplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant,
 }
 
 
-static void doApplyStrCat(Compiler *comp, Type **type, Type **rightType, Const *constant, Const *rightConstant)
+static void doApplyStrCat(Compiler *comp, Const *constant, Const *rightConstant)
 {
-    *type = typeAdd(&comp->types, &comp->blocks, TYPE_STR);
-
     if (constant)
     {
         int bufLen = strlen((char *)constant->ptrVal) + strlen((char *)rightConstant->ptrVal) + 1;
@@ -263,7 +313,7 @@ static void doApplyStrCat(Compiler *comp, Type **type, Type **rightType, Const *
     else
     {
         genBinary(&comp->gen, TOK_PLUS, TYPE_STR, 0);
-        doCopyResultToTempVar(comp, *type);
+        doCopyResultToTempVar(comp, comp->strType);
     }
 }
 
@@ -281,7 +331,7 @@ void doApplyOperator(Compiler *comp, Type **type, Type **rightType, Const *const
     if (apply)
     {
         if ((*type)->kind == TYPE_STR && op == TOK_PLUS)
-            doApplyStrCat(comp, type, rightType, constant, rightConstant);
+            doApplyStrCat(comp, constant, rightConstant);
         else
         {
             if (constant)
