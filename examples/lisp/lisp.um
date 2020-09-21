@@ -1,0 +1,14 @@
+import (
+    "../../import/std.um"
+    "parse.um"
+)
+
+fn main() {
+    if std.argc() < 3 {
+        error("Lisp file not specified")
+    }
+        
+    var p: parse.Parser
+    p.open(std.argv(2))
+    p.close()
+}

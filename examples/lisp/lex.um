@@ -1,0 +1,102 @@
+import "../../import/std.um"
+
+
+const (
+    tokNull* = 0
+    tokName* = 1
+    tokNum*  = 2
+    tokLPar* = 3
+    tokRPar* = 4
+    
+    spelling = [5]str{"nothing", "name", "number", "(", ")"}
+)
+
+
+type (
+    Token* = struct {
+        kind: int
+        name: str
+        val: int
+    }
+    
+    Lexer* = struct {
+        file: std.File
+        tok: Token
+        ch: char
+    }
+)
+
+
+fn (l: ^Lexer) open*(name: str) {
+    l.file = std.fopen(name, "r")
+    if l.file == null {
+        error("Cannot open " + name)
+    }
+    l.ch = ' '
+}
+
+
+fn (l: ^Lexer) close*() {
+    std.fclose(l.file)
+}
+
+
+fn (l: ^Lexer) getch() {
+    if fscanf(l.file, "%c", &l.ch) != 1 {l.ch = '\0'}
+}
+
+
+fn (l: ^Lexer) next*() {
+    const letter = fn(c: char): bool {return c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z'}
+    const digit  = fn(c: char): bool {return c >= '0' && c <= '9'}
+    const space  = fn(c: char): bool {return c == ' ' || c == '\t' || c == '\n'}
+
+    l.tok = Token{tokNull, "", 0}
+    
+    // Skip spaces
+    for space(l.ch) {
+        l.getch()
+    }
+    
+    // Read name
+    if letter(l.ch) {        
+        l.tok.kind = tokName
+        l.tok.name = ""
+        for letter(l.ch) || digit(l.ch) {
+            l.tok.name += l.ch
+            l.getch()
+        }
+        
+    // Read number    
+    } else if digit(l.ch) {
+        l.tok.kind = tokNum
+        l.tok.name = ""
+        for digit(l.ch) {
+            l.tok.name += l.ch
+            l.getch()
+        }
+        l.tok.val = std.atoi(l.tok.name)
+        
+    // Read parentheses
+    } else if l.ch == '(' || l.ch == ')' {        
+        if l.ch == '(' {l.tok.kind = tokLPar} else {l.tok.kind = tokRPar}
+        l.tok.name = l.ch
+        l.getch()
+        
+    } else if l.ch != '\0' {
+        error("Illegal character " + l.ch + " (" + std.itoa(int(l.ch)) + ")")
+    }
+}
+
+
+fn (l: ^Lexer) check*(kind: int) {
+    if l.tok.kind != kind {
+        error(spelling[kind] + " expected but " + spelling[l.tok.kind] + " found")
+    }
+}
+
+
+fn (l: ^Lexer) eat*(kind: int) {
+    l.check(kind)
+    l.next()
+}

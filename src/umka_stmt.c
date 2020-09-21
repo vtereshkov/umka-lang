@@ -212,7 +212,7 @@ static void parseIfStmt(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_IF);
 
-    // Additional scope embracing shortVarDecl
+    // Additional scope embracing shortVarDecl and statement body
     blocksEnter(&comp->blocks, NULL);
 
     // [shortVarDecl ";"]
@@ -249,7 +249,7 @@ static void parseIfStmt(Compiler *comp)
 
     genIfElseEpilog(&comp->gen);
 
-    // Additional scope embracing shortVarDecl
+    // Additional scope embracing shortVarDecl and statement body
     doGarbageCollection(comp, blocksCurrent(&comp->blocks));
     blocksLeave(&comp->blocks);
 }
@@ -298,7 +298,7 @@ static void parseSwitchStmt(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_SWITCH);
 
-    // Additional scope embracing shortVarDecl
+    // Additional scope embracing shortVarDecl and statement body
     blocksEnter(&comp->blocks, NULL);
 
     // [shortVarDecl ";"]
@@ -337,7 +337,7 @@ static void parseSwitchStmt(Compiler *comp)
 
     genSwitchEpilog(&comp->gen, numCases);
 
-    // Additional scope embracing shortVarDecl
+    // Additional scope embracing shortVarDecl and statement body
     doGarbageCollection(comp, blocksCurrent(&comp->blocks));
     blocksLeave(&comp->blocks);
 }
@@ -348,7 +348,7 @@ static void parseForStmt(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_FOR);
 
-    // Additional scope embracing shortVarDecl
+    // Additional scope embracing shortVarDecl and statement body
     blocksEnter(&comp->blocks, NULL);
 
     // 'break'/'continue' prologs
@@ -372,10 +372,17 @@ static void parseForStmt(Compiler *comp)
 
     genForCondProlog(&comp->gen);
 
+    // Additional scope embracing expr (needed for timely garbage collection in expr, since it is computed at each iteration)
+    blocksEnter(&comp->blocks, NULL);
+
     // expr
     Type *type;
     parseExpr(comp, &type, NULL);
     typeAssertCompatible(&comp->types, comp->boolType, type, false);
+
+    // Additional scope embracing expr
+    doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+    blocksLeave(&comp->blocks);
 
     genForCondEpilog(&comp->gen);
 
@@ -383,7 +390,15 @@ static void parseForStmt(Compiler *comp)
     if (comp->lex.tok.kind == TOK_SEMICOLON)
     {
         lexNext(&comp->lex);
+
+        // Additional scope embracing simpleStmt (needed for timely garbage collection in simpleStmt, since it is executed at each iteration)
+        blocksEnter(&comp->blocks, NULL);
+
         parseSimpleStmt(comp);
+
+        // Additional scope embracing simpleStmt
+        doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+        blocksLeave(&comp->blocks);
     }
 
     genForPostStmtEpilog(&comp->gen);
@@ -401,7 +416,7 @@ static void parseForStmt(Compiler *comp)
     genGotosEpilog(&comp->gen, comp->gen.breaks);
     comp->gen.breaks = outerBreaks;
 
-    // Additional scope embracing shortVarDecl
+    // Additional scope embracing shortVarDecl and statement body
     doGarbageCollection(comp, blocksCurrent(&comp->blocks));
     blocksLeave(&comp->blocks);
 }

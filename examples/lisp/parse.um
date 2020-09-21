@@ -1,0 +1,53 @@
+import (
+    "../../import/std.um"
+    "lex.um"
+)
+
+
+type (
+    Atom = struct {
+        name: str
+        val: int
+    }
+    
+    Expr = struct {
+        atom: ^Atom
+        car, cdr: ^Expr
+    }
+    
+    Parser* = struct {
+        lexer: lex.Lexer
+    }
+)
+
+
+fn (p: ^Parser) parseAtom() {
+    p.lexer.next()
+}
+
+
+fn (p: ^Parser) parseList() {
+    p.lexer.eat(lex.tokLPar)
+    
+    for p.lexer.tok.kind != lex.tokRPar && p.lexer.tok.kind != lex.tokNull {
+        if p.lexer.tok.kind == lex.tokLPar {
+            p.parseList()
+        } else {
+            p.parseAtom()
+        }
+    }
+    
+    p.lexer.eat(lex.tokRPar)
+}
+
+
+fn (p: ^Parser) open*(name: str) {
+    p.lexer.open(name)
+    p.lexer.next()
+    p.parseList()
+}
+
+
+fn (p: ^Parser) close*() {
+    p.lexer.close()
+}

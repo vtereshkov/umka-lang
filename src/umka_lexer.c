@@ -193,6 +193,7 @@ static char lexEscChar(Lexer *lex, bool *escaped)
 
         switch (ch)
         {
+            case '0': return '\0';
             case 'a': return '\a';
             case 'b': return '\b';
             case 'e': return '\e';
@@ -662,7 +663,7 @@ static void lexNumber(Lexer *lex)
 static void lexCharLiteral(Lexer *lex)
 {
     lex->tok.kind = TOK_CHARLITERAL;
-    lex->tok.charVal = lexEscChar(lex, NULL);
+    lex->tok.intVal = lexEscChar(lex, NULL);
 
     const char ch = lexChar(lex);
     if (ch != '\'')
