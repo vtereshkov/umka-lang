@@ -1,6 +1,6 @@
 import (
     "../../import/std.um"
-    "parse.um"
+    "parse.um"    
 )
 
 fn main() {

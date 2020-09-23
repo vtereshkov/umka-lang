@@ -1,37 +1,29 @@
 import (
     "../../import/std.um"
     "lex.um"
+    "ev.um"
 )
 
 
-type (
-    Atom = struct {
-        name: str
-        val: int
-    }
-    
-    Expr = struct {
-        atom: ^Atom
-        car, cdr: ^Expr
-    }
-    
-    Parser* = struct {
-        lexer: lex.Lexer
-    }
-)
+type Parser* = struct {
+    lexer: lex.Lexer
+}
 
 
-fn (p: ^Parser) parseAtom() {
+fn (p: ^Parser) parseAtom(): ^ev.Expr {
     p.lexer.next()
 }
 
 
-fn (p: ^Parser) parseList() {
+fn (p: ^Parser) parseList(): ^ev.Expr {
     p.lexer.eat(lex.tokLPar)
+    
+    e := ev.strExpr("nil")
     
     for p.lexer.tok.kind != lex.tokRPar && p.lexer.tok.kind != lex.tokNull {
         if p.lexer.tok.kind == lex.tokLPar {
-            p.parseList()
+            e1 := new(Expr)
+            e1.car = p.parseList()
         } else {
             p.parseAtom()
         }
