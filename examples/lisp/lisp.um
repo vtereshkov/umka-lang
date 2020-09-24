@@ -1,14 +1,10 @@
 import (
-    "../../import/std.um"
     "parse.um"    
 )
 
-fn main() {
-    if std.argc() < 3 {
-        error("Lisp file not specified")
-    }
-        
+fn main() {       
     var p: parse.Parser
-    p.open(std.argv(2))
-    p.close()
+    res := p.exec("((lambda (x y) (cons (car x) y)) (quote (a b)) (quote(c d)))")
+    //res := p.exec("((lambda () (cons (quote a) (quote b))) )")
+    printf("%s\n", res)
 }

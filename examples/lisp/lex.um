@@ -3,12 +3,11 @@ import "../../import/std.um"
 
 const (
     tokNull* = 0
-    tokName* = 1
-    tokNum*  = 2
-    tokLPar* = 3
-    tokRPar* = 4
+    tokAtom* = 1
+    tokLPar* = 2
+    tokRPar* = 3
     
-    spelling = [5]str{"nothing", "name", "number", "(", ")"}
+    spelling = [4]str{"nothing", "atom", "(", ")"}
 )
 
 
@@ -16,33 +15,30 @@ type (
     Token* = struct {
         kind: int
         name: str
-        val: int
     }
     
     Lexer* = struct {
-        file: std.File
-        tok: Token
+        buf: str
+        pos, size: int
         ch: char
+        tok: Token
     }
 )
 
 
-fn (l: ^Lexer) open*(name: str) {
-    l.file = std.fopen(name, "r")
-    if l.file == null {
-        error("Cannot open " + name)
-    }
+fn (l: ^Lexer) open*(buf: str) {
+    l.buf = buf
+    l.pos = 0
+    l.size = len(l.buf)
     l.ch = ' '
 }
 
 
-fn (l: ^Lexer) close*() {
-    std.fclose(l.file)
-}
-
-
-fn (l: ^Lexer) getch() {
-    if fscanf(l.file, "%c", &l.ch) != 1 {l.ch = '\0'}
+fn (l: ^Lexer) getch(): char {
+    if l.pos >= l.size {return '\0'}    
+    c := l.buf[l.pos]
+    l.pos++
+    return c
 }
 
 
@@ -51,41 +47,34 @@ fn (l: ^Lexer) next*() {
     const digit  = fn(c: char): bool {return c >= '0' && c <= '9'}
     const space  = fn(c: char): bool {return c == ' ' || c == '\t' || c == '\n'}
 
-    l.tok = Token{tokNull, "", 0}
+    ch := l.ch    
+    l.tok = Token{tokNull, ""}
     
     // Skip spaces
-    for space(l.ch) {
-        l.getch()
+    for space(ch) {
+        ch = l.getch()
     }
     
-    // Read name
-    if letter(l.ch) {        
-        l.tok.kind = tokName
+    // Read atom
+    if letter(ch) || digit(ch) {        
+        l.tok.kind = tokAtom
         l.tok.name = ""
-        for letter(l.ch) || digit(l.ch) {
-            l.tok.name += l.ch
-            l.getch()
+        for letter(ch) || digit(ch) {
+            l.tok.name += ch
+            ch = l.getch()
         }
-        
-    // Read number    
-    } else if digit(l.ch) {
-        l.tok.kind = tokNum
-        l.tok.name = ""
-        for digit(l.ch) {
-            l.tok.name += l.ch
-            l.getch()
-        }
-        l.tok.val = std.atoi(l.tok.name)
-        
+              
     // Read parentheses
-    } else if l.ch == '(' || l.ch == ')' {        
-        if l.ch == '(' {l.tok.kind = tokLPar} else {l.tok.kind = tokRPar}
-        l.tok.name = l.ch
-        l.getch()
+    } else if ch == '(' || ch == ')' {        
+        if ch == '(' {l.tok.kind = tokLPar} else {l.tok.kind = tokRPar}
+        l.tok.name = ch
+        ch = l.getch()
         
-    } else if l.ch != '\0' {
-        error("Illegal character " + l.ch + " (" + std.itoa(int(l.ch)) + ")")
+    } else if ch != '\0' {
+        error("Illegal character " + ch + " (" + std.itoa(int(ch)) + ")")
     }
+    
+    l.ch = ch
 }
 
 

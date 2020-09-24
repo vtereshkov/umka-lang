@@ -527,13 +527,13 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, Error *e
         case TYPE_UINT8:
         case TYPE_UINT16:
         case TYPE_UINT32:   len = snprintf(buf, maxLen, "%lld ",  (long long int)slot->intVal);             break;
-        case TYPE_UINT:     len = snprintf(buf, maxLen, "%llu ", (unsigned long long int)slot->uintVal);   break;
+        case TYPE_UINT:     len = snprintf(buf, maxLen, "%llu ", (unsigned long long int)slot->uintVal);    break;
         case TYPE_BOOL:     len = snprintf(buf, maxLen, slot->intVal ? "true " : "false ");                 break;
         case TYPE_CHAR:     len = snprintf(buf, maxLen, "%c ", (char)slot->intVal);                         break;
         case TYPE_REAL32:
         case TYPE_REAL:     len = snprintf(buf, maxLen, "%lf ", slot->realVal);                             break;
         case TYPE_PTR:      len = snprintf(buf, maxLen, "%p ", (void *)slot->ptrVal);                       break;
-        case TYPE_STR:      len = snprintf(buf, maxLen, "%s ", (char *)slot->ptrVal);                       break;
+        case TYPE_STR:      len = snprintf(buf, maxLen, "\"%s\" ", (char *)slot->ptrVal);                   break;
 
         case TYPE_ARRAY:
         {

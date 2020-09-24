@@ -1,5 +1,4 @@
 import (
-    "../../import/std.um"
     "lex.um"
     "ev.um"
 )
@@ -10,36 +9,48 @@ type Parser* = struct {
 }
 
 
-fn (p: ^Parser) parseAtom(): ^ev.Expr {
-    p.lexer.next()
-}
-
-
-fn (p: ^Parser) parseList(): ^ev.Expr {
-    p.lexer.eat(lex.tokLPar)
+fn (p: ^Parser) parse(): ^ev.Expr { 
+    res := ev.nilExpr()
     
-    e := ev.strExpr("nil")
+    // Parse list
+    if p.lexer.tok.kind == lex.tokLPar {
+        res^ = ev.Expr{"", ev.nilExpr(), ev.nilExpr()}
+        p.lexer.next() 
+       
+        for e := res; p.lexer.tok.kind == lex.tokAtom || p.lexer.tok.kind == lex.tokLPar {
+            if e.car.atom == "nil" {
+                e.car = p.parse()
+            } else if e.cdr.atom == "nil" {
+                e.cdr = p.parse()
+            } else {
+                tail := new(ev.Expr)
+                tail^ = ev.Expr{"", e.cdr, p.parse()} 
+                e.cdr = tail
+                e = tail
+            }
+        }        
+        p.lexer.eat(lex.tokRPar)
     
-    for p.lexer.tok.kind != lex.tokRPar && p.lexer.tok.kind != lex.tokNull {
-        if p.lexer.tok.kind == lex.tokLPar {
-            e1 := new(Expr)
-            e1.car = p.parseList()
-        } else {
-            p.parseAtom()
-        }
+    // Parse atom
+    } else {      
+        p.lexer.check(lex.tokAtom)
+        res.atom = p.lexer.tok.name
+        p.lexer.next()
     }
-    
-    p.lexer.eat(lex.tokRPar)
+
+    return res
 }
 
 
-fn (p: ^Parser) open*(name: str) {
-    p.lexer.open(name)
+fn (p: ^Parser) exec*(buf: str): str {
+    p.lexer.open(buf)
     p.lexer.next()
-    p.parseList()
+
+    e := p.parse()
+    
+    printf("parse: %s; %s\n", ev.car(e).toStr(), ev.cdr(e).toStr())
+      
+    res := ev.evalquote(ev.car(e), ev.cdr(e))
+    return res.toStr()
 }
 
-
-fn (p: ^Parser) close*() {
-    p.lexer.close()
-}

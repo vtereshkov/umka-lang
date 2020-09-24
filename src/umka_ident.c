@@ -104,11 +104,11 @@ static Ident *identAdd(Idents *idents, Modules *modules, Blocks *blocks, IdentKi
         // Forward type declaration resolution
         if (ident->kind == IDENT_TYPE && ident->type->kind == TYPE_FORWARD &&
             kind == IDENT_TYPE && type->kind != TYPE_FORWARD &&
-            ident->exported == exported &&
             strcmp(ident->type->typeIdent->name, name) == 0)
         {
             type->typeIdent = ident;
             typeDeepCopy(ident->type, type);
+            ident->exported = exported;
             return ident;
         }
 
