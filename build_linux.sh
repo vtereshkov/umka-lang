@@ -18,9 +18,11 @@ cp src/umka_api.h umka_linux
 cp LICENSE umka_linux
 
 mkdir umka_linux/examples
+mkdir umka_linux/examples/lisp
 mkdir umka_linux/import
  
 cp examples/*.* umka_linux/examples
+cp examples/lisp/*.* umka_linux/examples/lisp
 cp import/*.* umka_linux/import
 
 

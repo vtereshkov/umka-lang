@@ -17,7 +17,9 @@ copy src\umka_api.h umka_windows_mingw
 copy LICENSE umka_windows_mingw
 
 mkdir umka_windows_mingw\examples
+mkdir umka_windows_mingw\examples\lisp
 mkdir umka_windows_mingw\import
  
 copy examples\*.* umka_windows_mingw\examples
+copy examples\lisp\*.* umka_windows_mingw\examples\lisp
 copy import\*.* umka_windows_mingw\import

@@ -122,7 +122,9 @@ fn pairlis(x, y, a: ^Expr): ^Expr {
 
 
 fn assoc(x, a: ^Expr): ^Expr {
-    if equal(car(car(a)), x) {
+    if a == null {
+        error("No association for " + x.toStr())
+    } else if equal(car(car(a)), x) {
         return car(a)
     } else {
         return assoc(x, cdr(a))
