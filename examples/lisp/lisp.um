@@ -1,10 +1,27 @@
 import (
-    "parse.um"    
+    "../../import/std.um"
+    "parse.um"
 )
 
-fn main() {       
-    var p: parse.Parser
-    res := p.exec("((lambda (x y) (cons (car x) y)) (quote (a b)) (quote(c d)))")
-    //res := p.exec("((lambda () (cons (quote a) (quote b))) )")
-    printf("%s\n", res)
+fn getStr(): str {
+    s := ""
+    for true {
+        c := std.getchar()
+        if c == '\n' {break}
+        s += c
+    }
+    return s
+}
+
+
+fn main() {
+    printf("Lisp 1.5 interpreter\n")
+    printf("Example input: ((lambda (x y) (cons (car x) y)) (quote (a b)) (quote (c d)))\n\n")
+    
+    for true {
+        printf("> ")  
+        input := getStr()
+        if input == "" {break}
+        printf("< %s\n\n", parse.execStr(input))
+    }  
 }

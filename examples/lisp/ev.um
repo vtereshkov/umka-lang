@@ -1,6 +1,4 @@
-import (
-    "../../import/std.um"
-)
+import "../../import/std.um"
 
 
 type Expr* = struct {
@@ -10,8 +8,10 @@ type Expr* = struct {
 
 
 fn (e: ^Expr) toStr*(): str {
-    if e.atom == "" {
-        return "(" + e.car.toStr() + " " + e.cdr.toStr() + ")"
+    if e == null {
+        return "nil"
+    } else if e.atom == "" {
+        return "(" + e.car.toStr() + " . " + e.cdr.toStr() + ")"
     } else {  
         return e.atom
     }
@@ -19,10 +19,7 @@ fn (e: ^Expr) toStr*(): str {
 
 
 fn (e: ^Expr) toBool*(): bool {
-    if e.atom != "t" && e.atom != "nil" {
-        error("Expression is non-Boolean")
-    }
-    return e.atom == "t"
+    return e != null
 }
 
 
@@ -35,64 +32,56 @@ fn strExpr*(s: str): ^Expr {
 
 fn boolExpr*(b: bool): ^Expr {
     e := new(Expr)
-    if b {e.atom = "t"} else {e.atom = "nil"}
-    return e
-}
-
-
-fn nilExpr*(): ^Expr {
-    e := new(Expr)
-    e.atom = "nil"
-    return e
+    if b {
+        return strExpr("t")
+    } else {
+        return null
+    }
 }
 
 
 // Elementary functions
 
 fn car*(x: ^Expr): ^Expr {
-    printf("car\n")
-    if x.atom == "nil" {
-        return x
-    }
-    if x.atom != "" {
+    if x == null {
+        return null
+    } else if x.atom != "" {
         error("car() is undefined for atom " + x.atom)
+    } else {
+        return x.car
     }
-    return x.car
 }
 
 
 fn cdr*(x: ^Expr): ^Expr {
-    printf("cdr\n")
-    if x.atom == "nil" {
-        return x
-    }    
-    if x.atom != "" {
+    if x == null {
+        return null
+    } else if x.atom != "" {
         error("cdr() is undefined for atom " + x.atom)
+    } else {
+        return x.cdr
     }
-    return x.cdr
 }
 
 
 fn cons*(x, y: ^Expr): ^Expr {
-    printf("cons\n")
     z := new(Expr)
-    z.atom = ""
-    z.car = x
-    z.cdr = y
+    z^ = Expr{"", x, y} 
     return z
 }
 
 
 fn atom*(x: ^Expr): bool {
-    printf("atom\n")
-    return x.atom != "" || (x.car.atom == "nil" && x.cdr.atom == "nil")
+    return x == null || x.atom != ""
 }
 
 
 fn eq*(x, y: ^Expr): bool {
-    printf("eq\n")
-    if x.atom == "" || y.atom == "" {
-        error("eq() is undefined for non-atom " + x.atom + " or " + y.atom)
+    if x == null {return y == null}
+    if y == null {return x == null}
+    
+    if !atom(x) || !atom(y) {
+        error("eq() is undefined for non-atom(s) (" + x.toStr() + ", " + y.toStr() + ")")
     }
     return x.atom == y.atom
 }
@@ -104,13 +93,11 @@ fn eval(e, a: ^Expr): ^Expr
 
 
 fn _null(x: ^Expr): bool {
-    printf("null\n")
-    return x.atom == "nil" || x.atom == "" && x.car.atom == "nil" && x.cdr.atom == "nil"
+    return x == null
 }
 
 
 fn equal(x, y: ^Expr): bool {
-    printf("equal\n")
     if atom(x) {
         if atom(y) {
             return eq(x, y)
@@ -126,7 +113,6 @@ fn equal(x, y: ^Expr): bool {
 
 
 fn pairlis(x, y, a: ^Expr): ^Expr {
-    printf("pairlis\n")
     if _null(x) {
         return a
     } else {
@@ -136,7 +122,6 @@ fn pairlis(x, y, a: ^Expr): ^Expr {
 
 
 fn assoc(x, a: ^Expr): ^Expr {
-    printf("assoc\n")
     if equal(car(car(a)), x) {
         return car(a)
     } else {
@@ -146,7 +131,6 @@ fn assoc(x, a: ^Expr): ^Expr {
 
 
 fn evcon(c, a: ^Expr): ^Expr {
-    printf("evcon\n")
     if eval(car(car(c)), a).toBool() {
         return eval(car(cdr(car(c))), a)
     } else {
@@ -156,9 +140,8 @@ fn evcon(c, a: ^Expr): ^Expr {
 
 
 fn evlis(m, a: ^Expr): ^Expr {
-    printf("evlis\n")
     if _null(m) {
-        return strExpr("nil")
+        return null
     } else {
         return cons(eval(car(m), a), evlis(cdr(m), a))
     }
@@ -168,7 +151,6 @@ fn evlis(m, a: ^Expr): ^Expr {
 // Universal function (Lisp 1.5 manual, p. 13)
 
 fn apply(f, x, a: ^Expr): ^Expr {
-    printf("apply\n")
     if atom(f) {
         if eq(f, strExpr("car")) {
             return car(car(x))
@@ -179,7 +161,7 @@ fn apply(f, x, a: ^Expr): ^Expr {
         } else if eq(f, strExpr("atom")) {
             return boolExpr(atom(car(x)))
         } else if eq(f, strExpr("eq")) {
-            return boolExpr(eq(car(x), car(cdr(x))))
+            return boolExpr(eq(car(x), car(cdr(x))))        
         } else {
             return apply(eval(f, a), x, a)
         }
@@ -188,13 +170,12 @@ fn apply(f, x, a: ^Expr): ^Expr {
     } else if eq(car(f), strExpr("label")) {
         return apply(car(cdr(cdr(f))), x, cons(cons(car(cdr(f)), car(cdr(cdr(f)))), a))
     } else {
-        error("Illegal apply()")
+        error("Illegal function call")
     }    
 }
 
 
 fn eval(e, a: ^Expr): ^Expr {
-    printf("eval\n")
     if atom(e) {
         return cdr(assoc(e, a))
     } else if atom(car(e)) {
@@ -212,6 +193,5 @@ fn eval(e, a: ^Expr): ^Expr {
 
 
 fn evalquote*(f, x: ^Expr): ^Expr {
-    printf("evalquote\n")
-    return apply(f, x, ev.strExpr("nil"))
+    return apply(f, x, null)
 }

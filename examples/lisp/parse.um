@@ -9,48 +9,51 @@ type Parser* = struct {
 }
 
 
-fn (p: ^Parser) parse(): ^ev.Expr { 
-    res := ev.nilExpr()
-    
+fn (p: ^Parser) parse(): ^ev.Expr {    
     // Parse list
     if p.lexer.tok.kind == lex.tokLPar {
-        res^ = ev.Expr{"", ev.nilExpr(), ev.nilExpr()}
         p.lexer.next() 
        
-        for e := res; p.lexer.tok.kind == lex.tokAtom || p.lexer.tok.kind == lex.tokLPar {
-            if e.car.atom == "nil" {
-                e.car = p.parse()
-            } else if e.cdr.atom == "nil" {
-                e.cdr = p.parse()
+        var first, last: ^ev.Expr
+        for p.lexer.tok.kind == lex.tokAtom || p.lexer.tok.kind == lex.tokLPar {
+            e := ev.strExpr("")
+            e.car = p.parse()
+            
+            if first == null {
+                first = e
+                last = e
             } else {
-                tail := new(ev.Expr)
-                tail^ = ev.Expr{"", e.cdr, p.parse()} 
-                e.cdr = tail
-                e = tail
-            }
+                last.cdr = e
+                last = e
+            }            
         }        
         p.lexer.eat(lex.tokRPar)
+        return first
     
     // Parse atom
     } else {      
         p.lexer.check(lex.tokAtom)
+        res := new(ev.Expr)
         res.atom = p.lexer.tok.name
         p.lexer.next()
+        return res
     }
-
-    return res
 }
 
 
-fn (p: ^Parser) exec*(buf: str): str {
+fn parseStr*(buf: str): ^ev.Expr {
+    var p: Parser
     p.lexer.open(buf)
     p.lexer.next()
+    return p.parse()
+}
 
-    e := p.parse()
+
+fn execStr*(buf: str): str {
+    e := parseStr(buf)
     
-    printf("parse: %s; %s\n", ev.car(e).toStr(), ev.cdr(e).toStr())
-      
-    res := ev.evalquote(ev.car(e), ev.cdr(e))
-    return res.toStr()
+    // Convert expression to a fictitious function call: apply((lambda () e), nil)
+    lambda := ev.cons(ev.strExpr("lambda"), ev.cons(null, ev.cons(e, null)))
+    return ev.evalquote(lambda, null).toStr()
 }
 

@@ -56,7 +56,7 @@ fn (l: ^Lexer) next*() {
     }
     
     // Read atom
-    if letter(ch) || digit(ch) {        
+    if letter(ch) {        
         l.tok.kind = tokAtom
         l.tok.name = ""
         for letter(ch) || digit(ch) {
