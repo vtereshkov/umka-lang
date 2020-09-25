@@ -15,6 +15,7 @@ type (
     Token* = struct {
         kind: int
         name: str
+        val: int
     }
     
     Lexer* = struct {
@@ -48,14 +49,14 @@ fn (l: ^Lexer) next*() {
     const space  = fn(c: char): bool {return c == ' ' || c == '\t' || c == '\n'}
 
     ch := l.ch    
-    l.tok = Token{tokNull, ""}
+    l.tok = Token{tokNull, "", 0}
     
     // Skip spaces
     for space(ch) {
         ch = l.getch()
     }
     
-    // Read atom
+    // Read string atom
     if letter(ch) {        
         l.tok.kind = tokAtom
         l.tok.name = ""
@@ -63,6 +64,21 @@ fn (l: ^Lexer) next*() {
             l.tok.name += ch
             ch = l.getch()
         }
+        
+    // Read number
+    } else if ch == '+' || ch == '-' || digit(ch) {
+        l.tok.kind = tokAtom
+        l.tok.name = "<number>"
+        s := ""
+        if ch == '+' || ch == '-' {
+            s = ch
+            ch = l.getch()
+        }
+        for digit(ch) {
+            s += ch
+            ch = l.getch()
+        }
+        l.tok.val = std.atoi(s)
               
     // Read parentheses
     } else if ch == '(' || ch == ')' {        

@@ -15,8 +15,10 @@ fn getStr(): str {
 
 
 fn main() {
-    printf("Lisp 1.5 interpreter\n")
-    printf("Example input: ((lambda (x y) (cons (car x) y)) (quote (a b)) (quote (c d)))\n\n")
+    printf("Lisp interpreter\n\n")
+    printf("Examples:\n")
+    printf(" ((lambda(x y)(cons (car x) y))(quote (a b))(quote (c d)))\n")
+    printf(" ((label fac(lambda(n)(cond((eq n 0) 1)((quote t)(mul n (fac(sub n 1))))))) 6)\n\n")
     
     for true {
         printf("> ")  

@@ -35,6 +35,7 @@ fn (p: ^Parser) parse(): ^ev.Expr {
         p.lexer.check(lex.tokAtom)
         res := new(ev.Expr)
         res.atom = p.lexer.tok.name
+        res.val = p.lexer.tok.val
         p.lexer.next()
         return res
     }
