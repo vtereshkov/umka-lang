@@ -25,6 +25,7 @@ _400 x 400 matrix multiplication (AMD A4-3300M @ 1.9 GHz, Windows 7)_
 * Explore the [raytracer](https://github.com/vtereshkov/umka-lang/blob/master/examples/raytracer.um) example that demonstrates many language features like fibers, interfaces and dynamic arrays
 * Play with the toy [Lisp interpreter](https://github.com/vtereshkov/umka-lang/blob/master/examples/lisp) written in Umka
 * Try the more realistic [C](https://github.com/vtereshkov/umka-lang/blob/master/examples/3dcam.c)+[Umka](https://github.com/vtereshkov/umka-lang/blob/master/examples/3dcam.um) embedded scripting example (_Note:_ [raylib](https://www.raylib.com) is required to compile and run it)
+* If you are familiar with Go, read about the [differences](https://github.com/vtereshkov/umka-lang/blob/master/README.md#umka-vs-go)
 * Look at the [language grammar](https://github.com/vtereshkov/umka-lang/blob/master/README.md#language-grammar) to better understand Umka capabilities
 
 _Raytracer example_
@@ -193,6 +194,16 @@ fn main() {
     printf("Sum of all squares less than %d = %s\n", max, repr(result))       
 }
 ```
+## Umka vs Go
+### Purpose
+While Go is a compiled systems programming language with a complex runtime library and big output binaries, Umka is a scripting language with a lightweight interpreter that can be easily embedded into any application as a shared library.
+
+### Syntax
+Umka is very similar to Go syntactically. However, in some aspects it's different. It has shorter keywords: `fn` for `func` and `str` for `string`. For better readability, it requires a `:` between variable names and type in declarations. It doesn't follow the [unfortunate C tradition](https://blog.golang.org/declaration-syntax) of pointer dereferencing. Instead of `*p`, it uses the Pascal syntax `p^`. As the `*` character is no longer used for pointers, it becomes the export mark, like in Oberon, so that a programmer can freely use upper/lower case letters in identifier names according to his/her own style. Type assertions don't have any special syntax; they look like pointer type casts.
+
+### Semantics
+Umka allows implicit type casts and supports default parameters in function declarations. It doesn't have slices. Instead, it supports dynamic arrays, which are declared like Go's slices and initialized by calling `make()`. Method receivers must be pointers. The multithreading model in Umka is inspired by Lua and Wren rather than Go. It offers extremely lightweight threads called fibers instead of goroutines and channels. The garbage collection mechanism is based on reference counting, so Umka needs to support `weak` pointers. Maps, closures and Unicode support are under development.
+
 ## Language Grammar
 ```
 program             = module.
@@ -271,7 +282,7 @@ hexNumber           = "0" "x" hexDigit {hexDigit}.
 realNumber          = decNumber ["." decNumber] [("E" | "e") decNumber].
 charLiteral         = "'" (char | escSeq) "'".
 stringLiteral       = """ {char | escSeq} """.
-escSeq              = "\" ("a" | "b" | "e" | "f" | "n" | "r" | "t" | "v" | "x" hexNumber).
+escSeq              = "\" ("0" | "a" | "b" | "e" | "f" | "n" | "r" | "t" | "v" | "x" hexNumber).
 letter              = "A".."Z" | "a".."z".
 digit               = "0".."9".
 hexDigit            = digit | "A".."F" | "a"..f".
