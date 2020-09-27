@@ -176,8 +176,11 @@ static HeapPage *pageFind(HeapPages *pages, void *ptr)
 
 static void *chunkAlloc(HeapPages *pages, int size, Error *error)
 {
-    // Page layout: header, data, header, data...
-    int chunkSize = sizeof(HeapChunkHeader) + size;
+    if (size < 0)
+        error->handlerRuntime(error->context, "Allocated memory block size cannot be negative");
+
+    // Page layout: header, data, footer (char), header, data, footer (char)...
+    int chunkSize = sizeof(HeapChunkHeader) + size + 1;
     int pageSize = chunkSize > VM_MIN_HEAP_PAGE ? chunkSize : VM_MIN_HEAP_PAGE;
 
     if (!pages->last || pages->last->occupied + chunkSize > pages->last->size)
