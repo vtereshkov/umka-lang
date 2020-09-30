@@ -11,7 +11,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
-				<Option parameters="../examples/lisp/lisp.um ../examples/lisp/test.lisp" />
+				<Option parameters="../test.um" />
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>

@@ -351,6 +351,10 @@ static void doBasicAssign(void *lhs, Slot rhs, TypeKind typeKind, int structSize
     if (!lhs)
         error->handlerRuntime(error->context, "Pointer is null");
 
+    Const rhsConstant = {.intVal = rhs.intVal};
+    if (typeOverflow(typeKind, rhsConstant))
+        error->handlerRuntime(error->context, "Overflow in assignment to %s", typeKindSpelling(typeKind));
+
     switch (typeKind)
     {
         case TYPE_INT8:         *(int8_t   *)lhs = rhs.intVal;  break;

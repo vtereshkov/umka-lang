@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
+#include <float.h>
 
 #include "umka_vm.h"
 #include "umka_types.h"
@@ -486,6 +488,36 @@ bool typeAssertForwardResolved(Types *types)
             return false;
         }
     return true;
+}
+
+
+bool typeOverflow(TypeKind typeKind, Const val)
+{
+    switch (typeKind)
+    {
+        case TYPE_VOID:     return true;
+        case TYPE_INT8:     return val.intVal  < -128        || val.intVal  > 127;
+        case TYPE_INT16:    return val.intVal  < -32768      || val.intVal  > 32767;
+        case TYPE_INT32:    return val.intVal  < -2147483648 || val.intVal  > 2147483647;
+        case TYPE_INT:      return false;
+        case TYPE_UINT8:    return val.intVal  < 0           || val.intVal  > 255;
+        case TYPE_UINT16:   return val.intVal  < 0           || val.intVal  > 65535;
+        case TYPE_UINT32:   return val.intVal  < 0           || val.intVal  > 4294967295;
+        case TYPE_UINT:     return false;
+        case TYPE_BOOL:     return false;
+        case TYPE_CHAR:     return val.intVal  < -128        || val.intVal  > 255;
+        case TYPE_REAL32:   return val.realVal < -FLT_MAX    || val.realVal > FLT_MAX;
+        case TYPE_REAL:     return val.realVal < -DBL_MAX    || val.realVal > DBL_MAX;
+        case TYPE_PTR:
+        case TYPE_STR:
+        case TYPE_ARRAY:
+        case TYPE_DYNARRAY:
+        case TYPE_STRUCT:
+        case TYPE_INTERFACE:
+        case TYPE_FIBER:
+        case TYPE_FN:       return false;
+        default:            return true;
+    }
 }
 
 

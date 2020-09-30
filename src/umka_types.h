@@ -124,6 +124,8 @@ bool typeAssertValidOperator(Types *types, Type *type, TokenKind op);
 
 bool typeAssertForwardResolved(Types *types);
 
+bool typeOverflow           (TypeKind typeKind, Const val);
+
 Field *typeFindField        (Type *structType, char *name);
 Field *typeAssertFindField  (Types *types, Type *structType, char *name);
 Field *typeAddField         (Types *types, Type *structType, Type *fieldType, char *name);
