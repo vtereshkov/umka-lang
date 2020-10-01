@@ -102,7 +102,7 @@ fn tan(x: real): real {return sin(x) / cos(x)}
 _Built-in functions_
 ```
 printf fprintf sprintf scanf fscanf sscanf
-round trunc fabs sqrt sin cos atan exp log
+round trunc fabs sqrt sin cos atan atan2 exp log
 new make append delete len sizeof sizeofself
 fiberspawn fibercall fiberalive
 repr error
@@ -199,10 +199,10 @@ fn main() {
 While Go is a compiled systems programming language with a complex runtime library and big output binaries, Umka is a scripting language with a lightweight interpreter that can be easily embedded into any application as a shared library.
 
 ### Syntax
-Umka is very similar to Go syntactically. However, in some aspects it's different. It has shorter keywords: `fn` for `func` and `str` for `string`. For better readability, it requires a `:` between variable names and type in declarations. It doesn't follow the [unfortunate C tradition](https://blog.golang.org/declaration-syntax) of pointer dereferencing. Instead of `*p`, it uses the Pascal syntax `p^`. As the `*` character is no longer used for pointers, it becomes the export mark, like in Oberon, so that a programmer can freely use upper/lower case letters in identifier names according to his/her own style. Type assertions don't have any special syntax; they look like pointer type casts.
+Umka is very similar to Go syntactically. However, in some aspects it's different. It has shorter keywords: `fn` for `func` and `str` for `string`. For better readability, it requires a `:` between variable names and type in declarations. It doesn't follow the [unfortunate C tradition](https://blog.golang.org/declaration-syntax) of pointer dereferencing. Instead of `*p`, it uses the Pascal syntax `p^`. As the `*` character is no longer used for pointers, it becomes the export mark, like in Oberon, so that a programmer can freely use upper/lower case letters in identifiers according to his/her own style. Type assertions don't have any special syntax; they look like pointer type casts.
 
 ### Semantics
-Umka allows implicit type casts and supports default parameters in function declarations. It doesn't have slices. Instead, it supports dynamic arrays, which are declared like Go's slices and initialized by calling `make()`. Method receivers must be pointers. The multithreading model in Umka is inspired by Lua and Wren rather than Go. It offers extremely lightweight threads called fibers instead of goroutines and channels. The garbage collection mechanism is based on reference counting, so Umka needs to support `weak` pointers. Maps, closures and Unicode support are under development.
+Umka allows implicit type casts and supports default parameters in function declarations. It doesn't have slices. Instead, it supports dynamic arrays, which are declared like Go's slices and initialized by calling `make()`. Method receivers must be pointers. The multithreading model in Umka is inspired by Lua and Wren rather than Go. It offers lightweight threads called fibers instead of goroutines and channels. The garbage collection mechanism is based on reference counting, so Umka needs to support `weak` pointers. Maps, closures and Unicode support are under development.
 
 ## Language Grammar
 ```
