@@ -7,8 +7,8 @@ fn main() {
     var a, b, c: [size][size] real
     
     // Fill matrices
-    for i := 0; i < size; i++ {
-        for j := 0; j < size; j++ {
+    for i, row in a {
+        for j, col in row {
             a[i][j] = 3 * i + j
             b[i][j] = i - 3 * j
         }
@@ -29,8 +29,8 @@ fn main() {
     
     // Check result
     check := 0.0
-    for i := 0; i < size; i++ {
-        for j := 0; j < size; j++ {check += c[i][j]}
+    for _, row in c {
+        for _, col in row {check += col}
     }
 
     printf("check: %lf\n", check / size / size)

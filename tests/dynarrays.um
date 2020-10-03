@@ -9,14 +9,14 @@ fn f(b: ^[100][2]^int, length: int) {
 fn main() {    
     a := make([][2]^int, 10)
     
-    for i := 0; i < len(a); i++ {
+    for i, _ in a {
         a[i] = [2]^int {new(int), new(int)}
         a[i][0]^ = 5 * i
         a[i][1]^ = 7 * i
     } 
     
-    for i := 0; i < len(a); i++ {
-        std.println("a: " + std.itoa(a[i][0]^) + " " + std.itoa(a[i][1]^))
+    for _, x in a {
+        std.println("a: " + std.itoa(x[0]^) + " " + std.itoa(x[1]^))
     }
        
     std.println("Appending...")
@@ -24,8 +24,8 @@ fn main() {
     a[len(a) - 1][0]^ = 666
     a[len(a) - 1][1]^ = 777    
 
-    for i := 0; i < len(a); i++ {
-        std.println("a: " + std.itoa(a[i][0]^) + " " + std.itoa(a[i][1]^))
+    for _, x in a {
+        std.println("a: " + std.itoa(x[0]^) + " " + std.itoa(x[1]^))
     }   
 
     f(&a, len(a))
@@ -35,8 +35,8 @@ fn main() {
     e[len(e) - 1][0]^ = 876
     e[len(e) - 1][1]^ = 765
 
-    for i := 0; i < len(e); i++ {
-        std.println("e: " + std.itoa(e[i][0]^) + " " + std.itoa(e[i][1]^))
+    for _, x in e {
+        std.println("e: " + std.itoa(x[0]^) + " " + std.itoa(x[1]^))
     } 
 
     f := e
@@ -45,12 +45,12 @@ fn main() {
     std.println("Deleting #" + std.itoa(del) + "...")
     e = delete(e, del)
     
-    for i := 0; i < len(e); i++ {
-        std.println("e: " + std.itoa(e[i][0]^) + " " + std.itoa(e[i][1]^))
+    for _, x in e {
+        std.println("e: " + std.itoa(x[0]^) + " " + std.itoa(x[1]^))
     } 
 
-    for i := 0; i < len(f); i++ {
-        std.println("f: " + std.itoa(f[i][0]^) + " " + std.itoa(f[i][1]^))
+    for _, x in f {
+        std.println("f: " + std.itoa(x[0]^) + " " + std.itoa(x[1]^))
     }       
     
     var c: []int = [3]int {3, 4, 5}

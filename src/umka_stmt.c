@@ -130,8 +130,7 @@ void parseDeclAssignmentStmt(Compiler *comp, IdentName name, bool constExpr, boo
 
     parseExpr(comp, &rightType, rightConstant);
 
-    identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, name, rightType, exported);
-    Ident *ident = comp->idents.last;
+    Ident *ident = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, name, rightType, exported);
 
     if (constExpr)              // Initialize global variable
         constAssign(&comp->consts, ident->ptr, rightConstant, rightType->kind, typeSize(&comp->types, rightType));
@@ -343,29 +342,12 @@ static void parseSwitchStmt(Compiler *comp)
 }
 
 
-// forStmt = "for" [shortVarDecl ";"] expr [";" simpleStmt] block.
-static void parseForStmt(Compiler *comp)
+// forHeader = [shortVarDecl ";"] expr [";" simpleStmt].
+static void parseForHeader(Compiler *comp, TokenKind lookaheadTokKind)
 {
-    lexEat(&comp->lex, TOK_FOR);
-
-    // Additional scope embracing shortVarDecl and statement body
-    blocksEnter(&comp->blocks, NULL);
-
-    // 'break'/'continue' prologs
-    Gotos breaks, *outerBreaks = comp->gen.breaks;
-    comp->gen.breaks = &breaks;
-    genGotosProlog(&comp->gen, comp->gen.breaks, blocksCurrent(&comp->blocks));
-
-    Gotos continues, *outerContinues = comp->gen.continues;
-    comp->gen.continues = &continues;
-    genGotosProlog(&comp->gen, comp->gen.continues, blocksCurrent(&comp->blocks));
-
-    // [shortVarDecl ";"]
-    Lexer lookaheadLex = comp->lex;
-    lexNext(&lookaheadLex);
-
-    if (lookaheadLex.tok.kind == TOK_COLONEQ)
+    if (lookaheadTokKind == TOK_COLONEQ)
     {
+        // [shortVarDecl ";"]
         parseShortVarDecl(comp);
         lexEat(&comp->lex, TOK_SEMICOLON);
     }
@@ -389,11 +371,10 @@ static void parseForStmt(Compiler *comp)
     // [";" simpleStmt]
     if (comp->lex.tok.kind == TOK_SEMICOLON)
     {
-        lexNext(&comp->lex);
-
         // Additional scope embracing simpleStmt (needed for timely garbage collection in simpleStmt, since it is executed at each iteration)
         blocksEnter(&comp->blocks, NULL);
 
+        lexNext(&comp->lex);
         parseSimpleStmt(comp);
 
         // Additional scope embracing simpleStmt
@@ -402,6 +383,139 @@ static void parseForStmt(Compiler *comp)
     }
 
     genForPostStmtEpilog(&comp->gen);
+}
+
+
+// forInHeader = ident "," ident ":" expr.
+static void parseForInHeader(Compiler *comp)
+{
+    Ident *indexIdent = NULL, *itemIdent = NULL;
+    Type *collectionType;
+    IdentName itemName;
+
+    // ident "," ident ":"
+    lexCheck(&comp->lex, TOK_IDENT);
+    indexIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, comp->lex.tok.name, comp->intType, false);
+
+    // Zero index
+    doPushVarPtr(comp, indexIdent);
+    genPushIntConst(&comp->gen, 0);
+    genAssign(&comp->gen, TYPE_INT, 0);
+
+    lexNext(&comp->lex);
+    lexEat(&comp->lex, TOK_COMMA);
+
+    lexCheck(&comp->lex, TOK_IDENT);
+    strcpy(itemName, comp->lex.tok.name);
+
+    lexNext(&comp->lex);
+    lexEat(&comp->lex, TOK_IN);
+
+    genForCondProlog(&comp->gen);
+
+    // Additional scope embracing expr (needed for timely garbage collection in expr, since it is computed at each iteration)
+    blocksEnter(&comp->blocks, NULL);
+
+    // Implicit conditional expr: len(collection) >= index
+    parseExpr(comp, &collectionType, NULL);
+
+    // Save collection for future use
+    genDup(&comp->gen);
+    genPopReg(&comp->gen, VM_REG_COMMON_2);
+
+    if (collectionType->kind == TYPE_ARRAY)
+    {
+        genPop(&comp->gen);
+        genPushIntConst(&comp->gen, collectionType->numItems);
+    }
+    else if (collectionType->kind == TYPE_DYNARRAY || collectionType->kind == TYPE_STR)
+    {
+        genCallBuiltin(&comp->gen, collectionType->kind, BUILTIN_LEN);
+    }
+    else
+        comp->error.handler(comp->error.context, "Expression of type %s is not iterable", typeKindSpelling(collectionType->kind));
+
+    doPushVarPtr(comp, indexIdent);
+    genDeref(&comp->gen, TYPE_INT);
+    genBinary(&comp->gen, TOK_GREATER, TYPE_INT, 0);
+
+    // Additional scope embracing expr
+    doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+    blocksLeave(&comp->blocks);
+
+    genForCondEpilog(&comp->gen);
+
+    // Declare variable for collection item
+    Type *itemType = (collectionType->kind == TYPE_STR) ? comp->charType : collectionType->base;
+    itemIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, itemName, itemType, false);
+
+    // Additional scope embracing simpleStmt (needed for timely garbage collection in simpleStmt, since it is executed at each iteration)
+    blocksEnter(&comp->blocks, NULL);
+
+    // Implicit simpleStmt: index++
+    doPushVarPtr(comp, indexIdent);
+    genUnary(&comp->gen, TOK_PLUSPLUS, TYPE_INT);
+
+    // Additional scope embracing simpleStmt
+    doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+    blocksLeave(&comp->blocks);
+
+    genForPostStmtEpilog(&comp->gen);
+
+    // Get collection item pointer
+    genPushReg(&comp->gen, VM_REG_COMMON_2);
+    doPushVarPtr(comp, indexIdent);
+    genDeref(&comp->gen, TYPE_INT);
+
+    if (collectionType->kind == TYPE_DYNARRAY)
+    {
+        genGetDynArrayPtr(&comp->gen);
+    }
+    else if (collectionType->kind == TYPE_STR)
+    {
+        genPushIntConst(&comp->gen, -1);                            // Use actual length for range checking
+        genGetArrayPtr(&comp->gen, typeSize(&comp->types, itemType));
+    }
+    else // TYPE_ARRAY
+    {
+        genPushIntConst(&comp->gen, collectionType->numItems);      // Use nominal length for range checking
+        genGetArrayPtr(&comp->gen, typeSize(&comp->types, itemType));
+    }
+
+    // Get collection item value
+    if (!typeStructured(itemType))
+        genDeref(&comp->gen, itemType->kind);
+
+    // Assign collection item to iteration variable
+    doPushVarPtr(comp, itemIdent);
+    genSwapChangeRefCntAssign(&comp->gen, itemType);
+}
+
+
+// forStmt = "for" (forHeader | forInHeader) block.
+static void parseForStmt(Compiler *comp)
+{
+    lexEat(&comp->lex, TOK_FOR);
+
+    // Additional scope embracing shortVarDecl in forHeader/forEachHeader and statement body
+    blocksEnter(&comp->blocks, NULL);
+
+    // 'break'/'continue' prologs
+    Gotos breaks, *outerBreaks = comp->gen.breaks;
+    comp->gen.breaks = &breaks;
+    genGotosProlog(&comp->gen, comp->gen.breaks, blocksCurrent(&comp->blocks));
+
+    Gotos continues, *outerContinues = comp->gen.continues;
+    comp->gen.continues = &continues;
+    genGotosProlog(&comp->gen, comp->gen.continues, blocksCurrent(&comp->blocks));
+
+    Lexer lookaheadLex = comp->lex;
+    lexNext(&lookaheadLex);
+
+    if (lookaheadLex.tok.kind == TOK_COMMA)
+        parseForInHeader(comp);
+    else
+        parseForHeader(comp, lookaheadLex.tok.kind);
 
     // block
     parseBlock(comp);
@@ -416,7 +530,7 @@ static void parseForStmt(Compiler *comp)
     genGotosEpilog(&comp->gen, comp->gen.breaks);
     comp->gen.breaks = outerBreaks;
 
-    // Additional scope embracing shortVarDecl and statement body
+    // Additional scope embracing shortVarDecl in forHeader/forEachHeader and statement body
     doGarbageCollection(comp, blocksCurrent(&comp->blocks));
     blocksLeave(&comp->blocks);
 }

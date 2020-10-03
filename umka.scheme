@@ -2,7 +2,7 @@
 <Scheme>
 	<keyword-classes>
 		<keyword-class name="umka">
-            break case const continue default else for import interface if fn return str struct switch type var weak
+            break case const continue default else for fn import interface if in return str struct switch type var weak
 		</keyword-class>
 		<keyword-class name="ddoxygen">
 		</keyword-class>

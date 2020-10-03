@@ -22,12 +22,11 @@ type System = []^Body
 
 fn NewSystem(body: ^[]Body): System {
    sys := make([]^Body, len(body^))
-   for i := 0; i < len(sys); i++ {
+   for i, _ in sys {
       sys[i] = &body[i]
    }
    var px, py, pz: real
-   for i := 0; i < len(sys); i++ {
-      body := sys[i]
+   for _, body in sys {
       px += body.vx * body.mass
       py += body.vy * body.mass
       pz += body.vz * body.mass
@@ -38,8 +37,7 @@ fn NewSystem(body: ^[]Body): System {
 
 fn energy(sys: ^System): real {
    var e: real
-   for i := 0; i < len(sys^); i++ {
-      body := sys[i]
+   for i, body in sys^ {
       e += 0.5 * body.mass * (body.vx*body.vx + body.vy*body.vy + body.vz*body.vz)
       for j := i + 1; j < len(sys^); j++ {
          body2 := sys[j]
@@ -54,8 +52,7 @@ fn energy(sys: ^System): real {
 }
 
 fn advance(sys: ^System, dt: real) {
-   for i := 0; i < len(sys^); i++ {
-      body := sys[i]
+   for i, body in sys^ {
       for j := i + 1; j < len(sys^); j++ {
          body2 := sys[j]
          dx := body.x - body2.x
@@ -76,8 +73,7 @@ fn advance(sys: ^System, dt: real) {
       }
    }
 
-   for i := 0; i < len(sys^); i++ {
-      body := sys[i]
+   for i, body in sys^ {
       body.x += dt * body.vx
       body.y += dt * body.vy
       body.z += dt * body.vz

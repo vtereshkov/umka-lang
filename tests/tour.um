@@ -45,7 +45,7 @@ Built-in functions:
 
 // Methods
 fn (a: ^Arr) print(): int {
-    printf("Arr: %8.3lf %8.3lf %8.3lf\n", a[0], a[1], a[2])
+    printf("Arr: %s\n", repr(a^))
     return 0
 }
 
@@ -101,10 +101,14 @@ fn main() {
     }
 
     // Loop
-    for i := 0; i < len(g); i++ {
-        if fabs(g[i]) > 1e12 {break}
-        if g[i] < 0 {continue}
-        sum += g[i]
+    for k := 1; k <= 128; k *= 2 {
+        std.println(repr(k))
+    }
+    
+    for i, x in g {
+        if fabs(x) > 1e12 {break}
+        if x < 0 {continue}
+        sum += x
     }
     
         

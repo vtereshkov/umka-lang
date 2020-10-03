@@ -114,10 +114,10 @@ fn (sc: ^Scene) trace(ray: ^Ray, depth: int): Color {
     bestIndex := -1
     var bestPoint, bestNormal: Vec
 
-    for i := 0; i < len(sc.body); i++ {
+    for i, b in sc.body {
         var point, normal: Vec
         
-        if found := sc.body[i].intersect(ray, &point, &normal); found {
+        if found := b.intersect(ray, &point, &normal); found {
             dist := norm(point.sub(ray.origin))
             if dist < bestDist {
                 bestDist = dist

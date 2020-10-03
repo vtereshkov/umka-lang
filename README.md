@@ -110,7 +110,7 @@ repr error
 #### Methods
 ```
 fn (a: ^Arr) print(): int {
-    printf("Arr: %8.3lf %8.3lf %8.3lf\n", a[0], a[1], a[2])
+    printf("Arr: %s\n", repr(a^))
     return 0
 }
 ```
@@ -149,11 +149,15 @@ switch a {
 ```
 #### Loop
 ```
-for i := 0; i < len(g); i++ {
-    if fabs(g[i]) > 1e12 {break}
-    if g[i] < 0 {continue}
-    sum += g[i]
-}
+    for k := 1; k <= 128; k *= 2 {
+        std.println(repr(k))
+    }
+    
+    for i, x in g {
+        if fabs(x) > 1e12 {break}
+        if x < 0 {continue}
+        sum += x
+    }
 ```
 ### Multitasking
 ```
@@ -199,7 +203,7 @@ fn main() {
 While Go is a compiled systems programming language with a complex runtime library and big output binaries, Umka is a scripting language with a lightweight interpreter that can be easily embedded into any application as a shared library.
 
 ### Syntax
-Umka is very similar to Go syntactically. However, in some aspects it's different. It has shorter keywords: `fn` for `func` and `str` for `string`. For better readability, it requires a `:` between variable names and type in declarations. It doesn't follow the [unfortunate C tradition](https://blog.golang.org/declaration-syntax) of pointer dereferencing. Instead of `*p`, it uses the Pascal syntax `p^`. As the `*` character is no longer used for pointers, it becomes the export mark, like in Oberon, so that a programmer can freely use upper/lower case letters in identifiers according to his/her own style. Type assertions don't have any special syntax; they look like pointer type casts.
+Umka is very similar to Go syntactically. However, in some aspects it's different. It has shorter keywords: `fn` for `func`, `str` for `string`, `in` for `range`. For better readability, it requires a `:` between variable names and type in declarations. It doesn't follow the [unfortunate C tradition](https://blog.golang.org/declaration-syntax) of pointer dereferencing. Instead of `*p`, it uses the Pascal syntax `p^`. As the `*` character is no longer used for pointers, it becomes the export mark, like in Oberon, so that a programmer can freely use upper/lower case letters in identifiers according to his/her own style. Type assertions don't have any special syntax; they look like pointer type casts.
 
 ### Semantics
 Umka allows implicit type casts and supports default parameters in function declarations. It doesn't have slices. Instead, it supports dynamic arrays, which are declared like Go's slices and initialized by calling `make()`. Method receivers must be pointers. The multithreading model in Umka is inspired by Lua and Wren rather than Go. It offers lightweight threads called fibers instead of goroutines and channels. The garbage collection mechanism is based on reference counting, so Umka needs to support `weak` pointers. Maps, closures and Unicode support are under development.
@@ -249,7 +253,9 @@ ifStmt              = "if" [shortVarDecl ";"] expr block ["else" (ifStmt | block
 switchStmt          = "switch" [shortVarDecl ";"] expr "{" {case} [default] "}".
 case                = "case" expr {"," expr} ":" stmtList.
 default             = "default" ":" stmtList.
-forStmt             = "for" [shortVarDecl ";"] expr [";" simpleStmt] block.
+forStmt             = "for" (forHeader | forInHeader) block.
+forHeader           = [shortVarDecl ";"] expr [";" simpleStmt].
+forInHeader         = ident "," ident ":" expr.
 breakStmt           = "break".
 continueStmt        = "continue".
 returnStmt          = "return" [expr].
