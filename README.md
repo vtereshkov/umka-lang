@@ -43,6 +43,21 @@ fn main() {
     printf("Hello Umka!\n")
 }
 ```
+### Keywords and operators
+_Keywords_
+```
+break case const continue default else for fn import 
+interface if in return str struct switch type var weak
+```
+_Operators_
+```
++    -    *    /    %    &    |    ~    <<    >>
++=   -=   *=   /=   %=   &=   |=   ~=   <<=   >>=
+&&   ||   !    ++   --
+==   <    >    !=   <=   >=
+=    :=   (    )    [    ]    {    }    
+^    ;    :    .
+```
 ### Declarations
 #### Constants
 ```
@@ -255,7 +270,7 @@ case                = "case" expr {"," expr} ":" stmtList.
 default             = "default" ":" stmtList.
 forStmt             = "for" (forHeader | forInHeader) block.
 forHeader           = [shortVarDecl ";"] expr [";" simpleStmt].
-forInHeader         = ident "," ident ":" expr.
+forInHeader         = [ident ","] ident "in" expr.
 breakStmt           = "break".
 continueStmt        = "continue".
 returnStmt          = "return" [expr].

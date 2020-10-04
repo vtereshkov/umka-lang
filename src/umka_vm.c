@@ -1316,7 +1316,7 @@ static void doGetArrayPtr(Fiber *fiber, Error *error)
         len = strlen((char *)fiber->top->ptrVal);
 
     if (index < 0 || index > len - 1)
-        error->handlerRuntime(error->context, "Index is out of range");
+        error->handlerRuntime(error->context, "Index %d is out of range 0...%d", index, len - 1);
 
     fiber->top->ptrVal += itemSize * index;
 
@@ -1339,7 +1339,7 @@ static void doGetDynArrayPtr(Fiber *fiber, Error *error)
     int len         = array->len;
 
     if (index < 0 || index > len - 1)
-        error->handlerRuntime(error->context, "Index is out of range");
+        error->handlerRuntime(error->context, "Index %d is out of range 0...%d", index, len - 1);
 
     (--fiber->top)->ptrVal = (int64_t)(array->data + itemSize * index);
 

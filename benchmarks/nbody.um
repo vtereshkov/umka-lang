@@ -26,7 +26,7 @@ fn NewSystem(body: ^[]Body): System {
       sys[i] = &body[i]
    }
    var px, py, pz: real
-   for _, body in sys {
+   for body in sys {
       px += body.vx * body.mass
       py += body.vy * body.mass
       pz += body.vz * body.mass

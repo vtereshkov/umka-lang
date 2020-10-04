@@ -15,7 +15,7 @@ fn main() {
         a[i][1]^ = 7 * i
     } 
     
-    for _, x in a {
+    for x in a {
         std.println("a: " + std.itoa(x[0]^) + " " + std.itoa(x[1]^))
     }
        
@@ -24,7 +24,7 @@ fn main() {
     a[len(a) - 1][0]^ = 666
     a[len(a) - 1][1]^ = 777    
 
-    for _, x in a {
+    for x in a {
         std.println("a: " + std.itoa(x[0]^) + " " + std.itoa(x[1]^))
     }   
 
@@ -35,7 +35,7 @@ fn main() {
     e[len(e) - 1][0]^ = 876
     e[len(e) - 1][1]^ = 765
 
-    for _, x in e {
+    for x in e {
         std.println("e: " + std.itoa(x[0]^) + " " + std.itoa(x[1]^))
     } 
 
@@ -45,11 +45,11 @@ fn main() {
     std.println("Deleting #" + std.itoa(del) + "...")
     e = delete(e, del)
     
-    for _, x in e {
+    for x in e {
         std.println("e: " + std.itoa(x[0]^) + " " + std.itoa(x[1]^))
     } 
 
-    for _, x in f {
+    for x in f {
         std.println("f: " + std.itoa(x[0]^) + " " + std.itoa(x[1]^))
     }       
     

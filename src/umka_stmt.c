@@ -386,26 +386,32 @@ static void parseForHeader(Compiler *comp, TokenKind lookaheadTokKind)
 }
 
 
-// forInHeader = ident "," ident ":" expr.
-static void parseForInHeader(Compiler *comp)
+// forInHeader = [ident ","] ident "in" expr.
+static void parseForInHeader(Compiler *comp, TokenKind lookaheadTokKind)
 {
     Ident *indexIdent = NULL, *itemIdent = NULL;
     Type *collectionType;
     IdentName itemName;
 
-    // ident "," ident ":"
+    // [ident ","] ident "in"
     lexCheck(&comp->lex, TOK_IDENT);
-    indexIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, comp->lex.tok.name, comp->intType, false);
+
+    if (lookaheadTokKind == TOK_COMMA)
+    {
+        indexIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, comp->lex.tok.name, comp->intType, false);
+
+        lexEat(&comp->lex, TOK_IDENT);
+        lexEat(&comp->lex, TOK_COMMA);
+        lexCheck(&comp->lex, TOK_IDENT);
+    }
+    else if (lookaheadTokKind == TOK_IN)
+        indexIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "__index", comp->intType, false);
 
     // Zero index
     doPushVarPtr(comp, indexIdent);
     genPushIntConst(&comp->gen, 0);
     genAssign(&comp->gen, TYPE_INT, 0);
 
-    lexNext(&comp->lex);
-    lexEat(&comp->lex, TOK_COMMA);
-
-    lexCheck(&comp->lex, TOK_IDENT);
     strcpy(itemName, comp->lex.tok.name);
 
     lexNext(&comp->lex);
@@ -418,6 +424,14 @@ static void parseForInHeader(Compiler *comp)
 
     // Implicit conditional expr: len(collection) >= index
     parseExpr(comp, &collectionType, NULL);
+
+    // Implicit dereferencing: x in a^ == x in a
+    if (collectionType->kind == TYPE_PTR)
+    {
+        if (!typeStructured(collectionType->base))
+            genDeref(&comp->gen, collectionType->base->kind);
+        collectionType = collectionType->base;
+    }
 
     // Save collection for future use
     genDup(&comp->gen);
@@ -433,7 +447,10 @@ static void parseForInHeader(Compiler *comp)
         genCallBuiltin(&comp->gen, collectionType->kind, BUILTIN_LEN);
     }
     else
-        comp->error.handler(comp->error.context, "Expression of type %s is not iterable", typeKindSpelling(collectionType->kind));
+    {
+        char typeBuf[DEFAULT_STR_LEN + 1];
+        comp->error.handler(comp->error.context, "Expression of type %s is not iterable", typeSpelling(collectionType, typeBuf));
+    }
 
     doPushVarPtr(comp, indexIdent);
     genDeref(&comp->gen, TYPE_INT);
@@ -512,8 +529,8 @@ static void parseForStmt(Compiler *comp)
     Lexer lookaheadLex = comp->lex;
     lexNext(&lookaheadLex);
 
-    if (lookaheadLex.tok.kind == TOK_COMMA)
-        parseForInHeader(comp);
+    if (lookaheadLex.tok.kind == TOK_COMMA || lookaheadLex.tok.kind == TOK_IN)
+        parseForInHeader(comp, lookaheadLex.tok.kind);
     else
         parseForHeader(comp, lookaheadLex.tok.kind);
 

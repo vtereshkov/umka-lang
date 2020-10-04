@@ -138,7 +138,7 @@ static bool optimizeGetArrayPtr(CodeGen *gen, int itemSize)
         int index = prev2->operand.intVal;
 
         if (index < 0 || index > len - 1)
-            gen->error->handler(gen->error->context, "Index is out of range");
+            gen->error->handler(gen->error->context, "Index %d is out of range 0...%d", index, len - 1);
 
         gen->ip -= 2;
         genGetFieldPtr(gen, itemSize * index);
