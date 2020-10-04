@@ -45,7 +45,7 @@ void identFree(Idents *idents, int startBlock)
 
 Ident *identFind(Idents *idents, Modules *modules, Blocks *blocks, int module, char *name, Type *rcvType)
 {
-    int nameHash = hash(name);
+    unsigned int nameHash = hash(name);
     int curFnBlockPos = -1;
 
     for (int i = blocks->top; i >= 0; i--)

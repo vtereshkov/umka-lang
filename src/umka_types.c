@@ -525,7 +525,7 @@ Field *typeFindField(Type *structType, char *name)
 {
     if (structType->kind == TYPE_STRUCT || structType->kind == TYPE_INTERFACE)
     {
-        int nameHash = hash(name);
+        unsigned int nameHash = hash(name);
         for (int i = 0; i < structType->numItems; i++)
             if (structType->field[i]->hash == nameHash && strcmp(structType->field[i]->name, name) == 0)
                 return structType->field[i];
@@ -572,7 +572,7 @@ Field *typeAddField(Types *types, Type *structType, Type *fieldType, char *name)
 
 Param *typeFindParam(Signature *sig, char *name)
 {
-    int nameHash = hash(name);
+    unsigned int nameHash = hash(name);
     for (int i = 0; i < sig->numParams; i++)
         if (sig->param[i]->hash == nameHash && strcmp(sig->param[i]->name, name) == 0)
             return sig->param[i];

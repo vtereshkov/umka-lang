@@ -98,7 +98,7 @@ typedef struct
         struct
         {
             IdentName name;
-            int hash;
+            unsigned int hash;
         };
         int64_t intVal;
         uint64_t uintVal;

@@ -46,7 +46,7 @@ typedef union
 typedef struct
 {
     IdentName name;
-    int hash;
+    unsigned int hash;
     struct tagType *type;
     int offset;
 } Field;
@@ -55,7 +55,7 @@ typedef struct
 typedef struct
 {
     IdentName name;
-    int hash;
+    unsigned int hash;
     struct tagType *type;
     Const defaultVal;
 } Param;

@@ -51,7 +51,7 @@ typedef struct
 typedef struct
 {
     char path[DEFAULT_STR_LEN + 1], folder[DEFAULT_STR_LEN + 1], name[DEFAULT_STR_LEN + 1];
-    int hash, pathHash;
+    unsigned int hash, pathHash;
     bool imports[MAX_MODULES];
 } Module;
 
@@ -84,7 +84,7 @@ typedef struct
 typedef struct tagExternal
 {
     char name[DEFAULT_STR_LEN + 1];
-    int hash;
+    unsigned int hash;
     void *entry;
     struct tagExternal *next;
 } External;
@@ -124,7 +124,7 @@ void externalFree       (Externals *externals);
 External *externalFind  (Externals *externals, char *name);
 External *externalAdd   (Externals *externals, char *name, void *entry);
 
-int hash(const char *str);
+unsigned int hash(const char *str);
 int align(int size, int alignment);
 
 #endif // UMKA_COMMON_H_INCLUDED

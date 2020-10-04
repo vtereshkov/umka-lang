@@ -97,7 +97,7 @@ enum
 };
 
 
-static int keywordHash[NUM_KEYWORDS];
+static unsigned int keywordHash[NUM_KEYWORDS];
 
 
 int lexInit(Lexer *lex, Storage *storage, DebugInfo *debug, const char *fileName, Error *error)

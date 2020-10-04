@@ -41,7 +41,7 @@ void moduleFree(Modules *modules)
 
 int moduleFind(Modules *modules, char *name)
 {
-    int nameHash = hash(name);
+    unsigned int nameHash = hash(name);
     for (int i = 0; i < modules->numModules; i++)
         if (modules->module[i]->hash == nameHash && strcmp(modules->module[i]->name, name) == 0)
             return i;
@@ -60,7 +60,7 @@ int moduleAssertFind(Modules *modules, char *name)
 
 int moduleFindByPath(Modules *modules, char *path)
 {
-    int pathHash = hash(path);
+    unsigned int pathHash = hash(path);
     for (int i = 0; i < modules->numModules; i++)
         if (modules->module[i]->pathHash == pathHash && strcmp(modules->module[i]->path, path) == 0)
             return i;
@@ -178,7 +178,7 @@ void externalFree(Externals *externals)
 
 External *externalFind(Externals *externals, char *name)
 {
-    int nameHash = hash(name);
+    unsigned int nameHash = hash(name);
 
     for (External *external = externals->first; external; external = external->next)
         if (external->hash == nameHash && strcmp(external->name, name) == 0)
@@ -213,10 +213,10 @@ External *externalAdd(Externals *externals, char *name, void *entry)
 
 // Miscellaneous
 
-int hash(const char *str)
+unsigned int hash(const char *str)
 {
     // djb2 hash
-    int hash = 5381;
+    unsigned int hash = 5381;
     char ch;
 
     while ((ch = *str++))

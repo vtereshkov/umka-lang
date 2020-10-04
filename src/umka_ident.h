@@ -19,7 +19,7 @@ typedef struct tagIdent
 {
     IdentKind kind;
     IdentName name;
-    int hash;
+    unsigned int hash;
     Type *type;
     int module, block;                  // Global identifiers are in block 0
     bool exported, inHeap;
