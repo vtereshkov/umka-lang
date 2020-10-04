@@ -626,20 +626,24 @@ char *typeKindSpelling(TypeKind kind)
 
 static char *typeSpellingRecursive(Type *type, char *buf, int depth)
 {
-    if (type->kind == TYPE_ARRAY)
-        sprintf(buf, "[%d]", type->numItems);
+    if (type->typeIdent)
+        sprintf(buf, "%s", type->typeIdent->name);
     else
-        sprintf(buf, "%s", spelling[type->kind]);
-
-    if (type->kind == TYPE_PTR || type->kind == TYPE_ARRAY || type->kind == TYPE_DYNARRAY)
     {
-        char baseBuf[DEFAULT_STR_LEN + 1];
-        if (depth > 0)
-            strcat(buf, typeSpellingRecursive(type->base, baseBuf, depth - 1));
+        if (type->kind == TYPE_ARRAY)
+            sprintf(buf, "[%d]", type->numItems);
         else
-            strcat(buf, "...");
-    }
+            sprintf(buf, "%s", spelling[type->kind]);
 
+        if (type->kind == TYPE_PTR || type->kind == TYPE_ARRAY || type->kind == TYPE_DYNARRAY)
+        {
+            char baseBuf[DEFAULT_STR_LEN + 1];
+            if (depth > 0)
+                strcat(buf, typeSpellingRecursive(type->base, baseBuf, depth - 1));
+            else
+                strcat(buf, "...");
+        }
+    }
     return buf;
 }
 
