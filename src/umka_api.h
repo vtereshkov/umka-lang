@@ -5,6 +5,11 @@
 #include <stdbool.h>
 
 
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
+
 typedef union
 {
     int64_t intVal;
@@ -41,5 +46,10 @@ void umkaGetError   (void *umka, UmkaError *err);
 void umkaAsm        (void *umka, char *buf);
 void umkaAddFunc    (void *umka, char *name, UmkaExternFunc entry);
 int  umkaGetFunc    (void *umka, char *moduleName, char *funcName);
+
+
+#if defined(__cplusplus)
+}
+#endif
 
 #endif // UMKA_API_H_INCLUDED
