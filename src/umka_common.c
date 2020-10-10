@@ -139,6 +139,7 @@ void blocksEnter(Blocks *blocks, struct tagIdent *fn)
     blocks->item[blocks->top].block = blocks->numBlocks++;
     blocks->item[blocks->top].fn = fn;
     blocks->item[blocks->top].localVarSize = 0;
+    blocks->item[blocks->top].hasReturn = false;
 }
 
 

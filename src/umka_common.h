@@ -69,6 +69,7 @@ typedef struct
     int block;
     struct tagIdent *fn;
     int localVarSize;       // For function blocks only
+    bool hasReturn;
 } BlockStackSlot;
 
 

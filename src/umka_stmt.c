@@ -583,6 +583,8 @@ static void parseContinueStmt(Compiler *comp)
 static void parseReturnStmt(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_RETURN);
+    comp->blocks.item[comp->blocks.top].hasReturn = true;
+
     Type *type;
 
     if (comp->lex.tok.kind != TOK_SEMICOLON && comp->lex.tok.kind != TOK_RBRACE)
@@ -719,6 +721,9 @@ void parseFnBlock(Compiler *comp, Ident *fn)
 
     // StmtList
     parseStmtList(comp);
+
+    if (!comp->blocks.item[comp->blocks.top].hasReturn && fn->type->sig.resultType[0]->kind != TYPE_VOID)
+        comp->error.handler(comp->error.context, "Non-void function block must have return statement");
 
     // 'return' epilog
     genGotosEpilog(&comp->gen, comp->gen.returns);
