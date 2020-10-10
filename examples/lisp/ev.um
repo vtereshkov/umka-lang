@@ -25,9 +25,8 @@ fn (e: ^Expr) toStr*(): str {
         return "(" + e.car.toStr() + " . " + e.cdr.toStr() + ")"
     } else if num(e) {
         return std.itoa(e.val)
-    } else {  
-        return e.atom
     }
+    return e.atom
 }
 
 
@@ -61,11 +60,8 @@ fn intExpr*(i: int): ^Expr {
 
 fn boolExpr*(b: bool): ^Expr {
     e := new(Expr)
-    if b {
-        return strExpr("t")
-    } else {
-        return null
-    }
+    if b {return strExpr("t")}
+    return null
 }
 
 
@@ -76,9 +72,8 @@ fn car*(x: ^Expr): ^Expr {
         return null
     } else if x.atom != "" {
         error("car() is undefined for atom " + x.toStr())
-    } else {
-        return x.car
     }
+    return x.car
 }
 
 
@@ -87,9 +82,8 @@ fn cdr*(x: ^Expr): ^Expr {
         return null
     } else if x.atom != "" {
         error("cdr() is undefined for atom " + x.toStr())
-    } else {
-        return x.cdr
     }
+    return x.cdr
 }
 
 
@@ -147,18 +141,14 @@ fn equal(x, y: ^Expr): bool {
         }
     } else if equal(car(x), car(y)) {
         return equal(cdr(x), cdr(y))
-    } else {
-        return false
     }
+    return false
 }
 
 
 fn pairlis(x, y, a: ^Expr): ^Expr {
-    if _null(x) {
-        return a
-    } else {
-        return cons(cons(car(x), car(y)), pairlis(cdr(x), cdr(y), a))
-    }
+    if _null(x) {return a}
+    return cons(cons(car(x), car(y)), pairlis(cdr(x), cdr(y), a))
 }
 
 
@@ -167,27 +157,22 @@ fn assoc(x, a: ^Expr): ^Expr {
         error("No association for " + x.toStr())
     } else if equal(car(car(a)), x) {
         return car(a)
-    } else {
-        return assoc(x, cdr(a))
     }
+    return assoc(x, cdr(a))
 }
 
 
 fn evcon(c, a: ^Expr): ^Expr {
     if eval(car(car(c)), a).toBool() {
         return eval(car(cdr(car(c))), a)
-    } else {
-        return evcon(cdr(c), a)
-    }    
+    }
+    return evcon(cdr(c), a)    
 }
 
 
 fn evlis(m, a: ^Expr): ^Expr {
-    if _null(m) {
-        return null
-    } else {
-        return cons(eval(car(m), a), evlis(cdr(m), a))
-    }
+    if _null(m) {return null}
+    return cons(eval(car(m), a), evlis(cdr(m), a))
 }
 
 
@@ -238,9 +223,9 @@ fn apply(f, x, a: ^Expr): ^Expr {
         return eval(car(cdr(cdr(f))), pairlis(car(cdr(f)), x, a))     
     } else if eq(car(f), strExpr("label")) {
         return apply(car(cdr(cdr(f))), x, cons(cons(car(cdr(f)), car(cdr(cdr(f)))), a))
-    } else {
-        error("Illegal function call")
-    }    
+    }
+    error("Illegal function call")
+    return null
 }
 
 
@@ -259,9 +244,9 @@ fn eval(e, a: ^Expr): ^Expr {
         } else {
             return apply(car(e), evlis(cdr(e), a), a)
         }
-    } else {
-        return apply(car(e), evlis(cdr(e), a), a)
     }
+    return apply(car(e), evlis(cdr(e), a), a)
+
 }
 
 

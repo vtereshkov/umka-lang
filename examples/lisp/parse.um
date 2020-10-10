@@ -29,16 +29,16 @@ fn (p: ^Parser) parse(): ^ev.Expr {
         }        
         p.lexer.eat(lex.tokRPar)
         return first
-    
-    // Parse atom
-    } else {      
-        p.lexer.check(lex.tokAtom)
-        res := new(ev.Expr)
-        res.atom = p.lexer.tok.name
-        res.val = p.lexer.tok.val
-        p.lexer.next()
-        return res
     }
+    
+    // Parse atom  
+    p.lexer.check(lex.tokAtom)
+    res := new(ev.Expr)
+    res.atom = p.lexer.tok.name
+    res.val = p.lexer.tok.val
+    p.lexer.next()
+    return res
+
 }
 
 
