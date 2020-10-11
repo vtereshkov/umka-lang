@@ -148,7 +148,7 @@ Type *typeAddPtrTo(Types *types, Blocks *blocks, Type *type)
 }
 
 
-int typeSizeRuntime(Type *type)
+int typeSizeNoCheck(Type *type)
 {
     switch (type->kind)
     {
@@ -167,14 +167,14 @@ int typeSizeRuntime(Type *type)
         case TYPE_REAL:     return sizeof(double);
         case TYPE_PTR:
         case TYPE_STR:      return sizeof(void *);
-        case TYPE_ARRAY:    return type->numItems * typeSizeRuntime(type->base);
+        case TYPE_ARRAY:    return type->numItems * typeSizeNoCheck(type->base);
         case TYPE_DYNARRAY: return sizeof(DynArray);
         case TYPE_STRUCT:
         case TYPE_INTERFACE:
         {
             int size = 0;
             for (int i = 0; i < type->numItems; i++)
-                size += typeSizeRuntime(type->field[i]->type);
+                size += typeSizeNoCheck(type->field[i]->type);
             return size;
         }
         case TYPE_FIBER:    return sizeof(Fiber);
@@ -186,45 +186,13 @@ int typeSizeRuntime(Type *type)
 
 int typeSize(Types *types, Type *type)
 {
-    int size = typeSizeRuntime(type);
+    int size = typeSizeNoCheck(type);
     if (size < 0)
     {
         char buf[DEFAULT_STR_LEN + 1];
         types->error->handler(types->error->context, "Illegal type %s", typeSpelling(type, buf));
     }
     return size;
-}
-
-
-bool typeInteger(Type *type)
-{
-    return type->kind == TYPE_INT8  || type->kind == TYPE_INT16  || type->kind == TYPE_INT32  || type->kind == TYPE_INT ||
-           type->kind == TYPE_UINT8 || type->kind == TYPE_UINT16 || type->kind == TYPE_UINT32 || type->kind == TYPE_UINT;
-}
-
-
-bool typeOrdinal(Type *type)
-{
-    return typeInteger(type) || type->kind == TYPE_CHAR;
-}
-
-
-bool typeCastable(Type *type)
-{
-    return typeOrdinal(type) || type->kind == TYPE_BOOL;
-}
-
-
-bool typeReal(Type *type)
-{
-    return type->kind == TYPE_REAL32 || type->kind == TYPE_REAL;
-}
-
-
-bool typeStructured(Type *type)
-{
-    return type->kind == TYPE_ARRAY  || type->kind == TYPE_DYNARRAY  ||
-           type->kind == TYPE_STRUCT || type->kind == TYPE_INTERFACE || type->kind == TYPE_FIBER;
 }
 
 
@@ -242,27 +210,6 @@ bool typeGarbageCollected(Type *type)
                 return true;
 
     return false;
-}
-
-
-bool typeCharArrayPtr(Type *type)
-{
-    return type->kind == TYPE_PTR && type->base->kind == TYPE_ARRAY && type->base->base->kind == TYPE_CHAR;
-}
-
-
-bool typeFiberFunc(Type *type)
-{
-    return type->kind                            == TYPE_FN    &&
-           type->sig.numParams                   == 2          &&
-           type->sig.numDefaultParams            == 0          &&
-           type->sig.param[0]->type->kind        == TYPE_PTR   &&
-           type->sig.param[0]->type->base->kind  == TYPE_FIBER &&
-           type->sig.param[1]->type->kind        == TYPE_PTR   &&
-           type->sig.param[1]->type->base->kind  != TYPE_VOID  &&
-           type->sig.numResults                  == 1          &&
-           type->sig.resultType[0]->kind         == TYPE_VOID  &&
-           !type->sig.method;
 }
 
 

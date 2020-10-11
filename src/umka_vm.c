@@ -180,7 +180,7 @@ static void *chunkAlloc(HeapPages *pages, int size, Error *error)
         error->handlerRuntime(error->context, "Allocated memory block size cannot be negative");
 
     // Page layout: header, data, footer (char), header, data, footer (char)...
-    int chunkSize = sizeof(HeapChunkHeader) + size + 1;
+    int chunkSize = sizeof(HeapChunkHeader) + align(size + 1, sizeof(int64_t));
     int pageSize = chunkSize > VM_MIN_HEAP_PAGE ? chunkSize : VM_MIN_HEAP_PAGE;
 
     if (!pages->last || pages->last->occupied + chunkSize > pages->last->size)
@@ -245,34 +245,6 @@ static int fsscanf(bool string, void *stream, const char *format, ...)
 
     va_end(args);
     return res;
-}
-
-
-// Static counterparts of some external functions that allow inlining
-
-static int alignRuntime(int size, int alignment)
-{
-    return ((size + (alignment - 1)) / alignment) * alignment;
-}
-
-
-static bool typeKindIntegerRuntime(TypeKind typeKind)
-{
-    return typeKind == TYPE_INT8  || typeKind == TYPE_INT16  || typeKind == TYPE_INT32  || typeKind == TYPE_INT ||
-           typeKind == TYPE_UINT8 || typeKind == TYPE_UINT16 || typeKind == TYPE_UINT32 || typeKind == TYPE_UINT;
-}
-
-
-static bool typeKindRealRuntime(TypeKind typeKind)
-{
-    return typeKind == TYPE_REAL32 || typeKind == TYPE_REAL;
-}
-
-
-static bool typeKindGarbageCollectedRuntime(TypeKind typeKind)
-{
-    return typeKind == TYPE_PTR    || typeKind == TYPE_STR       || typeKind == TYPE_ARRAY  || typeKind == TYPE_DYNARRAY ||
-           typeKind == TYPE_STRUCT || typeKind == TYPE_INTERFACE || typeKind == TYPE_FIBER;
 }
 
 
@@ -402,7 +374,7 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
                 {
                     // Traverse children only before removing the last remaining ref
                     HeapChunkHeader *chunk = ptr - sizeof(HeapChunkHeader);
-                    if (chunk->refCnt == 1 && typeKindGarbageCollectedRuntime(type->base->kind))
+                    if (chunk->refCnt == 1 && typeKindGarbageCollected(type->base->kind))
                     {
                         void *data = ptr;
                         if (type->base->kind == TYPE_PTR || type->base->kind == TYPE_STR)
@@ -426,10 +398,10 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
 
         case TYPE_ARRAY:
         {
-            if (typeKindGarbageCollectedRuntime(type->base->kind))
+            if (typeKindGarbageCollected(type->base->kind))
             {
                 void *itemPtr = ptr;
-                int itemSize = typeSizeRuntime(type->base);
+                int itemSize = typeSizeNoCheck(type->base);
 
                 for (int i = 0; i < type->numItems; i++)
                 {
@@ -456,7 +428,7 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
                 {
                     // Traverse children only before removing the last remaining ref
                     HeapChunkHeader *chunk = array->data - sizeof(HeapChunkHeader);
-                    if (chunk->refCnt == 1 && typeKindGarbageCollectedRuntime(type->base->kind))
+                    if (chunk->refCnt == 1 && typeKindGarbageCollected(type->base->kind))
                     {
                         void *itemPtr = array->data;
 
@@ -480,7 +452,7 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
         {
             for (int i = 0; i < type->numItems; i++)
             {
-                if (typeKindGarbageCollectedRuntime(type->field[i]->type->kind))
+                if (typeKindGarbageCollected(type->field[i]->type->kind))
                 {
                     void *field = ptr + type->field[i]->offset;
                     if (type->field[i]->type->kind == TYPE_PTR || type->field[i]->type->kind == TYPE_STR)
@@ -547,7 +519,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, Error *e
             len += snprintf(buf, maxLen, "{");
 
             void *itemPtr = (void *)slot->ptrVal;
-            int itemSize = typeSizeRuntime(type->base);
+            int itemSize = typeSizeNoCheck(type->base);
 
             for (int i = 0; i < type->numItems; i++)
             {
@@ -749,8 +721,8 @@ static void doBuiltinPrintf(Fiber *fiber, bool console, bool string, Error *erro
     TypeKind expectedTypeKind;
     doCheckFormatString(format, &formatLen, &expectedTypeKind, error);
 
-    if (typeKind != expectedTypeKind && !(typeKindIntegerRuntime(typeKind) && typeKindIntegerRuntime(expectedTypeKind)) &&
-                                        !(typeKindRealRuntime(typeKind)    && typeKindRealRuntime(expectedTypeKind)))
+    if (typeKind != expectedTypeKind && !(typeKindInteger(typeKind) && typeKindInteger(expectedTypeKind)) &&
+                                        !(typeKindReal(typeKind)    && typeKindReal(expectedTypeKind)))
         error->handlerRuntime(error->context, "Incompatible types %s and %s in printf()", typeKindSpelling(expectedTypeKind), typeKindSpelling(typeKind));
 
     char *curFormat = malloc(formatLen + 1);
@@ -909,7 +881,7 @@ static void doBuiltinSizeofself(Fiber *fiber, Error *error)
     // Interface layout: __self, __selftype, methods
     Type *__selftype = *(Type **)(fiber->top->ptrVal + sizeof(void *));
     if (__selftype)
-        size = typeSizeRuntime(__selftype->base);
+        size = typeSizeNoCheck(__selftype->base);
 
     fiber->top->intVal = size;
 }
@@ -1011,7 +983,7 @@ static void doPushStruct(Fiber *fiber, Error *error)
 {
     void *src = (void *)(fiber->top++)->ptrVal;
     int size  = fiber->code[fiber->ip].operand.intVal;
-    int slots = alignRuntime(size, sizeof(Slot)) / sizeof(Slot);
+    int slots = align(size, sizeof(Slot)) / sizeof(Slot);
 
     if (fiber->top - slots - fiber->stack < VM_MIN_FREE_STACK)
         error->handlerRuntime(error->context, "Stack overflow");
@@ -1104,7 +1076,7 @@ static void doChangeRefCntAssign(Fiber *fiber, HeapPages *pages, Error *error)
     doBasicDeref(&lhsDeref, type->kind, error);
     doBasicChangeRefCnt(fiber, pages, (void *)lhsDeref.ptrVal, type, TOK_MINUSMINUS, error);
 
-    doBasicAssign(lhs, rhs, type->kind, typeSizeRuntime(type), error);
+    doBasicAssign(lhs, rhs, type->kind, typeSizeNoCheck(type), error);
     fiber->ip++;
 }
 
@@ -1522,7 +1494,7 @@ static void doEnterFrame(Fiber *fiber, Error *error)
 {
     // Push old stack frame base pointer, move new one to stack top, shift stack top by local variables' size
     int size = fiber->code[fiber->ip].operand.intVal;
-    int slots = alignRuntime(size, sizeof(Slot)) / sizeof(Slot);
+    int slots = align(size, sizeof(Slot)) / sizeof(Slot);
 
     if (fiber->top - slots - fiber->stack < VM_MIN_FREE_STACK)
         error->handlerRuntime(error->context, "Stack overflow");

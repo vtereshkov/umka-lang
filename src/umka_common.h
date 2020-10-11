@@ -125,7 +125,22 @@ void externalFree       (Externals *externals);
 External *externalFind  (Externals *externals, char *name);
 External *externalAdd   (Externals *externals, char *name, void *entry);
 
-unsigned int hash(const char *str);
-int align(int size, int alignment);
+static inline unsigned int hash(const char *str)
+{
+    // djb2 hash
+    unsigned int hash = 5381;
+    char ch;
+
+    while ((ch = *str++))
+        hash = ((hash << 5) + hash) + ch;
+
+    return hash;
+}
+
+
+static inline int align(int size, int alignment)
+{
+    return ((size + (alignment - 1)) / alignment) * alignment;
+}
 
 #endif // UMKA_COMMON_H_INCLUDED

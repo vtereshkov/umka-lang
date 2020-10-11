@@ -102,17 +102,84 @@ Type *typeAdd       (Types *types, Blocks *blocks, TypeKind kind);
 void typeDeepCopy   (Type *dest, Type *src);
 Type *typeAddPtrTo  (Types *types, Blocks *blocks, Type *type);
 
-int typeSizeRuntime (Type *type);
+int typeSizeNoCheck (Type *type);
 int typeSize        (Types *types, Type *type);
 
-bool typeInteger            (Type *type);
-bool typeOrdinal            (Type *type);
-bool typeCastable           (Type *type);
-bool typeReal               (Type *type);
-bool typeStructured         (Type *type);
-bool typeGarbageCollected   (Type *type);
-bool typeCharArrayPtr       (Type *type);
-bool typeFiberFunc          (Type *type);
+
+static inline bool typeKindInteger(TypeKind typeKind)
+{
+    return typeKind == TYPE_INT8  || typeKind == TYPE_INT16  || typeKind == TYPE_INT32  || typeKind == TYPE_INT ||
+           typeKind == TYPE_UINT8 || typeKind == TYPE_UINT16 || typeKind == TYPE_UINT32 || typeKind == TYPE_UINT;
+}
+
+
+static inline bool typeInteger(Type *type)
+{
+    return typeKindInteger(type->kind);
+}
+
+
+static inline bool typeOrdinal(Type *type)
+{
+    return typeInteger(type) || type->kind == TYPE_CHAR;
+}
+
+
+static inline bool typeCastable(Type *type)
+{
+    return typeOrdinal(type) || type->kind == TYPE_BOOL;
+}
+
+
+static inline bool typeKindReal(TypeKind typeKind)
+{
+    return typeKind == TYPE_REAL32 || typeKind == TYPE_REAL;
+}
+
+
+static inline bool typeReal(Type *type)
+{
+    return typeKindReal(type->kind);
+}
+
+
+static inline bool typeStructured(Type *type)
+{
+    return type->kind == TYPE_ARRAY  || type->kind == TYPE_DYNARRAY  ||
+           type->kind == TYPE_STRUCT || type->kind == TYPE_INTERFACE || type->kind == TYPE_FIBER;
+}
+
+
+static inline bool typeKindGarbageCollected(TypeKind typeKind)
+{
+    return typeKind == TYPE_PTR    || typeKind == TYPE_STR       || typeKind == TYPE_ARRAY  || typeKind == TYPE_DYNARRAY ||
+           typeKind == TYPE_STRUCT || typeKind == TYPE_INTERFACE || typeKind == TYPE_FIBER;
+}
+
+
+bool typeGarbageCollected(Type *type);
+
+
+static inline bool typeCharArrayPtr(Type *type)
+{
+    return type->kind == TYPE_PTR && type->base->kind == TYPE_ARRAY && type->base->base->kind == TYPE_CHAR;
+}
+
+
+static inline bool typeFiberFunc(Type *type)
+{
+    return type->kind                            == TYPE_FN    &&
+           type->sig.numParams                   == 2          &&
+           type->sig.numDefaultParams            == 0          &&
+           type->sig.param[0]->type->kind        == TYPE_PTR   &&
+           type->sig.param[0]->type->base->kind  == TYPE_FIBER &&
+           type->sig.param[1]->type->kind        == TYPE_PTR   &&
+           type->sig.param[1]->type->base->kind  != TYPE_VOID  &&
+           type->sig.numResults                  == 1          &&
+           type->sig.resultType[0]->kind         == TYPE_VOID  &&
+           !type->sig.method;
+}
+
 
 bool typeEquivalent         (Type *left, Type *right);
 bool typeAssertEquivalent   (Types *types, Type *left, Type *right);

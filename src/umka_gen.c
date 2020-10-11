@@ -283,7 +283,7 @@ void genChangeRefCntAssign(CodeGen *gen, Type *type)
         genAddInstr(gen, &instr);
     }
     else
-        genAssign(gen, type->kind, typeSizeRuntime(type));
+        genAssign(gen, type->kind, typeSizeNoCheck(type));
 }
 
 
@@ -295,7 +295,7 @@ void genSwapChangeRefCntAssign(CodeGen *gen, Type *type)
         genAddInstr(gen, &instr);
     }
     else
-        genSwapAssign(gen, type->kind, typeSizeRuntime(type));
+        genSwapAssign(gen, type->kind, typeSizeNoCheck(type));
 }
 
 

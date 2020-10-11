@@ -211,24 +211,3 @@ External *externalAdd(Externals *externals, char *name, void *entry)
     return externals->last;
 }
 
-
-// Miscellaneous
-
-unsigned int hash(const char *str)
-{
-    // djb2 hash
-    unsigned int hash = 5381;
-    char ch;
-
-    while ((ch = *str++))
-        hash = ((hash << 5) + hash) + ch;
-
-    return hash;
-}
-
-
-int align(int size, int alignment)
-{
-    return ((size + (alignment - 1)) / alignment) * alignment;
-}
-
