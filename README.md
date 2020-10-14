@@ -20,7 +20,7 @@ _400 x 400 matrix multiplication (AMD A4-3300M @ 1.9 GHz, Windows 7)_
 ![](perf.png)
 
 ## Getting Started
-* Download the [latest release](https://github.com/vtereshkov/umka-lang/releases) for Windows and Linux (_Note:_ both versions use `/` as path separator)
+* Download the [latest release](https://github.com/vtereshkov/umka-lang/releases) for Windows and Linux
 * Take a [tour of Umka](https://github.com/vtereshkov/umka-lang/blob/master/README.md#a-tour-of-umka)
 * Explore the [raytracer](https://github.com/vtereshkov/umka-lang/blob/master/examples/raytracer.um) example that demonstrates many language features like fibers, interfaces and dynamic arrays
 * Play with the toy [Lisp interpreter](https://github.com/vtereshkov/umka-lang/blob/master/examples/lisp) written in Umka

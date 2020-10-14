@@ -71,6 +71,11 @@ int moduleFindByPath(Modules *modules, char *path)
 static void moduleNameFromPath(Modules *modules, char *path, char *folder, char *name)
 {
     char *slash = strrchr(path, '/');
+    char *backslash = strrchr(path, '\\');
+
+    if (backslash && (!slash || backslash > slash))
+        slash = backslash;
+
     char *start = slash ? (slash + 1) : path;
 
     char *dot = strrchr(path, '.');

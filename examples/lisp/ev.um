@@ -59,7 +59,6 @@ fn intExpr*(i: int): ^Expr {
 
 
 fn boolExpr*(b: bool): ^Expr {
-    e := new(Expr)
     if b {return strExpr("t")}
     return null
 }
