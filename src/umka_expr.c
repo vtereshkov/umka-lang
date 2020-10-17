@@ -148,7 +148,8 @@ static void doPtrToInterfaceConv(Compiler *comp, Type *dest, Type **src, Const *
         if (!srcMethod)
             comp->error.handler(comp->error.context, "Method %s is not implemented", name);
 
-        typeAssertCompatible(&comp->types, dest->field[i]->type, srcMethod->type, false);
+        if (!typeCompatible(dest->field[i]->type, srcMethod->type, false))
+            comp->error.handler(comp->error.context, "Method %s has incompatible signature", name);
 
         genPushIntConst(&comp->gen, srcMethod->offset);                     // Push src value
         genPushLocalPtr(&comp->gen, destOffset + dest->field[i]->offset);   // Push dest.method pointer
@@ -191,7 +192,8 @@ static void doInterfaceToInterfaceConv(Compiler *comp, Type *dest, Type **src, C
         if (!srcMethod)
             comp->error.handler(comp->error.context, "Method %s is not implemented", name);
 
-        typeAssertCompatible(&comp->types, dest->field[i]->type, srcMethod->type, false);
+        if (!typeCompatible(dest->field[i]->type, srcMethod->type, false))
+            comp->error.handler(comp->error.context, "Method %s has incompatible signature", name);
 
         genDup(&comp->gen);                                                 // Duplicate src pointer
         genGetFieldPtr(&comp->gen, srcMethod->offset);                      // Get src.method pointer
