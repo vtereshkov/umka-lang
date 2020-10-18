@@ -16,6 +16,7 @@ mv src/libumka.* umka_linux
 mv src/umka umka_linux
 cp src/umka_api.h umka_linux
 cp LICENSE umka_linux
+cp Umka.sublime-syntax umka_linux
 
 mkdir umka_linux/examples
 mkdir umka_linux/examples/lisp

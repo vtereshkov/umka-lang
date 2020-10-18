@@ -1,0 +1,78 @@
+%YAML 1.2
+---
+# See http://www.sublimetext.com/docs/3/syntax.html
+file_extensions:
+  - um
+scope: source.umka
+contexts:
+  main:  
+    # Line comments
+    - match: '//'
+      scope: punctuation.definition.comment.umka
+      push: line_comment
+
+    # Block comments
+    - match: '/\*'
+      scope: punctuation.definition.comment.begin.umka
+      push: block_comment  
+
+    # Keywords
+    - match: '\b(break|case|const|continue|default|else|for|fn|import|interface|if|in|return|str|struct|switch|type|var|weak)\b'
+      scope: keyword.control.umka         
+
+    # Operators
+    - match: '\+|\-|\*|/|%|&|\||~|<<|>>|\+=|\-=|\*=|/=|%=|&=|\|=|~=|<<=|>>=|&&|\|\||!|\++|\--|==|<|>|!=|<=|>=|=|:='
+      scope: keyword.operator.umka
+
+    # Punctuation
+    - match: '\(|\)|\[|\]|\{|\}|\^|;|:|\.'
+      scope: punctuation.separator.umka
+
+    # Numeric literals
+    - match: '\b(0[Xx])?[0-9.]+([Ee][+-]?[0-9]*)?\b'
+      scope: constant.numeric.umka       
+
+    # String literals
+    - match: '"'
+      scope: punctuation.definition.string.begin.umka
+      push: double_quoted_string
+
+    # Character literals
+    - match: ''''
+      scope: punctuation.definition.string.begin.umka
+      push: single_quoted_string              
+
+    # Predeclared constants
+    - match: '\b(true|false|null)\b'
+      scope: storage.constant.umka       
+
+    # Predeclared types
+    - match: '\b(void|int8|int16|int32|int|uint8|uint16|uint32|uint|bool|char|real32|real|fiber)\b'
+      scope: storage.type.umka   
+
+  double_quoted_string:
+    - meta_scope: string.quoted.double.umka
+    - match: '\\.'
+      scope: constant.character.escape.umka
+    - match: '"'
+      scope: punctuation.definition.string.end.umka
+      pop: true
+
+  single_quoted_string:
+    - meta_scope: string.quoted.single.umka
+    - match: '\\.'
+      scope: constant.character.escape.umka
+    - match: ''''
+      scope: punctuation.definition.string.end.umka
+      pop: true      
+
+  line_comment:
+    - meta_scope: comment.line.umka
+    - match: $
+      pop: true
+
+  block_comment:
+    - meta_scope: comment.block.umka
+    - match: '\*/'
+      scope: punctuation.definition.comment.end.umka
+      pop: true       
