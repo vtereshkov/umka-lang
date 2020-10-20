@@ -109,10 +109,10 @@ void storageFree(Storage *storage);
 
 void moduleInit         (Modules *modules, Error *error);
 void moduleFree         (Modules *modules);
-int  moduleFind         (Modules *modules, char *name);
-int  moduleAssertFind   (Modules *modules, char *name);
-int  moduleFindByPath   (Modules *modules, char *path);
-int  moduleAdd          (Modules *modules, char *path);
+int  moduleFind         (Modules *modules, const char *name);
+int  moduleAssertFind   (Modules *modules, const char *name);
+int  moduleFindByPath   (Modules *modules, const char *path);
+int  moduleAdd          (Modules *modules, const char *path);
 
 void blocksInit   (Blocks *blocks, Error *error);
 void blocksFree   (Blocks *blocks);
@@ -122,8 +122,8 @@ int  blocksCurrent(Blocks *blocks);
 
 void externalInit       (Externals *externals);
 void externalFree       (Externals *externals);
-External *externalFind  (Externals *externals, char *name);
-External *externalAdd   (Externals *externals, char *name, void *entry);
+External *externalFind  (Externals *externals, const char *name);
+External *externalAdd   (Externals *externals, const char *name, void *entry);
 
 static inline unsigned int hash(const char *str)
 {

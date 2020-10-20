@@ -39,7 +39,7 @@ void moduleFree(Modules *modules)
 }
 
 
-int moduleFind(Modules *modules, char *name)
+int moduleFind(Modules *modules, const char *name)
 {
     unsigned int nameHash = hash(name);
     for (int i = 0; i < modules->numModules; i++)
@@ -49,7 +49,7 @@ int moduleFind(Modules *modules, char *name)
 }
 
 
-int moduleAssertFind(Modules *modules, char *name)
+int moduleAssertFind(Modules *modules, const char *name)
 {
     int res = moduleFind(modules, name);
     if (res < 0)
@@ -58,7 +58,7 @@ int moduleAssertFind(Modules *modules, char *name)
 }
 
 
-int moduleFindByPath(Modules *modules, char *path)
+int moduleFindByPath(Modules *modules, const char *path)
 {
     unsigned int pathHash = hash(path);
     for (int i = 0; i < modules->numModules; i++)
@@ -68,18 +68,18 @@ int moduleFindByPath(Modules *modules, char *path)
 }
 
 
-static void moduleNameFromPath(Modules *modules, char *path, char *folder, char *name)
+static void moduleNameFromPath(Modules *modules, const char *path, char *folder, char *name)
 {
-    char *slash = strrchr(path, '/');
-    char *backslash = strrchr(path, '\\');
+    const char *slash = strrchr(path, '/');
+    const char *backslash = strrchr(path, '\\');
 
     if (backslash && (!slash || backslash > slash))
         slash = backslash;
 
-    char *start = slash ? (slash + 1) : path;
+    const char *start = slash ? (slash + 1) : path;
 
-    char *dot = strrchr(path, '.');
-    char *stop = dot ? dot : (path + strlen(path));
+    const char *dot = strrchr(path, '.');
+    const char *stop = dot ? dot : (path + strlen(path));
 
     if (stop <= start)
         modules->error->handler(modules->error->context, "Illegal module path %s", path);
@@ -89,7 +89,7 @@ static void moduleNameFromPath(Modules *modules, char *path, char *folder, char 
 }
 
 
-int moduleAdd(Modules *modules, char *path)
+int moduleAdd(Modules *modules, const char *path)
 {
     char folder[DEFAULT_STR_LEN + 1] = "";
     char name  [DEFAULT_STR_LEN + 1] = "";
@@ -182,7 +182,7 @@ void externalFree(Externals *externals)
 }
 
 
-External *externalFind(Externals *externals, char *name)
+External *externalFind(Externals *externals, const char *name)
 {
     unsigned int nameHash = hash(name);
 
@@ -194,7 +194,7 @@ External *externalFind(Externals *externals, char *name)
 }
 
 
-External *externalAdd(Externals *externals, char *name, void *entry)
+External *externalAdd(Externals *externals, const char *name, void *entry)
 {
     External *external = malloc(sizeof(External));
 

@@ -13,7 +13,7 @@
 //#define DEBUG_REF_CNT
 
 
-static char *opcodeSpelling [] =
+static const char *opcodeSpelling [] =
 {
     "NOP",
     "PUSH",
@@ -46,7 +46,7 @@ static char *opcodeSpelling [] =
 };
 
 
-static char *builtinSpelling [] =
+static const char *builtinSpelling [] =
 {
     "printf",
     "fprintf",
@@ -594,7 +594,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, Error *e
 }
 
 
-static void doCheckFormatString(char *format, int *formatLen, TypeKind *typeKind, Error *error)
+static void doCheckFormatString(const char *format, int *formatLen, TypeKind *typeKind, Error *error)
 {
     enum {SIZE_SHORT_SHORT, SIZE_SHORT, SIZE_NORMAL, SIZE_LONG, SIZE_LONG_LONG} size;
     *typeKind = TYPE_VOID;
@@ -707,9 +707,9 @@ static void doCheckFormatString(char *format, int *formatLen, TypeKind *typeKind
 
 static void doBuiltinPrintf(Fiber *fiber, bool console, bool string, Error *error)
 {
-    void *stream      = console ? stdout : (void *)fiber->reg[VM_REG_IO_STREAM].ptrVal;
-    char *format      = (char *)fiber->reg[VM_REG_IO_FORMAT].ptrVal;
-    TypeKind typeKind = fiber->code[fiber->ip].typeKind;
+    void *stream       = console ? stdout : (void *)fiber->reg[VM_REG_IO_STREAM].ptrVal;
+    const char *format = (const char *)fiber->reg[VM_REG_IO_FORMAT].ptrVal;
+    TypeKind typeKind  = fiber->code[fiber->ip].typeKind;
 
     if (!stream)
         error->handlerRuntime(error->context, "printf() destination is null");
@@ -749,9 +749,9 @@ static void doBuiltinPrintf(Fiber *fiber, bool console, bool string, Error *erro
 
 static void doBuiltinScanf(Fiber *fiber, bool console, bool string, Error *error)
 {
-    void *stream      = console ? stdin : (void *)fiber->reg[VM_REG_IO_STREAM].ptrVal;
-    char *format      = (char *)fiber->reg[VM_REG_IO_FORMAT].ptrVal;
-    TypeKind typeKind = fiber->code[fiber->ip].typeKind;
+    void *stream       = console ? stdin : (void *)fiber->reg[VM_REG_IO_STREAM].ptrVal;
+    const char *format = (const char *)fiber->reg[VM_REG_IO_FORMAT].ptrVal;
+    TypeKind typeKind  = fiber->code[fiber->ip].typeKind;
 
     if (!stream)
         error->handlerRuntime(error->context, "scanf() source is null");

@@ -436,7 +436,7 @@ bool typeAssertForwardResolved(Types *types)
 }
 
 
-Field *typeFindField(Type *structType, char *name)
+Field *typeFindField(Type *structType, const char *name)
 {
     if (structType->kind == TYPE_STRUCT || structType->kind == TYPE_INTERFACE)
     {
@@ -449,7 +449,7 @@ Field *typeFindField(Type *structType, char *name)
 }
 
 
-Field *typeAssertFindField(Types *types, Type *structType, char *name)
+Field *typeAssertFindField(Types *types, Type *structType, const char *name)
 {
     Field *res = typeFindField(structType, name);
     if (!res)
@@ -458,7 +458,7 @@ Field *typeAssertFindField(Types *types, Type *structType, char *name)
 }
 
 
-Field *typeAddField(Types *types, Type *structType, Type *fieldType, char *name)
+Field *typeAddField(Types *types, Type *structType, Type *fieldType, const char *name)
 {
     Field *field = typeFindField(structType, name);
     if (field)
@@ -485,7 +485,7 @@ Field *typeAddField(Types *types, Type *structType, Type *fieldType, char *name)
 }
 
 
-Param *typeFindParam(Signature *sig, char *name)
+Param *typeFindParam(Signature *sig, const char *name)
 {
     unsigned int nameHash = hash(name);
     for (int i = 0; i < sig->numParams; i++)
@@ -496,7 +496,7 @@ Param *typeFindParam(Signature *sig, char *name)
 }
 
 
-Param *typeAddParam(Types *types, Signature *sig, Type *type, char *name)
+Param *typeAddParam(Types *types, Signature *sig, Type *type, const char *name)
 {
     Param *param = typeFindParam(sig, name);
     if (param)
@@ -533,7 +533,7 @@ int typeParamSizeTotal(Types *types, Signature *sig)
 }
 
 
-char *typeKindSpelling(TypeKind kind)
+const char *typeKindSpelling(TypeKind kind)
 {
     return spelling[kind];
 }

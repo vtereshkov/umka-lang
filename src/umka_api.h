@@ -37,15 +37,15 @@ typedef struct
 
 
 void *umkaAlloc     (void);
-bool umkaInit       (void *umka, char *fileName, int storageSize, int stackSize, int argc, char **argv);
+bool umkaInit       (void *umka, const char *fileName, int storageSize, int stackSize, int argc, char **argv);
 bool umkaCompile    (void *umka);
 bool umkaRun        (void *umka);
 bool umkaCall       (void *umka, int entryOffset, int numParamSlots, UmkaStackSlot *params, UmkaStackSlot *result);
 void umkaFree       (void *umka);
 void umkaGetError   (void *umka, UmkaError *err);
 void umkaAsm        (void *umka, char *buf);
-void umkaAddFunc    (void *umka, char *name, UmkaExternFunc entry);
-int  umkaGetFunc    (void *umka, char *moduleName, char *funcName);
+void umkaAddFunc    (void *umka, const char *name, UmkaExternFunc entry);
+int  umkaGetFunc    (void *umka, const char *moduleName, const char *funcName);
 
 
 #if defined(__cplusplus)

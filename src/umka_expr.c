@@ -143,7 +143,7 @@ static void doPtrToInterfaceConv(Compiler *comp, Type *dest, Type **src, Const *
     // Assign to methods
     for (int i = 2; i < dest->numItems; i++)
     {
-        char *name = dest->field[i]->name;
+        const char *name = dest->field[i]->name;
         Ident *srcMethod = identFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, name, *src);
         if (!srcMethod)
             comp->error.handler(comp->error.context, "Method %s is not implemented", name);
@@ -187,7 +187,7 @@ static void doInterfaceToInterfaceConv(Compiler *comp, Type *dest, Type **src, C
     // Assign to methods
     for (int i = 2; i < dest->numItems; i++)
     {
-        char *name = dest->field[i]->name;
+        const char *name = dest->field[i]->name;
         Field *srcMethod = typeFindField(*src, name);
         if (!srcMethod)
             comp->error.handler(comp->error.context, "Method %s is not implemented", name);

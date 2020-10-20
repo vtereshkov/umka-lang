@@ -225,18 +225,18 @@ static inline bool typeOverflow(TypeKind typeKind, Const val)
 }
 
 
-Field *typeFindField        (Type *structType, char *name);
-Field *typeAssertFindField  (Types *types, Type *structType, char *name);
-Field *typeAddField         (Types *types, Type *structType, Type *fieldType, char *name);
+Field *typeFindField        (Type *structType, const char *name);
+Field *typeAssertFindField  (Types *types, Type *structType, const char *name);
+Field *typeAddField         (Types *types, Type *structType, Type *fieldType, const char *name);
 
-Param *typeFindParam        (Signature *sig, char *name);
-Param *typeAddParam         (Types *types, Signature *sig, Type *type, char *name);
+Param *typeFindParam        (Signature *sig, const char *name);
+Param *typeAddParam         (Types *types, Signature *sig, Type *type, const char *name);
 
 int typeParamSizeUpTo   (Types *types, Signature *sig, int index);
 int typeParamSizeTotal  (Types *types, Signature *sig);
 
-char *typeKindSpelling  (TypeKind kind);
-char *typeSpelling      (Type *type, char *buf);
+const char *typeKindSpelling(TypeKind kind);
+char *typeSpelling          (Type *type, char *buf);
 
 
 #endif // UMKA_TYPES_H_INCLUDED

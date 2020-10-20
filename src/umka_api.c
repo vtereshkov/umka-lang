@@ -53,7 +53,7 @@ void *umkaAlloc(void)
 }
 
 
-bool umkaInit(void *umka, char *fileName, int storageSize, int stackSize, int argc, char **argv)
+bool umkaInit(void *umka, const char *fileName, int storageSize, int stackSize, int argc, char **argv)
 {
     Compiler *comp = umka;
     memset(comp, 0, sizeof(Compiler));
@@ -136,14 +136,14 @@ void umkaAsm(void *umka, char *buf)
 }
 
 
-void umkaAddFunc(void *umka, char *name, UmkaExternFunc entry)
+void umkaAddFunc(void *umka, const char *name, UmkaExternFunc entry)
 {
     Compiler *comp = umka;
     externalAdd(&comp->externals, name, entry);
 }
 
 
-int umkaGetFunc(void *umka, char *moduleName, char *funcName)
+int umkaGetFunc(void *umka, const char *moduleName, const char *funcName)
 {
     Compiler *comp = umka;
     return compilerGetFunc(comp, moduleName, funcName);

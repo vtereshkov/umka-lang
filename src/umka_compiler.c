@@ -113,7 +113,7 @@ static void compilerDeclareExternalFuncs(Compiler *comp)
 }
 
 
-void compilerInit(Compiler *comp, char *fileName, int storageSize, int stackSize, int argc, char **argv)
+void compilerInit(Compiler *comp, const char *fileName, int storageSize, int stackSize, int argc, char **argv)
 {
     storageInit  (&comp->storage, storageSize);
     moduleInit   (&comp->modules, &comp->error);
@@ -185,7 +185,7 @@ void compilerAsm(Compiler *comp, char *buf)
 }
 
 
-int compilerGetFunc(Compiler *comp, char *moduleName, char *funcName)
+int compilerGetFunc(Compiler *comp, const char *moduleName, const char *funcName)
 {
     int module = 1;
     if (moduleName)

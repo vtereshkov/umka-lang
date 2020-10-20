@@ -43,7 +43,7 @@ void identFree(Idents *idents, int startBlock)
 }
 
 
-Ident *identFind(Idents *idents, Modules *modules, Blocks *blocks, int module, char *name, Type *rcvType)
+Ident *identFind(Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, Type *rcvType)
 {
     unsigned int nameHash = hash(name);
     int curFnBlockPos = -1;
@@ -82,7 +82,7 @@ Ident *identFind(Idents *idents, Modules *modules, Blocks *blocks, int module, c
 }
 
 
-Ident *identAssertFind(Idents *idents, Modules *modules, Blocks *blocks, int module, char *name, Type *rcvType)
+Ident *identAssertFind(Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, Type *rcvType)
 {
     Ident *res = identFind(idents, modules, blocks, module, name, rcvType);
     if (!res)
@@ -91,7 +91,7 @@ Ident *identAssertFind(Idents *idents, Modules *modules, Blocks *blocks, int mod
 }
 
 
-static Ident *identAdd(Idents *idents, Modules *modules, Blocks *blocks, IdentKind kind, char *name, Type *type, bool exported)
+static Ident *identAdd(Idents *idents, Modules *modules, Blocks *blocks, IdentKind kind, const char *name, Type *type, bool exported)
 {
     Type *rcvType = NULL;
     if (type->kind == TYPE_FN && type->sig.method)
@@ -165,7 +165,7 @@ static Ident *identAdd(Idents *idents, Modules *modules, Blocks *blocks, IdentKi
 }
 
 
-Ident *identAddConst(Idents *idents, Modules *modules, Blocks *blocks, char *name, Type *type, bool exported, Const constant)
+Ident *identAddConst(Idents *idents, Modules *modules, Blocks *blocks, const char *name, Type *type, bool exported, Const constant)
 {
     Ident *ident = identAdd(idents, modules, blocks, IDENT_CONST, name, type, exported);
     ident->constant = constant;
@@ -173,7 +173,7 @@ Ident *identAddConst(Idents *idents, Modules *modules, Blocks *blocks, char *nam
 }
 
 
-Ident *identAddGlobalVar(Idents *idents, Modules *modules, Blocks *blocks, char *name, Type *type, bool exported, void *ptr)
+Ident *identAddGlobalVar(Idents *idents, Modules *modules, Blocks *blocks, const char *name, Type *type, bool exported, void *ptr)
 {
     Ident *ident = identAdd(idents, modules, blocks, IDENT_VAR, name, type, exported);
     ident->ptr = ptr;
@@ -181,7 +181,7 @@ Ident *identAddGlobalVar(Idents *idents, Modules *modules, Blocks *blocks, char 
 }
 
 
-Ident *identAddLocalVar(Idents *idents, Modules *modules, Blocks *blocks, char *name, Type *type, bool exported, int offset)
+Ident *identAddLocalVar(Idents *idents, Modules *modules, Blocks *blocks, const char *name, Type *type, bool exported, int offset)
 {
     Ident *ident = identAdd(idents, modules, blocks, IDENT_VAR, name, type, exported);
     ident->offset = offset;
@@ -189,13 +189,13 @@ Ident *identAddLocalVar(Idents *idents, Modules *modules, Blocks *blocks, char *
 }
 
 
-Ident *identAddType(Idents *idents, Modules *modules, Blocks *blocks, char *name, Type *type, bool exported)
+Ident *identAddType(Idents *idents, Modules *modules, Blocks *blocks, const char *name, Type *type, bool exported)
 {
     return identAdd(idents, modules, blocks, IDENT_TYPE, name, type, exported);
 }
 
 
-Ident *identAddBuiltinFunc(Idents *idents, Modules *modules, Blocks *blocks, char *name, Type *type, BuiltinFunc builtin)
+Ident *identAddBuiltinFunc(Idents *idents, Modules *modules, Blocks *blocks, const char *name, Type *type, BuiltinFunc builtin)
 {
     Ident *ident = identAdd(idents, modules, blocks, IDENT_BUILTIN_FN, name, type, false);
     ident->builtin = builtin;
@@ -220,7 +220,7 @@ int identAllocStack(Idents *idents, Blocks *blocks, int size)
 }
 
 
-Ident *identAllocVar(Idents *idents, Types *types, Modules *modules, Blocks *blocks, char *name, Type *type, bool exported)
+Ident *identAllocVar(Idents *idents, Types *types, Modules *modules, Blocks *blocks, const char *name, Type *type, bool exported)
 {
     Ident *ident;
     if (blocks->top == 0)       // Global

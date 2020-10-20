@@ -7,8 +7,8 @@
 
 void rtlfopen(Slot *params, Slot *result)
 {
-    char *name = (char *)params[1].ptrVal;
-    char *mode = (char *)params[0].ptrVal;
+    const char *name = (const char *)params[1].ptrVal;
+    const char *mode = (const char *)params[0].ptrVal;
 
     FILE *file = fopen(name, mode);
     result->ptrVal = (int64_t)file;
@@ -61,7 +61,7 @@ void rtlfseek(Slot *params, Slot *result)
 
 void rtlremove(Slot *params, Slot *result)
 {
-    char *name = (char *)params[0].ptrVal;
+    const char *name = (const char *)params[0].ptrVal;
     result->intVal = remove(name);
 }
 

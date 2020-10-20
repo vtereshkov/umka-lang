@@ -46,17 +46,17 @@ typedef struct
 void identInit(Idents *idents, Error *error);
 void identFree(Idents *idents, int startBlock /* < 0 to free in all blocks*/);
 
-Ident *identFind          (Idents *idents, Modules *modules, Blocks *blocks, int module, char *name, Type *rcvType);
-Ident *identAssertFind    (Idents *idents, Modules *modules, Blocks *blocks, int module, char *name, Type *rcvType);
+Ident *identFind          (Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, Type *rcvType);
+Ident *identAssertFind    (Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, Type *rcvType);
 
-Ident *identAddConst      (Idents *idents, Modules *modules, Blocks *blocks, char *name, Type *type, bool exported, Const constant);
-Ident *identAddGlobalVar  (Idents *idents, Modules *modules, Blocks *blocks, char *name, Type *type, bool exported, void *ptr);
-Ident *identAddLocalVar   (Idents *idents, Modules *modules, Blocks *blocks, char *name, Type *type, bool exported, int offset);
-Ident *identAddType       (Idents *idents, Modules *modules, Blocks *blocks, char *name, Type *type, bool exported);
-Ident *identAddBuiltinFunc(Idents *idents, Modules *modules, Blocks *blocks, char *name, Type *type, BuiltinFunc builtin);
+Ident *identAddConst      (Idents *idents, Modules *modules, Blocks *blocks, const char *name, Type *type, bool exported, Const constant);
+Ident *identAddGlobalVar  (Idents *idents, Modules *modules, Blocks *blocks, const char *name, Type *type, bool exported, void *ptr);
+Ident *identAddLocalVar   (Idents *idents, Modules *modules, Blocks *blocks, const char *name, Type *type, bool exported, int offset);
+Ident *identAddType       (Idents *idents, Modules *modules, Blocks *blocks, const char *name, Type *type, bool exported);
+Ident *identAddBuiltinFunc(Idents *idents, Modules *modules, Blocks *blocks, const char *name, Type *type, BuiltinFunc builtin);
 
 int    identAllocStack    (Idents *idents, Blocks *blocks, int size);
-Ident *identAllocVar      (Idents *idents, Types *types, Modules *modules, Blocks *blocks, char *name, Type *type, bool exported);
+Ident *identAllocVar      (Idents *idents, Types *types, Modules *modules, Blocks *blocks, const char *name, Type *type, bool exported);
 Ident *identAllocParam    (Idents *idents, Types *types, Modules *modules, Blocks *blocks, Signature *sig, int index);
 
 char *identTempVarName(Idents *idents, char *buf);
