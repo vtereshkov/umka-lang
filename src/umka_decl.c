@@ -358,9 +358,11 @@ static void parseTypeDeclItem(Compiler *comp)
     bool exported = parseExportMark(comp);
 
     lexEat(&comp->lex, TOK_EQ);
-    Type *type = parseType(comp, NULL);
 
-    type->typeIdent = identAddType(&comp->idents, &comp->modules, &comp->blocks, name, type, exported);
+    Type *type = parseType(comp, NULL);
+    Type *newType = typeAdd(&comp->types, &comp->blocks, type->kind);
+    typeDeepCopy(newType, type);
+    newType->typeIdent = identAddType(&comp->idents, &comp->modules, &comp->blocks, name, newType, exported);
 }
 
 

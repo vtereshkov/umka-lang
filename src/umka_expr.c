@@ -1182,7 +1182,7 @@ static void parseFieldSelector(Compiler *comp, Type **type, Const *constant, boo
     {
         // Field
         if ((*type)->kind != TYPE_STRUCT && (*type)->kind != TYPE_INTERFACE)
-            comp->error.handler(comp->error.context, "Structure expected");
+            comp->error.handler(comp->error.context, "Method %s is not found, structure expected to look for field", comp->lex.tok.name);
 
         Field *field = typeAssertFindField(&comp->types, *type, comp->lex.tok.name);
         lexNext(&comp->lex);
