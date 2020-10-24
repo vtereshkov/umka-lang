@@ -1,0 +1,100 @@
+// Umka 3D vector/matrix library
+
+type (
+    Vec* = [3]real
+    Mat* = [3]Vec
+)
+
+
+// Vector operations
+
+fn (u: ^Vec) add*(v: Vec): Vec         {return Vec{u[0] + v[0], u[1] + v[1], u[2] + v[2]}}
+fn (u: ^Vec) sub*(v: Vec): Vec         {return Vec{u[0] - v[0], u[1] - v[1], u[2] - v[2]}}
+fn (u: ^Vec) mul*(a: real): Vec        {return Vec{u[0] * a, u[1] * a, u[2] * a}}
+fn (u: ^Vec) div*(a: real): Vec        {return Vec{u[0] / a, u[1] / a, u[2] / a}}
+fn (u: ^Vec) dot*(v: Vec): real        {return u[0] * v[0] + u[1] * v[1] + u[2] * v[2]}
+fn (u: ^Vec) cross*(v: Vec): Vec       {return Vec{u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]}}
+fn (u: ^Vec) elementwise*(v: Vec): Vec {return Vec{u[0] * v[0], u[1] * v[1], u[2] * v[2]}}
+fn (v: ^Vec) norm*(): real             {return sqrt(v.dot(v^))}
+fn (v: ^Vec) normalize*(): Vec         {return v.div(v.norm())}
+
+
+// Matrix operations
+
+fn (m: ^Mat) add*(n: Mat): Mat         {return Mat{m[0].add(n[0]), m[1].add(n[1]), m[2].add(n[2])}}
+fn (m: ^Mat) sub*(n: Mat): Mat         {return Mat{m[0].sub(n[0]), m[1].sub(n[1]), m[2].sub(n[2])}}
+fn (m: ^Mat) mul*(a: real): Mat        {return Mat{m[0].mul(a), m[1].mul(a), m[2].mul(a)}}
+fn (m: ^Mat) div*(a: real): Mat        {return Mat{m[0].div(a), m[1].div(a), m[2].div(a)}}
+fn (m: ^Mat) mulv*(v: Vec): Vec        {return Vec{m[0].dot(v), m[1].dot(v), m[2].dot(v)}}
+
+fn (m: ^Mat) mulm*(n: Mat): Mat {
+    var res: Mat
+    for i := 0; i < 3; i++ {
+        for j := 0; j < 3; j++ {
+            for k := 0; k < 3; k++ {
+                res[i][j] += m[i][k] * n[k][j]
+            }
+        }
+    }
+    return res
+}
+
+fn identity*(): Mat {
+    var res: Mat
+    for i := 0; i < 3; i++ {
+        res[i][i] = 1
+    }
+    return res
+}
+
+fn (m: ^Mat) transpose*(): Mat {
+    var res: Mat
+    for i := 0; i < 3; i++ {
+        for j := 0; j < 3; j++ {
+            res[i][j] = m[j][i]
+        }
+    }
+    return res
+}
+
+fn (m: ^Mat) normalize*(): Mat {
+    return m.add(m.mulm(identity().sub(m.transpose().mulm(m^))).mul(0.5))
+}
+
+
+// Vector/matrix conversions
+
+fn (v: ^Vec) toRateMat*(): Mat {
+    return Mat{Vec{ 0,    -v[2],  v[1]},
+               Vec{ v[2],  0,    -v[0]},
+               Vec{-v[1],  v[0],  0   }}
+}
+
+fn (v: ^Vec) toAttMat*(): Mat {
+    // v = {roll, pitch, yaw}
+
+    sr := sin(v[0]);  cr := cos(v[0])
+    sp := sin(v[1]);  cp := cos(v[1])
+    sy := sin(v[2]);  cy := cos(v[2])
+
+    rollMat  := Mat{Vec{ 1,   0,   0 },
+                    Vec{ 0,   cr, -sr},
+                    Vec{ 0,   sr,  cr}}
+
+    pitchMat := Mat{Vec{ cp,  0,   sp},
+                    Vec{ 0,   1,   0 },
+                    Vec{-sp,  0,   cp}}
+
+    yawMat   := Mat{Vec{ cy, -sy,  0 },
+                    Vec{ sy,  cy,  0 },
+                    Vec{ 0,   0,   1 }}
+
+    return yawMat.mulm(pitchMat).mulm(rollMat)
+}
+
+fn (m: ^Mat) toAttAngles*(): Vec {
+    roll  := atan2( m[2][1], m[2][2])
+    pitch := atan2(-m[2][0], sqrt(m[2][1] * m[2][1] + m[2][2] * m[2][2]))
+    yaw   := atan2( m[1][0], m[0][0])
+    return Vec{roll, pitch, yaw}
+}

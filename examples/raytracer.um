@@ -1,27 +1,19 @@
 // Raytracer demo in Umka
 
-import "../import/std.um"
+import (
+    "../import/std.um"
+    "../import/mat.um"
+)
 
-type Vec = [3]real
-
-fn (u: ^Vec) add(v: Vec): Vec         { return Vec{u[0] + v[0], u[1] + v[1], u[2] + v[2]} }
-fn (u: ^Vec) sub(v: Vec): Vec         { return Vec{u[0] - v[0], u[1] - v[1], u[2] - v[2]} }
-fn (u: ^Vec) dot(v: Vec): real        { return u[0]*v[0] + u[1]*v[1] + u[2]*v[2] }
-fn (u: ^Vec) mul(a: real): Vec        { return Vec{u[0] * a, u[1] * a, u[2] * a} }
-fn (u: ^Vec) elementwise(v: Vec): Vec { return Vec{u[0] * v[0], u[1] * v[1], u[2] * v[2]} }
-fn norm(v: Vec): real                 { return sqrt(v.dot(v)) }
-fn normalize(v: Vec): Vec             { return v.mul(1.0 / norm(v)) }
-fn randn(): Vec                       { return Vec{std.frand() - 0.5, std.frand() - 0.5, std.frand() - 0.5} }
-
-type Color = Vec
+fn randn(): mat.Vec {return mat.Vec{std.frand() - 0.5, std.frand() - 0.5, std.frand() - 0.5}}
 
 type Ray = struct {
-    origin, dir: Vec
+    origin, dir: mat.Vec
 }
 
 type GenericBody = struct {
-    center:      Vec
-    color:       Color
+    center:      mat.Vec
+    color:       mat.Vec
     diffuseness: real
     isLamp:      bool
 }
@@ -32,17 +24,17 @@ fn (b: ^GenericBody) lambertFactor(lambert: real): real {
 
 type Body = interface {
     get(): ^GenericBody
-    intersect(ray: ^Ray, point, normal: ^Vec): bool
+    intersect(ray: ^Ray, point, normal: ^mat.Vec): bool
 }
 
 type Box = struct {
     body: GenericBody
-    halfsize: Vec
+    halfsize: mat.Vec
 }
 
-fn (b: ^Box) get(): ^GenericBody { return &b.body }
+fn (b: ^Box) get(): ^GenericBody {return &b.body}
 
-fn (b: ^Box) intersectFace(ray: ^Ray, point, normal: ^Vec, i, j, k: int): bool {
+fn (b: ^Box) intersectFace(ray: ^Ray, point, normal: ^mat.Vec, i, j, k: int): bool {
     if fabs(ray.dir[k]) > 1e-9 {
         side := 1.0
         if ray.dir[k] > 0.0 {
@@ -71,7 +63,7 @@ fn (b: ^Box) intersectFace(ray: ^Ray, point, normal: ^Vec, i, j, k: int): bool {
     return false
 }
 
-fn (b: ^Box) intersect(ray: ^Ray, point, normal: ^Vec): bool {
+fn (b: ^Box) intersect(ray: ^Ray, point, normal: ^mat.Vec): bool {
     return b.intersectFace(ray, point, normal, 0, 1, 2) || 
            b.intersectFace(ray, point, normal, 2, 0, 1) || 
            b.intersectFace(ray, point, normal, 1, 2, 0)
@@ -82,9 +74,9 @@ type Sphere = struct {
     radius: real
 }
 
-fn (s: ^Sphere) get(): ^GenericBody { return &s.body }
+fn (s: ^Sphere) get(): ^GenericBody {return &s.body}
 
-fn (s: ^Sphere) intersect(ray: ^Ray, point, normal: ^Vec): bool {
+fn (s: ^Sphere) intersect(ray: ^Ray, point, normal: ^mat.Vec): bool {
     displacement := s.body.center.sub(ray.origin)
     proj := displacement.dot(ray.dir)
     discr := s.radius * s.radius + proj * proj - displacement.dot(displacement)
@@ -100,11 +92,11 @@ fn (s: ^Sphere) intersect(ray: ^Ray, point, normal: ^Vec): bool {
 }
 
 type Scene = struct {
-    ambientColor: Color
+    ambientColor: mat.Vec
     body:         []Body
 }
 
-fn (sc: ^Scene) trace(ray: ^Ray, depth: int): Color {
+fn (sc: ^Scene) trace(ray: ^Ray, depth: int): mat.Vec {
     if depth > 3 {
         return sc.ambientColor
     }
@@ -112,14 +104,13 @@ fn (sc: ^Scene) trace(ray: ^Ray, depth: int): Color {
     // Find nearest intersection
     bestDist := 1e9
     bestIndex := -1
-    var bestPoint, bestNormal: Vec
+    var bestPoint, bestNormal: mat.Vec
 
     for i, b in sc.body {
-        var point, normal: Vec
+        var point, normal: mat.Vec
         
-        if found := b.intersect(ray, &point, &normal); found {
-            dist := norm(point.sub(ray.origin))
-            if dist < bestDist {
+        if found := b.intersect(ray, &point, &normal); found {           
+            if dist := point.sub(ray.origin).norm(); dist < bestDist {
                 bestDist = dist
                 bestIndex = i
                 bestPoint = point
@@ -137,7 +128,7 @@ fn (sc: ^Scene) trace(ray: ^Ray, depth: int): Color {
         }
 
         specularDir := ray.dir.sub(bestNormal.mul(2.0 * (ray.dir.dot(bestNormal))))
-        diffuseDir := normalize(specularDir.add(randn().mul(2.0 * bestBody.diffuseness)))
+        diffuseDir := specularDir.add(randn().mul(2.0 * bestBody.diffuseness)).normalize()
 
         lambert := diffuseDir.dot(bestNormal)
         if lambert < 0 {
@@ -158,7 +149,7 @@ const (width = 640; height = 480)
 type RenderData = struct {
     startHeight:  int
     stopHeight:   int
-    pos:          Vec
+    pos:          mat.Vec
     azimuth:      real
     focal:        real
     antialiasing: real
@@ -172,18 +163,18 @@ fn render(parent: ^fiber, buf: ^RenderData) {
     
     for i := buf.startHeight; i < buf.stopHeight; i++ {
         for j := 0; j < width; j++ {
-            dir := Vec{j - width / 2, i - height / 2, buf.focal}
+            dir := mat.Vec{j - width / 2, i - height / 2, buf.focal}
 
-            rotDir := Vec{
+            rotDir := mat.Vec{
                  dir[0]*cosAz + dir[2]*sinAz,
                  dir[1],
                 -dir[0]*sinAz + dir[2]*cosAz}
 
-            color := Color{0, 0, 0}
+            color := mat.Vec{0, 0, 0}
 
             for r := 0; r < buf.rays; r++ {
                 randomDir := rotDir.add(randn().mul(buf.antialiasing))
-                ray := Ray{buf.pos, normalize(randomDir)}
+                ray := Ray{buf.pos, randomDir.normalize()}
                 color = color.add(buf.scene.trace(&ray, 0))
             }
             color = color.mul(255.0 / buf.rays)
@@ -200,32 +191,32 @@ fn main() {
     body := [5]Body {
         &Box {
             body: GenericBody {
-                center: Vec{500, -100, 1200},
-                color: Color{0.4, 0.7, 1.0},
+                center: mat.Vec{500, -100, 1200},
+                color: mat.Vec{0.4, 0.7, 1.0},
                 diffuseness: 0.1,
                 isLamp: false},
-            halfsize: Vec{400 / 2.0, 600 / 2.0, 300 / 2.0}},
+            halfsize: mat.Vec{400 / 2.0, 600 / 2.0, 300 / 2.0}},
             
         &Box {
             body: GenericBody {
-                center: Vec{550, 210, 1100},
-                color: Color{0.9, 1.0, 0.6},
+                center: mat.Vec{550, 210, 1100},
+                color: mat.Vec{0.9, 1.0, 0.6},
                 diffuseness: 0.3,
                 isLamp: false},
-            halfsize: Vec{1000 / 2.0, 20 / 2.0, 1000 / 2.0}},            
+            halfsize: mat.Vec{1000 / 2.0, 20 / 2.0, 1000 / 2.0}},            
 
         &Sphere {
             body: GenericBody{
-                center: Vec{600, 0, 700},
-                color: Color{1.0, 0.4, 0.6},
+                center: mat.Vec{600, 0, 700},
+                color: mat.Vec{1.0, 0.4, 0.6},
                 diffuseness: 0.2,
                 isLamp: false},
             radius: 200},
             
         &Sphere {
             body: GenericBody{
-                center: Vec{330, 150, 700},
-                color: Color{1.0, 1.0, 0.3},
+                center: mat.Vec{330, 150, 700},
+                color: mat.Vec{1.0, 1.0, 0.3},
                 diffuseness: 0.15,
                 isLamp: false},
             radius: 50},
@@ -233,13 +224,13 @@ fn main() {
         // Define light
         &Sphere {
             body: GenericBody{
-                center: Vec{500, -1000, -700},
-                color: Color{1.0, 1.0, 1.0},
+                center: mat.Vec{500, -1000, -700},
+                color: mat.Vec{1.0, 1.0, 1.0},
                 diffuseness: 1.0,
                 isLamp: true},
             radius: 800}}
             
-    scene := Scene{Color{0.2, 0.2, 0.2}, body}
+    scene := Scene{mat.Vec{0.2, 0.2, 0.2}, body}
     
     var pixels: [height][width][3]uint8            
 
@@ -257,7 +248,7 @@ fn main() {
         renderData[i] = RenderData {
             startHeight:  height / len(renderer) * i,
             stopHeight:   height / len(renderer) * (i + 1),
-            pos:          Vec{0, 0, 0},
+            pos:          mat.Vec{0, 0, 0},
             azimuth:      30.0 * std.pi / 180.0,
             focal:        500,
             antialiasing: 1.0,
