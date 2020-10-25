@@ -169,7 +169,7 @@ typedef void (*ExternFunc)(Slot *params, Slot *result);
 
 typedef struct
 {
-    Fiber *fiber;
+    Fiber *fiber, *mainFiber;
     HeapPages pages;
     Error *error;
 } VM;

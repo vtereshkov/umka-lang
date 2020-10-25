@@ -252,7 +252,7 @@ static int fsscanf(bool string, void *stream, const char *format, ...)
 
 void vmInit(VM *vm, int stackSize, Error *error)
 {
-    vm->fiber = malloc(sizeof(Fiber));
+    vm->fiber = vm->mainFiber = malloc(sizeof(Fiber));
     vm->fiber->stack = malloc(stackSize * sizeof(Slot));
     vm->fiber->stackSize = stackSize;
     vm->fiber->alive = true;
@@ -264,13 +264,14 @@ void vmInit(VM *vm, int stackSize, Error *error)
 void vmFree(VM *vm)
 {
     pageFree(&vm->pages);
-    free(vm->fiber->stack);
-    free(vm->fiber);
+    free(vm->mainFiber->stack);
+    free(vm->mainFiber);
 }
 
 
 void vmReset(VM *vm, Instruction *code)
 {
+    vm->fiber = vm->mainFiber;
     vm->fiber->code = code;
     vm->fiber->ip = 0;
     vm->fiber->top = vm->fiber->base = vm->fiber->stack + vm->fiber->stackSize - 1;
@@ -516,7 +517,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, Error *e
 
         case TYPE_ARRAY:
         {
-            len += snprintf(buf, maxLen, "{");
+            len += snprintf(buf, maxLen, "{ ");
 
             void *itemPtr = (void *)slot->ptrVal;
             int itemSize = typeSizeNoCheck(type->base);
@@ -535,7 +536,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, Error *e
 
         case TYPE_DYNARRAY:
         {
-            len += snprintf(buf, maxLen, "{");
+            len += snprintf(buf, maxLen, "{ ");
 
             DynArray *array = (DynArray *)slot->ptrVal;
             if (array && array->data)
@@ -556,7 +557,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, Error *e
 
         case TYPE_STRUCT:
         {
-            len += snprintf(buf, maxLen, "{");
+            len += snprintf(buf, maxLen, "{ ");
 
             for (int i = 0; i < type->numItems; i++)
             {
