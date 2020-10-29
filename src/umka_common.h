@@ -13,7 +13,6 @@ enum
     MAX_MODULES         = 256,
     MAX_FIELDS          = 100,
     MAX_PARAMS          = 16,
-    MAX_RESULTS         = 16,
     MAX_BLOCK_NESTING   = 100,
     MAX_GOTOS           = 100
 };

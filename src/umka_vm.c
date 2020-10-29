@@ -558,12 +558,14 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, Error *e
         case TYPE_STRUCT:
         {
             len += snprintf(buf, maxLen, "{ ");
+            bool skipNames = typeExprListStruct(type);
 
             for (int i = 0; i < type->numItems; i++)
             {
                 Slot fieldSlot = {.ptrVal = slot->ptrVal + type->field[i]->offset};
                 doBasicDeref(&fieldSlot, type->field[i]->type->kind, error);
-                len += snprintf(buf + len, maxLen, "%s: ", type->field[i]->name);
+                if (!skipNames)
+                    len += snprintf(buf + len, maxLen, "%s: ", type->field[i]->name);
                 len += doFillReprBuf(&fieldSlot, type->field[i]->type, buf + len, maxLen, error);
             }
 

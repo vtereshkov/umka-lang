@@ -65,6 +65,25 @@ void doResolveExtern(Compiler *comp)
 }
 
 
+bool doShortVarDeclLookahead(Compiler *comp)
+{
+    // ident {"," ident} ":="
+    Lexer lookaheadLex = comp->lex;
+    while (1)
+    {
+        if (lookaheadLex.tok.kind != TOK_IDENT)
+            return false;
+
+        lexNext(&lookaheadLex);
+        if (lookaheadLex.tok.kind != TOK_COMMA)
+            break;
+
+        lexNext(&lookaheadLex);
+    }
+    return lookaheadLex.tok.kind == TOK_COLONEQ;
+}
+
+
 // assignmentStmt = designator "=" expr.
 void parseAssignmentStmt(Compiler *comp, Type *type, void *initializedVarPtr)
 {
@@ -119,29 +138,56 @@ static void parseShortAssignmentStmt(Compiler *comp, Type *type, TokenKind op)
 }
 
 
-// declAssignmentStmt = ident ":=" expr.
-void parseDeclAssignmentStmt(Compiler *comp, IdentName name, bool constExpr, bool exported)
+// declAssignmentStmt = identList ":=" exprList.
+void parseDeclAssignmentStmt(Compiler *comp, IdentName *names, bool *exported, int num, bool constExpr)
 {
-    Type *rightType;
-    Const rightConstantBuf, *rightConstant = NULL;
+    Type *rightListType;
+    Const rightListConstantBuf, *rightListConstant = constExpr ? &rightListConstantBuf : NULL;
 
-    if (constExpr)
-        rightConstant = &rightConstantBuf;
+    parseExprList(comp, &rightListType, NULL, rightListConstant);
 
-    parseExpr(comp, &rightType, rightConstant);
+    const bool isList = typeExprListStruct(rightListType);
+    const int numExpr = isList ? rightListType->numItems : 1;
 
-    Ident *ident = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, name, rightType, exported);
+    if (numExpr < num) comp->error.handler(comp->error.context, "Too few expressions");
+    if (numExpr > num) comp->error.handler(comp->error.context, "Too many expressions");
 
-    if (constExpr)              // Initialize global variable
-        constAssign(&comp->consts, ident->ptr, rightConstant, rightType->kind, typeSize(&comp->types, rightType));
-    else                        // Assign to variable
+    for (int i = 0; i < num; i++)
     {
-        // Increase right-hand side reference count
-        genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, rightType);
+        Type *rightType = isList ? rightListType->field[i]->type : rightListType;
+        Ident *ident = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, names[i], rightType, exported[i]);
 
-        doPushVarPtr(comp, ident);
-        genSwapAssign(&comp->gen, rightType->kind, typeSize(&comp->types, rightType));
+        if (constExpr)              // Initialize global variable
+        {
+            Const *rightConstant = rightListConstant;
+            if (isList)
+            {
+                Const rightConstantBuf = {.ptrVal = rightListConstant->ptrVal + rightListType->field[i]->offset};
+                rightConstant = &rightConstantBuf;
+                constDeref(&comp->consts, rightConstant, rightType->kind);
+            }
+
+            constAssign(&comp->consts, ident->ptr, rightConstant, rightType->kind, typeSize(&comp->types, rightType));
+        }
+        else                        // Assign to variable
+        {
+            if (isList)
+            {
+                genDup(&comp->gen);                                             // Duplicate expression list
+                genGetFieldPtr(&comp->gen, rightListType->field[i]->offset);    // Get expression pointer
+                genDeref(&comp->gen, rightType->kind);                          // Get expression value
+            }
+
+            // Increase right-hand side reference count
+            genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, rightType);
+
+            doPushVarPtr(comp, ident);
+            genSwapAssign(&comp->gen, rightType->kind, typeSize(&comp->types, rightType));
+        }
     }
+
+    if (isList && !constExpr)
+        genPop(&comp->gen);                                                     // Remove expression list
 }
 
 
@@ -161,14 +207,11 @@ static void parseIncDecStmt(Compiler *comp, Type *type, TokenKind op)
 }
 
 
-// simpleStmt     = assignmentStmt | shortAssignmentStmt | incDecStmt | callStmt.
-// callStmt       = designator.
+// simpleStmt = assignmentStmt | shortAssignmentStmt | incDecStmt | callStmt.
+// callStmt   = designator.
 static void parseSimpleStmt(Compiler *comp)
 {
-    Lexer lookaheadLex = comp->lex;
-    lexNext(&lookaheadLex);
-
-    if (lookaheadLex.tok.kind == TOK_COLONEQ)
+    if (doShortVarDeclLookahead(comp))
         parseShortVarDecl(comp);
     else
     {
@@ -215,10 +258,7 @@ static void parseIfStmt(Compiler *comp)
     blocksEnter(&comp->blocks, NULL);
 
     // [shortVarDecl ";"]
-    Lexer lookaheadLex = comp->lex;
-    lexNext(&lookaheadLex);
-
-    if (lookaheadLex.tok.kind == TOK_COLONEQ)
+    if (doShortVarDeclLookahead(comp))
     {
         parseShortVarDecl(comp);
         lexEat(&comp->lex, TOK_SEMICOLON);
@@ -301,10 +341,7 @@ static void parseSwitchStmt(Compiler *comp)
     blocksEnter(&comp->blocks, NULL);
 
     // [shortVarDecl ";"]
-    Lexer lookaheadLex = comp->lex;
-    lexNext(&lookaheadLex);
-
-    if (lookaheadLex.tok.kind == TOK_COLONEQ)
+    if (doShortVarDeclLookahead(comp))
     {
         parseShortVarDecl(comp);
         lexEat(&comp->lex, TOK_SEMICOLON);
@@ -343,11 +380,11 @@ static void parseSwitchStmt(Compiler *comp)
 
 
 // forHeader = [shortVarDecl ";"] expr [";" simpleStmt].
-static void parseForHeader(Compiler *comp, TokenKind lookaheadTokKind)
+static void parseForHeader(Compiler *comp)
 {
-    if (lookaheadTokKind == TOK_COLONEQ)
+    // [shortVarDecl ";"]
+    if (doShortVarDeclLookahead(comp))
     {
-        // [shortVarDecl ";"]
         parseShortVarDecl(comp);
         lexEat(&comp->lex, TOK_SEMICOLON);
     }
@@ -529,10 +566,10 @@ static void parseForStmt(Compiler *comp)
     Lexer lookaheadLex = comp->lex;
     lexNext(&lookaheadLex);
 
-    if (lookaheadLex.tok.kind == TOK_COMMA || lookaheadLex.tok.kind == TOK_IN)
+    if (!doShortVarDeclLookahead(comp) && (lookaheadLex.tok.kind == TOK_COMMA || lookaheadLex.tok.kind == TOK_IN))
         parseForInHeader(comp, lookaheadLex.tok.kind);
     else
-        parseForHeader(comp, lookaheadLex.tok.kind);
+        parseForHeader(comp);
 
     // block
     parseBlock(comp);
@@ -579,18 +616,11 @@ static void parseContinueStmt(Compiler *comp)
 }
 
 
-// returnStmt = "return" [expr].
+// returnStmt = "return" [exprList].
 static void parseReturnStmt(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_RETURN);
     comp->blocks.item[comp->blocks.top].hasReturn = true;
-
-    Type *type;
-
-    if (comp->lex.tok.kind != TOK_SEMICOLON && comp->lex.tok.kind != TOK_RBRACE)
-        parseExpr(comp, &type, NULL);
-    else
-        type = comp->voidType;
 
     // Get function signature
     Signature *sig = NULL;
@@ -601,11 +631,17 @@ static void parseReturnStmt(Compiler *comp)
             break;
         }
 
-    doImplicitTypeConv(comp, sig->resultType[0], &type, NULL, false);
-    typeAssertCompatible(&comp->types, sig->resultType[0], type, false);
+    Type *type;
+    if (comp->lex.tok.kind != TOK_SEMICOLON && comp->lex.tok.kind != TOK_RBRACE)
+        parseExprList(comp, &type, sig->resultType, NULL);
+    else
+        type = comp->voidType;
+
+    doImplicitTypeConv(comp, sig->resultType, &type, NULL, false);
+    typeAssertCompatible(&comp->types, sig->resultType, type, false);
 
     // Copy structure to __result
-    if (typeStructured(sig->resultType[0]))
+    if (typeStructured(sig->resultType))
     {
         Ident *__result = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, "__result", NULL);
 
@@ -613,16 +649,16 @@ static void parseReturnStmt(Compiler *comp)
         genDeref(&comp->gen, TYPE_PTR);
 
         // Assignment to an anonymous stack area (pointed to by __result) does not require updating reference counts
-        genSwapAssign(&comp->gen, sig->resultType[0]->kind, typeSize(&comp->types, sig->resultType[0]));
+        genSwapAssign(&comp->gen, sig->resultType->kind, typeSize(&comp->types, sig->resultType));
 
         doPushVarPtr(comp, __result);
         genDeref(&comp->gen, TYPE_PTR);
     }
 
-    if (sig->resultType[0]->kind != TYPE_VOID)
+    if (sig->resultType->kind != TYPE_VOID)
     {
         // Increase result reference count
-        genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, sig->resultType[0]);
+        genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, sig->resultType);
         genPopReg(&comp->gen, VM_REG_RESULT);
     }
 
@@ -698,7 +734,7 @@ void parseFnBlock(Compiler *comp, Ident *fn)
     bool mainFn = false;
     if (strcmp(fn->name, "main") == 0)
     {
-        if (fn->type->sig.method || fn->type->sig.numParams != 0 || fn->type->sig.resultType[0]->kind != TYPE_VOID)
+        if (fn->type->sig.method || fn->type->sig.numParams != 0 || fn->type->sig.resultType->kind != TYPE_VOID)
             comp->error.handler(comp->error.context, "Illegal main() signature");
 
         genEntryPoint(&comp->gen, 0);
@@ -722,7 +758,7 @@ void parseFnBlock(Compiler *comp, Ident *fn)
     // StmtList
     parseStmtList(comp);
 
-    if (!comp->blocks.item[comp->blocks.top].hasReturn && fn->type->sig.resultType[0]->kind != TYPE_VOID)
+    if (!comp->blocks.item[comp->blocks.top].hasReturn && fn->type->sig.resultType->kind != TYPE_VOID)
         comp->error.handler(comp->error.context, "Non-void function block must have return statement");
 
     // 'return' epilog

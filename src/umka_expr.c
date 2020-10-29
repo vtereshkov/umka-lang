@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <string.h>
 #include <limits.h>
 #include <stddef.h>
@@ -794,7 +795,7 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
     }
 
     // __result
-    if (typeStructured((*type)->sig.resultType[0]))
+    if (typeStructured((*type)->sig.resultType))
         numPostHiddenParams++;
 
     if (comp->lex.tok.kind != TOK_RPAR)
@@ -839,9 +840,9 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
     }
 
     // Push __result pointer
-    if (typeStructured((*type)->sig.resultType[0]))
+    if (typeStructured((*type)->sig.resultType))
     {
-        int size = typeSize(&comp->types, (*type)->sig.resultType[0]);
+        int size = typeSize(&comp->types, (*type)->sig.resultType);
         int offset = identAllocStack(&comp->idents, &comp->blocks, size);
         genPushLocalPtr(&comp->gen, offset);
         i++;
@@ -850,7 +851,7 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
     int paramSlots = typeParamSizeTotal(&comp->types, &(*type)->sig) / sizeof(Slot);
     genCall(&comp->gen, paramSlots);
 
-    *type = (*type)->sig.resultType[0];
+    *type = (*type)->sig.resultType;
     lexEat(&comp->lex, TOK_RPAR);
 }
 
@@ -1561,3 +1562,80 @@ void parseExpr(Compiler *comp, Type **type, Const *constant)
         }
     }
 }
+
+
+// exprList = expr {"," expr}.
+void parseExprList(Compiler *comp, Type **type, Type *destType, Const *constant)
+{
+    parseExpr(comp, type, constant);
+
+    if (comp->lex.tok.kind == TOK_COMMA)
+    {
+        // Expression list (syntactic sugar - actually a structure literal)
+        Const fieldConstantBuf[MAX_FIELDS], *fieldConstant = NULL;
+        if (constant)
+        {
+            fieldConstantBuf[0] = *constant;
+            fieldConstant = &fieldConstantBuf[0];
+        }
+
+        Type *fieldType = *type;
+        *type = typeAdd(&comp->types, &comp->blocks, TYPE_STRUCT);
+
+        // Evaluate expressions and get the total structure size
+        while (1)
+        {
+            IdentName fieldName;
+            sprintf(fieldName, "__field%d", (*type)->numItems);
+
+            // Convert field to the desired type if necessary and possible (no error is thrown anyway)
+            if (destType && destType->numItems > (*type)->numItems)
+            {
+                Type *destFieldType = destType->field[(*type)->numItems]->type;
+                doImplicitTypeConv(comp, destFieldType, &fieldType, fieldConstant, false);
+                if (typeCompatible(destFieldType, fieldType, false))
+                    fieldType = destFieldType;
+            }
+
+            typeAddField(&comp->types, *type, fieldType, fieldName);
+
+            if (comp->lex.tok.kind != TOK_COMMA)
+                break;
+
+            fieldConstant = constant ? &fieldConstantBuf[(*type)->numItems] : NULL;
+
+            lexNext(&comp->lex);
+            parseExpr(comp, &fieldType, fieldConstant);
+        }
+
+        // Allocate structure
+        int bufOffset = 0;
+        if (constant)
+        {
+            constant->ptrVal = (int64_t)&comp->storage.data[comp->storage.len];
+            comp->storage.len += typeSize(&comp->types, *type);
+        }
+        else
+            bufOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, *type));
+
+        // Assign expressions
+        for (int i = (*type)->numItems - 1; i >= 0; i--)
+        {
+            Field *field = (*type)->field[i];
+            int fieldSize = typeSize(&comp->types, field->type);
+
+            if (constant)
+                constAssign(&comp->consts, (void *)(constant->ptrVal + field->offset), &fieldConstantBuf[i], field->type->kind, fieldSize);
+            else
+            {
+                // Assignment to an anonymous stack area does not require updating reference counts
+                genPushLocalPtr(&comp->gen, bufOffset + field->offset);
+                genSwapAssign(&comp->gen, field->type->kind, fieldSize);
+            }
+        }
+
+        if (!constant)
+            genPushLocalPtr(&comp->gen, bufOffset);
+    }
+}
+

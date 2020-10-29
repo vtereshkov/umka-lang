@@ -7,7 +7,7 @@
 void doResolveExtern(Compiler *comp);
 
 void parseAssignmentStmt(Compiler *comp, Type *type, void *initializedVarPtr);
-void parseDeclAssignmentStmt(Compiler *comp, IdentName name, bool constExpr, bool exported);
+void parseDeclAssignmentStmt(Compiler *comp, IdentName *names, bool *exported, int num, bool constExpr);
 
 void parseFnBlock(Compiler *comp, Ident *fn);
 void parseFnPrototype(Compiler *comp, Ident *fn);

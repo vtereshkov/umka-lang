@@ -1,6 +1,7 @@
 #ifndef UMKA_TYPES_H_INCLUDED
 #define UMKA_TYPES_H_INCLUDED
 
+#include <string.h>
 #include <limits.h>
 #include <float.h>
 
@@ -66,11 +67,11 @@ typedef struct
 
 typedef struct
 {
-    int numParams, numDefaultParams, numResults;
+    int numParams, numDefaultParams;
     bool method;
     int offsetFromSelf;                     // For interface methods
     Param *param[MAX_PARAMS];
-    struct tagType *resultType[MAX_RESULTS];
+    struct tagType *resultType;
 } Signature;
 
 
@@ -169,6 +170,12 @@ static inline bool typeCharArrayPtr(Type *type)
 }
 
 
+static inline bool typeExprListStruct(Type *type)
+{
+    return type->kind == TYPE_STRUCT && type->numItems > 0 && strcmp(type->field[0]->name, "__field0") == 0;
+}
+
+
 static inline bool typeFiberFunc(Type *type)
 {
     return type->kind                            == TYPE_FN    &&
@@ -178,21 +185,20 @@ static inline bool typeFiberFunc(Type *type)
            type->sig.param[0]->type->base->kind  == TYPE_FIBER &&
            type->sig.param[1]->type->kind        == TYPE_PTR   &&
            type->sig.param[1]->type->base->kind  != TYPE_VOID  &&
-           type->sig.numResults                  == 1          &&
-           type->sig.resultType[0]->kind         == TYPE_VOID  &&
+           type->sig.resultType->kind            == TYPE_VOID  &&
            !type->sig.method;
 }
 
 
 bool typeEquivalent         (Type *left, Type *right);
-bool typeAssertEquivalent   (Types *types, Type *left, Type *right);
+void typeAssertEquivalent   (Types *types, Type *left, Type *right);
 bool typeCompatible         (Type *left, Type *right, bool symmetric);
-bool typeAssertCompatible   (Types *types, Type *left, Type *right, bool symmetric);
+void typeAssertCompatible   (Types *types, Type *left, Type *right, bool symmetric);
 
 bool typeValidOperator      (Type *type, TokenKind op);
-bool typeAssertValidOperator(Types *types, Type *type, TokenKind op);
+void typeAssertValidOperator(Types *types, Type *type, TokenKind op);
 
-bool typeAssertForwardResolved(Types *types);
+void typeAssertForwardResolved(Types *types);
 
 
 static inline bool typeOverflow(TypeKind typeKind, Const val)

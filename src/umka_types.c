@@ -99,7 +99,6 @@ Type *typeAdd(Types *types, Blocks *blocks, TypeKind kind)
         type->sig.offsetFromSelf    = 0;
         type->sig.numParams         = 0;
         type->sig.numDefaultParams  = 0;
-        type->sig.numResults        = 0;
     }
 
     // Add to list
@@ -290,14 +289,9 @@ bool typeEquivalent(Type *left, Type *right)
                     return false;
             }
 
-            // Number of results
-            if (left->sig.numResults != right->sig.numResults)
+            // Result type
+            if (!typeEquivalent(left->sig.resultType, right->sig.resultType))
                 return false;
-
-            // Result types
-            for (int i = 0; i < left->sig.numResults; i++)
-                if (!typeEquivalent(left->sig.resultType[i], right->sig.resultType[i]))
-                    return false;
 
             return true;
         }
@@ -310,16 +304,13 @@ bool typeEquivalent(Type *left, Type *right)
 }
 
 
-bool typeAssertEquivalent(Types *types, Type *left, Type *right)
+void typeAssertEquivalent(Types *types, Type *left, Type *right)
 {
-    bool res = typeEquivalent(left, right);
-    if (!res)
+    if (!typeEquivalent(left, right))
     {
         char leftBuf[DEFAULT_STR_LEN + 1], rightBuf[DEFAULT_STR_LEN + 1];
         types->error->handler(types->error->context, "Incompatible types %s and %s", typeSpelling(left, leftBuf), typeSpelling(right, rightBuf));
-
     }
-    return res;
 }
 
 
@@ -359,15 +350,13 @@ bool typeCompatible(Type *left, Type *right, bool symmetric)
 }
 
 
-bool typeAssertCompatible(Types *types, Type *left, Type *right, bool symmetric)
+void typeAssertCompatible(Types *types, Type *left, Type *right, bool symmetric)
 {
-    bool res = typeCompatible(left, right, symmetric);
-    if (!res)
+    if (!typeCompatible(left, right, symmetric))
     {
         char leftBuf[DEFAULT_STR_LEN + 1], rightBuf[DEFAULT_STR_LEN + 1];
         types->error->handler(types->error->context, "Incompatible types %s and %s", typeSpelling(left, leftBuf), typeSpelling(right, rightBuf));
     }
-    return res;
 }
 
 
@@ -412,27 +401,21 @@ bool typeValidOperator(Type *type, TokenKind op)
 }
 
 
-bool typeAssertValidOperator(Types *types, Type *type, TokenKind op)
+void typeAssertValidOperator(Types *types, Type *type, TokenKind op)
 {
-    bool res = typeValidOperator(type, op);
-    if (!res)
+    if (!typeValidOperator(type, op))
     {
         char buf[DEFAULT_STR_LEN + 1];
         types->error->handler(types->error->context, "Operator %s is not applicable to %s", lexSpelling(op), typeSpelling(type, buf));
     }
-    return res;
 }
 
 
-bool typeAssertForwardResolved(Types *types)
+void typeAssertForwardResolved(Types *types)
 {
     for (Type *type = types->first; type; type = type->next)
         if (type->kind == TYPE_FORWARD)
-        {
             types->error->handler(types->error->context, "Unresolved forward declaration of %s", (Ident *)(type->typeIdent)->name);
-            return false;
-        }
-    return true;
 }
 
 
@@ -545,8 +528,19 @@ static char *typeSpellingRecursive(Type *type, char *buf, int depth)
         sprintf(buf, "%s", type->typeIdent->name);
     else
     {
+        int len = 0;
         if (type->kind == TYPE_ARRAY)
-            sprintf(buf, "[%d]", type->numItems);
+            len += sprintf(buf + len, "[%d]", type->numItems);
+        else if (typeExprListStruct(type))
+        {
+            len += sprintf(buf + len, "{ ");
+            for (int i = 0; i < type->numItems; i++)
+            {
+                char fieldBuf[DEFAULT_STR_LEN + 1];
+                len += sprintf(buf + len, "%s ", typeSpellingRecursive(type->field[i]->type, fieldBuf, depth - 1));
+            }
+            len += sprintf(buf + len, "}");
+        }
         else
             sprintf(buf, "%s", spelling[type->kind]);
 

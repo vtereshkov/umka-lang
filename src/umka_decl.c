@@ -75,7 +75,7 @@ static void parseRcvSignature(Compiler *comp, Signature *sig)
 }
 
 
-// signature = "(" [typedIdentList ["=" expr] {"," typedIdentList ["=" expr]}] ")" [":" type].
+// signature = "(" [typedIdentList ["=" expr] {"," typedIdentList ["=" expr]}] ")" [":" (type | "(" type {"," type} ")")].
 static void parseSignature(Compiler *comp, Signature *sig)
 {
     // Formal parameter list
@@ -136,18 +136,38 @@ static void parseSignature(Compiler *comp, Signature *sig)
     sig->numDefaultParams = numDefaultParams;
 
     // Result type
-    sig->numResults = 0;
     if (comp->lex.tok.kind == TOK_COLON)
     {
         lexNext(&comp->lex);
-        sig->resultType[sig->numResults++] = parseType(comp, NULL);
+        if (comp->lex.tok.kind == TOK_LPAR)
+        {
+            // Result type list (syntactic sugar - actually a structure type)
+            sig->resultType = typeAdd(&comp->types, &comp->blocks, TYPE_STRUCT);
+            lexNext(&comp->lex);
+
+            while (1)
+            {
+                Type *fieldType = parseType(comp, NULL);
+                IdentName fieldName;
+                sprintf(fieldName, "__field%d", sig->resultType->numItems);
+                typeAddField(&comp->types, sig->resultType, fieldType, fieldName);
+
+                if (comp->lex.tok.kind != TOK_COMMA)
+                    break;
+                lexNext(&comp->lex);
+            }
+            lexEat(&comp->lex, TOK_RPAR);
+        }
+        else
+            // Single result type
+            sig->resultType = parseType(comp, NULL);
     }
     else
-        sig->resultType[sig->numResults++] = comp->voidType;
+        sig->resultType = comp->voidType;
 
     // Structured result parameter
-    if (typeStructured(sig->resultType[0]))
-        typeAddParam(&comp->types, sig, typeAddPtrTo(&comp->types, &comp->blocks, sig->resultType[0]), "__result");
+    if (typeStructured(sig->resultType))
+        typeAddParam(&comp->types, sig, typeAddPtrTo(&comp->types, &comp->blocks, sig->resultType), "__result");
 }
 
 
@@ -488,16 +508,13 @@ void parseVarDecl(Compiler *comp)
 // shortVarDecl = declAssignmentStmt.
 void parseShortVarDecl(Compiler *comp)
 {
-    lexCheck(&comp->lex, TOK_IDENT);
-    IdentName name;
-    strcpy(name, comp->lex.tok.name);
-
-    lexNext(&comp->lex);
-    bool exported = parseExportMark(comp);
+    IdentName varNames[MAX_FIELDS];
+    bool varExported[MAX_FIELDS];
+    int numVars = 0;
+    parseIdentList(comp, varNames, varExported, MAX_FIELDS, &numVars);
 
     lexEat(&comp->lex, TOK_COLONEQ);
-
-    parseDeclAssignmentStmt(comp, name, comp->blocks.top == 0, exported);
+    parseDeclAssignmentStmt(comp, varNames, varExported, numVars, comp->blocks.top == 0);
 }
 
 
