@@ -65,7 +65,7 @@ void doResolveExtern(Compiler *comp)
 }
 
 
-bool doShortVarDeclLookahead(Compiler *comp)
+static bool doShortVarDeclLookahead(Compiler *comp)
 {
     // ident {"," ident} ":="
     Lexer lookaheadLex = comp->lex;
@@ -84,8 +84,8 @@ bool doShortVarDeclLookahead(Compiler *comp)
 }
 
 
-// assignmentStmt = designator "=" expr.
-void parseAssignmentStmt(Compiler *comp, Type *type, void *initializedVarPtr)
+// singleAssignmentStmt = designator "=" expr.
+static void parseSingleAssignmentStmt(Compiler *comp, Type *type, void *initializedVarPtr)
 {
     if (!typeStructured(type))
     {
@@ -95,11 +95,7 @@ void parseAssignmentStmt(Compiler *comp, Type *type, void *initializedVarPtr)
     }
 
     Type *rightType;
-    Const rightConstantBuf, *rightConstant = NULL;
-
-    if (initializedVarPtr)
-        rightConstant = &rightConstantBuf;
-
+    Const rightConstantBuf, *rightConstant = initializedVarPtr ? &rightConstantBuf : NULL;
     parseExpr(comp, &rightType, rightConstant);
 
     doImplicitTypeConv(comp, type, &rightType, rightConstant, false);
@@ -109,6 +105,55 @@ void parseAssignmentStmt(Compiler *comp, Type *type, void *initializedVarPtr)
         constAssign(&comp->consts, initializedVarPtr, rightConstant, type->kind, typeSize(&comp->types, type));
     else                                            // Assign to variable
         genChangeRefCntAssign(&comp->gen, type);
+}
+
+
+// listAssignmentStmt = designatorList "=" exprList.
+static void parseListAssignmentStmt(Compiler *comp, Type *type)
+{
+    Type *rightListType;
+    parseExprList(comp, &rightListType, NULL, NULL);
+
+    const int numExpr = typeExprListStruct(rightListType) ? rightListType->numItems : 1;
+
+    if (numExpr < type->numItems) comp->error.handler(comp->error.context, "Too few expressions");
+    if (numExpr > type->numItems) comp->error.handler(comp->error.context, "Too many expressions");
+
+    for (int i = type->numItems - 1; i >= 0; i--)
+    {
+        Type *leftType = type->field[i]->type;
+        if (!typeStructured(leftType))
+        {
+            if (leftType->kind != TYPE_PTR || leftType->base->kind == TYPE_VOID)
+                comp->error.handler(comp->error.context, "Left side cannot be assigned to");
+            leftType = leftType->base;
+        }
+
+        Type *rightType = rightListType->field[i]->type;
+
+        doImplicitTypeConv(comp, leftType, &rightType, NULL, false);
+        typeAssertCompatible(&comp->types, leftType, rightType, false);
+
+        genDup(&comp->gen);                                             // Duplicate expression list pointer
+        genPopReg(&comp->gen, VM_REG_COMMON_0);                         // Save expression list pointer
+        genGetFieldPtr(&comp->gen, rightListType->field[i]->offset);    // Get expression pointer
+        genDeref(&comp->gen, rightType->kind);                          // Get expression value
+
+        genChangeRefCntAssign(&comp->gen, leftType);                    // Assign expression to variable
+        genPushReg(&comp->gen, VM_REG_COMMON_0);                        // Restore expression list pointer
+    }
+
+    genPop(&comp->gen);                                                 // Remove expression list pointer
+}
+
+
+// assignmentStmt = singleAssignmentStmt | listAssignmentStmt.
+void parseAssignmentStmt(Compiler *comp, Type *type, void *initializedVarPtr)
+{
+    if (typeExprListStruct(type))
+        parseListAssignmentStmt(comp, type);
+    else
+        parseSingleAssignmentStmt(comp, type, initializedVarPtr);
 }
 
 
@@ -138,56 +183,75 @@ static void parseShortAssignmentStmt(Compiler *comp, Type *type, TokenKind op)
 }
 
 
-// declAssignmentStmt = identList ":=" exprList.
-void parseDeclAssignmentStmt(Compiler *comp, IdentName *names, bool *exported, int num, bool constExpr)
+// singleDeclAssignmentStmt = ident ":=" expr.
+static void parseSingleDeclAssignmentStmt(Compiler *comp, IdentName name, bool exported, bool constExpr)
+{
+    Type *rightType;
+    Const rightConstantBuf, *rightConstant = constExpr ? &rightConstantBuf : NULL;
+    parseExpr(comp, &rightType, rightConstant);
+
+    Ident *ident = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, name, rightType, exported);
+
+    if (constExpr)              // Initialize global variable
+        constAssign(&comp->consts, ident->ptr, rightConstant, rightType->kind, typeSize(&comp->types, rightType));
+    else                        // Assign to variable
+    {
+        // Increase right-hand side reference count
+        genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, rightType);
+
+        doPushVarPtr(comp, ident);
+        genSwapAssign(&comp->gen, rightType->kind, typeSize(&comp->types, rightType));
+    }
+}
+
+
+// listDeclAssignmentStmt = identList ":=" exprList.
+static void parseListDeclAssignmentStmt(Compiler *comp, IdentName *names, bool *exported, int num, bool constExpr)
 {
     Type *rightListType;
     Const rightListConstantBuf, *rightListConstant = constExpr ? &rightListConstantBuf : NULL;
 
     parseExprList(comp, &rightListType, NULL, rightListConstant);
 
-    const bool isList = typeExprListStruct(rightListType);
-    const int numExpr = isList ? rightListType->numItems : 1;
-
-    if (numExpr < num) comp->error.handler(comp->error.context, "Too few expressions");
-    if (numExpr > num) comp->error.handler(comp->error.context, "Too many expressions");
+    if (rightListType->numItems < num) comp->error.handler(comp->error.context, "Too few expressions");
+    if (rightListType->numItems > num) comp->error.handler(comp->error.context, "Too many expressions");
 
     for (int i = 0; i < num; i++)
     {
-        Type *rightType = isList ? rightListType->field[i]->type : rightListType;
+        Type *rightType = rightListType->field[i]->type;
         Ident *ident = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, names[i], rightType, exported[i]);
 
         if (constExpr)              // Initialize global variable
         {
-            Const *rightConstant = rightListConstant;
-            if (isList)
-            {
-                Const rightConstantBuf = {.ptrVal = rightListConstant->ptrVal + rightListType->field[i]->offset};
-                rightConstant = &rightConstantBuf;
-                constDeref(&comp->consts, rightConstant, rightType->kind);
-            }
-
-            constAssign(&comp->consts, ident->ptr, rightConstant, rightType->kind, typeSize(&comp->types, rightType));
+            Const rightConstantBuf = {.ptrVal = rightListConstant->ptrVal + rightListType->field[i]->offset};
+            constDeref(&comp->consts, &rightConstantBuf, rightType->kind);
+            constAssign(&comp->consts, ident->ptr, &rightConstantBuf, rightType->kind, typeSize(&comp->types, rightType));
         }
         else                        // Assign to variable
         {
-            if (isList)
-            {
-                genDup(&comp->gen);                                             // Duplicate expression list
-                genGetFieldPtr(&comp->gen, rightListType->field[i]->offset);    // Get expression pointer
-                genDeref(&comp->gen, rightType->kind);                          // Get expression value
-            }
+            genDup(&comp->gen);                                             // Duplicate expression list pointer
+            genGetFieldPtr(&comp->gen, rightListType->field[i]->offset);    // Get expression pointer
+            genDeref(&comp->gen, rightType->kind);                          // Get expression value
 
-            // Increase right-hand side reference count
-            genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, rightType);
+            genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, rightType);           // Increase right-hand side reference count
 
             doPushVarPtr(comp, ident);
             genSwapAssign(&comp->gen, rightType->kind, typeSize(&comp->types, rightType));
         }
     }
 
-    if (isList && !constExpr)
-        genPop(&comp->gen);                                                     // Remove expression list
+    if (!constExpr)
+        genPop(&comp->gen);                                                 // Remove expression list pointer
+}
+
+
+// declAssignmentStmt = singleDeclAssignmentStmt | listDeclAssignmentStmt.
+void parseDeclAssignmentStmt(Compiler *comp, IdentName *names, bool *exported, int num, bool constExpr)
+{
+    if (num > 1)
+        parseListDeclAssignmentStmt(comp, names, exported, num, constExpr);
+    else
+        parseSingleDeclAssignmentStmt(comp, names[0], exported[0], constExpr);
 }
 
 
@@ -217,9 +281,13 @@ static void parseSimpleStmt(Compiler *comp)
     {
         Type *type;
         bool isVar, isCall;
-        parseDesignator(comp, &type, NULL, &isVar, &isCall);
+        parseDesignatorList(comp, &type, NULL, &isVar, &isCall);
 
         TokenKind op = comp->lex.tok.kind;
+
+        if (typeExprListStruct(type) && op != TOK_EQ)
+            comp->error.handler(comp->error.context, "List assignment expected");
+
         if (op == TOK_EQ || lexShortAssignment(op) != TOK_NONE)
         {
             // Assignment

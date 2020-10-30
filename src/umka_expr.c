@@ -1276,6 +1276,42 @@ void parseDesignator(Compiler *comp, Type **type, Const *constant, bool *isVar, 
 }
 
 
+// designatorList = designator {"," designator}.
+void parseDesignatorList(Compiler *comp, Type **type, Const *constant, bool *isVar, bool *isCall)
+{
+    parseDesignator(comp, type, constant, isVar, isCall);
+
+    if (comp->lex.tok.kind == TOK_COMMA)
+    {
+        // Designator list (types formally encoded as structure field types - not a real structure)
+        if (constant)
+            comp->error.handler(comp->error.context, "Designator lists are not allowed for constants");
+
+        Type *fieldType = *type;
+        *type = typeAdd(&comp->types, &comp->blocks, TYPE_STRUCT);
+        (*type)->isExprList = true;
+
+        while (1)
+        {
+            IdentName fieldName;
+            sprintf(fieldName, "__field%d", (*type)->numItems);
+            typeAddField(&comp->types, *type, fieldType, fieldName);
+
+            if (comp->lex.tok.kind != TOK_COMMA)
+                break;
+
+            lexNext(&comp->lex);
+
+            bool fieldIsVar, fieldIsCall;
+            parseDesignator(comp, &fieldType, NULL, &fieldIsVar, &fieldIsCall);
+
+            if (fieldIsVar != *isVar || fieldIsCall != *isCall)
+                comp->error.handler(comp->error.context, "Inconsistent designator list");
+        }
+    }
+}
+
+
 // factor = designator | intNumber | realNumber | charLiteral | stringLiteral |
 //          ("+" | "-" | "!" | "~" ) factor | "&" designator | "(" expr ")".
 static void parseFactor(Compiler *comp, Type **type, Const *constant)
@@ -1581,6 +1617,7 @@ void parseExprList(Compiler *comp, Type **type, Type *destType, Const *constant)
 
         Type *fieldType = *type;
         *type = typeAdd(&comp->types, &comp->blocks, TYPE_STRUCT);
+        (*type)->isExprList = true;
 
         // Evaluate expressions and get the total structure size
         while (1)

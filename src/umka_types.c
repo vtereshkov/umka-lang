@@ -89,6 +89,7 @@ Type *typeAdd(Types *types, Blocks *blocks, TypeKind kind)
     type->block         = blocks->item[blocks->top].block;
     type->base          = NULL;
     type->numItems      = 0;
+    type->isExprList    = false;
     type->weak          = false;
     type->typeIdent     = NULL;
     type->next          = NULL;

@@ -81,6 +81,7 @@ typedef struct tagType
     int block;
     struct tagType *base;                   // For pointers and arrays
     int numItems;                           // For arrays, structures and interfaces
+    bool isExprList;                        // For structures that represent expression lists
     bool weak;                              // For pointers
     struct tagIdent *typeIdent;             // For types that have identifiers
     union
@@ -172,7 +173,7 @@ static inline bool typeCharArrayPtr(Type *type)
 
 static inline bool typeExprListStruct(Type *type)
 {
-    return type->kind == TYPE_STRUCT && type->numItems > 0 && strcmp(type->field[0]->name, "__field0") == 0;
+    return type->kind == TYPE_STRUCT && type->isExprList && type->numItems > 0;
 }
 
 

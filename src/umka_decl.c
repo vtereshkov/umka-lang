@@ -143,6 +143,8 @@ static void parseSignature(Compiler *comp, Signature *sig)
         {
             // Result type list (syntactic sugar - actually a structure type)
             sig->resultType = typeAdd(&comp->types, &comp->blocks, TYPE_STRUCT);
+            sig->resultType->isExprList = true;
+
             lexNext(&comp->lex);
 
             while (1)
