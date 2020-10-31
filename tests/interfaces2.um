@@ -5,9 +5,7 @@ fn sort(a: []any, ordered: fn (x, y: any): bool): []any {
         sorted = true
         for i := 0; i < len(a) - 1; i++ {
             if !ordered(a[i], a[i + 1]) {
-                buf := a[i]
-                a[i] = a[i + 1]
-                a[i + 1] = buf
+                a[i], a[i + 1] = a[i + 1], a[i]
                 sorted = false
             }
         }

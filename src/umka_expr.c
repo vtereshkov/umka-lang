@@ -103,7 +103,7 @@ static void doDynArrayPtrToArrayPtrConv(Compiler *comp, Type *dest, Type **src, 
 static void doArrayToDynArrayConv(Compiler *comp, Type *dest, Type **src, Const *constant)
 {
     if (constant)
-        comp->error.handler(comp->error.context, "Conversion to array is not allowed in constant expressions");
+        comp->error.handler(comp->error.context, "Conversion to dynamic array is not allowed in constant expressions");
 
     // fn makefrom(array: [...] type, itemSize: int, len: int): [] type
 
@@ -1293,9 +1293,7 @@ void parseDesignatorList(Compiler *comp, Type **type, Const *constant, bool *isV
 
         while (1)
         {
-            IdentName fieldName;
-            sprintf(fieldName, "__field%d", (*type)->numItems);
-            typeAddField(&comp->types, *type, fieldType, fieldName);
+            typeAddField(&comp->types, *type, fieldType, NULL);
 
             if (comp->lex.tok.kind != TOK_COMMA)
                 break;
@@ -1622,9 +1620,6 @@ void parseExprList(Compiler *comp, Type **type, Type *destType, Const *constant)
         // Evaluate expressions and get the total structure size
         while (1)
         {
-            IdentName fieldName;
-            sprintf(fieldName, "__field%d", (*type)->numItems);
-
             // Convert field to the desired type if necessary and possible (no error is thrown anyway)
             if (destType && destType->numItems > (*type)->numItems)
             {
@@ -1634,7 +1629,7 @@ void parseExprList(Compiler *comp, Type **type, Type *destType, Const *constant)
                     fieldType = destFieldType;
             }
 
-            typeAddField(&comp->types, *type, fieldType, fieldName);
+            typeAddField(&comp->types, *type, fieldType, NULL);
 
             if (comp->lex.tok.kind != TOK_COMMA)
                 break;

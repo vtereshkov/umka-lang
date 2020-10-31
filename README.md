@@ -113,6 +113,7 @@ q := Quat{q: [4]real{1, 0, 0, 0}, normalized: true}
 #### Functions
 ```
 fn tan(x: real): real {return sin(x) / cos(x)}
+fn getValue(): (int, bool) {return 42, true}
 ```
 _Built-in functions_
 ```
@@ -150,8 +151,8 @@ g.print()
 ```
 #### Conditional
 ```
-if err := getError(); !err {
-    std.println("Done")
+if x, ok := getValue(); ok {
+    std.println("Got " + repr(x))
 }
 ```
 #### Switch
@@ -236,11 +237,12 @@ typeDeclItem        = ident exportMark "=" type.
 constDecl           = "const" (constDeclItem | "(" {constDeclItem ";"} ")").
 constDeclItem       = ident exportMark "=" expr.
 varDecl             = "var" (varDeclItem | "(" {varDeclItem ";"} ")").
-varDeclItem         = typedIdentList | ident ":" type "=" expr.
+varDeclItem         = typedIdentList | ident ":" type "=" exprList.
 shortVarDecl        = declAssignmentStmt.
 fnDecl              = "fn" [rcvSignature] ident exportMark signature [block].
 rcvSignature        = "(" ident ":" type ")".
-signature           = "(" [typedIdentList ["=" expr] {"," typedIdentList ["=" expr]}] ")" [":" type].
+signature           = "(" [typedIdentList ["=" expr] {"," typedIdentList ["=" expr]}] ")" 
+                      [":" (type | "(" type {"," type} ")")].
 exportMark          = ["*"].
 identList           = ident exportMark {"," ident exportMark}.
 typedIdentList      = identList ":" type.
@@ -259,9 +261,13 @@ stmtList            = Stmt {";" Stmt}.
 stmt                = decl | block | simpleStmt | 
                       ifStmt | switchStmt | forStmt | breakStmt | continueStmt | returnStmt.
 simpleStmt          = assignmentStmt | shortAssignmentStmt | incDecStmt | callStmt.
-assignmentStmt      = designator "=" expr.
+singleAssgnStmt     = designator "=" expr.
+listAssgnStmt       = designatorList "=" exprList.
+assignmentStmt      = singleAssgnStmt | listAssgnStmt.
 shortAssignmentStmt = designator ("+=" | "-=" | "*=" | "/=" | "%=" | "&=" | "|=" | "~=") expr.
-declAssignmentStmt  = ident ":=" expr.
+singleDeclAssgnStmt = ident ":=" expr.
+listDeclAssgnStmt   = identList ":=" exprList.
+declAssignmentStmt  = singleDeclAssgnStmt | listDeclAssgnStmt.
 incDecStmt          = designator ("++" | "--").
 callStmt            = designator.
 ifStmt              = "if" [shortVarDecl ";"] expr block ["else" (ifStmt | block)].
@@ -273,7 +279,8 @@ forHeader           = [shortVarDecl ";"] expr [";" simpleStmt].
 forInHeader         = [ident ","] ident "in" expr.
 breakStmt           = "break".
 continueStmt        = "continue".
-returnStmt          = "return" [expr].
+returnStmt          = "return" [exprList].
+exprList            = expr {"," expr}.
 expr                = logicalTerm {"||" logicalTerm}.
 logicalTerm         = relation {"&&" relation}.
 relation            = relationTerm [("==" | "!=" | "<" | "<=" | ">" | ">=") relationTerm].
@@ -281,6 +288,7 @@ relationTerm        = term {("+" | "-" | "|" | "~") term}.
 term                = factor {("*" | "/" | "%" | "<<" | ">>" | "&") factor}.
 factor              = designator | intNumber | realNumber | charLiteral | stringLiteral |
                       ("+" | "-" | "!" | "~") factor | "&" designator | "(" expr ")".
+designatorList      = designator {"," designator}.
 designator          = (primary | typeCast | compositeLiteral) selectors.
 primary             = qualIdent | builtinCall.
 qualIdent           = [ident "."] ident.
@@ -306,5 +314,5 @@ stringLiteral       = """ {char | escSeq} """.
 escSeq              = "\" ("0" | "a" | "b" | "e" | "f" | "n" | "r" | "t" | "v" | "x" hexNumber).
 letter              = "A".."Z" | "a".."z".
 digit               = "0".."9".
-hexDigit            = digit | "A".."F" | "a"..f".
+hexDigit            = digit | "A".."F" | "a".."f".
 char                = "\x00".."\xFF".

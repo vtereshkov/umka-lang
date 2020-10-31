@@ -16,6 +16,7 @@ enum
     VM_REG_COMMON_0      = 2,
     VM_REG_COMMON_1      = VM_REG_COMMON_0 + 1,
     VM_REG_COMMON_2      = VM_REG_COMMON_0 + 2,
+    VM_REG_COMMON_3      = VM_REG_COMMON_0 + 3,
 
     // Registers for special use by printf() / scanf()
     VM_REG_IO_STREAM     = VM_NUM_REGS - 3,

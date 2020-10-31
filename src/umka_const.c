@@ -187,7 +187,14 @@ void constCallBuiltin(Consts *consts, Const *arg, const Const *arg2, Type *argTy
     switch (builtinVal)
     {
         case BUILTIN_REAL:
-        case BUILTIN_REAL_LHS:  arg->realVal = (argType->kind == TYPE_UINT) ? arg->uintVal : arg->intVal; break;
+        case BUILTIN_REAL_LHS:
+        {
+            if (argType->kind == TYPE_UINT)
+                arg->realVal = arg->uintVal;
+            else
+                arg->realVal = arg->intVal;
+            break;
+        }
         case BUILTIN_ROUND:     arg->intVal  = (int64_t)round(arg->realVal); break;
         case BUILTIN_TRUNC:     arg->intVal  = (int64_t)trunc(arg->realVal); break;
         case BUILTIN_FABS:      arg->realVal = fabs(arg->realVal); break;

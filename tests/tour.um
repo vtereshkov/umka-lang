@@ -33,22 +33,13 @@ q := Quat{q: [4]real{1, 0, 0, 0}, normalized: true}
 
 // Functions
 fn tan(x: real): real {return sin(x) / cos(x)}
-
-/*
-Built-in functions:
-    printf fprintf sprintf scanf fscanf sscanf
-    round trunc fabs sqrt sin cos atan exp log
-    new make append delete len sizeof sizeofself
-    fiberspawn fibercall fiberalive
-    repr error
-*/
+fn getValue(): (int, bool) {return 42, true}
 
 // Methods
 fn (a: ^Arr) print(): int {
     printf("Arr: %s\n", repr(a^))
     return 0
 }
-
 
 // Fibers
 fn childFunc(parent: ^fiber, buf: ^int) {
@@ -71,9 +62,6 @@ fn parentFunc() {
     }    
 }   
 
-
-fn getError(): bool {return false}
-
 fn main() {
     // Assignment
     h = make([][5]int, 3)
@@ -88,9 +76,9 @@ fn main() {
     // Method call
     g.print()
     
-    // Conditional execution
-    if err := getError(); !err {
-        std.println("Done")
+    // Conditional
+    if x, ok := getValue(); ok {
+        std.println("Got " + repr(x))
     }
     
     // Switch

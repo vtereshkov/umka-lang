@@ -234,7 +234,7 @@ static inline bool typeOverflow(TypeKind typeKind, Const val)
 
 Field *typeFindField        (Type *structType, const char *name);
 Field *typeAssertFindField  (Types *types, Type *structType, const char *name);
-Field *typeAddField         (Types *types, Type *structType, Type *fieldType, const char *name);
+Field *typeAddField         (Types *types, Type *structType, Type *fieldType, const char *fieldName);
 
 Param *typeFindParam        (Signature *sig, const char *name);
 Param *typeAddParam         (Types *types, Signature *sig, Type *type, const char *name);

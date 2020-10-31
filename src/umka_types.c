@@ -442,8 +442,20 @@ Field *typeAssertFindField(Types *types, Type *structType, const char *name)
 }
 
 
-Field *typeAddField(Types *types, Type *structType, Type *fieldType, const char *name)
+Field *typeAddField(Types *types, Type *structType, Type *fieldType, const char *fieldName)
 {
+    IdentName fieldNameBuf;
+    const char *name;
+
+    if (fieldName)
+        name = fieldName;
+    else
+    {
+        // Automatic field naming
+        sprintf(fieldNameBuf, "__field%d", structType->numItems);
+        name = fieldNameBuf;
+    }
+
     Field *field = typeFindField(structType, name);
     if (field)
         types->error->handler(types->error->context, "Duplicate field %s", name);

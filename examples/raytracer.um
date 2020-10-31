@@ -159,7 +159,7 @@ type RenderData = struct {
 }
 
 fn render(parent: ^fiber, buf: ^RenderData) {
-    sinAz := sin(buf.azimuth); cosAz := cos(buf.azimuth)
+    sinAz, cosAz := sin(buf.azimuth), cos(buf.azimuth)
     
     for i := buf.startHeight; i < buf.stopHeight; i++ {
         for j := 0; j < width; j++ {

@@ -150,9 +150,7 @@ static void parseSignature(Compiler *comp, Signature *sig)
             while (1)
             {
                 Type *fieldType = parseType(comp, NULL);
-                IdentName fieldName;
-                sprintf(fieldName, "__field%d", sig->resultType->numItems);
-                typeAddField(&comp->types, sig->resultType, fieldType, fieldName);
+                typeAddField(&comp->types, sig->resultType, fieldType, NULL);
 
                 if (comp->lex.tok.kind != TOK_COMMA)
                     break;
@@ -449,7 +447,7 @@ void parseConstDecl(Compiler *comp)
 }
 
 
-// varDeclItem = typedIdentList | ident ":" type "=" expr.
+// varDeclItem = typedIdentList | ident ":" type "=" exprList.
 static void parseVarDeclItem(Compiler *comp)
 {
     IdentName varNames[MAX_FIELDS];
@@ -465,20 +463,33 @@ static void parseVarDeclItem(Compiler *comp)
     // Initializer
     if (comp->lex.tok.kind == TOK_EQ)
     {
-        if (numVars != 1)
-            comp->error.handler(comp->error.context, "Unable to initialize multiple variables");
-
         Type *designatorType = typeAddPtrTo(&comp->types, &comp->blocks, var[0]->type);
+        Type *designatorListType;
 
-        void *initializedVarPtr = NULL;
+        if (numVars == 1)
+            designatorListType = designatorType;
+        else
+        {
+            // Designator list (types formally encoded as structure field types - not a real structure)
+            designatorListType = typeAdd(&comp->types, &comp->blocks, TYPE_STRUCT);
+            designatorListType->isExprList = true;
 
-        if (comp->blocks.top == 0)          // Globals are initialized with constant expressions
-            initializedVarPtr = var[0]->ptr;
-        else                                // Locals are assigned to
-            doPushVarPtr(comp, var[0]);
+            for (int i = 0; i < numVars; i++)
+                typeAddField(&comp->types, designatorListType, designatorType, NULL);
+        }
+
+        Const varPtrConstList[MAX_FIELDS] = {0};
+
+        for (int i = 0; i < numVars; i++)
+        {
+            if (comp->blocks.top == 0)          // Globals are initialized with constant expressions
+                varPtrConstList[i].ptrVal = (int64_t)var[i]->ptr;
+            else                                // Locals are assigned to
+                doPushVarPtr(comp, var[i]);
+        }
 
         lexNext(&comp->lex);
-        parseAssignmentStmt(comp, designatorType, initializedVarPtr);
+        parseAssignmentStmt(comp, designatorListType, (comp->blocks.top == 0) ? varPtrConstList : NULL);
     }
     // Zeros (locals are zeroed automatically upon entering stack frame)
     else if (var[0]->block == 0)

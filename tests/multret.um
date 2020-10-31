@@ -1,0 +1,37 @@
+fn f(x: int, b: bool): (int32, [2]real32, bool) {
+    return -x, [2]real32{2 * x, 3 * x}, !b
+}
+
+u, v, w := 23, 45.6, "Hello"
+p := 'z'
+
+var i, j, k: [2]char = [2]char{'a', 'b'}, [2]char{'c', 'd'}, [2]char{'e', 'f'}
+var l, m, n: real = 12, -3, 17
+
+fn main() {
+    if a, b, c := f(3, false); a < 3 {
+        printf(repr(a) + " " + repr(b) + " " + repr(c) + "\n")
+
+        a, b, c = f(4, true)
+        printf(repr(a) + " " + repr(b) + " " + repr(c) + "\n")
+    }
+
+    a, b, c := [2]int{3, 2}, [2]int{7, 6}, [2]int{9, 8}
+    printf(repr(a) + " " + repr(b) + " " + repr(c) + "\n")
+
+    a, b, c = c, a, b   
+    printf(repr(a) + " " + repr(b) + " " + repr(c) + "\n")
+
+    var x, y, z: interface{} = a, b, c
+    printf(repr(x) + " " + repr(y) + " " + repr(z) + "\n")    
+
+    s, t := "Hello", "World"
+    printf(s + " " + t + "\n")
+
+    s, t = t, s
+    printf(s + " " + t + "\n")
+
+    printf(repr(u) + " " + repr(v) + " " + repr(w) + " " + repr(p) + "\n")     
+    printf(repr(i) + " " + repr(j) + " " + repr(k) + "\n")
+    printf(repr(l) + " " + repr(m) + " " + repr(n) + "\n")
+}
