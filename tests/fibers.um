@@ -8,7 +8,7 @@ fn childFunc(parent: ^fiber, buf: ^[2]real) {
     }
 }
 
-fn main() {
+fn test*() {
     buf := [2]real {0, 0}
     child := fiberspawn(childFunc, &buf)
     
@@ -20,3 +20,7 @@ fn main() {
         }
     }
 }   
+
+fn main() {
+    test()
+}

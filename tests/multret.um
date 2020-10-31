@@ -8,7 +8,7 @@ p := 'z'
 var i, j, k: [2]char = [2]char{'a', 'b'}, [2]char{'c', 'd'}, [2]char{'e', 'f'}
 var l, m, n: real = 12, -3, 17
 
-fn main() {
+fn test*() {
     if a, b, c := f(3, false); a < 3 {
         printf(repr(a) + " " + repr(b) + " " + repr(c) + "\n")
 
@@ -34,4 +34,8 @@ fn main() {
     printf(repr(u) + " " + repr(v) + " " + repr(w) + " " + repr(p) + "\n")     
     printf(repr(i) + " " + repr(j) + " " + repr(k) + "\n")
     printf(repr(l) + " " + repr(m) + " " + repr(n) + "\n")
+}
+
+fn main() {
+    test()
 }

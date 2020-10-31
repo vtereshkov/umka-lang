@@ -1,6 +1,6 @@
 import "../import/fnc.um"
 
-fn main() {
+fn test*() {
     var data: fnc.AnyArray = [6]fnc.Any{3, 7, 1, -4, 2, 5}
     printf("Array = %s\n", repr(data))
      
@@ -11,4 +11,8 @@ fn main() {
     const max = 30     
     result := data.map(sqr, null).filter(less, max).reduce(sum, null)    
     printf("Sum of all squares less than %d = %s\n", max, repr(result))       
+}
+
+fn main() {
+	test()
 }

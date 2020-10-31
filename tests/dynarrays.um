@@ -6,7 +6,7 @@ fn f(b: ^[100][2]^int, length: int) {
     }
 }    
 
-fn main() {    
+fn test*() {    
     a := make([][2]^int, 10)
     
     for i, _ in a {
@@ -70,4 +70,8 @@ fn main() {
     d = append(d, [2]int {444, 555})
     std.println("d: " + repr(d)) 
     
+}
+
+fn main() {
+	test()
 }

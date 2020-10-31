@@ -62,7 +62,7 @@ fn parentFunc() {
     }    
 }   
 
-fn main() {
+fn test*() {
     // Assignment
     h = make([][5]int, 3)
     
@@ -128,6 +128,10 @@ fn main() {
     printf("%s\n", repr(printable))
     printf("%s\n", repr(&q))
     
+}
+
+fn main() {
+    test()
 }
 
 

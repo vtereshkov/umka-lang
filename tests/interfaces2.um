@@ -13,8 +13,12 @@ fn sort(a: []any, ordered: fn (x, y: any): bool): []any {
     return a
 }
 
-fn main() {
+fn test*() {
     a := [10]any{"red", "green", "blue", "yellow", "gray", "brown", "black", "cyan", "magenta", "white"}
     b := sort(a, fn (x, y: any): bool {return ^str(x)^ < ^str(y)^})            
     printf("%s\n%s\n", repr(a), repr(b))
+}
+
+fn main() {
+    test()
 }

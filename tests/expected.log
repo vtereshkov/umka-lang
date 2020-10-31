@@ -1,0 +1,190 @@
+
+
+>>> Dynamic arrays
+
+a: 0 0
+a: 5 7
+a: 10 14
+a: 15 21
+a: 20 28
+a: 25 35
+a: 30 42
+a: 35 49
+a: 40 56
+a: 45 63
+Appending...
+a: 0 0
+a: 5 7
+a: 10 14
+a: 15 21
+a: 20 28
+a: 25 35
+a: 30 42
+a: 35 49
+a: 40 56
+a: 45 63
+a: 666 777
+b: 0 0
+b: 5 7
+b: 10 14
+b: 15 21
+b: 20 28
+b: 25 35
+b: 30 42
+b: 35 49
+b: 40 56
+b: 45 63
+b: 666 777
+Appending...
+e: 0 0
+e: 5 7
+e: 10 14
+e: 15 21
+e: 20 28
+e: 25 35
+e: 30 42
+e: 35 49
+e: 40 56
+e: 45 63
+e: 666 777
+e: 876 765
+Deleting #4...
+e: 0 0
+e: 5 7
+e: 10 14
+e: 15 21
+e: 25 35
+e: 30 42
+e: 35 49
+e: 40 56
+e: 45 63
+e: 666 777
+e: 876 765
+f: 0 0
+f: 5 7
+f: 10 14
+f: 15 21
+f: 20 28
+f: 25 35
+f: 30 42
+f: 35 49
+f: 40 56
+f: 45 63
+f: 666 777
+f: 876 765
+c: { 3 4 5 } 
+Appending...
+c: { 3 4 5 6 } 
+d: { { 666 777 } { 888 999 } } 
+Appending...
+d: { { 666 777 } { 888 999 } { 444 555 } } 
+
+
+>>> Fibers
+
+Parent fiber: i = 0   buf = 0.00
+Child  fiber: i = 0   buf = 0.00
+Parent fiber: i = 1   buf = 0.00
+Child  fiber: i = 1   buf = 7.00
+Parent fiber: i = 2   buf = 3.00
+Child  fiber: i = 2   buf = 14.00
+Parent fiber: i = 3   buf = 6.00
+Child  fiber: i = 3   buf = 21.00
+Parent fiber: i = 4   buf = 9.00
+Child  fiber: i = 4   buf = 28.00
+Parent fiber: i = 5   buf = 12.00
+Parent fiber: i = 6   buf = 12.00
+Parent fiber: i = 7   buf = 12.00
+Parent fiber: i = 8   buf = 12.00
+Parent fiber: i = 9   buf = 12.00
+
+
+>>> Functional tools
+
+Array = { 3 7 1 -4 2 5 } 
+Sum of all squares less than 30 = 55 
+
+
+>>> Garbage collection
+
+See any memory leak warnings?
+
+
+>>> Interfaces - 1
+
+proc_fooable:
+   foo: 3, 5, 7
+proc_fooable_barable:
+   foo: 3, 5, 9
+   bar: 3, 5, 11
+proc_fooable:
+   foo: 3, 5, 7
+
+
+>>> Interfaces - 2
+
+{ "red" "green" "blue" "yellow" "gray" "brown" "black" "cyan" "magenta" "white" } 
+{ "black" "blue" "brown" "cyan" "gray" "green" "magenta" "red" "white" "yellow" } 
+
+
+>>> Multiple returns
+
+-3  { 6.000000 9.000000 }  true 
+-4  { 8.000000 12.000000 }  false 
+{ 3 2 }  { 7 6 }  { 9 8 } 
+{ 9 8 }  { 3 2 }  { 7 6 } 
+{ 9 8 }  { 3 2 }  { 7 6 } 
+Hello World
+World Hello
+23  45.600000  "Hello"  z 
+{ a b }  { c d }  { e f } 
+12.000000  -3.000000  17.000000 
+
+
+>>> Language tour
+
+Arr: { 2.300000 -2.050000 2.380000 } 
+Got 42 
+3 is odd
+1 
+2 
+4 
+8 
+16 
+32 
+64 
+128 
+len = 4
+4.680
+Arr: { 0.500000 0.700000 0.900000 } 
+Parent: i=0 buf=0
+Child : i=0 buf=0
+Parent: i=1 buf=0
+Child : i=1 buf=7
+Parent: i=2 buf=3
+Child : i=2 buf=14
+Parent: i=3 buf=6
+Child : i=3 buf=21
+Parent: i=4 buf=9
+Child : i=4 buf=28
+Parent: i=5 buf=12
+Parent: i=6 buf=35
+Parent: i=7 buf=42
+Parent: i=8 buf=49
+Parent: i=9 buf=56
+
+repr():
+3 
+2.380000 
+0.138015 
+"Hello World" 
+0 
+"Hello World!" 
+{ 2.300000 -2.050000 2.380000 } 
+{ { 0 0 0 0 0 } { 0 0 0 0 0 } { 0 0 0 0 0 } { 10 20 30 40 50 } } 
+{ q: { 1.000000 0.000000 0.000000 0.000000 } normalized: true } 
+4.680000 
+a 
+fn 
+{ 0.500000 0.700000 0.900000 } 
+000000000054ff10 

@@ -36,7 +36,7 @@ fn proc_fooable_barable(fb: fooable_barable) {
     proc_fooable(fb)
 }
 
-fn main() {
+fn test*() {
     var fb: fooable_barable
 
     if true {
@@ -50,6 +50,10 @@ fn main() {
     proc_fooable_barable(fb)
 
     f := fooable(fb)
+}
+
+fn main() {
+    test()
 }
     
 

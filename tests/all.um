@@ -1,0 +1,21 @@
+import (
+    "dynarrays.um"
+    "fibers.um"
+    "fnctools.um"
+    "gc.um"
+    "interfaces.um"
+    "interfaces2.um"
+    "multret.um"
+    "tour.um"
+)
+
+fn main() {
+    printf("\n\n>>> Dynamic arrays\n\n");       dynarrays.test()
+    printf("\n\n>>> Fibers\n\n");               fibers.test()
+    printf("\n\n>>> Functional tools\n\n");     fnctools.test()
+    printf("\n\n>>> Garbage collection\n\n");   gc.test()
+    printf("\n\n>>> Interfaces - 1\n\n");       interfaces.test()
+    printf("\n\n>>> Interfaces - 2\n\n");       interfaces2.test()
+    printf("\n\n>>> Multiple returns\n\n");     multret.test()
+    printf("\n\n>>> Language tour\n\n");        tour.test()
+}

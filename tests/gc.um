@@ -34,7 +34,7 @@ fn h2(): st {
     return st{x: 7, p: d, y: 5, q: d}
 }
 
-fn main() {
+fn test*() {
     std.println("See any memory leak warnings?")
  
     a := new([1000] int)
@@ -71,4 +71,8 @@ fn main() {
     g2res := g2()
     
     new([1000000] int)
+}
+
+fn main() {
+    test()
 }
