@@ -7,6 +7,7 @@
 #include <stdarg.h>
 #include <math.h>
 #include <limits.h>
+#include <ctype.h>
 
 #include "umka_vm.h"
 
@@ -224,6 +225,14 @@ static void chunkChangeRefCnt(HeapPages *pages, HeapPage *page, void *ptr, int d
 
 // I/O functions
 
+static char fsgetc(bool string, void *stream, int *len)
+{
+    char ch = string ? ((char *)stream)[*len] : fgetc((FILE *)stream);
+    (*len)++;
+    return ch;    
+}
+
+
 static int fsprintf(bool string, void *stream, const char *format, ...)
 {
     va_list args;
@@ -245,6 +254,36 @@ static int fsscanf(bool string, void *stream, const char *format, ...)
 
     va_end(args);
     return res;
+}
+
+
+static char *fsscanfString(bool string, void *stream, int *len)
+{
+    int capacity = 8;
+    char *str = malloc(capacity);
+    
+    *len = 0;
+    int writtenLen = 0;
+    char ch = ' ';
+
+    // Skip whitespace
+    while (isspace(ch))
+        ch = fsgetc(string, stream, len);
+    
+    // Read string
+    while (ch && ch != EOF && !isspace(ch))
+    {
+        str[writtenLen++] = ch;    
+        if (writtenLen == capacity - 1)
+        {
+            capacity *= 2;
+            str = realloc(str, capacity);
+        }
+        ch = fsgetc(string, stream, len);
+    }
+
+    str[writtenLen] = '\0';
+    return str;
 }
 
 
@@ -750,7 +789,7 @@ static void doBuiltinPrintf(Fiber *fiber, bool console, bool string, Error *erro
 }
 
 
-static void doBuiltinScanf(Fiber *fiber, bool console, bool string, Error *error)
+static void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool console, bool string, Error *error)
 {
     void *stream       = console ? stdin : (void *)fiber->reg[VM_REG_IO_STREAM].ptrVal;
     const char *format = (const char *)fiber->reg[VM_REG_IO_FORMAT].ptrVal;
@@ -782,8 +821,26 @@ static void doBuiltinScanf(Fiber *fiber, bool console, bool string, Error *error
     {
         if (!fiber->top->ptrVal)
             error->handlerRuntime(error->context, "scanf() destination is null");
+ 
+        // Strings need special handling, as the required buffer size is unknown
+        if (typeKind == TYPE_STR)
+        {    
+            char *src = fsscanfString(string, stream, &len);
+            char **dest = (char **)fiber->top->ptrVal;
 
-        cnt = fsscanf(string, stream, curFormat, (void *)fiber->top->ptrVal, &len);
+            // Decrease old string ref count
+            Type destType = {.kind = TYPE_STR};
+            doBasicChangeRefCnt(fiber, pages, *dest, &destType, TOK_MINUSMINUS, error);
+
+            // Allocate new string
+            *dest = chunkAlloc(pages, strlen(src) + 1, error);
+            strcpy(*dest, src);
+            free(src);
+
+            cnt = (*dest)[0] ? 1 : 0;
+        }
+        else
+            cnt = fsscanf(string, stream, curFormat, (void *)fiber->top->ptrVal, &len);
     }
 
     fiber->reg[VM_REG_IO_FORMAT].ptrVal += formatLen;
@@ -1404,9 +1461,9 @@ static void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages *pages, Erro
         case BUILTIN_PRINTF:        doBuiltinPrintf(fiber, true, false, error); break;
         case BUILTIN_FPRINTF:       doBuiltinPrintf(fiber, false, false, error); break;
         case BUILTIN_SPRINTF:       doBuiltinPrintf(fiber, false, true, error); break;
-        case BUILTIN_SCANF:         doBuiltinScanf(fiber, true, false, error); break;
-        case BUILTIN_FSCANF:        doBuiltinScanf(fiber, false, false, error); break;
-        case BUILTIN_SSCANF:        doBuiltinScanf(fiber, false, true, error); break;
+        case BUILTIN_SCANF:         doBuiltinScanf(fiber, pages, true, false, error); break;
+        case BUILTIN_FSCANF:        doBuiltinScanf(fiber, pages, false, false, error); break;
+        case BUILTIN_SSCANF:        doBuiltinScanf(fiber, pages, false, true, error); break;
 
         // Math
         case BUILTIN_REAL:

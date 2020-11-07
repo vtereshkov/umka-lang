@@ -377,12 +377,7 @@ static void parseBuiltinIOCall(Compiler *comp, Type **type, Const *constant, Bui
     if (builtin == BUILTIN_FPRINTF || builtin == BUILTIN_SPRINTF ||
         builtin == BUILTIN_FSCANF  || builtin == BUILTIN_SSCANF)
     {
-        Type *expectedType;
-        if (builtin == BUILTIN_FPRINTF || builtin == BUILTIN_FSCANF)
-            expectedType = comp->ptrVoidType;
-        else
-            expectedType = comp->strType;
-
+        Type *expectedType = (builtin == BUILTIN_FPRINTF || builtin == BUILTIN_FSCANF) ? comp->ptrVoidType : comp->strType;
         parseExpr(comp, type, constant);
         typeAssertCompatible(&comp->types, expectedType, *type, false);
         genPopReg(&comp->gen, VM_REG_IO_STREAM);
@@ -402,22 +397,17 @@ static void parseBuiltinIOCall(Compiler *comp, Type **type, Const *constant, Bui
 
         if (builtin == BUILTIN_PRINTF || builtin == BUILTIN_FPRINTF || builtin == BUILTIN_SPRINTF)
         {
-            if (typeOrdinal(*type) || typeReal(*type) || (*type)->kind == TYPE_STR)
-                genCallBuiltin(&comp->gen, (*type)->kind, builtin);
-            else
+            if (!typeOrdinal(*type) && !typeReal(*type) && (*type)->kind != TYPE_STR)
                 comp->error.handler(comp->error.context, "Incompatible type in printf()");
+
+            genCallBuiltin(&comp->gen, (*type)->kind, builtin);
         }
         else  // BUILTIN_SCANF, BUILTIN_FSCANF, BUILTIN_SSCANF
         {
-            if ((*type)->kind == TYPE_PTR && (typeOrdinal((*type)->base) || typeReal((*type)->base) || (*type)->base->kind == TYPE_STR))
-            {
-                if ((*type)->base->kind == TYPE_STR)
-                    genDeref(&comp->gen, TYPE_STR);
-
-                genCallBuiltin(&comp->gen, (*type)->base->kind, builtin);
-            }
-            else
+            if ((*type)->kind != TYPE_PTR || (!typeOrdinal((*type)->base) && !typeReal((*type)->base) && (*type)->base->kind != TYPE_STR))
                 comp->error.handler(comp->error.context, "Incompatible type in scanf()");
+            
+            genCallBuiltin(&comp->gen, (*type)->base->kind, builtin);                
         }
         genPop(&comp->gen); // Manually remove parameter
 
