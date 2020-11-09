@@ -638,6 +638,20 @@ static void parseBuiltinSizeofselfCall(Compiler *comp, Type **type, Const *const
 }
 
 
+static void parseBuiltinSelfhasptrCall(Compiler *comp, Type **type, Const *constant)
+{
+    if (constant)
+        comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
+
+    parseExpr(comp, type, constant);
+    if ((*type)->kind != TYPE_INTERFACE)
+        comp->error.handler(comp->error.context, "Incompatible type in selfhasptr()");
+
+    genCallBuiltin(&comp->gen, TYPE_INTERFACE, BUILTIN_SELFHASPTR);
+    *type = comp->boolType;
+}
+
+
 // type FiberFunc = fn(parent: ^fiber, anyParam: ^type)
 // fn fiberspawn(childFunc: FiberFunc, anyParam: ^type): ^fiber
 // fn fibercall(child: ^fiber)
@@ -744,6 +758,7 @@ static void parseBuiltinCall(Compiler *comp, Type **type, Const *constant, Built
         case BUILTIN_LEN:           parseBuiltinLenCall(comp, type, constant);              break;
         case BUILTIN_SIZEOF:        parseBuiltinSizeofCall(comp, type, constant);           break;
         case BUILTIN_SIZEOFSELF:    parseBuiltinSizeofselfCall(comp, type, constant);       break;
+        case BUILTIN_SELFHASPTR:    parseBuiltinSelfhasptrCall(comp, type, constant);       break;
 
         // Fibers
         case BUILTIN_FIBERSPAWN:

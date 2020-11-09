@@ -75,6 +75,7 @@ static const char *builtinSpelling [] =
     "len",
     "sizeof",
     "sizeofself",
+    "selfhasptr",
     "fiberspawn",
     "fibercall",
     "fiberalive",
@@ -947,6 +948,19 @@ static void doBuiltinSizeofself(Fiber *fiber, Error *error)
 }
 
 
+static void doBuiltinSelfhasptr(Fiber *fiber, Error *error)
+{
+    bool hasPtr = false;
+
+    // Interface layout: __self, __selftype, methods
+    Type *__selftype = *(Type **)(fiber->top->ptrVal + sizeof(void *));
+    if (__selftype)
+        hasPtr = typeGarbageCollected(__selftype->base);
+
+    fiber->top->intVal = hasPtr;
+}
+
+
 // type FiberFunc = fn(parent: ^fiber, anyParam: ^type)
 // fn fiberspawn(childFunc: FiberFunc, anyParam: ^type): ^fiber
 static void doBuiltinFiberspawn(Fiber *fiber, HeapPages *pages, Error *error)
@@ -1516,6 +1530,7 @@ static void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages *pages, Erro
         case BUILTIN_LEN:           doBuiltinLen(fiber, error); break;
         case BUILTIN_SIZEOF:        error->handlerRuntime(error->context, "Illegal instruction"); return;       // Done at compile time
         case BUILTIN_SIZEOFSELF:    doBuiltinSizeofself(fiber, error); break;
+        case BUILTIN_SELFHASPTR:    doBuiltinSelfhasptr(fiber, error); break;
 
         // Fibers
         case BUILTIN_FIBERSPAWN:    doBuiltinFiberspawn(fiber, pages, error); break;

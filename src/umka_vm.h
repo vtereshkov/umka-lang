@@ -98,6 +98,7 @@ typedef enum
     BUILTIN_LEN,
     BUILTIN_SIZEOF,
     BUILTIN_SIZEOFSELF,
+    BUILTIN_SELFHASPTR,
 
     // Fibers
     BUILTIN_FIBERSPAWN,

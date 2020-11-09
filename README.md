@@ -119,7 +119,7 @@ _Built-in functions_
 ```
 printf fprintf sprintf scanf fscanf sscanf
 round trunc fabs sqrt sin cos atan atan2 exp log
-new make append delete len sizeof sizeofself
+new make append delete len sizeof sizeofself selfhasptr
 fiberspawn fibercall fiberalive
 repr error
 ```

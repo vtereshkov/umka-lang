@@ -16,11 +16,21 @@ fn fopen*    (name: str, mode: str): File {return rtlfopen(name, mode)}
 fn rtlfclose (f: File): int
 fn fclose*   (f: File): int {return rtlfclose(f)}
 
-fn rtlfread  (buf: ^void, size, cnt: int, f: File): int
-fn fread*    (f: File, buf: interface{}): int {return rtlfread(buf.__self, sizeofself(buf), 1, f)}
+fn rtlfread(buf: ^void, size, cnt: int, f: File): int
+fn fread*(f: File, buf: interface{}): int {
+    if selfhasptr(buf) {
+        error("Cannot read reference types")
+    }
+    return rtlfread(buf.__self, sizeofself(buf), 1, f)
+}
 
-fn rtlfwrite (buf: ^void, size, cnt: int, f: File): int
-fn fwrite*   (f: File, buf: interface{}): int {return rtlfwrite(buf.__self, sizeofself(buf), 1, f)}
+fn rtlfwrite(buf: ^void, size, cnt: int, f: File): int
+fn fwrite*(f: File, buf: interface{}): int {
+    if selfhasptr(buf) {
+        error("Cannot write reference types")
+    }
+    return rtlfwrite(buf.__self, sizeofself(buf), 1, f)
+}
 
 fn rtlfseek  (f: File, offset, origin: int): int
 fn fseek*    (f: File, offset, origin: int): int {return rtlfseek(f, offset, origin)}
