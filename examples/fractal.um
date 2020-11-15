@@ -9,29 +9,18 @@ fn main() {
     )
 
     for yPixel := 0; yPixel < 40; yPixel++ {
-      y := (yPixel / 40.0) * (yMax - yMin) + yMin
+      y0 := (yPixel / 40.0) * (yMax - yMin) + yMin
       
       for xPixel := 0; xPixel < 79; xPixel++ {
-        x := (xPixel / 78.0) * (xMax - xMin) + xMin
-        pixel := ' '
-        x0 := x
-        y0 := y        
+        x0 := (xPixel / 78.0) * (xMax - xMin) + xMin
+        x, y := x0, y0
+        pixel := ' '       
         
         for iter := 0; iter < 80; iter++ {
-          x1 := x0 * x0 - y0 * y0
-          y1 := 2 * x0 * y0
-
-          // Add the seed
-          x1 = x1 + x
-          y1 = y1 + y
-
-          x0 = x1
-          y0 = y1
+          x, y = x * x - y * y + x0, 2 * x * y + y0
 
           // Stop if the point escaped
-          d := x0 * x0 + y0 * y0
-          
-          if d > 4 {
+          if x * x + y * y > 4 {
             const pixels = " .:;+=xX$&"
             pixel = pixels[iter / 8]
             break
