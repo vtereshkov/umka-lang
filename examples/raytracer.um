@@ -5,7 +5,9 @@ import (
     "../import/mat.um"
 )
 
-fn randn(): mat.Vec {return mat.Vec{std.frand() - 0.5, std.frand() - 0.5, std.frand() - 0.5}}
+fn randn(): mat.Vec {
+    return mat.Vec{std.frand() - 0.5, std.frand() - 0.5, std.frand() - 0.5}
+}
 
 type Ray = struct {
     origin, dir: mat.Vec
@@ -188,8 +190,8 @@ fn render(parent: ^fiber, buf: ^RenderData) {
 
 fn main() {
     // Define scene  
-    body := [5]Body {
-        &Box {
+    body := []Body {
+        Box {
             body: GenericBody {
                 center: mat.Vec{500, -100, 1200},
                 color: mat.Vec{0.4, 0.7, 1.0},
@@ -197,7 +199,7 @@ fn main() {
                 isLamp: false},
             halfsize: mat.Vec{400 / 2.0, 600 / 2.0, 300 / 2.0}},
             
-        &Box {
+        Box {
             body: GenericBody {
                 center: mat.Vec{550, 210, 1100},
                 color: mat.Vec{0.9, 1.0, 0.6},
@@ -205,7 +207,7 @@ fn main() {
                 isLamp: false},
             halfsize: mat.Vec{1000 / 2.0, 20 / 2.0, 1000 / 2.0}},            
 
-        &Sphere {
+        Sphere {
             body: GenericBody{
                 center: mat.Vec{600, 0, 700},
                 color: mat.Vec{1.0, 0.4, 0.6},
@@ -213,7 +215,7 @@ fn main() {
                 isLamp: false},
             radius: 200},
             
-        &Sphere {
+        Sphere {
             body: GenericBody{
                 center: mat.Vec{330, 150, 700},
                 color: mat.Vec{1.0, 1.0, 0.3},
@@ -222,7 +224,7 @@ fn main() {
             radius: 50},
             
         // Define light
-        &Sphere {
+        Sphere {
             body: GenericBody{
                 center: mat.Vec{500, -1000, -700},
                 color: mat.Vec{1.0, 1.0, 1.0},

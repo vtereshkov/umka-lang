@@ -447,7 +447,7 @@ void parseConstDecl(Compiler *comp)
 }
 
 
-// varDeclItem = typedIdentList | ident ":" type "=" exprList.
+// varDeclItem = typedIdentList "=" exprList.
 static void parseVarDeclItem(Compiler *comp)
 {
     IdentName varNames[MAX_FIELDS];

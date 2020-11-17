@@ -237,7 +237,7 @@ typeDeclItem        = ident exportMark "=" type.
 constDecl           = "const" (constDeclItem | "(" {constDeclItem ";"} ")").
 constDeclItem       = ident exportMark "=" expr.
 varDecl             = "var" (varDeclItem | "(" {varDeclItem ";"} ")").
-varDeclItem         = typedIdentList | ident ":" type "=" exprList.
+varDeclItem         = typedIdentList "=" exprList.
 shortVarDecl        = declAssignmentStmt.
 fnDecl              = "fn" [rcvSignature] ident exportMark signature [block].
 rcvSignature        = "(" ident ":" type ")".
@@ -299,15 +299,16 @@ indexSelector       = "[" expr "]".
 fieldSelector       = "." ident.
 callSelector        = actualParams.
 actualParams        = "(" [expr {"," expr}] ")".
-compositeLiteral    = arrayLiteral | structLiteral | fnLiteral.
+compositeLiteral    = arrayLiteral | dynArrayLiteral | structLiteral | fnLiteral.
 arrayLiteral        = "{" [expr {"," expr}] "}".
+dynArrayLiteral     = arrayLiteral.
 structLiteral       = "{" [[ident ":"] expr {"," [ident ":"] expr}] "}".
 fnLiteral           = fnBlock.
 typeCast            = type "(" expr ")".
 ident               = (letter | "_") {letter | "_" | digit}.
 intNumber           = decNumber | hexHumber.
 decNumber           = digit {digit}.
-hexNumber           = "0" "x" hexDigit {hexDigit}.
+hexNumber           = "0" ("X | "x") hexDigit {hexDigit}.
 realNumber          = decNumber ["." decNumber] [("E" | "e") decNumber].
 charLiteral         = "'" (char | escSeq) "'".
 stringLiteral       = """ {char | escSeq} """.

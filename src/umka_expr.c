@@ -1015,6 +1015,57 @@ static void parseArrayOrStructLiteral(Compiler *comp, Type **type, Const *consta
 }
 
 
+// dynArrayLiteral = arrayLiteral.
+static void parseDynArrayLiteral(Compiler *comp, Type **type, Const *constant)
+{
+    lexEat(&comp->lex, TOK_LBRACE);
+
+    if (constant)
+        comp->error.handler(comp->error.context, "Dynamic array literals are not allowed for constants");
+
+    // Dynamic array is first parsed as a static array of unknown length, then converted to a dynamic array 
+    Type *staticArrayType = typeAdd(&comp->types, &comp->blocks, TYPE_ARRAY);
+    staticArrayType->base = (*type)->base;
+    int itemSize = typeSize(&comp->types, staticArrayType->base);
+
+    // Parse array
+    if (comp->lex.tok.kind != TOK_RBRACE)
+    {
+        while (1)
+        {
+            Type *itemType;      
+            parseExpr(comp, &itemType, NULL);
+            doImplicitTypeConv(comp, staticArrayType->base, &itemType, NULL, false);
+            typeAssertCompatible(&comp->types, staticArrayType->base, itemType, false); 
+
+            staticArrayType->numItems++;
+            
+            if (comp->lex.tok.kind != TOK_COMMA)
+                break;
+            lexNext(&comp->lex);                       
+        }
+    }
+
+    lexEat(&comp->lex, TOK_RBRACE);
+
+    // Allocate array
+    int bufOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, staticArrayType));
+
+    // Assign items
+    for (int i = staticArrayType->numItems - 1; i >= 0; i--)
+    {
+        // Assignment to an anonymous stack area does not require updating reference counts
+        genPushLocalPtr(&comp->gen, bufOffset + i * itemSize);
+        genSwapAssign(&comp->gen, staticArrayType->base->kind, itemSize);
+    } 
+
+    // Convert to dynamic array
+    genPushLocalPtr(&comp->gen, bufOffset); 
+    doImplicitTypeConv(comp, *type, &staticArrayType, NULL, false);
+    typeAssertCompatible(&comp->types, *type, staticArrayType, false); 
+}
+
+
 // fnLiteral = fnBlock.
 static void parseFnLiteral(Compiler *comp, Type **type, Const *constant)
 {
@@ -1040,11 +1091,13 @@ static void parseFnLiteral(Compiler *comp, Type **type, Const *constant)
 }
 
 
-// compositeLiteral = arrayLiteral | structLiteral | fnLiteral.
+// compositeLiteral = arrayLiteral | dynArrayLiteral | structLiteral | fnLiteral.
 static void parseCompositeLiteral(Compiler *comp, Type **type, Const *constant)
 {
     if ((*type)->kind == TYPE_ARRAY || (*type)->kind == TYPE_STRUCT)
         parseArrayOrStructLiteral(comp, type, constant);
+    else if ((*type)->kind == TYPE_DYNARRAY)
+        parseDynArrayLiteral(comp, type, constant);    
     else if ((*type)->kind == TYPE_FN)
         parseFnLiteral(comp, type, constant);
     else
