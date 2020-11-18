@@ -53,17 +53,14 @@ fn test*() {
         std.println("f: " + std.itoa(x[0]^) + " " + std.itoa(x[1]^))
     }       
     
-    var c: []int = [3]int {3, 4, 5}
+    c := []int{3, 4, 5}
     std.println("c: " + repr(c))
     
     std.println("Appending...")
-    c = append(c, 6)
+    c = append(c, []int{6, 7})
     std.println("c: " + repr(c))
 
-    d := make([][2]int, 2)
-    d[0] = [2]int {666, 777}
-    d[1] = [2]int {888, 999}
-    
+    d := [][]int{[]int{666, 777}, [2]int{888, 999}}
     std.println("d: " + repr(d))    
     
     std.println("Appending...")    

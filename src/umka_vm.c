@@ -230,7 +230,7 @@ static char fsgetc(bool string, void *stream, int *len)
 {
     char ch = string ? ((char *)stream)[*len] : fgetc((FILE *)stream);
     (*len)++;
-    return ch;    
+    return ch;
 }
 
 
@@ -262,7 +262,7 @@ static char *fsscanfString(bool string, void *stream, int *len)
 {
     int capacity = 8;
     char *str = malloc(capacity);
-    
+
     *len = 0;
     int writtenLen = 0;
     char ch = ' ';
@@ -270,11 +270,11 @@ static char *fsscanfString(bool string, void *stream, int *len)
     // Skip whitespace
     while (isspace(ch))
         ch = fsgetc(string, stream, len);
-    
+
     // Read string
     while (ch && ch != EOF && !isspace(ch))
     {
-        str[writtenLen++] = ch;    
+        str[writtenLen++] = ch;
         if (writtenLen == capacity - 1)
         {
             capacity *= 2;
@@ -822,10 +822,10 @@ static void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool console, bool st
     {
         if (!fiber->top->ptrVal)
             error->handlerRuntime(error->context, "scanf() destination is null");
- 
+
         // Strings need special handling, as the required buffer size is unknown
         if (typeKind == TYPE_STR)
-        {    
+        {
             char *src = fsscanfString(string, stream, &len);
             char **dest = (char **)fiber->top->ptrVal;
 
@@ -878,22 +878,37 @@ static void doBuiltinMakefrom(Fiber *fiber, HeapPages *pages, Error *error)
 }
 
 
-// fn append(array: [] type, item: ^type): [] type
+// fn append(array: [] type, item: (^type | [] type), single: bool): [] typee
 static void doBuiltinAppend(Fiber *fiber, HeapPages *pages, Error *error)
 {
     DynArray *result = (DynArray *)(fiber->top++)->ptrVal;
+    bool single      = (bool      )(fiber->top++)->intVal;
     void *item       = (void     *)(fiber->top++)->ptrVal;
     DynArray *array  = (DynArray *)(fiber->top++)->ptrVal;
 
     if (!array || !array->data)
         error->handlerRuntime(error->context, "Dynamic array is null");
 
-    result->len      = array->len + 1;
+    void *rhs = item;
+    int rhsLen = 1;
+
+    if (!single)
+    {
+        DynArray *rhsArray = item;
+
+        if (!rhsArray || !rhsArray->data)
+            error->handlerRuntime(error->context, "Dynamic array is null");
+
+        rhs = rhsArray->data;
+        rhsLen = rhsArray->len;
+    }
+
+    result->len      = array->len + rhsLen;
     result->itemSize = array->itemSize;
     result->data     = chunkAlloc(pages, result->len * result->itemSize, error);
 
     memcpy(result->data, array->data, array->len * array->itemSize);
-    memcpy(result->data + (result->len - 1) * result->itemSize, item, result->itemSize);
+    memcpy(result->data + array->len * array->itemSize, rhs, rhsLen * array->itemSize);
 
     (--fiber->top)->ptrVal = (int64_t)result;
 }

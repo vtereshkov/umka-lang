@@ -406,8 +406,8 @@ static void parseBuiltinIOCall(Compiler *comp, Type **type, Const *constant, Bui
         {
             if ((*type)->kind != TYPE_PTR || (!typeOrdinal((*type)->base) && !typeReal((*type)->base) && (*type)->base->kind != TYPE_STR))
                 comp->error.handler(comp->error.context, "Incompatible type in scanf()");
-            
-            genCallBuiltin(&comp->gen, (*type)->base->kind, builtin);                
+
+            genCallBuiltin(&comp->gen, (*type)->base->kind, builtin);
         }
         genPop(&comp->gen); // Manually remove parameter
 
@@ -505,7 +505,7 @@ static void parseBuiltinMakeCall(Compiler *comp, Type **type, Const *constant)
 }
 
 
-// fn append(array: [] type, item: ^type): [] type
+// fn append(array: [] type, item: (^type | [] type), single: bool): [] type
 static void parseBuiltinAppendCall(Compiler *comp, Type **type, Const *constant)
 {
     if (constant)
@@ -518,21 +518,37 @@ static void parseBuiltinAppendCall(Compiler *comp, Type **type, Const *constant)
 
     lexEat(&comp->lex, TOK_COMMA);
 
-    // New item (must always be a pointer, even for value types)
+    // New item (must always be a pointer, even for value types) or right-hand side dynamic array
     Type *itemType;
     parseExpr(comp, &itemType, NULL);
-    doImplicitTypeConv(comp, (*type)->base, &itemType, NULL, false);
-    typeAssertCompatible(&comp->types, (*type)->base, itemType, false);
 
-    if (!typeStructured(itemType))
+    bool singleItem = true;
+    if (typeEquivalent(*type, itemType))
+        singleItem = false;
+    else if (itemType->kind == TYPE_ARRAY && typeEquivalent((*type)->base, itemType->base))
     {
-        // Assignment to an anonymous stack area does not require updating reference counts
-        int itemOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, itemType));
-        genPushLocalPtr(&comp->gen, itemOffset);
-        genSwapAssign(&comp->gen, itemType->kind, 0);
-
-        genPushLocalPtr(&comp->gen, itemOffset);
+        doImplicitTypeConv(comp, *type, &itemType, NULL, false);
+        singleItem = false;
     }
+
+    if (singleItem)
+    {
+        doImplicitTypeConv(comp, (*type)->base, &itemType, NULL, false);
+        typeAssertCompatible(&comp->types, (*type)->base, itemType, false);
+
+        if (!typeStructured(itemType))
+        {
+            // Assignment to an anonymous stack area does not require updating reference counts
+            int itemOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, itemType));
+            genPushLocalPtr(&comp->gen, itemOffset);
+            genSwapAssign(&comp->gen, itemType->kind, 0);
+
+            genPushLocalPtr(&comp->gen, itemOffset);
+        }
+    }
+
+    // 'Append single item' flag
+    genPushIntConst(&comp->gen, singleItem);
 
     // Pointer to result (hidden parameter)
     int resultOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, *type));
@@ -1023,7 +1039,7 @@ static void parseDynArrayLiteral(Compiler *comp, Type **type, Const *constant)
     if (constant)
         comp->error.handler(comp->error.context, "Dynamic array literals are not allowed for constants");
 
-    // Dynamic array is first parsed as a static array of unknown length, then converted to a dynamic array 
+    // Dynamic array is first parsed as a static array of unknown length, then converted to a dynamic array
     Type *staticArrayType = typeAdd(&comp->types, &comp->blocks, TYPE_ARRAY);
     staticArrayType->base = (*type)->base;
     int itemSize = typeSize(&comp->types, staticArrayType->base);
@@ -1033,16 +1049,16 @@ static void parseDynArrayLiteral(Compiler *comp, Type **type, Const *constant)
     {
         while (1)
         {
-            Type *itemType;      
+            Type *itemType;
             parseExpr(comp, &itemType, NULL);
             doImplicitTypeConv(comp, staticArrayType->base, &itemType, NULL, false);
-            typeAssertCompatible(&comp->types, staticArrayType->base, itemType, false); 
+            typeAssertCompatible(&comp->types, staticArrayType->base, itemType, false);
 
             staticArrayType->numItems++;
-            
+
             if (comp->lex.tok.kind != TOK_COMMA)
                 break;
-            lexNext(&comp->lex);                       
+            lexNext(&comp->lex);
         }
     }
 
@@ -1057,12 +1073,12 @@ static void parseDynArrayLiteral(Compiler *comp, Type **type, Const *constant)
         // Assignment to an anonymous stack area does not require updating reference counts
         genPushLocalPtr(&comp->gen, bufOffset + i * itemSize);
         genSwapAssign(&comp->gen, staticArrayType->base->kind, itemSize);
-    } 
+    }
 
     // Convert to dynamic array
-    genPushLocalPtr(&comp->gen, bufOffset); 
+    genPushLocalPtr(&comp->gen, bufOffset);
     doImplicitTypeConv(comp, *type, &staticArrayType, NULL, false);
-    typeAssertCompatible(&comp->types, *type, staticArrayType, false); 
+    typeAssertCompatible(&comp->types, *type, staticArrayType, false);
 }
 
 
@@ -1097,7 +1113,7 @@ static void parseCompositeLiteral(Compiler *comp, Type **type, Const *constant)
     if ((*type)->kind == TYPE_ARRAY || (*type)->kind == TYPE_STRUCT)
         parseArrayOrStructLiteral(comp, type, constant);
     else if ((*type)->kind == TYPE_DYNARRAY)
-        parseDynArrayLiteral(comp, type, constant);    
+        parseDynArrayLiteral(comp, type, constant);
     else if ((*type)->kind == TYPE_FN)
         parseFnLiteral(comp, type, constant);
     else
