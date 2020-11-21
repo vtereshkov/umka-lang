@@ -15,6 +15,7 @@ move /y src\libumka.* umka_windows_mingw
 move /y src\umka.exe umka_windows_mingw
 copy src\umka_api.h umka_windows_mingw
 copy LICENSE umka_windows_mingw
+copy spec.md umka_windows_mingw
 copy Umka.sublime-syntax umka_windows_mingw
 
 mkdir umka_windows_mingw\examples
