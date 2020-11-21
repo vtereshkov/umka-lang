@@ -152,7 +152,7 @@ comment
 
 Umka is a statically typed language. Each variable or constant has a type that is either explicitly specified in the variable declaration or inferred from the type of the right-hand side expression in a variable assignment or constant declaration. After a variable or constant is declared or assigned for the first time, it cannot change its type.
 
-*Syntax:*
+Syntax:
 
 ```
 type = qualIdent | ptrType | arrayType | dynArrayType | strType | structType | fnType.
