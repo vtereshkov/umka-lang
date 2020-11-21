@@ -476,7 +476,7 @@ static void parseBuiltinNewCall(Compiler *comp, Type **type, Const *constant)
 }
 
 
-// fn make([...] type (actually itemSize: int), len: int): [] type
+// fn make([] type (actually itemSize: int), len: int): [] type
 static void parseBuiltinMakeCall(Compiler *comp, Type **type, Const *constant)
 {
     if (constant)

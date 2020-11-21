@@ -22,6 +22,7 @@ _400 x 400 matrix multiplication (AMD A4-3300M @ 1.9 GHz, Windows 7)_
 ## Getting Started
 * Download the [latest release](https://github.com/vtereshkov/umka-lang/releases) for Windows and Linux
 * Take a [tour of Umka](https://github.com/vtereshkov/umka-lang/blob/master/README.md#a-tour-of-umka)
+* Read the [language specification](https://github.com/vtereshkov/umka-lang/blob/master/spec.md)
 * Explore the [raytracer](https://github.com/vtereshkov/umka-lang/blob/master/examples/raytracer.um) example that demonstrates many language features like fibers, interfaces and dynamic arrays
 * Play with the toy [Lisp interpreter](https://github.com/vtereshkov/umka-lang/blob/master/examples/lisp) written in Umka
 * Try the more realistic [C](https://github.com/vtereshkov/umka-lang/blob/master/examples/3dcam.c)+[Umka](https://github.com/vtereshkov/umka-lang/blob/master/examples/3dcam.um) embedded scripting example (_Note:_ [raylib](https://www.raylib.com) is required to compile and run it)
@@ -223,97 +224,3 @@ Umka is very similar to Go syntactically. However, in some aspects it's differen
 
 ### Semantics
 Umka allows implicit type casts and supports default parameters in function declarations. It doesn't have slices. Instead, it supports dynamic arrays, which are declared like Go's slices and initialized by calling `make()`. Method receivers must be pointers. The multithreading model in Umka is inspired by Lua and Wren rather than Go. It offers lightweight threads called fibers instead of goroutines and channels. The garbage collection mechanism is based on reference counting, so Umka needs to support `weak` pointers. Maps, closures and Unicode support are under development.
-
-## Language Grammar
-```
-program             = module.
-module              = [import ";"] decls.
-import              = "import" (importItem | "(" {importItem ";"} ")").
-importItem          = stringLiteral.
-decls               = decl {";" decl}.
-decl                = typeDecl | constDecl | varDecl | fnDecl.
-typeDecl            = "type" (typeDeclItem | "(" {typeDeclItem ";"} ")").
-typeDeclItem        = ident exportMark "=" type.
-constDecl           = "const" (constDeclItem | "(" {constDeclItem ";"} ")").
-constDeclItem       = ident exportMark "=" expr.
-varDecl             = "var" (varDeclItem | "(" {varDeclItem ";"} ")").
-varDeclItem         = typedIdentList "=" exprList.
-shortVarDecl        = declAssignmentStmt.
-fnDecl              = "fn" [rcvSignature] ident exportMark signature [block].
-rcvSignature        = "(" ident ":" type ")".
-signature           = "(" [typedIdentList ["=" expr] {"," typedIdentList ["=" expr]}] ")" 
-                      [":" (type | "(" type {"," type} ")")].
-exportMark          = ["*"].
-identList           = ident exportMark {"," ident exportMark}.
-typedIdentList      = identList ":" type.
-type                = qualIdent | ptrType | arrayType | dynArrayType | strType | structType | fnType.
-ptrType             = ["weak"] "^" type.
-arrayType           = "[" expr "]" type.
-dynArrayType        = "[" "]" type.
-strType             = "str".
-structType          = "struct" "{" {typedIdentList ";"} "}".
-interfaceType       = "interface" "{" {ident signature ";"} "}".
-fnType              = "fn" signature.
-block               = "{" StmtList "}".
-fnBlock             = block.
-fnPrototype         = .
-stmtList            = Stmt {";" Stmt}.
-stmt                = decl | block | simpleStmt | 
-                      ifStmt | switchStmt | forStmt | breakStmt | continueStmt | returnStmt.
-simpleStmt          = assignmentStmt | shortAssignmentStmt | incDecStmt | callStmt.
-singleAssgnStmt     = designator "=" expr.
-listAssgnStmt       = designatorList "=" exprList.
-assignmentStmt      = singleAssgnStmt | listAssgnStmt.
-shortAssignmentStmt = designator ("+=" | "-=" | "*=" | "/=" | "%=" | "&=" | "|=" | "~=") expr.
-singleDeclAssgnStmt = ident ":=" expr.
-listDeclAssgnStmt   = identList ":=" exprList.
-declAssignmentStmt  = singleDeclAssgnStmt | listDeclAssgnStmt.
-incDecStmt          = designator ("++" | "--").
-callStmt            = designator.
-ifStmt              = "if" [shortVarDecl ";"] expr block ["else" (ifStmt | block)].
-switchStmt          = "switch" [shortVarDecl ";"] expr "{" {case} [default] "}".
-case                = "case" expr {"," expr} ":" stmtList.
-default             = "default" ":" stmtList.
-forStmt             = "for" (forHeader | forInHeader) block.
-forHeader           = [shortVarDecl ";"] expr [";" simpleStmt].
-forInHeader         = [ident ","] ident "in" expr.
-breakStmt           = "break".
-continueStmt        = "continue".
-returnStmt          = "return" [exprList].
-exprList            = expr {"," expr}.
-expr                = logicalTerm {"||" logicalTerm}.
-logicalTerm         = relation {"&&" relation}.
-relation            = relationTerm [("==" | "!=" | "<" | "<=" | ">" | ">=") relationTerm].
-relationTerm        = term {("+" | "-" | "|" | "~") term}.
-term                = factor {("*" | "/" | "%" | "<<" | ">>" | "&") factor}.
-factor              = designator | intNumber | realNumber | charLiteral | stringLiteral |
-                      ("+" | "-" | "!" | "~") factor | "&" designator | "(" expr ")".
-designatorList      = designator {"," designator}.
-designator          = (primary | typeCast | compositeLiteral) selectors.
-primary             = qualIdent | builtinCall.
-qualIdent           = [ident "."] ident.
-builtinCall         = qualIdent "(" [expr {"," expr}] ")".
-selectors           = {derefSelector | indexSelector | fieldSelector | callSelector}.
-derefSelector       = "^".
-indexSelector       = "[" expr "]".
-fieldSelector       = "." ident.
-callSelector        = actualParams.
-actualParams        = "(" [expr {"," expr}] ")".
-compositeLiteral    = arrayLiteral | dynArrayLiteral | structLiteral | fnLiteral.
-arrayLiteral        = "{" [expr {"," expr}] "}".
-dynArrayLiteral     = arrayLiteral.
-structLiteral       = "{" [[ident ":"] expr {"," [ident ":"] expr}] "}".
-fnLiteral           = fnBlock.
-typeCast            = type "(" expr ")".
-ident               = (letter | "_") {letter | "_" | digit}.
-intNumber           = decNumber | hexHumber.
-decNumber           = digit {digit}.
-hexNumber           = "0" ("X | "x") hexDigit {hexDigit}.
-realNumber          = decNumber ["." decNumber] [("E" | "e") decNumber].
-charLiteral         = "'" (char | escSeq) "'".
-stringLiteral       = """ {char | escSeq} """.
-escSeq              = "\" ("0" | "a" | "b" | "e" | "f" | "n" | "r" | "t" | "v" | "x" hexNumber).
-letter              = "A".."Z" | "a".."z".
-digit               = "0".."9".
-hexDigit            = digit | "A".."F" | "a".."f".
-char                = "\x00".."\xFF".

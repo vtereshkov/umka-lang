@@ -387,7 +387,7 @@ static void parseTypeDeclItem(Compiler *comp)
 
 
 // typeDecl = "type" (typeDeclItem | "(" {typeDeclItem ";"} ")").
-void parseTypeDecl(Compiler *comp)
+static void parseTypeDecl(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_TYPE);
 
@@ -428,7 +428,7 @@ static void parseConstDeclItem(Compiler *comp)
 
 
 // constDecl = "const" (constDeclItem | "(" {constDeclItem ";"} ")").
-void parseConstDecl(Compiler *comp)
+static void parseConstDecl(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_CONST);
 
@@ -498,8 +498,8 @@ static void parseVarDeclItem(Compiler *comp)
 }
 
 
-// varDecl = "var" (varDeclItem | "(" {varDeclItem ";"} ")").
-void parseVarDecl(Compiler *comp)
+// fullVarDecl = "var" (varDeclItem | "(" {varDeclItem ";"} ")").
+static void parseFullVarDecl(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_VAR);
 
@@ -532,7 +532,7 @@ void parseShortVarDecl(Compiler *comp)
 
 
 // fnDecl = "fn" [rcvSignature] ident exportMark signature [block].
-void parseFnDecl(Compiler *comp)
+static void parseFnDecl(Compiler *comp)
 {
     if (comp->blocks.top != 0)
         comp->error.handler(comp->error.context, "Nested functions should be declared as variables");
@@ -577,7 +577,7 @@ void parseDecl(Compiler *comp)
     {
         case TOK_TYPE:   parseTypeDecl(comp);       break;
         case TOK_CONST:  parseConstDecl(comp);      break;
-        case TOK_VAR:    parseVarDecl(comp);        break;
+        case TOK_VAR:    parseFullVarDecl(comp);    break;
         case TOK_IDENT:  parseShortVarDecl(comp);   break;
         case TOK_FN:     parseFnDecl(comp);         break;
 
@@ -590,7 +590,7 @@ void parseDecl(Compiler *comp)
 
 
 // decls = decl {";" decl}.
-void parseDecls(Compiler *comp)
+static void parseDecls(Compiler *comp)
 {
     while (1)
     {
