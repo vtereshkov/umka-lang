@@ -44,21 +44,6 @@ fn main() {
     printf("Hello Umka!\n")
 }
 ```
-### Keywords and operators
-_Keywords_
-```
-break case const continue default else for fn import 
-interface if in return str struct switch type var weak
-```
-_Operators_
-```
-+    -    *    /    %    &    |    ~    <<    >>
-+=   -=   *=   /=   %=   &=   |=   ~=   <<=   >>=
-&&   ||   !    ++   --
-==   <    >    !=   <=   >=
-=    :=   (    )    [    ]    {    }    
-^    ;    :    .
-```
 ### Declarations
 #### Constants
 ```
@@ -68,11 +53,6 @@ const (
     c = sin(b) / 5
     d = "Hello" + " World"
 )
-```
-_Built-in constants_
-```
-true false
-null
 ```
 #### Types
 ```
@@ -89,17 +69,7 @@ type (
         print(): int
     }
     ErrFn = fn(code: int)               // Function
-)        
-```
-_Built-in types_
-```
-void
-int8 int16 int32 int
-uint8 uint16 uint32 uint
-bool
-char
-real32 real
-fiber
+)
 ```
 #### Variables
 ```
@@ -115,14 +85,6 @@ q := Quat{q: [4]real{1, 0, 0, 0}, normalized: true}
 ```
 fn tan(x: real): real {return sin(x) / cos(x)}
 fn getValue(): (int, bool) {return 42, true}
-```
-_Built-in functions_
-```
-printf fprintf sprintf scanf fscanf sscanf
-round trunc fabs sqrt sin cos atan atan2 exp log
-new make append delete len sizeof sizeofself selfhasptr
-fiberspawn fibercall fiberalive
-repr error
 ```
 #### Methods
 ```
