@@ -294,7 +294,7 @@ static Type *parseStructType(Compiler *comp)
 }
 
 
-// interfaceType = "interface" "{" {ident signature ";"} "}"
+// interfaceType = "interface" "{" {(ident signature | qualIdent) ";"} "}"
 static Type *parseInterfaceType(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_INTERFACE);
@@ -307,21 +307,46 @@ static Type *parseInterfaceType(Compiler *comp)
     typeAddField(&comp->types, type, comp->ptrVoidType, "__self");
     typeAddField(&comp->types, type, comp->ptrVoidType, "__selftype");
 
-    // Methods
+    // Method names and signatures, or embedded interfaces
     while (comp->lex.tok.kind == TOK_IDENT)
     {
-        IdentName methodName;
-        strcpy(methodName, comp->lex.tok.name);
-        lexNext(&comp->lex);
+        Lexer lookaheadLex = comp->lex;
+        lexNext(&lookaheadLex);
 
-        Type *methodType = typeAdd(&comp->types, &comp->blocks, TYPE_FN);
+        if (lookaheadLex.tok.kind == TOK_LPAR)
+        {
+            // Method name and signature
+            IdentName methodName;
+            strcpy(methodName, comp->lex.tok.name);
+            lexNext(&comp->lex);
 
-        typeAddParam(&comp->types, &methodType->sig, comp->ptrVoidType, "__self");
-        parseSignature(comp, &methodType->sig);
+            Type *methodType = typeAdd(&comp->types, &comp->blocks, TYPE_FN);
 
-        Field *method = typeAddField(&comp->types, type, methodType, methodName);
-        methodType->sig.method = true;
-        methodType->sig.offsetFromSelf = method->offset;
+            typeAddParam(&comp->types, &methodType->sig, comp->ptrVoidType, "__self");
+            parseSignature(comp, &methodType->sig);
+
+            Field *method = typeAddField(&comp->types, type, methodType, methodName);
+            methodType->sig.method = true;
+            methodType->sig.offsetFromSelf = method->offset;
+        }
+        else
+        {
+            // Embedded interface
+            Type *embeddedType = parseType(comp, NULL);
+
+            if (embeddedType->kind != TYPE_INTERFACE)
+                comp->error.handler(comp->error.context, "Interface type expected");
+
+            for (int i = 2; i < embeddedType->numItems; i++)    // Skip __self and __selftype in embedded interface
+            {
+                Type *methodType = typeAdd(&comp->types, &comp->blocks, TYPE_FN);
+                typeDeepCopy(methodType, embeddedType->field[i]->type);
+
+                Field *method = typeAddField(&comp->types, type, methodType, embeddedType->field[i]->name);
+                methodType->sig.method = true;
+                methodType->sig.offsetFromSelf = method->offset;
+            }
+        }
 
         lexEat(&comp->lex, TOK_SEMICOLON);
     }

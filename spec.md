@@ -306,12 +306,12 @@ Structure assignment copies the contents of the structure.
 
 #### Interface types
 
-An interface is a sequence of method names and signatures. Each method should have a unique name. 
+An interface is a sequence of method names and signatures. Each method should have a unique name. It is allowed to specify either a method name and its signature, or a name of some other interface type whose methods are to be included to the new interface type.
 
 Syntax:
 
 ```
-interfaceType = "interface" "{" {ident signature ";"} "}".
+interfaceType = "interface" "{" {(ident signature | qualIdent) ";"} "}"
 ```
 
 Examples:
@@ -319,6 +319,7 @@ Examples:
 ```
 interface {
     print(): int
+    Saveable
 }
 ```
 
