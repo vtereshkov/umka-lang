@@ -197,7 +197,6 @@ static char lexEscChar(Lexer *lex, bool *escaped)
             case '0': return '\0';
             case 'a': return '\a';
             case 'b': return '\b';
-            case 'e': return '\e';
             case 'f': return '\f';
             case 'n': return '\n';
             case 'r': return '\r';

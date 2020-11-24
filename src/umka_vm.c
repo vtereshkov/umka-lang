@@ -164,9 +164,9 @@ static void pageRemove(HeapPages *pages, HeapPage *page)
 static HeapPage *pageFind(HeapPages *pages, void *ptr)
 {
     for (HeapPage *page = pages->first; page; page = page->next)
-        if (ptr >= page->ptr && ptr < page->ptr + page->occupied)
+        if (ptr >= page->ptr && ptr < (void *)((char *)page->ptr + page->occupied))
         {
-            HeapChunkHeader *chunk = ptr - sizeof(HeapChunkHeader);
+            HeapChunkHeader *chunk = (HeapChunkHeader *)((char *)ptr - sizeof(HeapChunkHeader));
             if (chunk->magic == VM_HEAP_CHUNK_MAGIC)
                 return page;
             return NULL;
@@ -188,7 +188,7 @@ static void *chunkAlloc(HeapPages *pages, int size, Error *error)
     if (!pages->last || pages->last->occupied + chunkSize > pages->last->size)
         pageAdd(pages, pageSize);
 
-    HeapChunkHeader *chunk = pages->last->ptr + pages->last->occupied;
+    HeapChunkHeader *chunk = (HeapChunkHeader *)((char *)pages->last->ptr + pages->last->occupied);
     chunk->magic = VM_HEAP_CHUNK_MAGIC;
     chunk->refCnt = 1;
     chunk->size = size;
@@ -200,13 +200,13 @@ static void *chunkAlloc(HeapPages *pages, int size, Error *error)
     printf("Add chunk at %p\n", (void *)chunk + sizeof(HeapChunkHeader));
 #endif
 
-    return (void *)chunk + sizeof(HeapChunkHeader);
+    return (char *)chunk + sizeof(HeapChunkHeader);
 }
 
 
 static void chunkChangeRefCnt(HeapPages *pages, HeapPage *page, void *ptr, int delta)
 {
-    HeapChunkHeader *chunk = ptr - sizeof(HeapChunkHeader);
+    HeapChunkHeader *chunk = (HeapChunkHeader *)((char *)ptr - sizeof(HeapChunkHeader));
 
     // TODO: double-check the suspicious condition
     if (chunk->refCnt > 0)
@@ -414,7 +414,7 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
                 else
                 {
                     // Traverse children only before removing the last remaining ref
-                    HeapChunkHeader *chunk = ptr - sizeof(HeapChunkHeader);
+                    HeapChunkHeader *chunk = (HeapChunkHeader *)((char *)ptr - sizeof(HeapChunkHeader));
                     if (chunk->refCnt == 1 && typeKindGarbageCollected(type->base->kind))
                     {
                         void *data = ptr;
@@ -441,7 +441,7 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
         {
             if (typeKindGarbageCollected(type->base->kind))
             {
-                void *itemPtr = ptr;
+                char *itemPtr = ptr;
                 int itemSize = typeSizeNoCheck(type->base);
 
                 for (int i = 0; i < type->numItems; i++)
@@ -468,10 +468,10 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
                 else
                 {
                     // Traverse children only before removing the last remaining ref
-                    HeapChunkHeader *chunk = array->data - sizeof(HeapChunkHeader);
+                    HeapChunkHeader *chunk = (HeapChunkHeader *)((char *)array->data - sizeof(HeapChunkHeader));
                     if (chunk->refCnt == 1 && typeKindGarbageCollected(type->base->kind))
                     {
-                        void *itemPtr = array->data;
+                        char *itemPtr = array->data;
 
                         for (int i = 0; i < array->len; i++)
                         {
@@ -495,7 +495,7 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
             {
                 if (typeKindGarbageCollected(type->field[i]->type->kind))
                 {
-                    void *field = ptr + type->field[i]->offset;
+                    void *field = (char *)ptr + type->field[i]->offset;
                     if (type->field[i]->type->kind == TYPE_PTR || type->field[i]->type->kind == TYPE_STR)
                         field = *(void **)field;
 
@@ -509,7 +509,7 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
         {
             // Interface layout: __self, __selftype, methods
             void *__self = *(void **)ptr;
-            Type *__selftype = *(Type **)(ptr + type->field[1]->offset);
+            Type *__selftype = *(Type **)((char *)ptr + type->field[1]->offset);
 
             if (__self)
                 doBasicChangeRefCnt(fiber, pages, __self, __selftype, tokKind, error);
@@ -522,7 +522,7 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
             if (page)
             {
                 // Don't use ref counting for the fiber stack, otherwise every local variable will also be ref-counted
-                HeapChunkHeader *chunk = ptr - sizeof(HeapChunkHeader);
+                HeapChunkHeader *chunk = (HeapChunkHeader *)((char *)ptr - sizeof(HeapChunkHeader));
                 if (chunk->refCnt == 1 && tokKind == TOK_MINUSMINUS)
                     free(((Fiber *)ptr)->stack);
             }
@@ -559,7 +559,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, Error *e
         {
             len += snprintf(buf, maxLen, "{ ");
 
-            void *itemPtr = (void *)slot->ptrVal;
+            char *itemPtr = (char *)slot->ptrVal;
             int itemSize = typeSizeNoCheck(type->base);
 
             for (int i = 0; i < type->numItems; i++)
@@ -581,7 +581,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, Error *e
             DynArray *array = (DynArray *)slot->ptrVal;
             if (array && array->data)
             {
-                void *itemPtr = array->data;
+                char *itemPtr = array->data;
                 for (int i = 0; i < array->len; i++)
                 {
                     Slot itemSlot = {.ptrVal = (int64_t)itemPtr};
@@ -907,8 +907,8 @@ static void doBuiltinAppend(Fiber *fiber, HeapPages *pages, Error *error)
     result->itemSize = array->itemSize;
     result->data     = chunkAlloc(pages, result->len * result->itemSize, error);
 
-    memcpy(result->data, array->data, array->len * array->itemSize);
-    memcpy(result->data + array->len * array->itemSize, rhs, rhsLen * array->itemSize);
+    memcpy((char *)result->data, (char*)array->data, array->len * array->itemSize);
+    memcpy((char *)result->data + array->len * array->itemSize, (char *)rhs, rhsLen * array->itemSize);
 
     (--fiber->top)->ptrVal = (int64_t)result;
 }
@@ -928,8 +928,8 @@ static void doBuiltinDelete(Fiber *fiber, HeapPages *pages, Error *error)
     result->itemSize = array->itemSize;
     result->data     = chunkAlloc(pages, result->len * result->itemSize, error);
 
-    memcpy(result->data, array->data, index * array->itemSize);
-    memcpy(result->data + index * result->itemSize, array->data + (index + 1) * result->itemSize, (result->len - index) * result->itemSize);
+    memcpy((char *)result->data, (char *)array->data, index * array->itemSize);
+    memcpy((char *)result->data + index * result->itemSize, (char *)array->data + (index + 1) * result->itemSize, (result->len - index) * result->itemSize);
 
     (--fiber->top)->ptrVal = (int64_t)result;
 }
@@ -1199,7 +1199,7 @@ static void doUnary(Fiber *fiber, Error *error)
                     case TYPE_UINT32: (*(uint32_t *)ptr)++; break;
                     case TYPE_UINT:   (*(uint64_t *)ptr)++; break;
                     case TYPE_CHAR:   (*(char     *)ptr)++; break;
-                    case TYPE_PTR:    (*(void *   *)ptr)++; break;
+                    case TYPE_PTR:    (*(char *   *)ptr)++; break;
                     // Structured, boolean and real types are not incremented/decremented
                     default:          error->handlerRuntime(error->context, "Illegal type"); return;
                 }
@@ -1220,7 +1220,7 @@ static void doUnary(Fiber *fiber, Error *error)
                     case TYPE_UINT32: (*(uint32_t *)ptr)--; break;
                     case TYPE_UINT:   (*(uint64_t *)ptr)--; break;
                     case TYPE_CHAR:   (*(char     *)ptr)--; break;
-                    case TYPE_PTR:    (*(void *   *)ptr)--; break;
+                    case TYPE_PTR:    (*(char *   *)ptr)--; break;
                     // Structured, boolean and real types are not incremented/decremented
                     default:          error->handlerRuntime(error->context, "Illegal type"); return;
                 }
@@ -1402,7 +1402,7 @@ static void doGetDynArrayPtr(Fiber *fiber, Error *error)
     if (index < 0 || index > len - 1)
         error->handlerRuntime(error->context, "Index %d is out of range 0...%d", index, len - 1);
 
-    (--fiber->top)->ptrVal = (int64_t)(array->data + itemSize * index);
+    (--fiber->top)->ptrVal = (int64_t)((char *)array->data + itemSize * index);
 
     if (fiber->code[fiber->ip].inlineOpcode == OP_DEREF)
         doBasicDeref(fiber->top, fiber->code[fiber->ip].typeKind, error);
@@ -1434,7 +1434,7 @@ static void doAssertType(Fiber *fiber)
 
     // Interface layout: __self, __selftype, methods
     void *__self     = *(void **)interface;
-    Type *__selftype = *(Type **)(interface + sizeof(__self));
+    Type *__selftype = *(Type **)((char *)interface + sizeof(__self));
 
     (--fiber->top)->ptrVal = (int64_t)((__selftype && typeEquivalent(type, __selftype)) ? __self : NULL);
     fiber->ip++;

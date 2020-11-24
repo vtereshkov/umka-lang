@@ -182,7 +182,7 @@ static Type *parsePtrType(Compiler *comp)
     }
 
     lexEat(&comp->lex, TOK_CARET);
-    Type *type;
+    Type *type = NULL;
 
     // Forward declaration
     bool forward = false;
