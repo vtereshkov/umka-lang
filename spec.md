@@ -311,7 +311,7 @@ An interface is a sequence of method names and signatures. Each method should ha
 Syntax:
 
 ```
-interfaceType = "interface" "{" {(ident signature | qualIdent) ";"} "}"
+interfaceType = "interface" "{" {(ident signature | qualIdent) ";"} "}".
 ```
 
 Examples:
@@ -381,7 +381,7 @@ Note: Using explicit conversions between pointer types is considered unsafe in U
 
 ## Declarations
 
-All types, constants, variables and functions should be declared before the first use. No identifier may be declared twice in the same block.
+All types, constants, variables and functions should be declared before the first use. The only exception is that a pointer base type `T` may be declared after using the pointer type `^T` but before the end of the same `type` declaration list. No identifier may be declared twice in the same block.
 
 Syntax:
 
@@ -1315,7 +1315,7 @@ arrayType           = "[" expr "]" type.
 dynArrayType        = "[" "]" type.
 strType             = "str".
 structType          = "struct" "{" {typedIdentList ";"} "}".
-interfaceType       = "interface" "{" {ident signature ";"} "}".
+interfaceType       = "interface" "{" {(ident signature | qualIdent) ";"} "}".
 fnType              = "fn" signature.
 block               = "{" StmtList "}".
 fnBlock             = block.
