@@ -629,7 +629,7 @@ Returns the size in bytes of the variable that has been converted to the interfa
 fn selfhasptr(a: interface{...}): bool
 ```
 
-Checks whether the type of the variable that has been converted to the interface`a` is a pointer or has a pointer as its item type or field type.
+Checks whether the type of the variable that has been converted to the interface`a` is a pointer, string, dynamic array, interfaces or fibers, or has one of these types as its item type or field type.
 
 ##### Multitasking functions
 
@@ -1179,6 +1179,147 @@ fn main() {
     std.println("Hello, World!")
 }
 ```
+
+## Standard library
+
+The standard library is contained in the `std.um` module.
+
+### Input/output
+
+#### Types
+
+```
+type File* = ^struct {}
+```
+
+File handle.
+
+#### Constants
+
+```
+const (
+    seekBegin* = 0
+    seekCur*   = 1
+    seekEnd*   = 2
+)
+```
+
+Codes defining the offset origins in `fseek()`: the beginning of file, the current position, the end of file.
+
+#### Functions
+
+```
+fn fopen*(name: str, mode: str): File
+```
+
+Opens the file specified by the `name` in the given `mode` (identical to C): `"r"` to read from a text file, `"rb"` to read from a binary file, `"w"` to write to a text file, `"wb"` to write to a binary file, etc. Returns the file handle.
+
+```
+fn fclose*(f: File): int
+```
+
+Closes the file `f`. Returns 0 if successful.
+
+```
+fn fread*(f: File, buf: interface{}): int
+```
+
+Reads the `buf` variable from the file `f`. `buf` can be of any type that doesn't contain pointers, strings, dynamic arrays, interfaces or fibers. Returns 1 if successful.
+
+```
+fn fwrite*(f: File, buf: interface{}): int
+```
+
+Writes the `buf` variable to the file `f`. `buf` can be of any type that doesn't contain pointers, strings, dynamic arrays, interfaces or fibers. Returns 1 if successful.
+
+```
+fn fseek*(f: File, offset, origin: int): int
+```
+
+Sets the file pointer in the file `f` to the given `offset`  from the `origin` , which is either `seekBegin`, or `seekCur`, or `seekEnd`. Returns 0 if successful.
+
+```
+fn remove*(name: str): int
+```
+
+Opens the file specified by the `name`. Returns 0 if successful.
+
+```
+fn println*(s: str): int
+fn fprintln*(f: File, s: str): int
+```
+
+Write the string `s`  followed by a newline character to the console or to the file `f`. Return the number of bytes written.
+
+```
+fn getchar*(): char
+```
+
+Returns a character read from the console.
+
+### Conversions
+
+#### Functions
+
+```
+fn atoi*(s: str): int                   // String to integer
+fn atof*(s: str): real                  // String to real
+fn itoa*(x: int): str                   // Integer to string
+fn ftoa*(x: real, decimals: int): str   // Real to string with `decimals` decimal places 
+```
+
+### Math
+
+#### Constants
+
+```
+const pi* = 3.14159265358979323846
+const randMax* = 0x7FFFFFFF
+```
+
+#### Functions
+
+```
+fn srand*(seed: int)
+```
+
+Initializes the pseudo-random number generator with `seed`.
+
+```
+fn rand*(): int
+```
+
+Returns an integer pseudo-random number between 0 and `randMax` inclusive.
+
+```
+fn frand*(): real
+```
+
+Returns a real pseudo-random number between 0 and 1 inclusive.
+
+### Timer
+
+#### Functions
+
+```
+fn time*(): int
+```
+
+Returns the number of seconds since 00:00, January 1, 1970 UTC.
+
+### Command line
+
+```
+fn argc*(): int
+```
+
+Returns the number of command line parameters.
+
+```
+fn argv*(i: int): str
+```
+
+Returns the `i`-th command line parameter. 
 
 ## Embedding API
 
