@@ -1242,7 +1242,7 @@ Sets the file pointer in the file `f` to the given `offset`  from the `origin` ,
 fn remove*(name: str): int
 ```
 
-Opens the file specified by the `name`. Returns 0 if successful.
+Removes the file specified by the `name`. Returns 0 if successful.
 
 ```
 fn println*(s: str): int
@@ -1319,7 +1319,7 @@ Returns the number of command line parameters.
 fn argv*(i: int): str
 ```
 
-Returns the `i`-th command line parameter. 
+Returns the `i`-th command line parameter, where `i` should be between 0 and  `argc() - 1 ` inclusive.
 
 ## Embedding API
 
