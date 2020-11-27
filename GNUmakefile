@@ -3,7 +3,7 @@ ifeq ($(platform), Linux)
   LPATH = LD_LIBRARY_PATH
   STATIC_CFLAGS = -fPIC -O3 -Wall -Wno-format-security -DUMKA_STATIC
   DYNAMIC_CFLAGS = -fPIC -O3 -Wall -fvisibility=hidden -DUMKA_BUILD
-  STATIC_LDFLAGS = -static-libgcc
+  STATIC_LDFLAGS = -rs 
   DYNAMIC_LDFLAGS = -shared -lm
   STATIC_LIB = libumka.a
   DYNAMIC_LIB = libumka.so
@@ -39,7 +39,7 @@ clean:
 
 $(STATIC_LIB): $(STATIC_LIB_OBJ)
 	# Build static archive 
-	$(RANLIB) $(STATIC_LDFLAGS) -o $(STATIC_LIB) $^
+	$(RANLIB) $(STATIC_LDFLAGS) $(STATIC_LIB) $^
 
 $(DYNAMIC_LIB): $(DYNAMIC_LIB_OBJ)
 	# Build shared library
