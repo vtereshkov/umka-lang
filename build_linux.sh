@@ -1,7 +1,7 @@
 #!/bin/sh
 cd src
 
-gcc -fPIC -O3 -Wall -Wno-format-security -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast -c umka_api.c umka_common.c umka_compiler.c umka_const.c umka_decl.c umka_expr.c umka_gen.c umka_ident.c umka_lexer.c umka_runtime.c umka_stmt.c umka_types.c umka_vm.c 
+gcc -fPIC -O3 -fvisibility=hidden -DUMKA_BUILD -Wall -Wno-format-security -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast -c umka_api.c umka_common.c umka_compiler.c umka_const.c umka_decl.c umka_expr.c umka_gen.c umka_ident.c umka_lexer.c umka_runtime.c umka_stmt.c umka_types.c umka_vm.c 
 gcc -shared -fPIC -static-libgcc *.o -o libumka.so -lm 
 
 gcc -O3 -Wall -c umka.c 

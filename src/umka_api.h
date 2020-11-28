@@ -1,6 +1,27 @@
 #ifndef UMKA_API_H_INCLUDED
 #define UMKA_API_H_INCLUDED
 
+
+#ifdef _WIN32  // MSVC++ only
+    #if defined(UMKA_STATIC)
+        #define UMKA_EXPORT
+        #define UMKA_IMPORT
+    #else
+        #define UMKA_EXPORT __declspec(dllexport)
+        #define UMKA_IMPORT __declspec(dllimport)
+    #endif
+#else
+    #define UMKA_EXPORT __attribute__((visibility("default"))) 
+    #define UMKA_IMPORT __attribute__((visibility("default"))) 
+#endif
+
+#ifdef UMKA_BUILD
+    #define UMKA_API UMKA_EXPORT
+#else
+    #define UMKA_API UMKA_IMPORT
+#endif
+
+
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -36,16 +57,16 @@ typedef struct
 } UmkaError;
 
 
-void *umkaAlloc     (void);
-bool umkaInit       (void *umka, const char *fileName, int storageSize, int stackSize, int argc, char **argv);
-bool umkaCompile    (void *umka);
-bool umkaRun        (void *umka);
-bool umkaCall       (void *umka, int entryOffset, int numParamSlots, UmkaStackSlot *params, UmkaStackSlot *result);
-void umkaFree       (void *umka);
-void umkaGetError   (void *umka, UmkaError *err);
-void umkaAsm        (void *umka, char *buf);
-void umkaAddFunc    (void *umka, const char *name, UmkaExternFunc entry);
-int  umkaGetFunc    (void *umka, const char *moduleName, const char *funcName);
+void UMKA_API *umkaAlloc     (void);
+bool UMKA_API umkaInit       (void *umka, const char *fileName, int storageSize, int stackSize, int argc, char **argv);
+bool UMKA_API umkaCompile    (void *umka);
+bool UMKA_API umkaRun        (void *umka);
+bool UMKA_API umkaCall       (void *umka, int entryOffset, int numParamSlots, UmkaStackSlot *params, UmkaStackSlot *result);
+void UMKA_API umkaFree       (void *umka);
+void UMKA_API umkaGetError   (void *umka, UmkaError *err);
+void UMKA_API umkaAsm        (void *umka, char *buf);
+void UMKA_API umkaAddFunc    (void *umka, const char *name, UmkaExternFunc entry);
+int  UMKA_API umkaGetFunc    (void *umka, const char *moduleName, const char *funcName);
 
 
 #if defined(__cplusplus)
