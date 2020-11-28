@@ -60,7 +60,7 @@ jobs:
           #  base-devel
           #  git
 
-      - run: uname -a
+      - run: uname -s
 
       - uses: actions/checkout@v2
 
