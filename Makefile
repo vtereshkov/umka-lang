@@ -1,7 +1,7 @@
 .POSIX:
 
 SRC = src
-CFLAGS = -fPIC -O3 -Wall -Wno-format-security
+CFLAGS = -fPIC -O3 -fvisibility=hidden -DUMKA_BUILD -Wall -Wno-format-security
 LDFLAGS = -static-libgcc
 
 BIN_OBJ = src/umka.o
