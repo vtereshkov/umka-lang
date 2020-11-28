@@ -20,6 +20,18 @@ ifeq ($(platform), Darwin)
   DYNAMIC_LIB = libumka.dylib
   EXECUTABLE_DEPS = 
   RANLIB = libtool -static -o  
+else
+ifeq (X${platform:0:10), XMINGW64_NT)
+  LPATH = PATH
+  STATIC_CFLAGS = -fPIC -O3 -Wall -Wno-format-security -DUMKA_STATIC
+  DYNAMIC_CFLAGS = -fPIC -O3 -Wall -fvisibility=hidden -DUMKA_BUILD
+  STATIC_LDFLAGS = -rs 
+  DYNAMIC_LDFLAGS = -shared -lm
+  STATIC_LIB = libumka.a
+  DYNAMIC_LIB = libumka.so
+  EXECUTABLE_DEPS = -lm
+  RANLIB = ar
+endif
 endif
 endif
 
