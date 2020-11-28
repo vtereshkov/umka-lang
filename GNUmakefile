@@ -1,22 +1,72 @@
-.POSIX:
+platform := $(shell uname -s)
+shortplatform := $(shell (X=`uname -s`; echo $${X:0:10}))
+ifeq ($(platform), Linux)
+  LPATH = LD_LIBRARY_PATH
+  STATIC_CFLAGS = -fPIC -O3 -Wall -Wno-format-security -DUMKA_STATIC
+  DYNAMIC_CFLAGS = -fPIC -O3 -Wall -fvisibility=hidden -DUMKA_BUILD
+  STATIC_LDFLAGS = -rs 
+  DYNAMIC_LDFLAGS = -shared -lm
+  STATIC_LIB = libumka.a
+  DYNAMIC_LIB = libumka.so
+  EXECUTABLE_DEPS = -lm
+  RANLIB = ar
+else
+ifeq ($(platform), Darwin)
+  LPATH = DYLD_LIBRARY_PATH
+  STATIC_CFLAGS = -fPIC -O3 -Wall -Wno-format-security -DUMKA_STATIC
+  DYNAMIC_CFLAGS = -fPIC -O3 -Wall -fvisibility=hidden -DUMKA_BUILD
+  STATIC_LDFLAGS = 
+  DYNAMIC_LDFLAGS = -shared
+  STATIC_LIB = libumka.a
+  DYNAMIC_LIB = libumka.dylib
+  EXECUTABLE_DEPS = 
+  RANLIB = libtool -static -o  
+else
+ifeq ($(shortplatform), MINGW64_NT)
+  LPATH = PATH
+  STATIC_CFLAGS = -fPIC -O3 -Wall -Wno-format-security -DUMKA_STATIC
+  DYNAMIC_CFLAGS = -fPIC -O3 -Wall -fvisibility=hidden -DUMKA_BUILD
+  STATIC_LDFLAGS = -rs 
+  DYNAMIC_LDFLAGS = -shared -lm
+  STATIC_LIB = libumka.a
+  DYNAMIC_LIB = libumka.so
+  EXECUTABLE_DEPS = -lm
+  RANLIB = ar
+endif
+endif
+endif
 
-SRC = src
-CFLAGS = -fPIC -O3 -fvisibility=hidden -DUMKA_BUILD -Wall -Wno-format-security
-LDFLAGS = -static-libgcc
+ifndef LPATH
+$(warning Unrecognized kernel name ${platform} -- Unable to detect setting for LPATH)
+endif
 
-BIN_OBJ = src/umka.o
-LIB_OBJ = src/umka_api.o src/umka_common.o src/umka_compiler.o src/umka_const.o src/umka_decl.o src/umka_expr.o src/umka_gen.o src/umka_ident.o src/umka_lexer.o src/umka_runtime.o src/umka_stmt.o src/umka_types.o src/umka_vm.o
+STATIC_LIB_OBJ = src/umka_api_static.o src/umka_common_static.o src/umka_compiler_static.o src/umka_const_static.o src/umka_decl_static.o src/umka_expr_static.o src/umka_gen_static.o src/umka_ident_static.o src/umka_lexer_static.o src/umka_runtime_static.o src/umka_stmt_static.o src/umka_types_static.o src/umka_vm_static.o
+DYNAMIC_LIB_OBJ = src/umka_api_dynamic.o src/umka_common_dynamic.o src/umka_compiler_dynamic.o src/umka_const_dynamic.o src/umka_decl_dynamic.o src/umka_expr_dynamic.o src/umka_gen_dynamic.o src/umka_ident_dynamic.o src/umka_lexer_dynamic.o src/umka_runtime_dynamic.o src/umka_stmt_dynamic.o src/umka_types_dynamic.o src/umka_vm_dynamic.o
+EXECUTABLE_OBJ = src/umka_static.o
+EXECUTABLE = umka
 
 .PHONY: all clean
-all: umka libumka.so
+all: $(EXECUTABLE) $(STATIC_LIB) $(DYNAMIC_LIB)
+
 clean:
-	rm -f umka libumka.so
+	rm -f $(EXECUTABLE) $(STATIC_LIB) $(DYNAMIC_LIB) 
 	rm -f src/*.o
 
-umka: $(BIN_OBJ) $(LIB_OBJ)
-	$(CC) $(LDFLAGS) -o $@ $^ -lm
+$(STATIC_LIB): $(STATIC_LIB_OBJ)
+	# Build static archive 
+	$(RANLIB) $(STATIC_LDFLAGS) $(STATIC_LIB) $^
 
-libumka.so: $(LIB_OBJ)
-	$(CC) $(LDFLAGS) -shared -fPIC -o libumka.so $^ -lm
+$(DYNAMIC_LIB): $(DYNAMIC_LIB_OBJ)
+	# Build shared library
+	$(CC) $(DYNAMIC_LDFLAGS) -o $(DYNAMIC_LIB) $^
 
-src/%.o: src/%.c
+$(EXECUTABLE): $(EXECUTABLE_OBJ) $(STATIC_LIB) 
+	# Build executable 
+	$(CC) $(STATIC_CFLAGS) -o $(EXECUTABLE) $^ $(EXECUTABLE_DEPS)
+
+src/%_static.o: src/%.c
+	$(CC) $(STATIC_CFLAGS) -c -o $@ $^
+
+
+src/%_dynamic.o: src/%.c
+	$(CC) $(DYNAMIC_CFLAGS) -c -o $@ $^
