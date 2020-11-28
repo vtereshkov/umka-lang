@@ -78,7 +78,7 @@ int main(int argc, char **argv)
     }
 
     void *umka = umkaAlloc();
-    bool ok = umkaInit(umka, argv[1], storageSize, stackSize, argc, argv);
+    bool ok = umkaInit(umka, argv[1], NULL, storageSize, stackSize, argc, argv);
     if (ok)
         ok = umkaCompile(umka);
 

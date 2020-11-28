@@ -1364,63 +1364,63 @@ Umka error description structure.
 ### API functions
 
 ```
-void *umkaAlloc(void);
+void UMKA_API *umkaAlloc(void);
 ```
 
 Allocates memory for the interpreter and returns the interpreter instance handle.
 
 ```
-bool umkaInit(void *umka, const char *fileName, int storageSize, int stackSize, 
-              int argc, char **argv);
+bool UMKA_API umkaInit(void *umka, const char *fileName, const char *sourceString, 
+                       int storageSize, int stackSize, int argc, char **argv);
 ```
 
-Initializes the interpreter instance. Here, `umka` is the interpreter instance handle, `fileName` is the Umka source file name, `storageSize` is the size, in bytes, of the static storage used for storing string literals and constant composite literals, `stackSize` is the fiber stack size, in slots, `argc` and `argv` represent the standard C/C++ command-line parameter data. Returns `true` if the source file has been successfully loaded.
+Initializes the interpreter instance. Here, `umka` is the interpreter instance handle, `fileName` is the Umka source file name, `sourceString` is an optional string buffer that contains the program source, `storageSize` is the size, in bytes, of the static storage used for storing string literals and constant composite literals, `stackSize` is the fiber stack size, in slots, `argc` and `argv` represent the standard C/C++ command-line parameter data. If `sourceString` is not `NULL`, the program source is read from this string rather than from a file. A fictitious `fileName` should nevertheless be specified. Returns `true` if the source has been successfully loaded.
 
 ```
-bool umkaCompile(void *umka);
+bool UMKA_API umkaCompile(void *umka);
 ```
 
 Compiles the Umka program into bytecode. Here, `umka` is the interpreter instance handle. Returns `true` if the compilation is successful and no compile-time errors are detected.
 
 ```
-bool umkaRun(void *umka);
+bool UMKA_API umkaRun(void *umka);
 ```
 
 Runs the Umka program previously compiled to bytecode, i. e., calls its `main()` function. Here, `umka` is the interpreter instance handle. Returns `true` if the program execution finishes successfully and no run-time errors are detected.
 
 ``` 
-bool umkaCall(void *umka, int entryOffset, 
-              int numParamSlots, UmkaStackSlot *params, UmkaStackSlot *result);
+bool UMKA_API umkaCall(void *umka, int entryOffset, 
+                       int numParamSlots, UmkaStackSlot *params, UmkaStackSlot *result);
 ```
 
 Calls the specific Umka function. Here, `umka` is the interpreter instance handle, `entryPoint` is the function entry point offset previously obtained by calling `umkaGetFunc()`,  `numParamSlots` is the number of Umka fiber stack slots occupied by the actual parameters passed to the function (equal to the number of parameters if no structured parameters are passed by value), `params` is the array of stack slots occupied by the actual parameters, `result` is the pointer to the stack slot to be occupied by the returned value. Returns `true` if the Umka function returns successfully and no run-time errors are detected.
 
 ```
-void umkaFree(void *umka);
+void UMKA_API umkaFree(void *umka);
 ```
 
 Deallocates memory allocated for the interpreter. Here, `umka` is the interpreter instance handle.
 
 ```
-void umkaGetError(void *umka, UmkaError *err);
+void UMKA_API umkaGetError(void *umka, UmkaError *err);
 ```
 
 Gets the last compile-time or run-time error. Here, `umka` is the interpreter instance handle, `err` is the pointer to the error description structure to be filled.
 
 ```
-void umkaAsm(void *umka, char *buf);
+void UMKA_API umkaAsm(void *umka, char *buf);
 ```
 
 Generates the Umka assembly listing for the Umka program previously compiled to bytecode. Here, `umka` is the interpreter instance handle, `buf` is the pointer to the string buffer to be filled.
 
 ```
-void umkaAddFunc(void *umka, const char *name, UmkaExternFunc entry);
+void UMKA_API umkaAddFunc(void *umka, const char *name, UmkaExternFunc entry);
 ```
 
 Adds a C/C++ function to the list of external functions that can be called from Umka. Here, `umka` is the interpreter instance handle, `name` is the function name, `entry` is the function pointer. 
 
 ```
-int umkaGetFunc(void *umka, const char *moduleName, const char *funcName);
+int UMKA_API umkaGetFunc(void *umka, const char *moduleName, const char *funcName);
 ```
 
 Gets an Umka function that can be called from C/C++ using `umkaCall()`.  Here, `umka` is the interpreter instance handle, `moduleName` is the Umka module name, `funcName` is the Umka function name. Returns the function entry point offset.

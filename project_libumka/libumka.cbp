@@ -17,6 +17,7 @@
 				<Option createStaticLib="1" />
 				<Compiler>
 					<Add option="-g" />
+					<Add option="-DUMKA_BUILD -fvisibility=hidden" />
 				</Compiler>
 			</Target>
 			<Target title="Release">

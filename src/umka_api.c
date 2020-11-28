@@ -52,7 +52,7 @@ void UMKA_API *umkaAlloc(void)
 }
 
 
-bool UMKA_API umkaInit(void *umka, const char *fileName, int storageSize, int stackSize, int argc, char **argv)
+bool UMKA_API umkaInit(void *umka, const char *fileName, const char *sourceString, int storageSize, int stackSize, int argc, char **argv)
 {
     Compiler *comp = umka;
     memset(comp, 0, sizeof(Compiler));
@@ -64,7 +64,7 @@ bool UMKA_API umkaInit(void *umka, const char *fileName, int storageSize, int st
 
     if (setjmp(comp->error.jumper) == 0)
     {
-        compilerInit(comp, fileName, storageSize, stackSize, argc, argv);
+        compilerInit(comp, fileName, sourceString, storageSize, stackSize, argc, argv);
         return true;
     }
     return false;

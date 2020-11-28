@@ -100,7 +100,7 @@ enum
 static unsigned int keywordHash[NUM_KEYWORDS];
 
 
-int lexInit(Lexer *lex, Storage *storage, DebugInfo *debug, const char *fileName, Error *error)
+int lexInit(Lexer *lex, Storage *storage, DebugInfo *debug, const char *fileName, const char *sourceString, Error *error)
 {
     // Fill keyword hashes
     for (int i = 0; i < NUM_KEYWORDS; i++)
@@ -127,28 +127,42 @@ int lexInit(Lexer *lex, Storage *storage, DebugInfo *debug, const char *fileName
     lex->debug->line = lex->line;
     lex->error = error;
 
-    FILE *file = fopen(lex->fileName, "rb");
-
-    if (!file)
+    int bufLen = 0;
+    if (sourceString)
     {
-        lex->error->handler(lex->error->context, "Cannot open file %s", lex->fileName);
-        return 0;
+        // Read source from a string buffer
+        bufLen = strlen(sourceString);
+        lex->buf = malloc(bufLen + 1);
+        strcpy(lex->buf, sourceString);
+        lex->buf[bufLen] = 0;
+    }
+    else
+    {
+        // Read source from a file
+        FILE *file = fopen(lex->fileName, "rb");
+
+        if (!file)
+        {
+            lex->error->handler(lex->error->context, "Cannot open file %s", lex->fileName);
+            return 0;
+        }
+
+        fseek(file, 0, SEEK_END);
+        bufLen = ftell(file);
+        rewind(file);
+
+        lex->buf = malloc(bufLen + 1);
+
+        if (fread(lex->buf, bufLen, 1, file) != 1)
+        {
+            lex->error->handler(lex->error->context, "Cannot read file %s", lex->fileName);
+            return 0;
+        }
+
+        lex->buf[bufLen] = 0;
+        fclose(file);
     }
 
-    fseek(file, 0, SEEK_END);
-    const int bufLen = ftell(file);
-    rewind(file);
-
-    lex->buf = malloc(bufLen + 1);
-
-    if (fread(lex->buf, bufLen, 1, file) != 1)
-    {
-        lex->error->handler(lex->error->context, "Cannot read file %s", lex->fileName);
-        return 0;
-    }
-
-    lex->buf[bufLen] = 0;
-    fclose(file);
     return bufLen;
 }
 

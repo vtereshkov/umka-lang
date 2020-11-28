@@ -120,7 +120,7 @@ typedef struct
 } Lexer;
 
 
-int lexInit(Lexer *lex, Storage *storage, DebugInfo *debug, const char *fileName, Error *error);
+int lexInit(Lexer *lex, Storage *storage, DebugInfo *debug, const char *fileName, const char *sourceString, Error *error);
 void lexFree(Lexer *lex);
 void lexNext(Lexer *lex);
 bool lexCheck(Lexer *lex, TokenKind kind);

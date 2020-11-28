@@ -33,7 +33,7 @@ int main(void)
     // Umka initialization
     int umkaInitBodies = 0, umkaDrawBodies = 0;
     void *umka = umkaAlloc();
-    bool umkaOk = umkaInit(umka, "3dcam.um", 1024 * 1024, 1024 * 1024, 0, NULL);
+    bool umkaOk = umkaInit(umka, "3dcam.um", NULL, 1024 * 1024, 1024 * 1024, 0, NULL);
     
     if (umkaOk)
     {

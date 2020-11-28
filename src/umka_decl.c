@@ -643,7 +643,7 @@ static void parseImportItem(Compiler *comp)
         int currentModule       = comp->blocks.module;
         DebugInfo currentDebug  = comp->debug;
         Lexer currentLex        = comp->lex;
-        lexInit(&comp->lex, &comp->storage, &comp->debug, path, &comp->error);
+        lexInit(&comp->lex, &comp->storage, &comp->debug, path, NULL, &comp->error);
 
         lexNext(&comp->lex);
         importedModule = parseModule(comp);

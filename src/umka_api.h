@@ -11,8 +11,8 @@
         #define UMKA_IMPORT __declspec(dllimport)
     #endif
 #else
-    #define UMKA_EXPORT __attribute__((visibility("default"))) 
-    #define UMKA_IMPORT __attribute__((visibility("default"))) 
+    #define UMKA_EXPORT __attribute__((visibility("default")))
+    #define UMKA_IMPORT __attribute__((visibility("default")))
 #endif
 
 #ifdef UMKA_BUILD
@@ -58,7 +58,7 @@ typedef struct
 
 
 void UMKA_API *umkaAlloc     (void);
-bool UMKA_API umkaInit       (void *umka, const char *fileName, int storageSize, int stackSize, int argc, char **argv);
+bool UMKA_API umkaInit       (void *umka, const char *fileName, const char *sourceString, int storageSize, int stackSize, int argc, char **argv);
 bool UMKA_API umkaCompile    (void *umka);
 bool UMKA_API umkaRun        (void *umka);
 bool UMKA_API umkaCall       (void *umka, int entryOffset, int numParamSlots, UmkaStackSlot *params, UmkaStackSlot *result);

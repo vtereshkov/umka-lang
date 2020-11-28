@@ -114,7 +114,7 @@ static void compilerDeclareExternalFuncs(Compiler *comp)
 }
 
 
-void compilerInit(Compiler *comp, const char *fileName, int storageSize, int stackSize, int argc, char **argv)
+void compilerInit(Compiler *comp, const char *fileName, const char *sourceString, int storageSize, int stackSize, int argc, char **argv)
 {
     storageInit  (&comp->storage, storageSize);
     moduleInit   (&comp->modules, &comp->error);
@@ -125,7 +125,7 @@ void compilerInit(Compiler *comp, const char *fileName, int storageSize, int sta
     constInit    (&comp->consts, &comp->error);
     genInit      (&comp->gen, &comp->debug, &comp->error);
     vmInit       (&comp->vm, stackSize, &comp->error);
-    lexInit      (&comp->lex, &comp->storage, &comp->debug, fileName, &comp->error);
+    lexInit      (&comp->lex, &comp->storage, &comp->debug, fileName, sourceString, &comp->error);
 
     comp->argc  = argc;
     comp->argv  = argv;
