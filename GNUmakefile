@@ -45,7 +45,7 @@ $(DYNAMIC_LIB): $(DYNAMIC_LIB_OBJ)
 	# Build shared library
 	$(CC) $(DYNAMIC_LDFLAGS) -o $(DYNAMIC_LIB) $^
 
-$(EXECUTABLE): $(STATIC_LIB) $(EXECUTABLE_OBJ) 
+$(EXECUTABLE): $(EXECUTABLE_OBJ) $(STATIC_LIB) 
 	# Build executable 
 	$(CC) $(STATIC_CFLAGS) -o $(EXECUTABLE) $^
 
