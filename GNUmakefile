@@ -1,4 +1,4 @@
-platform := $(shell (X=`uname -s`; echo $${X:0:10)))
+platform := $(shell (X=`uname -s`; echo $${X:0:10))
 ifeq ($(platform), Linux)
   LPATH = LD_LIBRARY_PATH
   STATIC_CFLAGS = -fPIC -O3 -Wall -Wno-format-security -DUMKA_STATIC
