@@ -36,7 +36,7 @@ endif
 endif
 
 ifndef LPATH
-$(warning Unrecognized kernel name $(platform) -- Unable to detect setting for LPATH)
+$(warning Unrecognized kernel name ${platform:0:10} -- Unable to detect setting for LPATH)
 endif
 
 STATIC_LIB_OBJ = src/umka_api_static.o src/umka_common_static.o src/umka_compiler_static.o src/umka_const_static.o src/umka_decl_static.o src/umka_expr_static.o src/umka_gen_static.o src/umka_ident_static.o src/umka_lexer_static.o src/umka_runtime_static.o src/umka_stmt_static.o src/umka_types_static.o src/umka_vm_static.o
