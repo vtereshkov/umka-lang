@@ -45,7 +45,7 @@ jobs:
   msys-build:
     runs-on: windows-latest
 
-    default:
+    defaults:
       run: 
         shell: msys2 {0}
 
