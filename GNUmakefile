@@ -1,4 +1,5 @@
-platform := $(shell (X=`uname -s`; echo $${X:0:10}))
+platform := $(shell uname -s)
+shortplatform := $(shell (X=`uname -s`; echo $${X:0:10}))
 ifeq ($(platform), Linux)
   LPATH = LD_LIBRARY_PATH
   STATIC_CFLAGS = -fPIC -O3 -Wall -Wno-format-security -DUMKA_STATIC
@@ -21,7 +22,7 @@ ifeq ($(platform), Darwin)
   EXECUTABLE_DEPS = 
   RANLIB = libtool -static -o  
 else
-ifeq ($(platform), MINGW64_NT)
+ifeq ($(shortplatform), MINGW64_NT)
   LPATH = PATH
   STATIC_CFLAGS = -fPIC -O3 -Wall -Wno-format-security -DUMKA_STATIC
   DYNAMIC_CFLAGS = -fPIC -O3 -Wall -fvisibility=hidden -DUMKA_BUILD
