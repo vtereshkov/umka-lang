@@ -21,7 +21,7 @@ ifeq ($(platform), Darwin)
   EXECUTABLE_DEPS = 
   RANLIB = libtool -static -o  
 else
-ifeq (X${platform:0:10), XMINGW64_NT)
+ifeq (X${platform:0:10}, XMINGW64_NT)
   LPATH = PATH
   STATIC_CFLAGS = -fPIC -O3 -Wall -Wno-format-security -DUMKA_STATIC
   DYNAMIC_CFLAGS = -fPIC -O3 -Wall -fvisibility=hidden -DUMKA_BUILD
