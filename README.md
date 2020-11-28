@@ -1,4 +1,5 @@
 ![](logo.png)
+
 [![CI](https://github.com/felix-lang/umka-lang/workflows/CI/badge.svg)](https://github.com/felix-lang/umka-lang/actions)
 
 # Welcome to Umka!
