@@ -7,7 +7,7 @@ ifeq ($(platform), Linux)
   DYNAMIC_LDFLAGS = -shared -lm
   STATIC_LIB = libumka.a
   DYNAMIC_LIB = libumka.so
-  RANLIB = ar -c
+  RANLIB = ar
 else
 ifeq ($(platform), Darwin)
   LPATH = DYLD_LIBRARY_PATH
