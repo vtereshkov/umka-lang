@@ -54,10 +54,11 @@ jobs:
       - uses: msys2/setup-msys2@v2 
         with:
           path-type: strict
+          release: false
           update: false 
-          install: >-
-            base-devel
-            git
+          #install: >-
+          #  base-devel
+          #  git
 
       - run: uname -a
 
@@ -79,7 +80,7 @@ jobs:
 
       # Build it
       - name: build 
-        run: type "Hello World" 
+        run: echo "Hello World" 
 
 
 
