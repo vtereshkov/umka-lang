@@ -54,7 +54,7 @@ jobs:
       - uses: msys2/setup-msys2@v2 
         with:
           path-type: strict
-          update: true
+          update: false 
           install: >-
             base-devel
             git
@@ -79,7 +79,7 @@ jobs:
 
       # Build it
       - name: build 
-        run: nmake all
+        run: type "Hello World" 
 
 
 
