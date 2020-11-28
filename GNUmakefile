@@ -19,7 +19,7 @@ ifeq ($(platform), Darwin)
   STATIC_LIB = libumka.a
   DYNAMIC_LIB = libumka.dylib
   EXECUTABLE_DEPS = 
-  RANLIB = libtool -static 
+  RANLIB = libtool -static -o  
 endif
 endif
 
