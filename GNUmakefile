@@ -70,4 +70,3 @@ src/%_static.o: src/%.c
 
 src/%_dynamic.o: src/%.c
 	$(CC) $(DYNAMIC_CFLAGS) -c -o $@ $^
-
