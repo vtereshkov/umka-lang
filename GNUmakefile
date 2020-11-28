@@ -7,6 +7,7 @@ ifeq ($(platform), Linux)
   DYNAMIC_LDFLAGS = -shared -lm
   STATIC_LIB = libumka.a
   DYNAMIC_LIB = libumka.so
+  EXECUTABLE_DEPS = -lm
   RANLIB = ar
 else
 ifeq ($(platform), Darwin)
@@ -17,6 +18,7 @@ ifeq ($(platform), Darwin)
   DYNAMIC_LDFLAGS = -shared
   STATIC_LIB = libumka.a
   DYNAMIC_LIB = libumka.dylib
+  EXECUTABLE_DEPS = 
   RANLIB = libtool -static 
 endif
 endif
@@ -47,7 +49,7 @@ $(DYNAMIC_LIB): $(DYNAMIC_LIB_OBJ)
 
 $(EXECUTABLE): $(EXECUTABLE_OBJ) $(STATIC_LIB) 
 	# Build executable 
-	$(CC) $(STATIC_CFLAGS) -o $(EXECUTABLE) $^
+	$(CC) $(STATIC_CFLAGS) -o $(EXECUTABLE) $^ $(EXECUTABLE_DEPS)
 
 src/%_static.o: src/%.c
 	$(CC) $(STATIC_CFLAGS) -c -o $@ $^
