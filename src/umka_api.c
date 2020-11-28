@@ -5,7 +5,6 @@
 #include <string.h>
 #include <stdarg.h>
 
-
 #include "umka_compiler.h"
 #include "umka_api.h"
 
@@ -47,13 +46,13 @@ static void runtimeError(void *context, const char *format, ...)
 
 // API functions
 
-void *umkaAlloc(void)
+void UMKA_API *umkaAlloc(void)
 {
     return malloc(sizeof(Compiler));
 }
 
 
-bool umkaInit(void *umka, const char *fileName, int storageSize, int stackSize, int argc, char **argv)
+bool UMKA_API umkaInit(void *umka, const char *fileName, int storageSize, int stackSize, int argc, char **argv)
 {
     Compiler *comp = umka;
     memset(comp, 0, sizeof(Compiler));
@@ -72,7 +71,7 @@ bool umkaInit(void *umka, const char *fileName, int storageSize, int stackSize, 
 }
 
 
-bool umkaCompile(void *umka)
+bool UMKA_API umkaCompile(void *umka)
 {
     Compiler *comp = umka;
 
@@ -85,7 +84,7 @@ bool umkaCompile(void *umka)
 }
 
 
-bool umkaRun(void *umka)
+bool UMKA_API umkaRun(void *umka)
 {
     Compiler *comp = umka;
 
@@ -98,7 +97,7 @@ bool umkaRun(void *umka)
 }
 
 
-bool umkaCall(void *umka, int entryOffset, int numParamSlots, UmkaStackSlot *params, UmkaStackSlot *result)
+bool UMKA_API umkaCall(void *umka, int entryOffset, int numParamSlots, UmkaStackSlot *params, UmkaStackSlot *result)
 {
     Compiler *comp = umka;
 
@@ -111,7 +110,7 @@ bool umkaCall(void *umka, int entryOffset, int numParamSlots, UmkaStackSlot *par
 }
 
 
-void umkaFree(void *umka)
+void UMKA_API umkaFree(void *umka)
 {
     Compiler *comp = umka;
     compilerFree(comp);
@@ -119,7 +118,7 @@ void umkaFree(void *umka)
 }
 
 
-void umkaGetError(void *umka, UmkaError *err)
+void UMKA_API umkaGetError(void *umka, UmkaError *err)
 {
     Compiler *comp = umka;
     strcpy(err->fileName, comp->error.fileName);
@@ -129,21 +128,21 @@ void umkaGetError(void *umka, UmkaError *err)
 }
 
 
-void umkaAsm(void *umka, char *buf)
+void UMKA_API umkaAsm(void *umka, char *buf)
 {
     Compiler *comp = umka;
     compilerAsm(comp, buf);
 }
 
 
-void umkaAddFunc(void *umka, const char *name, UmkaExternFunc entry)
+void UMKA_API umkaAddFunc(void *umka, const char *name, UmkaExternFunc entry)
 {
     Compiler *comp = umka;
     externalAdd(&comp->externals, name, entry);
 }
 
 
-int umkaGetFunc(void *umka, const char *moduleName, const char *funcName)
+int UMKA_API umkaGetFunc(void *umka, const char *moduleName, const char *funcName)
 {
     Compiler *comp = umka;
     return compilerGetFunc(comp, moduleName, funcName);
