@@ -57,10 +57,11 @@ jobs:
       - uses: ilammy/msvc-dev-cmd@v1 
 
       # Build it
-      - name: build 
-        run: echo "Hello World" 
       - name: check
         run: CL
+      - name: build
+        run: nmake /FGitHubActionsWindows.mak all
+ 
 
 
 
