@@ -45,31 +45,4 @@ jobs:
       - name: check
         run: ls
 
-  vs-build:
-    runs-on: windows-latest
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
-
-      #- uses: microsoft/setup-msbuild@v1.0.2
-      - uses: ilammy/msvc-dev-cmd@v1 
-
-      # Build it
-      - name: check
-        run: CL
-
-      - name: build
-        shell: cmd
-        run: nmake /FGithubActionsWindows.mak all
-
-      - name: dcheck
-        run: dir src
-      - name: rcheck
-        run: dir 
-
- 
-
-
 
