@@ -45,34 +45,6 @@ jobs:
       - name: check
         run: ls
 
-  msys-build:
-    runs-on: windows-latest
-
-    defaults:
-      run: 
-        shell: msys2 {0}
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      - uses: msys2/setup-msys2@v2 
-        with:
-          path-type: strict
-          release: false
-          update: false 
-          #install: >-
-          #  base-devel
-          #  git
-
-      - run: uname -s
-
-      - uses: actions/checkout@v2
-
-      # Build it
-      - name: build 
-        run: make -f GithubActionsMain.mak all
-      - name: check
-        run: ls
-
   vs-build:
     runs-on: windows-latest
 

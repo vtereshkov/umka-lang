@@ -21,23 +21,11 @@ ifeq ($(platform), Darwin)
   DYNAMIC_LIB = libumka.dylib
   EXECUTABLE_DEPS = 
   RANLIB = libtool -static -o  
-else
-ifeq ($(shortplatform), MINGW64_NT)
-  LPATH = PATH
-  STATIC_CFLAGS = -fPIC -O3 -Wall -Wno-format-security -DUMKA_STATIC
-  DYNAMIC_CFLAGS = -fPIC -O3 -Wall -fvisibility=hidden -DUMKA_BUILD
-  STATIC_LDFLAGS = -rs 
-  DYNAMIC_LDFLAGS = -shared -lm
-  STATIC_LIB = libumka.a
-  DYNAMIC_LIB = libumka.dll
-  EXECUTABLE_DEPS = -lm
-  RANLIB = ar
-endif
 endif
 endif
 
 ifndef LPATH
-$(warning Unrecognized kernel name ${platform} -- Unable to detect setting for LPATH)
+$(error Unrecognized kernel name ${platform} -- Unable to detect setting for LPATH)
 endif
 
 STATIC_LIB_OBJ = src/umka_api_static.o src/umka_common_static.o src/umka_compiler_static.o src/umka_const_static.o src/umka_decl_static.o src/umka_expr_static.o src/umka_gen_static.o src/umka_ident_static.o src/umka_lexer_static.o src/umka_runtime_static.o src/umka_stmt_static.o src/umka_types_static.o src/umka_vm_static.o
