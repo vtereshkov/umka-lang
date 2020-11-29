@@ -27,6 +27,7 @@ jobs:
       # Build it
       - name: build 
         run: make -f GithubActionsMain.mak all
+      - name: check
         run: ls
 
   macos-build:
@@ -41,6 +42,7 @@ jobs:
       # Build it
       - name: build 
         run: make -f GithubActionsMain.mak all
+      - name: check
         run: ls
 
   msys-build:
@@ -68,6 +70,7 @@ jobs:
       # Build it
       - name: build 
         run: make -f GithubActionsMain.mak all
+      - name: check
         run: ls
 
   vs-build:
@@ -83,6 +86,7 @@ jobs:
       # Build it
       - name: build 
         run: echo "Hello World" 
+      - name: check
         run: CL
 
 
