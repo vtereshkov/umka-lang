@@ -60,7 +60,10 @@ jobs:
       - name: check
         run: CL
       - name: build
-        run: nmake /FGithubActionsWindows.mak all
+        - run: | 
+           nmake /FGithubActionsWindows.mak all
+          shell: cmd
+
       - name: dcheck
         run: dir src
       - name: rcheck
