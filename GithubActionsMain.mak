@@ -29,7 +29,7 @@ ifeq ($(shortplatform), MINGW64_NT)
   STATIC_LDFLAGS = -rs 
   DYNAMIC_LDFLAGS = -shared -lm
   STATIC_LIB = libumka.a
-  DYNAMIC_LIB = libumka.so
+  DYNAMIC_LIB = libumka.dll
   EXECUTABLE_DEPS = -lm
   RANLIB = ar
 endif

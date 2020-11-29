@@ -26,7 +26,8 @@ jobs:
 
       # Build it
       - name: build 
-        run: make all
+        run: make -f GithubActionsMain.mak all
+        run: ls
 
   macos-build:
     # The type of runner that the job will run on
@@ -39,8 +40,8 @@ jobs:
 
       # Build it
       - name: build 
-        run: make all
-
+        run: make -f GithubActionsMain.mak all
+        run: ls
 
   msys-build:
     runs-on: windows-latest
@@ -66,7 +67,8 @@ jobs:
 
       # Build it
       - name: build 
-        run: make all
+        run: make -f GithubActionsMain.mak all
+        run: ls
 
   vs-build:
     runs-on: windows-latest
@@ -81,7 +83,7 @@ jobs:
       # Build it
       - name: build 
         run: echo "Hello World" 
-
+        run: CL
 
 
 
