@@ -127,6 +127,20 @@ proc_fooable:
 { "black" "blue" "brown" "cyan" "gray" "green" "magenta" "red" "white" "yellow" } 
 
 
+>>> Interfaces - 3
+
+woof
+meow
+meow
+woof
+meow
+meow
+woof
+meow
+meow
+woof
+
+
 >>> Multiple returns
 
 -3  { 6.000000 9.000000 }  true 
@@ -187,4 +201,4 @@ repr():
 a 
 fn 
 { 0.500000 0.700000 0.900000 } 
-0000000000597f10 
+00000000002f0800 

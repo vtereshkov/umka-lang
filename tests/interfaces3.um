@@ -1,0 +1,42 @@
+type (
+	Dog = struct { woof_count: int }
+	Cat = struct { meow_count: int }
+)
+
+type Speaker = interface {
+    speak(): str
+}
+
+fn (d: ^Dog) speak(): str {
+    d.woof_count++
+    return "woof"
+}
+
+fn new_dog(): Speaker {
+    return Dog { woof_count: 0 }
+}
+
+fn (c: ^Cat) speak(): str {
+    c.meow_count++
+    return "meow" 
+}
+
+fn new_cat(): Speaker {
+    return Cat { meow_count: 0 }
+}
+
+fn test*() {
+    for i in []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10} {
+    	var a: Speaker
+        if i % 3 == 1 {
+            a = new_dog()
+        } else {
+            a = new_cat()
+        }
+        printf(a.speak() + '\n')
+    }
+}
+
+fn main() {
+    test()
+}

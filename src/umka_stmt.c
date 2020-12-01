@@ -520,7 +520,7 @@ static void parseForHeader(Compiler *comp)
 // forInHeader = [ident ","] ident "in" expr.
 static void parseForInHeader(Compiler *comp, TokenKind lookaheadTokKind)
 {
-    Ident *indexIdent = NULL, *itemIdent = NULL;
+    Ident *indexIdent = NULL, *itemIdent = NULL, *collectionIdent = NULL;
     Type *collectionType;
     IdentName itemName;
 
@@ -548,12 +548,7 @@ static void parseForInHeader(Compiler *comp, TokenKind lookaheadTokKind)
     lexNext(&comp->lex);
     lexEat(&comp->lex, TOK_IN);
 
-    genForCondProlog(&comp->gen);
-
-    // Additional scope embracing expr (needed for timely garbage collection in expr, since it is computed at each iteration)
-    blocksEnter(&comp->blocks, NULL);
-
-    // Implicit conditional expr: len(collection) >= index
+    // expr
     parseExpr(comp, &collectionType, NULL);
 
     // Implicit dereferencing: x in a^ == x in a
@@ -564,9 +559,16 @@ static void parseForInHeader(Compiler *comp, TokenKind lookaheadTokKind)
         collectionType = collectionType->base;
     }
 
-    // Save collection for future use
-    genDup(&comp->gen);
-    genPopReg(&comp->gen, VM_REG_COMMON_2);
+    // Declare variable for the collection
+    collectionIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "__collection", collectionType, false);
+    doPushVarPtr(comp, collectionIdent);
+    genSwapChangeRefCntAssign(&comp->gen, collectionType);
+
+    genForCondProlog(&comp->gen);
+
+    // Implicit conditional expression: len(collection) > index
+    doPushVarPtr(comp, collectionIdent);
+    genDeref(&comp->gen, collectionType->kind);
 
     if (collectionType->kind == TYPE_ARRAY)
     {
@@ -587,31 +589,22 @@ static void parseForInHeader(Compiler *comp, TokenKind lookaheadTokKind)
     genDeref(&comp->gen, TYPE_INT);
     genBinary(&comp->gen, TOK_GREATER, TYPE_INT, 0);
 
-    // Additional scope embracing expr
-    doGarbageCollection(comp, blocksCurrent(&comp->blocks));
-    blocksLeave(&comp->blocks);
-
     genForCondEpilog(&comp->gen);
 
-    // Declare variable for collection item
+    // Declare variable for the collection item
     Type *itemType = (collectionType->kind == TYPE_STR) ? comp->charType : collectionType->base;
     itemIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, itemName, itemType, false);
-
-    // Additional scope embracing simpleStmt (needed for timely garbage collection in simpleStmt, since it is executed at each iteration)
-    blocksEnter(&comp->blocks, NULL);
 
     // Implicit simpleStmt: index++
     doPushVarPtr(comp, indexIdent);
     genUnary(&comp->gen, TOK_PLUSPLUS, TYPE_INT);
 
-    // Additional scope embracing simpleStmt
-    doGarbageCollection(comp, blocksCurrent(&comp->blocks));
-    blocksLeave(&comp->blocks);
-
     genForPostStmtEpilog(&comp->gen);
 
     // Get collection item pointer
-    genPushReg(&comp->gen, VM_REG_COMMON_2);
+    doPushVarPtr(comp, collectionIdent);
+    genDeref(&comp->gen, collectionType->kind);
+
     doPushVarPtr(comp, indexIdent);
     genDeref(&comp->gen, TYPE_INT);
 
