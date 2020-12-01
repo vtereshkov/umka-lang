@@ -3,7 +3,7 @@
 
 #include "umka_compiler.h"
 
-
+void doZeroVar(Compiler *comp, Ident *ident);
 void doResolveExtern(Compiler *comp);
 
 void parseAssignmentStmt(Compiler *comp, Type *type, Const *varPtrConstList);

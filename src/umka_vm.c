@@ -25,6 +25,7 @@ static const char *opcodeSpelling [] =
     "POP_REG",
     "DUP",
     "SWAP",
+    "ZERO",
     "DEREF",
     "ASSIGN",
     "CHANGE_REF_CNT",
@@ -1113,6 +1114,20 @@ static void doSwap(Fiber *fiber)
 }
 
 
+static void doZero(Fiber *fiber)
+{
+    void *ptr = (void *)(fiber->top++)->ptrVal;
+    int size = fiber->code[fiber->ip].operand.intVal;
+
+    if (size == sizeof(int64_t))
+        *(int64_t *)ptr = 0;
+    else
+        memset(ptr, 0, size);
+
+    fiber->ip++;
+}
+
+
 static void doDeref(Fiber *fiber, Error *error)
 {
     doBasicDeref(fiber->top, fiber->code[fiber->ip].typeKind, error);
@@ -1593,7 +1608,7 @@ static void doEnterFrame(Fiber *fiber, Error *error)
     fiber->base = fiber->top;
     fiber->top -= slots;
 
-    // Zero all local variables
+    // Zero the whole stack frame
     if (slots == 1)
         fiber->top->intVal = 0;
     else if (slots > 0)
@@ -1644,6 +1659,7 @@ static void vmLoop(VM *vm)
             case OP_POP_REG:                        doPopReg(fiber);                              break;
             case OP_DUP:                            doDup(fiber);                                 break;
             case OP_SWAP:                           doSwap(fiber);                                break;
+            case OP_ZERO:                           doZero(fiber);                                break;
             case OP_DEREF:                          doDeref(fiber, error);                        break;
             case OP_ASSIGN:                         doAssign(fiber, error);                       break;
             case OP_CHANGE_REF_CNT:                 doChangeRefCnt(fiber, pages, error);          break;
@@ -1749,6 +1765,7 @@ int vmAsm(int ip, Instruction *instr, char *buf)
         case OP_PUSH_REG:
         case OP_PUSH_STRUCT:
         case OP_POP_REG:
+        case OP_ZERO:
         case OP_ASSIGN:
         case OP_BINARY:
         case OP_GET_ARRAY_PTR:

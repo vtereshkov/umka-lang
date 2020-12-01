@@ -43,6 +43,7 @@ typedef enum
     OP_POP_REG,
     OP_DUP,
     OP_SWAP,
+    OP_ZERO,
     OP_DEREF,
     OP_ASSIGN,
     OP_CHANGE_REF_CNT,
