@@ -29,9 +29,9 @@ fn f2() {
 
 fn g2(): ^int {a := new(int); return a}
 
-fn h2(): st {
+fn h2(): ^st {
     d := new(int)
-    return st{x: 7, p: d, y: 5, q: d}
+    return &st{x: 7, p: d, y: 5, q: d}
 }
 
 fn test*() {

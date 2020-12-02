@@ -10,7 +10,7 @@ void doImplicitTypeConv (Compiler *comp, Type *dest, Type **src, Const *constant
 void doApplyOperator    (Compiler *comp, Type **type, Type **rightType, Const *constant, Const *rightConstant, TokenKind op, bool apply, bool convertLhs);
 
 Ident *parseQualIdent   (Compiler *comp);
-void parseDesignator    (Compiler *comp, Type **type, Const *constant, bool *isVar, bool *isCall);
+void parseDesignator    (Compiler *comp, Type **type, Const *constant, bool *isVar, bool *isCall, bool *isCompLit);
 void parseDesignatorList(Compiler *comp, Type **type, Const *constant, bool *isVar, bool *isCall);
 void parseExpr          (Compiler *comp, Type **type, Const *constant);
 void parseExprList      (Compiler *comp, Type **type, Type *destType, Const *constant);

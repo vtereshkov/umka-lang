@@ -2,9 +2,9 @@ import "../../import/std.um"
 
 
 type Expr* = struct {
-        atom: str
-        val: int
-        car, cdr: ^Expr
+    atom: str
+    val: int
+    car, cdr: ^Expr
 }
 
 
@@ -44,17 +44,12 @@ fn (e: ^Expr) toBool*(): bool {
 
 
 fn strExpr*(s: str): ^Expr {
-    e := new(Expr)
-    e.atom = s
-    return e
+    return &Expr{s, 0, null, null}
 }
 
 
 fn intExpr*(i: int): ^Expr {
-    e := new(Expr)
-    e.atom = "<number>"
-    e.val = i
-    return e
+    return &Expr{"<number>", i, null, null}
 }
 
 
@@ -86,10 +81,8 @@ fn cdr*(x: ^Expr): ^Expr {
 }
 
 
-fn cons*(x, y: ^Expr): ^Expr {
-    z := new(Expr)
-    z^ = Expr{"", 0, x, y} 
-    return z
+fn cons*(x, y: ^Expr): ^Expr { 
+    return &Expr{"", 0, x, y}
 }
 
 
