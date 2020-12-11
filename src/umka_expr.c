@@ -962,22 +962,58 @@ static void parseArrayOrStructLiteral(Compiler *comp, Type **type, Const *consta
 {
     lexEat(&comp->lex, TOK_LBRACE);
 
+    bool namedFields = false;
+    if ((*type)->kind == TYPE_STRUCT)
+    {
+        if (comp->lex.tok.kind == TOK_RBRACE)
+            namedFields = true;
+        else if (comp->lex.tok.kind == TOK_IDENT)
+        {
+            Lexer lookaheadLex = comp->lex;
+            lexNext(&lookaheadLex);
+            namedFields = lookaheadLex.tok.kind == TOK_COLON;
+        }
+    }
+
+    const int size = typeSize(&comp->types, *type);
     int bufOffset = 0;
+
     if (constant)
     {
         constant->ptrVal = (int64_t)&comp->storage.data[comp->storage.len];
-        comp->storage.len += typeSize(&comp->types, *type);
+        comp->storage.len += size;
+
+        if (namedFields)
+            constZero((void *)constant->ptrVal, size);
     }
     else
-        bufOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, *type));
+    {
+        bufOffset = identAllocStack(&comp->idents, &comp->blocks, size);
+
+        if (namedFields)
+        {
+            genPushLocalPtr(&comp->gen, bufOffset);
+            genZero(&comp->gen, size);
+        }
+    }
 
     int numItems = 0, itemOffset = 0;
     if (comp->lex.tok.kind != TOK_RBRACE)
     {
         while (1)
         {
-            if (numItems > (*type)->numItems - 1)
+            if (!namedFields && numItems > (*type)->numItems - 1)
                 comp->error.handler(comp->error.context, "Too many elements in literal");
+
+            // [ident ":"]
+            if (namedFields)
+            {
+                Field *field = typeAssertFindField(&comp->types, *type, comp->lex.tok.name);
+                itemOffset = field->offset;
+
+                lexNext(&comp->lex);
+                lexEat(&comp->lex, TOK_COLON);
+            }            
 
             if (!constant)
                 genPushLocalPtr(&comp->gen, bufOffset + itemOffset);
@@ -986,23 +1022,6 @@ static void parseArrayOrStructLiteral(Compiler *comp, Type **type, Const *consta
             Type *itemType;
             Const itemConstantBuf, *itemConstant = constant ? &itemConstantBuf : NULL;
             int itemSize = typeSize(&comp->types, expectedItemType);
-
-            // [ident ":"]
-            if ((*type)->kind == TYPE_STRUCT && comp->lex.tok.kind == TOK_IDENT)
-            {
-                Lexer lookaheadLex = comp->lex;
-                lexNext(&lookaheadLex);
-
-                if (lookaheadLex.tok.kind == TOK_COLON)
-                {
-                    Field *field = typeAssertFindField(&comp->types, *type, comp->lex.tok.name);
-                    if (field->offset != itemOffset)
-                        comp->error.handler(comp->error.context, "Wrong field position in literal");
-
-                    lexNext(&comp->lex);
-                    lexEat(&comp->lex, TOK_COLON);
-                }
-            }
 
             // expr
             parseExpr(comp, &itemType, itemConstant);
@@ -1017,14 +1036,15 @@ static void parseArrayOrStructLiteral(Compiler *comp, Type **type, Const *consta
                 genAssign(&comp->gen, expectedItemType->kind, itemSize);
 
             numItems++;
-            itemOffset += itemSize;
+            if (!namedFields)
+                itemOffset += itemSize;
 
             if (comp->lex.tok.kind != TOK_COMMA)
                 break;
             lexNext(&comp->lex);
         }
     }
-    if (numItems < (*type)->numItems)
+    if (!namedFields && numItems < (*type)->numItems)
         comp->error.handler(comp->error.context, "Too few elements in literal");
 
     if (!constant)

@@ -374,8 +374,8 @@ A type `S` can be explicitly converted to a type `T` if
 * `S` can be implicitly converted to `T`
 * `S` and `T` are ordinal types
 * `S` and `T` are pointer types
-* `S` is `str` and `T` is `[]char`
-* `S` is `[]char` and `T` is `str`
+* `S` is `str` and `T` is  an array of `char`
+* `S` is an array of `char` and `T` is `str`
 
 Note: Using explicit conversions between pointer types is considered unsafe in Umka.
 
