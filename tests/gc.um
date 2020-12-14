@@ -34,8 +34,18 @@ fn h2(): ^st {
     return &st{x: 7, p: d, y: 5, q: d}
 }
 
+fn foo(): int { 
+    var p: ^int
+    {
+        a := new([2]int)
+        a[1] = 7
+        p = &a[1]
+    }
+    return p^
+}
+
 fn test*() {
-    std.println("See any memory leak warnings?")
+    r := foo()
  
     a := new([1000] int)
     b := a
@@ -71,6 +81,8 @@ fn test*() {
     g2res := g2()
     
     new([1000000] int)
+
+    std.println("See any memory leak warnings?")
 }
 
 fn main() {

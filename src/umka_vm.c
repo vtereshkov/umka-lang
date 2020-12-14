@@ -110,14 +110,17 @@ static void pageFree(HeapPages *pages)
 }
 
 
-static HeapPage *pageAdd(HeapPages *pages, int size)
+static HeapPage *pageAdd(HeapPages *pages, int numChunks, int chunkSize)
 {
     HeapPage *page = malloc(sizeof(HeapPage));
 
+    const int size = numChunks * chunkSize;
+
     page->ptr = malloc(size);
     memset(page->ptr, 0, size);
-    page->size = size;
-    page->occupied = 0;
+    page->numChunks = numChunks;
+    page->numOccupiedChunks = 0;
+    page->chunkSize = chunkSize;
     page->refCnt = 0;
     page->prev = pages->last;
     page->next = NULL;
@@ -162,18 +165,39 @@ static void pageRemove(HeapPages *pages, HeapPage *page)
 }
 
 
+static HeapChunkHeader *pageGetChunkHeader(HeapPage *page, void *ptr)
+{
+    const int chunkOffset = (ptr - page->ptr) % page->chunkSize;
+    return (HeapChunkHeader *)((char *)ptr - chunkOffset);
+}
+
+
 static HeapPage *pageFind(HeapPages *pages, void *ptr)
 {
     for (HeapPage *page = pages->first; page; page = page->next)
-        if (ptr >= page->ptr && ptr < (void *)((char *)page->ptr + page->occupied))
+        if (ptr >= page->ptr && ptr < (void *)((char *)page->ptr + page->numChunks * page->chunkSize))
         {
-            HeapChunkHeader *chunk = (HeapChunkHeader *)((char *)ptr - sizeof(HeapChunkHeader));
+            HeapChunkHeader *chunk = pageGetChunkHeader(page, ptr);
             if (chunk->magic == VM_HEAP_CHUNK_MAGIC)
                 return page;
             return NULL;
         }
-
     return NULL;
+}
+
+
+static HeapPage *pageFindForAlloc(HeapPages *pages, int size)
+{
+    HeapPage *bestPage = NULL;
+    int bestSize = 1 << 30;
+
+    for (HeapPage *page = pages->first; page; page = page->next)
+        if (page->numOccupiedChunks < page->numChunks && page->chunkSize >= size && page->chunkSize < bestSize)
+        {
+            bestPage = page;
+            bestSize = page->chunkSize;
+        }
+    return bestPage;
 }
 
 
@@ -182,20 +206,25 @@ static void *chunkAlloc(HeapPages *pages, int size, Error *error)
     if (size < 0)
         error->handlerRuntime(error->context, "Allocated memory block size cannot be negative");
 
-    // Page layout: header, data, footer (char), header, data, footer (char)...
-    int chunkSize = sizeof(HeapChunkHeader) + align(size + 1, sizeof(int64_t));
-    int pageSize = chunkSize > VM_MIN_HEAP_PAGE ? chunkSize : VM_MIN_HEAP_PAGE;
+    // Page layout: header, data, footer (char), padding, header, data, footer (char), padding...
+    int chunkSize = align(sizeof(HeapChunkHeader) + align(size + 1, sizeof(int64_t)), VM_MIN_HEAP_CHUNK);
 
-    if (!pages->last || pages->last->occupied + chunkSize > pages->last->size)
-        pageAdd(pages, pageSize);
+    HeapPage *page = pageFindForAlloc(pages, chunkSize);
+    if (!page)
+    {
+        int numChunks = VM_MIN_HEAP_PAGE / chunkSize;
+        if (numChunks == 0)
+            numChunks = 1;
 
-    HeapChunkHeader *chunk = (HeapChunkHeader *)((char *)pages->last->ptr + pages->last->occupied);
+        page = pageAdd(pages, numChunks, chunkSize);
+    }
+
+    HeapChunkHeader *chunk = (HeapChunkHeader *)((char *)page->ptr + page->numOccupiedChunks * page->chunkSize);
     chunk->magic = VM_HEAP_CHUNK_MAGIC;
     chunk->refCnt = 1;
-    chunk->size = size;
 
-    pages->last->occupied += chunkSize;
-    pages->last->refCnt++;
+    page->numOccupiedChunks++;
+    page->refCnt++;
 
 #ifdef DEBUG_REF_CNT
     printf("Add chunk at %p\n", (void *)chunk + sizeof(HeapChunkHeader));
@@ -207,7 +236,7 @@ static void *chunkAlloc(HeapPages *pages, int size, Error *error)
 
 static void chunkChangeRefCnt(HeapPages *pages, HeapPage *page, void *ptr, int delta)
 {
-    HeapChunkHeader *chunk = (HeapChunkHeader *)((char *)ptr - sizeof(HeapChunkHeader));
+    HeapChunkHeader *chunk = pageGetChunkHeader(page, ptr);
 
     // TODO: double-check the suspicious condition
     if (chunk->refCnt > 0)
@@ -415,7 +444,7 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
                 else
                 {
                     // Traverse children only before removing the last remaining ref
-                    HeapChunkHeader *chunk = (HeapChunkHeader *)((char *)ptr - sizeof(HeapChunkHeader));
+                    HeapChunkHeader *chunk = pageGetChunkHeader(page, ptr);
                     if (chunk->refCnt == 1 && typeKindGarbageCollected(type->base->kind))
                     {
                         void *data = ptr;
@@ -469,7 +498,7 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
                 else
                 {
                     // Traverse children only before removing the last remaining ref
-                    HeapChunkHeader *chunk = (HeapChunkHeader *)((char *)array->data - sizeof(HeapChunkHeader));
+                    HeapChunkHeader *chunk = pageGetChunkHeader(page, array->data);
                     if (chunk->refCnt == 1 && typeKindGarbageCollected(type->base->kind))
                     {
                         char *itemPtr = array->data;
@@ -523,7 +552,7 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
             if (page)
             {
                 // Don't use ref counting for the fiber stack, otherwise every local variable will also be ref-counted
-                HeapChunkHeader *chunk = (HeapChunkHeader *)((char *)ptr - sizeof(HeapChunkHeader));
+                HeapChunkHeader *chunk = pageGetChunkHeader(page, ptr);
                 if (chunk->refCnt == 1 && tokKind == TOK_MINUSMINUS)
                     free(((Fiber *)ptr)->stack);
             }

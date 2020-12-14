@@ -24,6 +24,7 @@ enum
     VM_REG_IO_COUNT      = VM_NUM_REGS - 1,
 
     VM_MIN_FREE_STACK    = 1024,                    // Slots
+    VM_MIN_HEAP_CHUNK    = 64,                      // Bytes
     VM_MIN_HEAP_PAGE     = 1024 * 1024,             // Bytes
 
     VM_HEAP_CHUNK_MAGIC  = 0x1234567887654321LL,
@@ -147,7 +148,7 @@ typedef struct
 typedef struct tagHeapPage
 {
     void *ptr;
-    int size, occupied;
+    int numChunks, numOccupiedChunks, chunkSize;
     int refCnt;
     struct tagHeapPage *prev, *next;
 } HeapPage;
@@ -163,7 +164,6 @@ typedef struct
 {
     int64_t magic;
     int refCnt;
-    int size;
 } HeapChunkHeader;
 
 
