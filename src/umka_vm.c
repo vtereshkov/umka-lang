@@ -36,6 +36,7 @@ static const char *opcodeSpelling [] =
     "GET_DYNARRAY_PTR",
     "GET_FIELD_PTR",
     "ASSERT_TYPE",
+    "ASSERT_WEAK_PTR",
     "GOTO",
     "GOTO_IF",
     "CALL",
@@ -1485,6 +1486,19 @@ static void doAssertType(Fiber *fiber)
 }
 
 
+static void doAssertWeakPtr(Fiber *fiber, HeapPages *pages)
+{
+    void *ptr = (void *)fiber->top->ptrVal;
+
+    HeapPage *page = pageFind(pages, ptr);
+    if (!page || pageGetChunkHeader(page, ptr)->refCnt == 0)
+        ptr = NULL;
+
+    fiber->top->ptrVal = (int64_t)ptr;
+    fiber->ip++;
+}
+
+
 static void doGoto(Fiber *fiber)
 {
     fiber->ip = fiber->code[fiber->ip].operand.intVal;
@@ -1699,6 +1713,7 @@ static void vmLoop(VM *vm)
             case OP_GET_DYNARRAY_PTR:               doGetDynArrayPtr(fiber, error);               break;
             case OP_GET_FIELD_PTR:                  doGetFieldPtr(fiber, error);                  break;
             case OP_ASSERT_TYPE:                    doAssertType(fiber);                          break;
+            case OP_ASSERT_WEAK_PTR:                doAssertWeakPtr(fiber, pages);                break;
             case OP_GOTO:                           doGoto(fiber);                                break;
             case OP_GOTO_IF:                        doGotoIf(fiber);                              break;
             case OP_CALL:                           doCall(fiber, error);                         break;

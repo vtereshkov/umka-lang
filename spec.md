@@ -186,9 +186,7 @@ Umka supports the  `real32` and  `real`  floating-point types.  The  `real`  is 
 
 A variable that stores a memory address of another variable has a pointer type. The type of that another variable is called the *base type* of the pointer type. The pointer type is specified by a `^`  followed by the base type specification. If the base type is unknown, it should be specified as `void`.
 
-Umka performs automatic memory management using reference counting. All pointers are reference-counted by default. However, in processing data structures with cyclic references (like doubly-linked lists), reference counting is unable to deallocate memory properly. In this case, one of the pointers that constitute the cycle can be declared `weak` . A weak pointer is not reference-counted and its existence does not prevent the pointed-to variable from being deallocated. 
-
-Note: Using weak pointers is considered unsafe in Umka. 
+Umka performs automatic memory management using reference counting. All pointers are reference-counted by default. However, in processing data structures with cyclic references (like doubly-linked lists), reference counting is unable to deallocate memory properly. In this case, one of the pointers that constitute the cycle can be declared `weak` . A weak pointer is not reference-counted and its existence does not prevent the pointed-to variable from being deallocated. A weak pointer cannot be dereferenced. Instead, it should be first converted to a conventional (or strong) pointer of the same base type. If the weak pointer does not point to a valid dynamically allocated memory block, the result of this conversion is `null`.
 
 Syntax:
 
@@ -340,6 +338,7 @@ The `fiber` type represents a fiber context to use in multitasking.
 Two types are *equivalent* if
 
 * They are the same type
+* They are pointer types and have equivalent base types and, if one of them is weak, the other is also weak
 * They are array types and have equal length and equivalent item types
 * They are dynamic array types and have equivalent item types
 * They are structure or interface types and have equal number of fields, equal field names and equivalent field types
@@ -359,13 +358,13 @@ Two types are *compatible* if
 If the type `S` is given where some other type `T` is expected, the type `S` is implicitly converted to `T` if
 
 * `S` and `T` are compatible
-
 * `S` is an integer type and `T` is a real type
 * `S` is `char` and `T` is `str`
 * `S` is an array type and `T` is a dynamic array type and the item types of `S` and `T` are equivalent.
 * `S` is a pointer to a dynamic array and `T` is a pointer to an array and  the item types of `S` and `T` are equivalent
 * `S` is an interface type and `T` is a type that implements all the methods of `S` 
 * `S` is a pointer type and `T` is an interface type
+* `S` is a weak pointer type and `T` is a strong pointer type and the base types of `S` and `T` are equivalent 
 
 #### Explicit conversions
 

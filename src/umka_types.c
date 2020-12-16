@@ -220,7 +220,7 @@ bool typeEquivalent(Type *left, Type *right)
     {
         // Pointers
         if (left->kind == TYPE_PTR)
-            return typeEquivalent(left->base, right->base);
+            return typeEquivalent(left->base, right->base) && left->weak == right->weak;
 
         // Arrays
         else if (left->kind == TYPE_ARRAY)
@@ -346,6 +346,14 @@ bool typeCompatible(Type *left, Type *right, bool symmetric)
         // Null can be compared to any pointer
         if (left->base->kind == TYPE_NULL && symmetric)
             return true;
+
+        // Any pointer can be assigned to a weak pointer of the same base type
+        if (left->weak)
+            return typeEquivalent(left->base, right->base);
+
+        // Any pointer can be compared to a weak pointer of the same base type
+        if (right->weak && symmetric)
+            return typeEquivalent(left->base, right->base);
     }
     return false;
 }
@@ -542,6 +550,10 @@ static char *typeSpellingRecursive(Type *type, char *buf, int depth)
     else
     {
         int len = 0;
+
+        if (type->weak)
+            len += sprintf(buf + len, "weak ");
+
         if (type->kind == TYPE_ARRAY)
             len += sprintf(buf + len, "[%d]", type->numItems);
         else if (typeExprListStruct(type))
@@ -555,7 +567,7 @@ static char *typeSpellingRecursive(Type *type, char *buf, int depth)
             len += sprintf(buf + len, "}");
         }
         else
-            sprintf(buf, "%s", spelling[type->kind]);
+            sprintf(buf + len, "%s", spelling[type->kind]);
 
         if (type->kind == TYPE_PTR || type->kind == TYPE_ARRAY || type->kind == TYPE_DYNARRAY)
         {

@@ -354,6 +354,13 @@ void genAssertType(CodeGen *gen, Type *type)
 }
 
 
+void genAssertWeakPtr(CodeGen *gen)
+{
+    const Instruction instr = {.opcode = OP_ASSERT_WEAK_PTR, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = 0};
+    genAddInstr(gen, &instr);
+}
+
+
 void genGoto(CodeGen *gen, int dest)
 {
     const Instruction instr = {.opcode = OP_GOTO, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = dest};
