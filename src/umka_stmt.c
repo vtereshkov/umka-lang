@@ -557,8 +557,7 @@ static void parseForInHeader(Compiler *comp, TokenKind lookaheadTokKind)
         if (collectionType->weak)
             comp->error.handler(comp->error.context, "Weak pointer cannot be dereferenced");
 
-        if (!typeStructured(collectionType->base))
-            genDeref(&comp->gen, collectionType->base->kind);
+        genDeref(&comp->gen, collectionType->base->kind);
         collectionType = collectionType->base;
     }
 
@@ -627,8 +626,7 @@ static void parseForInHeader(Compiler *comp, TokenKind lookaheadTokKind)
     }
 
     // Get collection item value
-    if (!typeStructured(itemType))
-        genDeref(&comp->gen, itemType->kind);
+    genDeref(&comp->gen, itemType->kind);
 
     // Assign collection item to iteration variable
     doPushVarPtr(comp, itemIdent);

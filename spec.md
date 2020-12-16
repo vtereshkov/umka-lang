@@ -338,7 +338,7 @@ The `fiber` type represents a fiber context to use in multitasking.
 Two types are *equivalent* if
 
 * They are the same type
-* They are pointer types and have equivalent base types and, if one of them is weak, the other is also weak
+* They are pointer types and have equivalent base types and both are either strong or weak
 * They are array types and have equal length and equivalent item types
 * They are dynamic array types and have equivalent item types
 * They are structure or interface types and have equal number of fields, equal field names and equivalent field types
@@ -349,7 +349,8 @@ Two types are *compatible* if
 * They are equivalent
 * They are integer types
 * They are real types
-* They are pointers and one of them either has the `void` base type, or is `null`.
+* They are pointer types and the left-hand side pointer type has the `void` base type or the right-hand side is `null` 
+* They are pointer types and have equivalent base types and the left-hand side pointer type is weak and the right-hand side pointer type is strong
 
 ### Type conversions
 
