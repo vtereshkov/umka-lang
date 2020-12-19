@@ -211,10 +211,24 @@ bool typeGarbageCollected(Type *type)
 }
 
 
-static bool typeEquivalentRecursive(Type *left, Type *right, int depth)
+typedef struct tagTypeEquivalenceHypothesis
 {
-    if (depth <= 0)
-        return false;
+    Type *left;
+    Type *right;
+    struct tagTypeEquivalenceHypothesis *next;
+} TypeEquivalenceHypothesis;
+
+
+static bool typeEquivalentRecursive(Type *left, Type *right, TypeEquivalenceHypothesis *hypotheses)
+{
+    TypeEquivalenceHypothesis *prev_hypo = hypotheses;
+    while (prev_hypo && !(prev_hypo->left == left && prev_hypo->right == right))
+        prev_hypo = prev_hypo->next;
+
+    if (prev_hypo)
+        return true;
+
+    TypeEquivalenceHypothesis cur_hypothesis = { left, right, hypotheses };
 
     if (left == right)
         return true;
@@ -223,7 +237,7 @@ static bool typeEquivalentRecursive(Type *left, Type *right, int depth)
     {
         // Pointers
         if (left->kind == TYPE_PTR)
-            return typeEquivalentRecursive(left->base, right->base, depth - 1) && left->weak == right->weak;
+            return typeEquivalentRecursive(left->base, right->base, &cur_hypothesis) && left->weak == right->weak;
 
         // Arrays
         else if (left->kind == TYPE_ARRAY)
@@ -232,12 +246,12 @@ static bool typeEquivalentRecursive(Type *left, Type *right, int depth)
             if (left->numItems != right->numItems)
                 return false;
 
-            return typeEquivalentRecursive(left->base, right->base, depth - 1);
+            return typeEquivalentRecursive(left->base, right->base, &cur_hypothesis);
         }
 
         // Dynamic arrays
         else if (left->kind == TYPE_DYNARRAY)
-            return typeEquivalentRecursive(left->base, right->base, depth - 1);
+            return typeEquivalentRecursive(left->base, right->base, &cur_hypothesis);
 
         // Strings
         else if (left->kind == TYPE_STR)
@@ -258,7 +272,7 @@ static bool typeEquivalentRecursive(Type *left, Type *right, int depth)
                     return false;
 
                 // Type
-                if (!typeEquivalentRecursive(left->field[i]->type, right->field[i]->type, depth - 1))
+                if (!typeEquivalentRecursive(left->field[i]->type, right->field[i]->type, &cur_hypothesis))
                     return false;
             }
             return true;
@@ -285,7 +299,7 @@ static bool typeEquivalentRecursive(Type *left, Type *right, int depth)
                     return false;
 
                 // Type
-                if (!typeEquivalentRecursive(left->sig.param[i]->type, right->sig.param[i]->type, depth - 1))
+                if (!typeEquivalentRecursive(left->sig.param[i]->type, right->sig.param[i]->type, &cur_hypothesis))
                     return false;
 
                 // Default value
@@ -294,7 +308,7 @@ static bool typeEquivalentRecursive(Type *left, Type *right, int depth)
             }
 
             // Result type
-            if (!typeEquivalentRecursive(left->sig.resultType, right->sig.resultType, depth - 1))
+            if (!typeEquivalentRecursive(left->sig.resultType, right->sig.resultType, &cur_hypothesis))
                 return false;
 
             return true;
@@ -310,8 +324,7 @@ static bool typeEquivalentRecursive(Type *left, Type *right, int depth)
 
 bool typeEquivalent(Type *left, Type *right)
 {
-    enum {MAX_TYPE_EQUIVALENCE_DEPTH = 500};
-    return typeEquivalentRecursive(left, right, MAX_TYPE_EQUIVALENCE_DEPTH);
+    return typeEquivalentRecursive(left, right, NULL);
 }
 
 

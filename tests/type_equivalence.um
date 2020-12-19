@@ -1,0 +1,42 @@
+type (
+    P1 = ^S1
+    S1 = struct {
+      x: int
+      next: P1
+    }
+)
+
+type (
+    P2 = ^S2
+    S2 = struct {
+      x: int
+      next: P2
+    }
+)
+
+type (
+    P3 = ^S3
+    P4 = ^S4
+
+    S3 = struct {
+      x: int
+      next: P4
+    }
+
+    S4 = struct {
+      x: int
+      next: P3
+    }
+)
+
+fn test*() {
+    var p1 : P1
+    var p3 : P3
+    var p4 : P4
+
+    p1 = new(S2)
+    p3 = p1
+    p4 = p1
+
+    printf("    ...passed\n");
+}
