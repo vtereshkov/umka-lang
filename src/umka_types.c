@@ -222,8 +222,7 @@ typedef struct tagTypeEquivalenceHypothesis
 static bool typeEquivalentRecursive(Type *left, Type *right, TypeEquivalenceHypothesis *hypotheses)
 {
     TypeEquivalenceHypothesis *prev_hypo = hypotheses;
-    while (prev_hypo != NULL &&
-           !(prev_hypo->left == left && prev_hypo->right == right))
+    while (prev_hypo && !(prev_hypo->left == left && prev_hypo->right == right))
         prev_hypo = prev_hypo->next;
 
     if (prev_hypo)
