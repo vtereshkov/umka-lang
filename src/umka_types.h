@@ -93,6 +93,13 @@ typedef struct tagType
 } Type;
 
 
+typedef struct tagMemoizedTypePair
+{
+    Type *left, *right;
+    struct tagMemoizedTypePair *next;
+} MemoizedTypePair;
+
+
 typedef struct
 {
     Type *first, *last;

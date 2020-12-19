@@ -211,25 +211,19 @@ bool typeGarbageCollected(Type *type)
 }
 
 
-typedef struct tagTypeEquivalenceHypothesis
+static bool typeEquivalentRecursive(Type *left, Type *right, MemoizedTypePair *first)
 {
-    Type *left;
-    Type *right;
-    struct tagTypeEquivalenceHypothesis *next;
-} TypeEquivalenceHypothesis;
+    // Recursively defined types visited before
+    MemoizedTypePair *memo = first;
+    while (memo && !(memo->left == left && memo->right == right))
+        memo = memo->next;
 
-
-static bool typeEquivalentRecursive(Type *left, Type *right, TypeEquivalenceHypothesis *hypotheses)
-{
-    TypeEquivalenceHypothesis *prev_hypo = hypotheses;
-    while (prev_hypo && !(prev_hypo->left == left && prev_hypo->right == right))
-        prev_hypo = prev_hypo->next;
-
-    if (prev_hypo)
+    if (memo)
         return true;
 
-    TypeEquivalenceHypothesis cur_hypothesis = { left, right, hypotheses };
+    MemoizedTypePair newMemo = {left, right, first};
 
+    // Same types
     if (left == right)
         return true;
 
@@ -237,7 +231,7 @@ static bool typeEquivalentRecursive(Type *left, Type *right, TypeEquivalenceHypo
     {
         // Pointers
         if (left->kind == TYPE_PTR)
-            return typeEquivalentRecursive(left->base, right->base, &cur_hypothesis) && left->weak == right->weak;
+            return typeEquivalentRecursive(left->base, right->base, &newMemo) && left->weak == right->weak;
 
         // Arrays
         else if (left->kind == TYPE_ARRAY)
@@ -246,12 +240,12 @@ static bool typeEquivalentRecursive(Type *left, Type *right, TypeEquivalenceHypo
             if (left->numItems != right->numItems)
                 return false;
 
-            return typeEquivalentRecursive(left->base, right->base, &cur_hypothesis);
+            return typeEquivalentRecursive(left->base, right->base, &newMemo);
         }
 
         // Dynamic arrays
         else if (left->kind == TYPE_DYNARRAY)
-            return typeEquivalentRecursive(left->base, right->base, &cur_hypothesis);
+            return typeEquivalentRecursive(left->base, right->base, &newMemo);
 
         // Strings
         else if (left->kind == TYPE_STR)
@@ -272,7 +266,7 @@ static bool typeEquivalentRecursive(Type *left, Type *right, TypeEquivalenceHypo
                     return false;
 
                 // Type
-                if (!typeEquivalentRecursive(left->field[i]->type, right->field[i]->type, &cur_hypothesis))
+                if (!typeEquivalentRecursive(left->field[i]->type, right->field[i]->type, &newMemo))
                     return false;
             }
             return true;
@@ -299,7 +293,7 @@ static bool typeEquivalentRecursive(Type *left, Type *right, TypeEquivalenceHypo
                     return false;
 
                 // Type
-                if (!typeEquivalentRecursive(left->sig.param[i]->type, right->sig.param[i]->type, &cur_hypothesis))
+                if (!typeEquivalentRecursive(left->sig.param[i]->type, right->sig.param[i]->type, &newMemo))
                     return false;
 
                 // Default value
@@ -308,7 +302,7 @@ static bool typeEquivalentRecursive(Type *left, Type *right, TypeEquivalenceHypo
             }
 
             // Result type
-            if (!typeEquivalentRecursive(left->sig.resultType, right->sig.resultType, &cur_hypothesis))
+            if (!typeEquivalentRecursive(left->sig.resultType, right->sig.resultType, &newMemo))
                 return false;
 
             return true;

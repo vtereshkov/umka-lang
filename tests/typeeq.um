@@ -40,3 +40,7 @@ fn test*() {
 
     printf("    ...passed\n");
 }
+
+fn main() {
+    test()
+}
