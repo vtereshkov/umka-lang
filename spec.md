@@ -342,9 +342,7 @@ Two types are *equivalent* if
 * They are array types and have equal length and equivalent item types
 * They are dynamic array types and have equivalent item types
 * They are structure or interface types and have equal number of fields, equal field names and equivalent field types
-* They are function types, which are both either methods or non-methods, and have equal number of parameters, equal parameter names, equivalent parameter types, equal parameter default values (excluding the receiver parameter) and equivalent result type
-
-If type equivalence cannot be proven in a sufficiently large (implementation-dependent) number of recursive checks, the types are considered non-equivalent.  
+* They are function types, which are both either methods or non-methods, and have equal number of parameters, equal parameter names, equivalent parameter types, equal parameter default values (excluding the receiver parameter) and equivalent result type.
 
 Two types are *compatible* if
 
