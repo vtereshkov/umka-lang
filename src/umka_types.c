@@ -211,8 +211,11 @@ bool typeGarbageCollected(Type *type)
 }
 
 
-bool typeEquivalent(Type *left, Type *right)
+static bool typeEquivalentRecursive(Type *left, Type *right, int depth)
 {
+    if (depth <= 0)
+        return false;
+
     if (left == right)
         return true;
 
@@ -220,7 +223,7 @@ bool typeEquivalent(Type *left, Type *right)
     {
         // Pointers
         if (left->kind == TYPE_PTR)
-            return typeEquivalent(left->base, right->base) && left->weak == right->weak;
+            return typeEquivalentRecursive(left->base, right->base, depth - 1) && left->weak == right->weak;
 
         // Arrays
         else if (left->kind == TYPE_ARRAY)
@@ -229,12 +232,12 @@ bool typeEquivalent(Type *left, Type *right)
             if (left->numItems != right->numItems)
                 return false;
 
-            return typeEquivalent(left->base, right->base);
+            return typeEquivalentRecursive(left->base, right->base, depth - 1);
         }
 
         // Dynamic arrays
         else if (left->kind == TYPE_DYNARRAY)
-            return typeEquivalent(left->base, right->base);
+            return typeEquivalentRecursive(left->base, right->base, depth - 1);
 
         // Strings
         else if (left->kind == TYPE_STR)
@@ -255,7 +258,7 @@ bool typeEquivalent(Type *left, Type *right)
                     return false;
 
                 // Type
-                if (!typeEquivalent(left->field[i]->type, right->field[i]->type))
+                if (!typeEquivalentRecursive(left->field[i]->type, right->field[i]->type, depth - 1))
                     return false;
             }
             return true;
@@ -282,7 +285,7 @@ bool typeEquivalent(Type *left, Type *right)
                     return false;
 
                 // Type
-                if (!typeEquivalent(left->sig.param[i]->type, right->sig.param[i]->type))
+                if (!typeEquivalentRecursive(left->sig.param[i]->type, right->sig.param[i]->type, depth - 1))
                     return false;
 
                 // Default value
@@ -291,7 +294,7 @@ bool typeEquivalent(Type *left, Type *right)
             }
 
             // Result type
-            if (!typeEquivalent(left->sig.resultType, right->sig.resultType))
+            if (!typeEquivalentRecursive(left->sig.resultType, right->sig.resultType, depth - 1))
                 return false;
 
             return true;
@@ -302,6 +305,13 @@ bool typeEquivalent(Type *left, Type *right)
             return true;
     }
     return false;
+}
+
+
+bool typeEquivalent(Type *left, Type *right)
+{
+    enum {MAX_TYPE_EQUIVALENCE_DEPTH = 500};
+    return typeEquivalentRecursive(left, right, MAX_TYPE_EQUIVALENCE_DEPTH);
 }
 
 
