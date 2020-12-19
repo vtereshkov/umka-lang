@@ -211,17 +211,17 @@ bool typeGarbageCollected(Type *type)
 }
 
 
-static bool typeEquivalentRecursive(Type *left, Type *right, MemoizedTypePair *first)
+static bool typeEquivalentRecursive(Type *left, Type *right, VisitedTypePair *firstPair)
 {
-    // Recursively defined types visited before
-    MemoizedTypePair *memo = first;
-    while (memo && !(memo->left == left && memo->right == right))
-        memo = memo->next;
+    // Recursively defined types visited before (need to check first in order to break a possible circular definition)
+    VisitedTypePair *pair = firstPair;
+    while (pair && !(pair->left == left && pair->right == right))
+        pair = pair->next;
 
-    if (memo)
+    if (pair)
         return true;
 
-    MemoizedTypePair newMemo = {left, right, first};
+    VisitedTypePair newPair = {left, right, firstPair};
 
     // Same types
     if (left == right)
@@ -231,7 +231,7 @@ static bool typeEquivalentRecursive(Type *left, Type *right, MemoizedTypePair *f
     {
         // Pointers
         if (left->kind == TYPE_PTR)
-            return typeEquivalentRecursive(left->base, right->base, &newMemo) && left->weak == right->weak;
+            return typeEquivalentRecursive(left->base, right->base, &newPair) && left->weak == right->weak;
 
         // Arrays
         else if (left->kind == TYPE_ARRAY)
@@ -240,12 +240,12 @@ static bool typeEquivalentRecursive(Type *left, Type *right, MemoizedTypePair *f
             if (left->numItems != right->numItems)
                 return false;
 
-            return typeEquivalentRecursive(left->base, right->base, &newMemo);
+            return typeEquivalentRecursive(left->base, right->base, &newPair);
         }
 
         // Dynamic arrays
         else if (left->kind == TYPE_DYNARRAY)
-            return typeEquivalentRecursive(left->base, right->base, &newMemo);
+            return typeEquivalentRecursive(left->base, right->base, &newPair);
 
         // Strings
         else if (left->kind == TYPE_STR)
@@ -266,7 +266,7 @@ static bool typeEquivalentRecursive(Type *left, Type *right, MemoizedTypePair *f
                     return false;
 
                 // Type
-                if (!typeEquivalentRecursive(left->field[i]->type, right->field[i]->type, &newMemo))
+                if (!typeEquivalentRecursive(left->field[i]->type, right->field[i]->type, &newPair))
                     return false;
             }
             return true;
@@ -293,7 +293,7 @@ static bool typeEquivalentRecursive(Type *left, Type *right, MemoizedTypePair *f
                     return false;
 
                 // Type
-                if (!typeEquivalentRecursive(left->sig.param[i]->type, right->sig.param[i]->type, &newMemo))
+                if (!typeEquivalentRecursive(left->sig.param[i]->type, right->sig.param[i]->type, &newPair))
                     return false;
 
                 // Default value
@@ -302,7 +302,7 @@ static bool typeEquivalentRecursive(Type *left, Type *right, MemoizedTypePair *f
             }
 
             // Result type
-            if (!typeEquivalentRecursive(left->sig.resultType, right->sig.resultType, &newMemo))
+            if (!typeEquivalentRecursive(left->sig.resultType, right->sig.resultType, &newPair))
                 return false;
 
             return true;
