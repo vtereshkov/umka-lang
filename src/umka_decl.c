@@ -573,11 +573,15 @@ static void parseFnDecl(Compiler *comp)
     strcpy(name, comp->lex.tok.name);
 
     // Check for method/field name collision
-    if (fnType->sig.method && fnType->sig.param[0]->type->kind == TYPE_STRUCT)
+    if (fnType->sig.method)
     {
-        Field *field = typeFindField(fnType->sig.param[0]->type, name);
-        if (field)
-            comp->error.handler(comp->error.context, "Structure already has field %s", name);
+        Type *rcvBaseType = fnType->sig.param[0]->type->base;
+        if (rcvBaseType->kind == TYPE_STRUCT || rcvBaseType->kind == TYPE_INTERFACE)
+        {
+            Field *field = typeFindField(rcvBaseType, name);
+            if (field)
+                comp->error.handler(comp->error.context, "Structure or interface already has field %s", name);            
+        }
     }
 
     lexNext(&comp->lex);
