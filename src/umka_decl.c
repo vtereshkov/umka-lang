@@ -68,6 +68,9 @@ static void parseRcvSignature(Compiler *comp, Signature *sig)
     if (rcvType->kind != TYPE_PTR || !rcvType->base->typeIdent)
         comp->error.handler(comp->error.context, "Receiver should be a pointer to a defined type");
 
+    if (rcvType->base->kind == TYPE_INTERFACE)
+    	comp->error.handler(comp->error.context, "Receiver cannot be an interface");
+
     sig->method = true;
     typeAddParam(&comp->types, sig, rcvType, rcvName);
 
@@ -576,12 +579,9 @@ static void parseFnDecl(Compiler *comp)
     if (fnType->sig.method)
     {
         Type *rcvBaseType = fnType->sig.param[0]->type->base;
-        if (rcvBaseType->kind == TYPE_STRUCT || rcvBaseType->kind == TYPE_INTERFACE)
-        {
-            Field *field = typeFindField(rcvBaseType, name);
-            if (field)
-                comp->error.handler(comp->error.context, "Structure or interface already has field %s", name);            
-        }
+               
+        if (rcvBaseType->kind == TYPE_STRUCT && typeFindField(rcvBaseType, name))
+            comp->error.handler(comp->error.context, "Structure already has field %s", name);            
     }
 
     lexNext(&comp->lex);

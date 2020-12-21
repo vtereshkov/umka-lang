@@ -518,7 +518,7 @@ A function or method declaration can be either a complete definition that includ
 
 Function and method declarations are only allowed in the module scope. In the block scope, functions should be declared as constants or variables of a function type. Methods cannot be declared in the block scope.
 
-Method receiver type should be a pointer to any declared type.
+The method receiver type should be a pointer to any declared type, except interface types.
 
 Syntax:
 
