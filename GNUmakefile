@@ -27,10 +27,10 @@ ifeq ($(shortplatform), MINGW64_NT)
   STATIC_CFLAGS  = -fPIC -O3 -Wall -Wno-format-security -fno-strict-aliasing -DUMKA_STATIC -DUMKA_EXT_LIBS
   DYNAMIC_CFLAGS = -fPIC -O3 -Wall -Wno-format-security -fno-strict-aliasing -fvisibility=hidden -DUMKA_BUILD -DUMKA_EXT_LIBS
   STATIC_LDFLAGS = -rs 
-  DYNAMIC_LDFLAGS = -shared -lm -ldl
+  DYNAMIC_LDFLAGS = -shared -lm
   STATIC_LIB = libumka.a
   DYNAMIC_LIB = libumka.so
-  EXECUTABLE_DEPS = -lm -ldl
+  EXECUTABLE_DEPS = -lm
   RANLIB = ar
 endif
 endif
