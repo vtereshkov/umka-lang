@@ -1,7 +1,5 @@
 # The Umka Language Specification
 
-[TOC]
-
 ## Introduction
 
 Umka is a statically typed embeddable scripting language. It combines the simplicity and flexibility needed for scripting with a compile-time protection against type errors.
@@ -514,7 +512,7 @@ s, val := "Hello", sin(0.1 * a)
 
 ### Function and method declarations
 
-A function or method declaration can be either a complete definition that includes the function block, or a *prototype* declaration if the function block is omitted. A prototype should be resolved somewhere below by duplicating the declaration, now with the function block. If a prototype is not resolved, it is considered an external C/C++ function. If such a function has not been registered via the Umka API, an error is triggered. 
+A function or method declaration can be either a complete definition that includes the function block, or a *prototype* declaration if the function block is omitted. A prototype should be resolved somewhere below in the same module by duplicating the declaration, now with the function block. If a prototype is not resolved, it is considered an external C/C++ function. If such a function has not been registered via the Umka API, it is searched in the shared library (Umka implementation file) `mod.umi`, where `mod` is the current module name. If the library does not exist or contains no such function, an error is triggered. 
 
 Function and method declarations are only allowed in the module scope. In the block scope, functions should be declared as constants or variables of a function type. Methods cannot be declared in the block scope.
 

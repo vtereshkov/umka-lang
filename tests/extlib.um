@@ -1,0 +1,9 @@
+import "lib/lib.um"
+
+fn test*() {
+	printf("%f %f\n", lib.add(3, 5), lib.sub(3, 5))      
+}
+
+fn main() {
+	test()
+}

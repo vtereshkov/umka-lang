@@ -2,8 +2,8 @@ platform := $(shell uname -s)
 shortplatform := $(shell (X=`uname -s`; echo $${X:0:10}))
 ifeq ($(platform), Linux)
   LPATH = LD_LIBRARY_PATH
-  STATIC_CFLAGS = -fPIC -O3 -Wall -Wno-format-security -DUMKA_STATIC
-  DYNAMIC_CFLAGS = -fPIC -O3 -Wall -fvisibility=hidden -DUMKA_BUILD
+  STATIC_CFLAGS  = -fPIC -O3 -Wall -Wno-format-security -fno-strict-aliasing -DUMKA_STATIC -DUMKA_EXT_LIBS
+  DYNAMIC_CFLAGS = -fPIC -O3 -Wall -Wno-format-security -fno-strict-aliasing -fvisibility=hidden -DUMKA_BUILD -DUMKA_EXT_LIBS
   STATIC_LDFLAGS = -rs 
   DYNAMIC_LDFLAGS = -shared -lm
   STATIC_LIB = libumka.a
@@ -13,8 +13,8 @@ ifeq ($(platform), Linux)
 else
 ifeq ($(platform), Darwin)
   LPATH = DYLD_LIBRARY_PATH
-  STATIC_CFLAGS = -fPIC -O3 -Wall -Wno-format-security -DUMKA_STATIC
-  DYNAMIC_CFLAGS = -fPIC -O3 -Wall -fvisibility=hidden -DUMKA_BUILD
+  STATIC_CFLAGS  = -fPIC -O3 -Wall -Wno-format-security -fno-strict-aliasing -DUMKA_STATIC -DUMKA_EXT_LIBS
+  DYNAMIC_CFLAGS = -fPIC -O3 -Wall -Wno-format-security -fno-strict-aliasing -fvisibility=hidden -DUMKA_BUILD -DUMKA_EXT_LIBS
   STATIC_LDFLAGS = 
   DYNAMIC_LDFLAGS = -shared
   STATIC_LIB = libumka.a
@@ -24,8 +24,8 @@ ifeq ($(platform), Darwin)
 else
 ifeq ($(shortplatform), MINGW64_NT)
   LPATH = PATH
-  STATIC_CFLAGS = -fPIC -O3 -Wall -Wno-format-security -DUMKA_STATIC
-  DYNAMIC_CFLAGS = -fPIC -O3 -Wall -fvisibility=hidden -DUMKA_BUILD
+  STATIC_CFLAGS  = -fPIC -O3 -Wall -Wno-format-security -fno-strict-aliasing -DUMKA_STATIC -DUMKA_EXT_LIBS
+  DYNAMIC_CFLAGS = -fPIC -O3 -Wall -Wno-format-security -fno-strict-aliasing -fvisibility=hidden -DUMKA_BUILD -DUMKA_EXT_LIBS
   STATIC_LDFLAGS = -rs 
   DYNAMIC_LDFLAGS = -shared -lm
   STATIC_LIB = libumka.a

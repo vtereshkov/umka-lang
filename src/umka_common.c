@@ -1,5 +1,14 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#ifdef UMKA_EXT_LIBS
+    #ifdef _WIN32
+        #include <windows.h>
+    #else
+        #include <dlfcn.h>
+    #endif
+#endif
 
 #include "umka_common.h"
 
@@ -22,6 +31,44 @@ void storageFree(Storage *storage)
 
 // Modules
 
+static void *moduleLoadImplLib(const char *path)
+{
+#ifdef UMKA_EXT_LIBS
+    #ifdef _WIN32
+        return LoadLibrary(path);
+    #else
+        return dlopen(path, RTLD_LOCAL | RTLD_LAZY);
+    #endif
+#endif
+    return NULL;
+}
+
+
+static void moduleFreeImplLib(void *lib)
+{
+#ifdef UMKA_EXT_LIBS
+    #ifdef _WIN32
+        FreeLibrary(lib);
+    #else
+        dlclose(lib);
+    #endif
+#endif
+}
+
+
+static void *moduleLoadImplLibFunc(void *lib, const char *name)
+{
+#ifdef UMKA_EXT_LIBS
+    #ifdef _WIN32
+        return GetProcAddress(lib, name);
+    #else
+        return dlsym(lib, name);
+    #endif
+#endif
+    return NULL;
+}
+
+
 void moduleInit(Modules *modules, Error *error)
 {
     for (int i = 0; i < MAX_MODULES; i++)
@@ -35,7 +82,11 @@ void moduleFree(Modules *modules)
 {
     for (int i = 0; i < MAX_MODULES; i++)
         if (modules->module[i])
+        {
+            if (modules->module[i]->implLib)
+                moduleFreeImplLib(modules->module[i]->implLib);
             free(modules->module[i]);
+        }
 }
 
 
@@ -109,11 +160,24 @@ int moduleAdd(Modules *modules, const char *path)
     module->hash = hash(name);
     module->pathHash = hash(path);
 
+    char libPath[2 * DEFAULT_STR_LEN + 4 + 1];
+    sprintf(libPath, "%s%s.umi", module->folder, module->name);
+
+    module->implLib = moduleLoadImplLib(libPath);
+
     for (int i = 0; i < MAX_MODULES; i++)
         module->imports[i] = false;
 
     modules->module[modules->numModules] = module;
     return modules->numModules++;
+}
+
+
+void *moduleGetImplLibFunc(Module *module, const char *name)
+{
+    if (module->implLib)
+        return moduleLoadImplLibFunc(module->implLib, name);
+    return NULL;
 }
 
 
@@ -215,4 +279,3 @@ External *externalAdd(Externals *externals, const char *name, void *entry)
     }
     return externals->last;
 }
-

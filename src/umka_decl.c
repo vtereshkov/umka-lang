@@ -579,9 +579,9 @@ static void parseFnDecl(Compiler *comp)
     if (fnType->sig.method)
     {
         Type *rcvBaseType = fnType->sig.param[0]->type->base;
-               
+
         if (rcvBaseType->kind == TYPE_STRUCT && typeFindField(rcvBaseType, name))
-            comp->error.handler(comp->error.context, "Structure already has field %s", name);            
+            comp->error.handler(comp->error.context, "Structure already has field %s", name);
     }
 
     lexNext(&comp->lex);
@@ -695,6 +695,7 @@ static int parseModule(Compiler *comp)
         lexEat(&comp->lex, TOK_SEMICOLON);
     }
     parseDecls(comp);
+    doResolveExtern(comp);
     return comp->blocks.module;
 }
 
@@ -707,7 +708,6 @@ void parseProgram(Compiler *comp)
 
     lexNext(&comp->lex);
     parseModule(comp);
-    doResolveExtern(comp);
 
     if (!comp->gen.mainDefined)
         comp->error.handler(comp->error.context, "main() is not defined");

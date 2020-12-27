@@ -51,6 +51,7 @@ typedef struct
 {
     char path[DEFAULT_STR_LEN + 1], folder[DEFAULT_STR_LEN + 1], name[DEFAULT_STR_LEN + 1];
     unsigned int hash, pathHash;
+    void *implLib;
     bool imports[MAX_MODULES];
 } Module;
 
@@ -106,12 +107,13 @@ typedef struct
 void storageInit(Storage *storage, int capacity);
 void storageFree(Storage *storage);
 
-void moduleInit         (Modules *modules, Error *error);
-void moduleFree         (Modules *modules);
-int  moduleFind         (Modules *modules, const char *name);
-int  moduleAssertFind   (Modules *modules, const char *name);
-int  moduleFindByPath   (Modules *modules, const char *path);
-int  moduleAdd          (Modules *modules, const char *path);
+void  moduleInit             (Modules *modules, Error *error);
+void  moduleFree             (Modules *modules);
+int   moduleFind             (Modules *modules, const char *name);
+int   moduleAssertFind       (Modules *modules, const char *name);
+int   moduleFindByPath       (Modules *modules, const char *path);
+int   moduleAdd              (Modules *modules, const char *path);
+void *moduleGetImplLibFunc   (Module *module, const char *name);
 
 void blocksInit   (Blocks *blocks, Error *error);
 void blocksFree   (Blocks *blocks);
@@ -123,6 +125,7 @@ void externalInit       (Externals *externals);
 void externalFree       (Externals *externals);
 External *externalFind  (Externals *externals, const char *name);
 External *externalAdd   (Externals *externals, const char *name, void *entry);
+
 
 static inline unsigned int hash(const char *str)
 {

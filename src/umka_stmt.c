@@ -49,10 +49,14 @@ void doZeroVar(Compiler *comp, Ident *ident)
 void doResolveExtern(Compiler *comp)
 {
     for (Ident *ident = comp->idents.first; ident; ident = ident->next)
-        if (ident->prototypeOffset >= 0)
+        if (ident->module == comp->blocks.module && ident->prototypeOffset >= 0)
         {
             External *external = externalFind(&comp->externals, ident->name);
-            if (!external)
+
+            // Try to find the function in the external function list or in an external implementation library
+            void *fn = external ? external->entry : moduleGetImplLibFunc(comp->modules.module[comp->blocks.module], ident->name);
+
+            if (!fn)
                 comp->error.handler(comp->error.context, "Unresolved prototype of %s", ident->name);
 
             // All parameters must be declared since they may require garbage collection
@@ -63,7 +67,7 @@ void doResolveExtern(Compiler *comp)
             for (int i = 0; i < ident->type->sig.numParams; i++)
                 identAllocParam(&comp->idents, &comp->types, &comp->modules, &comp->blocks, &ident->type->sig, i);
 
-            genCallExtern(&comp->gen, external->entry);
+            genCallExtern(&comp->gen, fn);
 
             doGarbageCollection(comp, blocksCurrent(&comp->blocks));
             identFree(&comp->idents, blocksCurrent(&comp->blocks));

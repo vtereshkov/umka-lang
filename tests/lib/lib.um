@@ -1,0 +1,2 @@
+fn add*(a, b: real): real
+fn sub*(a, b: real): real
