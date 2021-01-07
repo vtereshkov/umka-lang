@@ -368,7 +368,7 @@ static Type *parseFnType(Compiler *comp)
 }
 
 
-// type = qualIdent | ptrType | arrayType | dynArrayType | strType | structType | fnType.
+// type = qualIdent | ptrType | arrayType | dynArrayType | strType | structType | interfaceType | fnType.
 Type *parseType(Compiler *comp, Ident *ident)
 {
     if (ident)

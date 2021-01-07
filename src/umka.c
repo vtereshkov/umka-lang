@@ -17,7 +17,7 @@ int main(int argc, char **argv)
 {
     if (argc < 2)
     {
-        printf("Umka interpreter (C) Vasiliy Tereshkov, 2020\n");
+        printf("Umka interpreter (C) Vasiliy Tereshkov, 2020-2021\n");
         printf("Usage: umka <file.um> [<parameters>] [<script-parameters>]\n");
         printf("Parameters:\n");
         printf("    -storage <storage-size>\n");

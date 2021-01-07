@@ -1,0 +1,93 @@
+// Hash map
+
+type (
+    Any = interface{}
+
+    Item = struct {
+        key: str
+        val: Any
+    }
+
+    Map* = [][]Item
+)
+
+
+const (
+    defLen = 32
+    rehashThreshold = 5
+)
+
+
+fn hash(s: str): uint32 {  // djb2 hash    
+    var hash: uint32 = 5381;
+    for ch in s {
+        hash = (((hash << 5) + hash) + uint32(ch)) & 0xFFFFFFFF;
+    }
+    return hash;
+}
+
+
+fn (m: ^Map) rehash()
+
+
+fn (m: ^Map) get*(key: str): Any {
+    b := hash(key) % len(m^)
+
+    for item in m[b] {
+        if item.key == key {
+            return item.val
+        } 
+    }
+
+    return null
+}
+
+
+fn (m: ^Map) set*(key: str, val: Any) {
+    if len(m^) == 0 {
+        m^ = make(Map, defLen)
+    }
+
+    b := hash(key) % len(m^)
+
+    if size := len(m[b]); size == 0 {
+        m[b] = []Item{Item{key, val}}
+    } else {
+        if size > rehashThreshold {
+            m.rehash()
+            b = hash(key) % len(m^)         
+        } 
+
+        for i := 0; i < len(m[b]); i++ {
+            if m[b][i].key == key {
+                m[b][i].val = val
+                return
+            }
+        }
+
+        m[b] = append(m[b], Item{key, val})
+    }
+}
+
+
+fn (m: ^Map) del*(key: str) {
+    b := hash(key) % len(m^)
+
+    for i, item in m[b] {
+        if item.key == key {
+            m[b] = delete(m[b], i)
+            return
+        } 
+    }
+}
+
+
+fn (m: ^Map) rehash() {
+    n := make(Map, 2 * len(m^))
+    for bucket in m {
+        for item in bucket {
+            n.set(item.key, item.val)
+        }
+    }
+    m^ = n
+}

@@ -153,7 +153,8 @@ Umka is a statically typed language. Each variable or constant has a type that i
 Syntax:
 
 ```
-type = qualIdent | ptrType | arrayType | dynArrayType | strType | structType | fnType.
+type = qualIdent | ptrType | arrayType | dynArrayType | strType | 
+       structType | interfaceType | fnType.
 qualIdent = [ident "."] ident.
 ```
 
@@ -1448,7 +1449,7 @@ exportMark          = ["*"].
 identList           = ident exportMark {"," ident exportMark}.
 typedIdentList      = identList ":" type.
 type                = qualIdent | ptrType | arrayType | dynArrayType | strType |
-                      structType | fnType.
+                      structType | interfaceType | fnType.
 ptrType             = ["weak"] "^" type.
 arrayType           = "[" expr "]" type.
 dynArrayType        = "[" "]" type.

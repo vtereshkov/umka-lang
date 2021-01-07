@@ -141,6 +141,11 @@ meow
 woof
 
 
+>>> Maps
+
+Population of Russia was 146.73 million. Now it is 146.75 million
+
+
 >>> Multiple returns
 
 -3  { 6.000000 9.000000 }  true 
@@ -201,7 +206,7 @@ repr():
 a 
 fn 
 { 0.500000 0.700000 0.900000 } 
-00000000004a0820 
+0000000000579f20 
 
 
 >>> Type equivalence

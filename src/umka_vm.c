@@ -427,6 +427,77 @@ static void doBasicAssign(void *lhs, Slot rhs, TypeKind typeKind, int structSize
 }
 
 
+static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type *type, TokenKind tokKind, Error *error);
+
+
+static void doChangePtrBaseRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type *type, TokenKind tokKind, Error *error)
+{
+    if (typeKindGarbageCollected(type->base->kind))
+    {
+        void *data = ptr;
+        if (type->base->kind == TYPE_PTR || type->base->kind == TYPE_STR)
+            data = *(void **)data;
+
+        doBasicChangeRefCnt(fiber, pages, data, type->base, tokKind, error);
+    }
+}
+
+
+static void doChangeArrayItemsRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type *type, TokenKind tokKind, Error *error)
+{
+    if (typeKindGarbageCollected(type->base->kind))
+    {
+        char *itemPtr = ptr;
+        int itemSize = typeSizeNoCheck(type->base);
+
+        for (int i = 0; i < type->numItems; i++)
+        {
+            void *item = itemPtr;
+            if (type->base->kind == TYPE_PTR || type->base->kind == TYPE_STR)
+                item = *(void **)item;
+
+            doBasicChangeRefCnt(fiber, pages, item, type->base, tokKind, error);
+            itemPtr += itemSize;
+        }
+    }
+}
+
+
+static void doChangeDynArrayItemsRefCnt(Fiber *fiber, HeapPages *pages, DynArray *array, Type *type, TokenKind tokKind, Error *error)
+{
+    if (typeKindGarbageCollected(type->base->kind))
+    {
+        char *itemPtr = array->data;
+
+        for (int i = 0; i < array->len; i++)
+        {
+            void *item = itemPtr;
+            if (type->base->kind == TYPE_PTR || type->base->kind == TYPE_STR)
+                item = *(void **)item;
+
+            doBasicChangeRefCnt(fiber, pages, item, type->base, tokKind, error);
+            itemPtr += array->itemSize;
+        }
+    }
+}
+
+
+static void doChangeStructFieldsRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type *type, TokenKind tokKind, Error *error)
+{
+    for (int i = 0; i < type->numItems; i++)
+    {
+        if (typeKindGarbageCollected(type->field[i]->type->kind))
+        {
+            void *field = (char *)ptr + type->field[i]->offset;
+            if (type->field[i]->type->kind == TYPE_PTR || type->field[i]->type->kind == TYPE_STR)
+                field = *(void **)field;
+
+            doBasicChangeRefCnt(fiber, pages, field, type->field[i]->type, tokKind, error);
+        }
+    }
+}
+
+
 static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type *type, TokenKind tokKind, Error *error)
 {
     // Update ref counts for pointers (including static/dynamic array items and structure/interface fields) if allocated dynamically
@@ -446,14 +517,9 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
                 {
                     // Traverse children only before removing the last remaining ref
                     HeapChunkHeader *chunk = pageGetChunkHeader(page, ptr);
-                    if (chunk->refCnt == 1 && typeKindGarbageCollected(type->base->kind))
-                    {
-                        void *data = ptr;
-                        if (type->base->kind == TYPE_PTR || type->base->kind == TYPE_STR)
-                            data = *(void **)data;
+                    if (chunk->refCnt == 1)
+                        doChangePtrBaseRefCnt(fiber, pages, ptr, type, tokKind, error);
 
-                        doBasicChangeRefCnt(fiber, pages, data, type->base, tokKind, error);
-                    }
                     chunkChangeRefCnt(pages, page, ptr, -1);
                 }
             }
@@ -470,21 +536,7 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
 
         case TYPE_ARRAY:
         {
-            if (typeKindGarbageCollected(type->base->kind))
-            {
-                char *itemPtr = ptr;
-                int itemSize = typeSizeNoCheck(type->base);
-
-                for (int i = 0; i < type->numItems; i++)
-                {
-                    void *item = itemPtr;
-                    if (type->base->kind == TYPE_PTR || type->base->kind == TYPE_STR)
-                        item = *(void **)item;
-
-                    doBasicChangeRefCnt(fiber, pages, item, type->base, tokKind, error);
-                    itemPtr += itemSize;
-                }
-            }
+            doChangeArrayItemsRefCnt(fiber, pages, ptr, type, tokKind, error);
             break;
         }
 
@@ -500,20 +552,9 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
                 {
                     // Traverse children only before removing the last remaining ref
                     HeapChunkHeader *chunk = pageGetChunkHeader(page, array->data);
-                    if (chunk->refCnt == 1 && typeKindGarbageCollected(type->base->kind))
-                    {
-                        char *itemPtr = array->data;
+                    if (chunk->refCnt == 1)
+                        doChangeDynArrayItemsRefCnt(fiber, pages, ptr, type, tokKind, error);
 
-                        for (int i = 0; i < array->len; i++)
-                        {
-                            void *item = itemPtr;
-                            if (type->base->kind == TYPE_PTR || type->base->kind == TYPE_STR)
-                                item = *(void **)item;
-
-                            doBasicChangeRefCnt(fiber, pages, item, type->base, tokKind, error);
-                            itemPtr += array->itemSize;
-                        }
-                    }
                     chunkChangeRefCnt(pages, page, array->data, -1);
                 }
             }
@@ -522,17 +563,7 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
 
         case TYPE_STRUCT:
         {
-            for (int i = 0; i < type->numItems; i++)
-            {
-                if (typeKindGarbageCollected(type->field[i]->type->kind))
-                {
-                    void *field = (char *)ptr + type->field[i]->offset;
-                    if (type->field[i]->type->kind == TYPE_PTR || type->field[i]->type->kind == TYPE_STR)
-                        field = *(void **)field;
-
-                    doBasicChangeRefCnt(fiber, pages, field, type->field[i]->type, tokKind, error);
-                }
-            }
+            doChangeStructFieldsRefCnt(fiber, pages, ptr, type, tokKind, error);
             break;
         }
 
@@ -896,23 +927,29 @@ static void doBuiltinMake(Fiber *fiber, HeapPages *pages, Error *error)
 }
 
 
-// fn makefrom(array: [...] type, itemSize: int, len: int): [] type
+// fn makefrom(array: [...] type, [] type: Type, itemSize: int, len: int): [] type
 static void doBuiltinMakefrom(Fiber *fiber, HeapPages *pages, Error *error)
 {
     doBuiltinMake(fiber, pages, error);
 
     DynArray *dest = (DynArray *)(fiber->top++)->ptrVal;
+    Type *type     = (Type     *)(fiber->top++)->ptrVal;
     void *src      = (void     *)(fiber->top++)->ptrVal;
 
     memcpy(dest->data, src, dest->len * dest->itemSize);
+
+    // Increase result items' ref counts, as if they have been assigned one by one
+    doChangeDynArrayItemsRefCnt(fiber, pages, dest, type, TOK_PLUSPLUS, error);
+
     (--fiber->top)->ptrVal = (int64_t)dest;
 }
 
 
-// fn append(array: [] type, item: (^type | [] type), single: bool): [] typee
+// fn append(array: [] type, item: (^type | [] type), single: bool, [] type: Type): [] type
 static void doBuiltinAppend(Fiber *fiber, HeapPages *pages, Error *error)
 {
     DynArray *result = (DynArray *)(fiber->top++)->ptrVal;
+    Type *type       = (Type     *)(fiber->top++)->ptrVal;
     bool single      = (bool      )(fiber->top++)->intVal;
     void *item       = (void     *)(fiber->top++)->ptrVal;
     DynArray *array  = (DynArray *)(fiber->top++)->ptrVal;
@@ -938,17 +975,21 @@ static void doBuiltinAppend(Fiber *fiber, HeapPages *pages, Error *error)
     result->itemSize = array->itemSize;
     result->data     = chunkAlloc(pages, result->len * result->itemSize, error);
 
-    memcpy((char *)result->data, (char*)array->data, array->len * array->itemSize);
+    memcpy((char *)result->data, (char *)array->data, array->len * array->itemSize);
     memcpy((char *)result->data + array->len * array->itemSize, (char *)rhs, rhsLen * array->itemSize);
+
+    // Increase result items' ref counts, as if they have been assigned one by one
+    doChangeDynArrayItemsRefCnt(fiber, pages, result, type, TOK_PLUSPLUS, error);
 
     (--fiber->top)->ptrVal = (int64_t)result;
 }
 
 
-// fn delete(array: [] type, index: int): [] type
+// fn delete(array: [] type, index: int, [] type: Type): [] type
 static void doBuiltinDelete(Fiber *fiber, HeapPages *pages, Error *error)
 {
     DynArray *result = (DynArray *)(fiber->top++)->ptrVal;
+    Type *type       = (Type     *)(fiber->top++)->ptrVal;
     int index        =             (fiber->top++)->intVal;
     DynArray *array  = (DynArray *)(fiber->top++)->ptrVal;
 
@@ -961,6 +1002,9 @@ static void doBuiltinDelete(Fiber *fiber, HeapPages *pages, Error *error)
 
     memcpy((char *)result->data, (char *)array->data, index * array->itemSize);
     memcpy((char *)result->data + index * result->itemSize, (char *)array->data + (index + 1) * result->itemSize, (result->len - index) * result->itemSize);
+
+    // Increase result items' ref counts, as if they have been assigned one by one
+    doChangeDynArrayItemsRefCnt(fiber, pages, result, type, TOK_PLUSPLUS, error);
 
     (--fiber->top)->ptrVal = (int64_t)result;
 }

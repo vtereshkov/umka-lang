@@ -122,8 +122,9 @@ static void doArrayToDynArrayConv(Compiler *comp, Type *dest, Type **src, Const 
     if (constant)
         comp->error.handler(comp->error.context, "Conversion to dynamic array is not allowed in constant expressions");
 
-    // fn makefrom(array: [...] type, itemSize: int, len: int): [] type
+    // fn makefrom(array: [...] type, [] type: Type, itemSize: int, len: int): [] type
 
+    genPushGlobalPtr(&comp->gen, dest);                                 // Dynamic array type
     genPushIntConst(&comp->gen, typeSize(&comp->types, (*src)->base));  // Dynamic array item size
     genPushIntConst(&comp->gen, (*src)->numItems);                      // Dynamic array length
 
@@ -526,7 +527,7 @@ static void parseBuiltinMakeCall(Compiler *comp, Type **type, Const *constant)
 }
 
 
-// fn append(array: [] type, item: (^type | [] type), single: bool): [] type
+// fn append(array: [] type, item: (^type | [] type), single: bool, [] type: Type): [] type
 static void parseBuiltinAppendCall(Compiler *comp, Type **type, Const *constant)
 {
     if (constant)
@@ -568,8 +569,11 @@ static void parseBuiltinAppendCall(Compiler *comp, Type **type, Const *constant)
         }
     }
 
-    // 'Append single item' flag
+    // 'Append single item' flag (hidden parameter)
     genPushIntConst(&comp->gen, singleItem);
+
+    // Result type (hidden parameter)
+    genPushGlobalPtr(&comp->gen, *type);
 
     // Pointer to result (hidden parameter)
     int resultOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, *type));
@@ -579,7 +583,7 @@ static void parseBuiltinAppendCall(Compiler *comp, Type **type, Const *constant)
 }
 
 
-// fn delete(array: [] type, index: int): [] type
+// fn delete(array: [] type, index: int, [] type: Type): [] type
 static void parseBuiltinDeleteCall(Compiler *comp, Type **type, Const *constant)
 {
     if (constant)
@@ -597,6 +601,9 @@ static void parseBuiltinDeleteCall(Compiler *comp, Type **type, Const *constant)
     parseExpr(comp, &indexType, NULL);
     doImplicitTypeConv(comp, comp->intType, &indexType, NULL, false);
     typeAssertCompatible(&comp->types, comp->intType, indexType, false);
+
+    // Result type (hidden parameter)
+    genPushGlobalPtr(&comp->gen, *type);
 
     // Pointer to result (hidden parameter)
     int resultOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, *type));

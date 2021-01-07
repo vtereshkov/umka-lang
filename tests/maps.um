@@ -1,0 +1,38 @@
+import (
+    "../import/std.um"
+    "../import/map.um"
+)
+
+fn test*() {
+    var populations: map.Map
+    f := std.fopen("../tests/countries.dat", "r")
+
+    for true {
+        var code, name, typ: str
+        var year: int
+        var pop: real
+        
+        num := fscanf(f, "%s %s %s %lld %lf\n", &code, &name, &typ, &year, &pop) 
+        if num != 5 {break}
+
+        populations.set(name, pop)
+    }
+
+    std.fclose(f)
+
+    russia2019 := ^real(populations.get("Russia"))^
+    
+    populations.set("Russia", 146.748)    
+    russia2020 := ^real(populations.get("Russia"))^
+
+    populations.del("Russia")
+    if ^real(populations.get("Russia")) != null {
+        error("Test failed")
+    }
+
+    printf("Population of Russia was %.2f million. Now it is %.2f million\n", russia2019, russia2020)
+}
+
+fn main() {
+    test()
+}
