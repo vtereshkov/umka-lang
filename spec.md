@@ -158,7 +158,7 @@ type = qualIdent | ptrType | arrayType | dynArrayType | strType |
 qualIdent = [ident "."] ident.
 ```
 
-Any data type can have a set of functions attached to it, which are called *methods*. A variable of that type is called the *receiver* with respect to any method which is called on it. Methods are not considered a part of the type declaration. 
+Any data type except the interface type can have a set of functions attached to it, which are called *methods*. A variable of that type is called the *receiver* with respect to any method which is called on it. Methods are not considered a part of the type declaration. 
 
 ### Simple types
 
