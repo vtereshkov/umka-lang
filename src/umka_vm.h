@@ -59,6 +59,7 @@ typedef enum
     OP_GOTO,
     OP_GOTO_IF,
     OP_CALL,
+    OP_CALL_INDIRECT,
     OP_CALL_EXTERN,
     OP_CALL_BUILTIN,
     OP_RETURN,
@@ -118,6 +119,7 @@ typedef union
 {
     int64_t intVal;
     uint64_t uintVal;
+    int32_t int32Val[2];
     int64_t ptrVal;
     double realVal;
     BuiltinFunc builtinVal;

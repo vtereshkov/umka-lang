@@ -61,6 +61,25 @@ static bool peepholeFound(CodeGen *gen, int size)
 }
 
 
+static bool optimizePushReg(CodeGen *gen, int regIndex)
+{
+    if (!peepholeFound(gen, 1))
+        return false;
+
+    Instruction *prev = &gen->code[gen->ip - 1];
+
+    // Optimization: POP_REG SELF + PUSH_REG SELF -> 0
+    // This is an inequivalent replacement since it cannot update VM_REG_SELF, but the updated register is never actually used
+    if (prev->opcode == OP_POP_REG && prev->operand.intVal == VM_REG_SELF && regIndex == VM_REG_SELF)
+    {
+        gen->ip -= 1;
+        return true;
+    }
+
+    return false;
+}
+
+
 static bool optimizePop(CodeGen *gen)
 {
     if (!peepholeFound(gen, 1))
@@ -69,7 +88,7 @@ static bool optimizePop(CodeGen *gen)
     Instruction *prev = &gen->code[gen->ip - 1];
 
     // Optimization: CHANGE_REF_CNT + POP -> CHANGE_REF_CNT; POP
-    if (prev->opcode == OP_CHANGE_REF_CNT && prev->inlineOpcode != OP_POP)
+    if (prev->opcode == OP_CHANGE_REF_CNT && prev->inlineOpcode == OP_NOP)
     {
         prev->inlineOpcode = OP_POP;
         return true;
@@ -112,7 +131,7 @@ static bool optimizeDeref(CodeGen *gen, TypeKind typeKind)
           prev->opcode == OP_GET_ARRAY_PTR                       ||
           prev->opcode == OP_GET_DYNARRAY_PTR                    ||
           prev->opcode == OP_GET_FIELD_PTR)                      &&
-          prev->inlineOpcode != OP_DEREF)
+          prev->inlineOpcode == OP_NOP)
     {
         prev->inlineOpcode = OP_DEREF;
         prev->typeKind = typeKind;
@@ -123,24 +142,22 @@ static bool optimizeDeref(CodeGen *gen, TypeKind typeKind)
 }
 
 
-static bool optimizeGetArrayPtr(CodeGen *gen, int itemSize)
+static bool optimizeGetArrayPtr(CodeGen *gen, int itemSize, int len)
 {
-    if (!peepholeFound(gen, 2))
+    if (!peepholeFound(gen, 1))
         return false;
 
     Instruction *prev  = &gen->code[gen->ip - 1];
-    Instruction *prev2 = &gen->code[gen->ip - 2];
 
-    // Optimization: PUSH + PUSH + GET_ARRAY_PTR -> GET_FIELD_PTR
-    if (prev2->opcode == OP_PUSH && prev->opcode == OP_PUSH && prev->operand.intVal >= 0)
+    // Optimization: PUSH + GET_ARRAY_PTR -> GET_FIELD_PTR
+    if (prev->opcode == OP_PUSH && len >= 0)
     {
-        int len   = prev->operand.intVal;
-        int index = prev2->operand.intVal;
+        int index = prev->operand.intVal;
 
         if (index < 0 || index > len - 1)
             gen->error->handler(gen->error->context, "Index %d is out of range 0...%d", index, len - 1);
 
-        gen->ip -= 2;
+        gen->ip -= 1;
         genGetFieldPtr(gen, itemSize * index);
         return true;
     }
@@ -195,8 +212,11 @@ void genPushLocalPtr(CodeGen *gen, int offset)
 
 void genPushReg(CodeGen *gen, int regIndex)
 {
-    const Instruction instr = {.opcode = OP_PUSH_REG, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = regIndex};
-    genAddInstr(gen, &instr);
+    if (!optimizePushReg(gen, regIndex))
+    {
+        const Instruction instr = {.opcode = OP_PUSH_REG, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = regIndex};
+        genAddInstr(gen, &instr);
+    }
 }
 
 
@@ -320,11 +340,11 @@ void genBinary(CodeGen *gen, TokenKind tokKind, TypeKind typeKind, int bufOffset
 }
 
 
-void genGetArrayPtr(CodeGen *gen, int itemSize)
+void genGetArrayPtr(CodeGen *gen, int itemSize, int len)
 {
-    if (!optimizeGetArrayPtr(gen, itemSize))
+    if (!optimizeGetArrayPtr(gen, itemSize, len))
     {
-        const Instruction instr = {.opcode = OP_GET_ARRAY_PTR, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = itemSize};
+        const Instruction instr = {.opcode = OP_GET_ARRAY_PTR, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.int32Val = {itemSize, len}};
         genAddInstr(gen, &instr);
     }
 }
@@ -375,9 +395,16 @@ void genGotoIf(CodeGen *gen, int dest)
 }
 
 
-void genCall(CodeGen *gen, int paramSlots)
+void genCall(CodeGen *gen, int entry)
 {
-    const Instruction instr = {.opcode = OP_CALL, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = paramSlots};
+    const Instruction instr = {.opcode = OP_CALL, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = entry};
+    genAddInstr(gen, &instr);
+}
+
+
+void genCallIndirect(CodeGen *gen, int paramSlots)
+{
+    const Instruction instr = {.opcode = OP_CALL_INDIRECT, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = paramSlots};
     genAddInstr(gen, &instr);
 }
 
@@ -624,6 +651,23 @@ void genEntryPoint(CodeGen *gen, int start)
     genGoFromTo(gen, start, gen->ip);
     if (start == 0)
         gen->mainDefined = true;
+}
+
+
+int genTryRemoveImmediateEntryPoint(CodeGen *gen)
+{
+    if (!peepholeFound(gen, 1))
+        return -1;
+
+    Instruction *prev = &gen->code[gen->ip - 1];
+    if (prev->opcode == OP_PUSH)
+    {
+        int entry = prev->operand.intVal;
+        gen->ip -= 1;
+        return entry;
+    }
+
+    return -1;
 }
 
 

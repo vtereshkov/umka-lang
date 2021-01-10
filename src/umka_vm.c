@@ -40,6 +40,7 @@ static const char *opcodeSpelling [] =
     "GOTO",
     "GOTO_IF",
     "CALL",
+    "CALL_INDIRECT",
     "CALL_EXTERN",
     "CALL_BUILTIN",
     "RETURN",
@@ -1454,8 +1455,8 @@ static void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
 
 static void doGetArrayPtr(Fiber *fiber, Error *error)
 {
-    int itemSize = fiber->code[fiber->ip].operand.intVal;
-    int len      = (fiber->top++)->intVal;
+    int itemSize = fiber->code[fiber->ip].operand.int32Val[0];
+    int len      = fiber->code[fiber->ip].operand.int32Val[1];
     int index    = (fiber->top++)->intVal;
 
     if (!fiber->top->ptrVal)
@@ -1560,7 +1561,18 @@ static void doGotoIf(Fiber *fiber)
 
 static void doCall(Fiber *fiber, Error *error)
 {
-    // All calls are indirect, entry point address is below the parameters
+    // For direct calls, entry point address is stored in the instruction
+    int entryOffset = fiber->code[fiber->ip].operand.intVal;
+
+    // Push return address and go to the entry point
+    (--fiber->top)->intVal = fiber->ip + 1;
+    fiber->ip = entryOffset;
+}
+
+
+static void doCallIndirect(Fiber *fiber, Error *error)
+{
+    // For indirect calls, entry point address is below the parameters on the stack
     int paramSlots = fiber->code[fiber->ip].operand.intVal;
     int entryOffset = (fiber->top + paramSlots)->intVal;
 
@@ -1675,8 +1687,8 @@ static void doReturn(Fiber *fiber, Fiber **newFiber)
     }
     else
     {
-        // For conventional function, remove parameters and entry point address from stack and go back
-        fiber->top += fiber->code[fiber->ip].operand.intVal + 1;
+        // For conventional function, remove parameters from the stack and go back
+        fiber->top += fiber->code[fiber->ip].operand.intVal;
         fiber->ip = returnOffset;
     }
 }
@@ -1761,6 +1773,7 @@ static void vmLoop(VM *vm)
             case OP_GOTO:                           doGoto(fiber);                                break;
             case OP_GOTO_IF:                        doGotoIf(fiber);                              break;
             case OP_CALL:                           doCall(fiber, error);                         break;
+            case OP_CALL_INDIRECT:                  doCallIndirect(fiber, error);                 break;
             case OP_CALL_EXTERN:                    doCallExtern(fiber);                          break;
             case OP_CALL_BUILTIN:
             {
@@ -1856,15 +1869,16 @@ int vmAsm(int ip, Instruction *instr, char *buf)
         case OP_ZERO:
         case OP_ASSIGN:
         case OP_BINARY:
-        case OP_GET_ARRAY_PTR:
         case OP_GET_FIELD_PTR:
         case OP_GOTO:
         case OP_GOTO_IF:
         case OP_CALL:
+        case OP_CALL_INDIRECT:
         case OP_RETURN:
-        case OP_ENTER_FRAME:            chars += sprintf(buf + chars, " %lld", (long long int)instr->operand.intVal); break;
-        case OP_CALL_EXTERN:            chars += sprintf(buf + chars, " %p",   (void *)instr->operand.ptrVal); break;
-        case OP_CALL_BUILTIN:           chars += sprintf(buf + chars, " %s",   builtinSpelling[instr->operand.builtinVal]); break;
+        case OP_ENTER_FRAME:            chars += sprintf(buf + chars, " %lld",  (long long int)instr->operand.intVal); break;
+        case OP_GET_ARRAY_PTR:          chars += sprintf(buf + chars, " %d %d", (int)instr->operand.int32Val[0], (int)instr->operand.int32Val[1]); break;
+        case OP_CALL_EXTERN:            chars += sprintf(buf + chars, " %p",    (void *)instr->operand.ptrVal); break;
+        case OP_CALL_BUILTIN:           chars += sprintf(buf + chars, " %s",    builtinSpelling[instr->operand.builtinVal]); break;
         case OP_CHANGE_REF_CNT:
         case OP_CHANGE_REF_CNT_ASSIGN:
         case OP_ASSERT_TYPE:

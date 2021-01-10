@@ -615,19 +615,11 @@ static void parseForInHeader(Compiler *comp, TokenKind lookaheadTokKind)
     genDeref(&comp->gen, TYPE_INT);
 
     if (collectionType->kind == TYPE_DYNARRAY)
-    {
         genGetDynArrayPtr(&comp->gen);
-    }
     else if (collectionType->kind == TYPE_STR)
-    {
-        genPushIntConst(&comp->gen, -1);                            // Use actual length for range checking
-        genGetArrayPtr(&comp->gen, typeSize(&comp->types, itemType));
-    }
+        genGetArrayPtr(&comp->gen, typeSize(&comp->types, itemType), -1);                           // Use actual length for range checking
     else // TYPE_ARRAY
-    {
-        genPushIntConst(&comp->gen, collectionType->numItems);      // Use nominal length for range checking
-        genGetArrayPtr(&comp->gen, typeSize(&comp->types, itemType));
-    }
+        genGetArrayPtr(&comp->gen, typeSize(&comp->types, itemType), collectionType->numItems);     // Use nominal length for range checking
 
     // Get collection item value
     genDeref(&comp->gen, itemType->kind);

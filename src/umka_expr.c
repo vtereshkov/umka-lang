@@ -827,6 +827,9 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
     if (constant)
         comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
 
+    // Decide whether a (default) indirect call can be replaced with a direct call
+    int immediateEntryPoint = genTryRemoveImmediateEntryPoint(&comp->gen);
+
     // Actual parameters: [__self,] param1, param2 ...[__result]
     int numExplicitParams = 0, numPreHiddenParams = 0, numPostHiddenParams = 0;
     int i = 0;
@@ -897,8 +900,16 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
         i++;
     }
 
-    int paramSlots = typeParamSizeTotal(&comp->types, &(*type)->sig) / sizeof(Slot);
-    genCall(&comp->gen, paramSlots);
+    if (immediateEntryPoint > 0)
+        genCall(&comp->gen, immediateEntryPoint);                                           // Direct call
+    else if (immediateEntryPoint < 0)
+    {
+        int paramSlots = typeParamSizeTotal(&comp->types, &(*type)->sig) / sizeof(Slot);
+        genCallIndirect(&comp->gen, paramSlots);                                            // Indirect call
+        genPop(&comp->gen);                                                                 // Pop entry point
+    }
+    else
+        comp->error.handler(comp->error.context, "Called function is not defined");
 
     *type = (*type)->sig.resultType;
     lexEat(&comp->lex, TOK_RPAR);
@@ -1250,19 +1261,11 @@ static void parseIndexSelector(Compiler *comp, Type **type, Const *constant, boo
     lexEat(&comp->lex, TOK_RBRACKET);
 
     if ((*type)->kind == TYPE_DYNARRAY)
-    {
         genGetDynArrayPtr(&comp->gen);
-    }
     else if ((*type)->kind == TYPE_STR)
-    {
-        genPushIntConst(&comp->gen, -1);                     // Use actual length for range checking
-        genGetArrayPtr(&comp->gen, typeSize(&comp->types, comp->charType));
-    }
+        genGetArrayPtr(&comp->gen, typeSize(&comp->types, comp->charType), -1);                 // Use actual length for range checking
     else // TYPE_ARRAY
-    {
-        genPushIntConst(&comp->gen, (*type)->numItems);      // Use nominal length for range checking
-        genGetArrayPtr(&comp->gen, typeSize(&comp->types, (*type)->base));
-    }
+        genGetArrayPtr(&comp->gen, typeSize(&comp->types, (*type)->base), (*type)->numItems);   // Use nominal length for range checking
 
     if ((*type)->kind == TYPE_STR)
         *type = typeAddPtrTo(&comp->types, &comp->blocks, comp->charType);

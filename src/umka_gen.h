@@ -59,7 +59,7 @@ void genSwapChangeRefCntAssign  (CodeGen *gen, Type *type);
 void genUnary (CodeGen *gen, TokenKind tokKind, TypeKind typeKind);
 void genBinary(CodeGen *gen, TokenKind tokKind, TypeKind typeKind, int bufOffset /*bytes*/);
 
-void genGetArrayPtr   (CodeGen *gen, int itemSize);
+void genGetArrayPtr   (CodeGen *gen, int itemSize, int len);
 void genGetDynArrayPtr(CodeGen *gen);
 void genGetFieldPtr   (CodeGen *gen, int fieldOffset);
 
@@ -69,10 +69,11 @@ void genAssertWeakPtr(CodeGen *gen);
 void genGoto  (CodeGen *gen, int dest);
 void genGotoIf(CodeGen *gen, int dest);
 
-void genCall       (CodeGen *gen, int paramSlots);
-void genCallExtern (CodeGen *gen, void *entry);
-void genCallBuiltin(CodeGen *gen, TypeKind typeKind, BuiltinFunc builtin);
-void genReturn     (CodeGen *gen, int numParams);
+void genCall        (CodeGen *gen, int entry);
+void genCallIndirect(CodeGen *gen, int paramSlots);
+void genCallExtern  (CodeGen *gen, void *entry);
+void genCallBuiltin (CodeGen *gen, TypeKind typeKind, BuiltinFunc builtin);
+void genReturn      (CodeGen *gen, int numParams);
 
 void genEnterFrame(CodeGen *gen, int localVarSize);
 void genLeaveFrame(CodeGen *gen);
@@ -110,6 +111,8 @@ void genEnterFrameStub (CodeGen *gen);
 void genLeaveFrameFixup(CodeGen *gen, int localVarSize);
 
 void genEntryPoint(CodeGen *gen, int start);
+
+int  genTryRemoveImmediateEntryPoint(CodeGen *gen);
 
 void genGotosProlog (CodeGen *gen, Gotos *gotos, int block);
 void genGotosAddStub(CodeGen *gen, Gotos *gotos);
