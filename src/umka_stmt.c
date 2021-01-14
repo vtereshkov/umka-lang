@@ -12,7 +12,7 @@ static void parseBlock(Compiler *comp);
 static void doGarbageCollection(Compiler *comp, int block)
 {
     for (Ident *ident = comp->idents.first; ident; ident = ident->next)
-        if (ident->kind == IDENT_VAR && ident->block == block && typeGarbageCollected(ident->type))
+        if (ident->kind == IDENT_VAR && ident->block == block && typeGarbageCollected(ident->type) && strcmp(ident->name, "__result") != 0)
         {
             doPushVarPtr(comp, ident);
             genDeref(&comp->gen, ident->type->kind);

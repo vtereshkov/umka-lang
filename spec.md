@@ -984,7 +984,7 @@ setValue(2, 4)
 v[i].print()
 ```
 
-### `if` statement
+### The `if` statement
 
 Executes a block if a given Boolean expression evaluates to `true`. Optionally, executes another block if the expression evaluates to `false`. An optional short variable declaration may precede the Boolean expression. Its scope encloses the Boolean expression and the two blocks.
 
@@ -1006,7 +1006,7 @@ if x, ok := getValue(); ok {
 }
 ```
 
-### `switch` statement
+### The `switch` statement
 
 Executes one of several statement lists depending on the value of the given ordinal expression. If the expression is equal to any of the constant expressions attached by a `case` label to a statement list, this statement list is executed and the control is transferred past the end of the `switch` statement. If no statement list is selected, the optional `default` statement list is executed. An optional short variable declaration may precede the ordinal expression. Its scope encloses the expression and all the statement lists.
 
@@ -1028,7 +1028,7 @@ switch a {
 }
 ```
 
-### `for` statement
+### The `for` statement
 
 Executes a block repeatedly.
 
@@ -1038,7 +1038,7 @@ Syntax:
 forStmt = "for" (forHeader | forInHeader) block.
 ```
 
-#### General `for` statement
+#### The general `for` statement
 
 Executes a block while a given Boolean expression evaluates to `true`. The expression is re-evaluated before each iteration. An optional simple statement may follow the Boolean expression. If present, it is executed after executing the block and before re-evaluating the Boolean expression. An optional short variable declaration may precede the Boolean expression. Its scope encloses the Boolean expression, the simple statement and the block.
 
@@ -1064,7 +1064,7 @@ for k := 1; k <= 128; k *= 2 {
 }
 ```
 
-#### `for...in` statement
+#### The `for...in` statement
 
 Iterates through all items of an array, a dynamic array or a string. Before each iteration, the index and the value of the next item are evaluated and assigned to the corresponding variables declared via an implicit short variable declaration in the statement header. The index variable may be omitted.
 
@@ -1089,7 +1089,7 @@ for index, item in data {
 }
 ```
 
-### `break` statement
+### The `break` statement
 
 Terminates the execution of the innermost enclosing `for` statement and transfers the control past the end of the `for` statement.
 
@@ -1108,7 +1108,7 @@ for x in a {
 }
 ```
 
-### `continue` statement
+### The `continue` statement
 
 Terminates the execution of the current iteration of the innermost enclosing `for` statement and transfers the control to the point immediately before the end of the `for` statement block.
 
@@ -1127,7 +1127,7 @@ for x in a {
 }
 ```
 
-### `return` statement
+### The `return` statement
 
 Terminates the execution of the innermost enclosing function and transfers the control to the calling function. For functions with non-`void` return value types, the `return` keyword should be followed by an expression or expression list whose types are compatible with the return value types declared in the function signature.
 
