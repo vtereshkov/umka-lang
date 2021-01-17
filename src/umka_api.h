@@ -2,7 +2,7 @@
 #define UMKA_API_H_INCLUDED
 
 
-#ifdef _WIN32  // MSVC++ only
+#ifdef _WIN32
     #if defined(UMKA_STATIC)
         #define UMKA_EXPORT
         #define UMKA_IMPORT

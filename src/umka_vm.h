@@ -38,6 +38,7 @@ typedef enum
     OP_NOP,
     OP_PUSH,
     OP_PUSH_LOCAL_PTR,
+    OP_PUSH_LOCAL,
     OP_PUSH_REG,
     OP_PUSH_STRUCT,
     OP_POP,

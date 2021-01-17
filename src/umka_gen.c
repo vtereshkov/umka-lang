@@ -125,9 +125,17 @@ static bool optimizeDeref(CodeGen *gen, TypeKind typeKind)
 
     Instruction *prev = &gen->code[gen->ip - 1];
 
+    // Optimization: PUSH_LOCAL_PTR + DEREF -> PUSH_LOCAL 
+    // These sequences constitute 20...30 % of all instructions and need a special, more optimized single instruction
+    if (prev->opcode == OP_PUSH_LOCAL_PTR)
+    {
+        gen->ip -= 1;
+        genPushLocal(gen, typeKind, prev->operand.intVal);
+        return true;
+    }    
+
     // Optimization: (PUSH | ...) + DEREF -> (PUSH | ...); DEREF
     if (((prev->opcode == OP_PUSH && prev->typeKind == TYPE_PTR) ||
-          prev->opcode == OP_PUSH_LOCAL_PTR                      ||
           prev->opcode == OP_GET_ARRAY_PTR                       ||
           prev->opcode == OP_GET_DYNARRAY_PTR                    ||
           prev->opcode == OP_GET_FIELD_PTR)                      &&
@@ -206,6 +214,13 @@ void genPushGlobalPtr(CodeGen *gen, void *ptrVal)
 void genPushLocalPtr(CodeGen *gen, int offset)
 {
     const Instruction instr = {.opcode = OP_PUSH_LOCAL_PTR, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = offset};
+    genAddInstr(gen, &instr);
+}
+
+
+void genPushLocal(CodeGen *gen, TypeKind typeKind, int offset)
+{
+    const Instruction instr = {.opcode = OP_PUSH_LOCAL, .tokKind = TOK_NONE, .typeKind = typeKind, .operand.intVal = offset};
     genAddInstr(gen, &instr);
 }
 
