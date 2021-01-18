@@ -182,14 +182,14 @@ void constBinary(Consts *consts, Const *lhs, const Const *rhs, TokenKind tokKind
 }
 
 
-void constCallBuiltin(Consts *consts, Const *arg, const Const *arg2, Type *argType, BuiltinFunc builtinVal)
+void constCallBuiltin(Consts *consts, Const *arg, const Const *arg2, TypeKind argTypeKind, BuiltinFunc builtinVal)
 {
     switch (builtinVal)
     {
         case BUILTIN_REAL:
         case BUILTIN_REAL_LHS:
         {
-            if (argType->kind == TYPE_UINT)
+            if (argTypeKind == TYPE_UINT)
                 arg->realVal = arg->uintVal;
             else
                 arg->realVal = arg->intVal;

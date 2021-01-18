@@ -60,7 +60,7 @@ static void doIntToRealConv(Compiler *comp, Type *dest, Type **src, Const *const
 {
     BuiltinFunc builtin = lhs ? BUILTIN_REAL_LHS : BUILTIN_REAL;
     if (constant)
-        constCallBuiltin(&comp->consts, constant, NULL, *src, builtin);
+        constCallBuiltin(&comp->consts, constant, NULL, (*src)->kind, builtin);
     else
         genCallBuiltin(&comp->gen, (*src)->kind, builtin);
 
@@ -471,7 +471,7 @@ static void parseBuiltinMathCall(Compiler *comp, Type **type, Const *constant, B
     }
 
     if (constant)
-        constCallBuiltin(&comp->consts, constant, constant2, *type, builtin);
+        constCallBuiltin(&comp->consts, constant, constant2, TYPE_REAL, builtin);
     else
         genCallBuiltin(&comp->gen, TYPE_REAL, builtin);
 
@@ -639,7 +639,7 @@ static void parseBuiltinLenCall(Compiler *comp, Type **type, Const *constant)
         case TYPE_STR:
         {
             if (constant)
-                constCallBuiltin(&comp->consts, constant, NULL, comp->strType, BUILTIN_LEN);
+                constCallBuiltin(&comp->consts, constant, NULL, TYPE_STR, BUILTIN_LEN);
             else
                 genCallBuiltin(&comp->gen, TYPE_STR, BUILTIN_LEN);
             break;

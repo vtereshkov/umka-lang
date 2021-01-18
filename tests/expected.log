@@ -206,9 +206,14 @@ repr():
 a 
 fn 
 { 0.500000 0.700000 0.900000 } 
-0000000000579f20 
+0000000000519f80 
 
 
 >>> Type equivalence
 
     ...passed
+
+
+>>> Constant folding
+
+-1.479060 2 true true 

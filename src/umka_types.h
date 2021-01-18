@@ -131,9 +131,15 @@ static inline bool typeInteger(Type *type)
 }
 
 
+static inline bool typeKindOrdinal(TypeKind typeKind)
+{
+    return typeKindInteger(typeKind) || typeKind == TYPE_CHAR;
+}
+
+
 static inline bool typeOrdinal(Type *type)
 {
-    return typeInteger(type) || type->kind == TYPE_CHAR;
+    return typeKindOrdinal(type->kind);
 }
 
 
