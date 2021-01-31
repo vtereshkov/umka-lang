@@ -9,7 +9,7 @@ static void parseStmtList(Compiler *comp);
 static void parseBlock(Compiler *comp);
 
 
-static void doGarbageCollection(Compiler *comp, int block)
+void doGarbageCollection(Compiler *comp, int block)
 {
     for (Ident *ident = comp->idents.first; ident; ident = ident->next)
         if (ident->kind == IDENT_VAR && ident->block == block && typeGarbageCollected(ident->type) && strcmp(ident->name, "__result") != 0)
@@ -22,7 +22,7 @@ static void doGarbageCollection(Compiler *comp, int block)
 }
 
 
-static void doGarbageCollectionDownToBlock(Compiler *comp, int block)
+void doGarbageCollectionDownToBlock(Compiler *comp, int block)
 {
     // Collect garbage over all scopes down to the specified block (not inclusive)
     for (int i = comp->blocks.top; i >= 1; i--)
@@ -815,16 +815,7 @@ void parseFnBlock(Compiler *comp, Ident *fn)
     lexEat(&comp->lex, TOK_LBRACE);
     blocksEnter(&comp->blocks, fn);
 
-    bool mainFn = false;
-    if (strcmp(fn->name, "main") == 0)
-    {
-        if (fn->type->sig.method || fn->type->sig.numParams != 0 || fn->type->sig.resultType->kind != TYPE_VOID)
-            comp->error.handler(comp->error.context, "Illegal main() signature");
-
-        genEntryPoint(&comp->gen, 0);
-        mainFn = true;
-    }
-    else if (fn->prototypeOffset >= 0)
+    if (fn->prototypeOffset >= 0)
     {
         genEntryPoint(&comp->gen, fn->prototypeOffset);
         fn->prototypeOffset = -1;
@@ -854,16 +845,8 @@ void parseFnBlock(Compiler *comp, Ident *fn)
 
     genLeaveFrameFixup(&comp->gen, comp->blocks.item[comp->blocks.top].localVarSize);
 
-    if (mainFn)
-    {
-        doGarbageCollection(comp, 0);
-        genHalt(&comp->gen);
-    }
-    else
-    {
-        int paramSlots = typeParamSizeTotal(&comp->types, &fn->type->sig) / sizeof(Slot);
-        genReturn(&comp->gen, paramSlots);
-    }
+    int paramSlots = typeParamSizeTotal(&comp->types, &fn->type->sig) / sizeof(Slot);
+    genReturn(&comp->gen, paramSlots);
 
     blocksLeave(&comp->blocks);
     lexEat(&comp->lex, TOK_RBRACE);

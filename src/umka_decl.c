@@ -707,8 +707,18 @@ void parseProgram(Compiler *comp)
     genNop(&comp->gen);
 
     lexNext(&comp->lex);
-    parseModule(comp);
+    int mainModule = parseModule(comp);
 
-    if (!comp->gen.mainDefined)
-        comp->error.handler(comp->error.context, "main() is not defined");
+    // Entry point
+    genEntryPoint(&comp->gen, 0);
+
+    Ident *mainFn = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, mainModule, "main", NULL);
+
+    if (mainFn->kind != IDENT_CONST || mainFn->type->kind != TYPE_FN || mainFn->type->sig.method || 
+        mainFn->type->sig.numParams != 0 || mainFn->type->sig.resultType->kind != TYPE_VOID)
+        comp->error.handler(comp->error.context, "Illegal main() function");
+
+    genCall(&comp->gen, mainFn->offset);
+    doGarbageCollection(comp, 0);
+    genHalt(&comp->gen);
 }

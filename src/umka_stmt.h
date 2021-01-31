@@ -3,6 +3,9 @@
 
 #include "umka_compiler.h"
 
+void doGarbageCollection(Compiler *comp, int block);
+void doGarbageCollectionDownToBlock(Compiler *comp, int block);
+
 void doZeroVar(Compiler *comp, Ident *ident);
 void doResolveExtern(Compiler *comp);
 
