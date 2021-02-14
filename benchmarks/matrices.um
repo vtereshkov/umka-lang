@@ -15,7 +15,7 @@ fn main() {
     }
     
     // Multiply matrices
-    start := std.time()
+    start := std.clock()
     
     for i := 0; i < size; i++ {
         for j := 0; j < size; j++ {
@@ -25,7 +25,7 @@ fn main() {
         }
     }    
     
-    printf("elapsed: %d\n", std.time() - start)
+    printf("elapsed: %.3f\n", std.clock() - start)
     
     // Check result
     check := 0.0

@@ -71,3 +71,9 @@ void rtltime(Slot *params, Slot *result)
     result->intVal = time(NULL);
 }
 
+
+void rtlclock(Slot *params, Slot *result)
+{
+    result->realVal = (double)clock() / CLOCKS_PER_SEC;
+}
+

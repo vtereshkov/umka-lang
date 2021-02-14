@@ -1306,6 +1306,12 @@ fn time*(): int
 
 Returns the number of seconds since 00:00, January 1, 1970 UTC.
 
+```
+fn clock*(): real
+```
+
+Returns the number of seconds since the start of the program.
+
 ### Command line
 
 ```

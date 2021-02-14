@@ -100,6 +100,9 @@ fn frand*(): real {return real(rand()) / randMax}
 fn rtltime(): int
 fn time*(): int {return rtltime()}
 
+fn rtlclock(): real
+fn clock*(): real {return rtlclock()}
+
 // Command line
 
 fn argc*(): int {return rtlargc}
