@@ -622,10 +622,12 @@ static void parseBuiltinLenCall(Compiler *comp, Type **type, Const *constant)
         case TYPE_ARRAY:
         {
             if (constant)
-                comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
-
-            genPop(&comp->gen);
-            genPushIntConst(&comp->gen, (*type)->numItems);
+                constant->intVal = (*type)->numItems;
+            else
+            {
+                genPop(&comp->gen);
+                genPushIntConst(&comp->gen, (*type)->numItems);                
+            }
             break;
         }
         case TYPE_DYNARRAY:

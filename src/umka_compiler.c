@@ -138,8 +138,13 @@ void compilerInit(Compiler *comp, const char *fileName, const char *sourceString
     compilerDeclareExternalFuncs(comp);
 
     // Command-line-arguments
+    Type *argvType     = typeAdd(&comp->types, &comp->blocks, TYPE_ARRAY);
+    argvType->base     = comp->strType;
+    argvType->numItems = comp->argc;
+    argvType           = typeAddPtrTo(&comp->types, &comp->blocks, argvType);
+
     Ident *rtlargc = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "rtlargc", comp->intType, true);
-    Ident *rtlargv = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "rtlargv", comp->ptrVoidType, true);
+    Ident *rtlargv = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "rtlargv", argvType, true);
 
     *(int64_t *)(rtlargc->ptr) = comp->argc;
     *(void *  *)(rtlargv->ptr) = comp->argv;

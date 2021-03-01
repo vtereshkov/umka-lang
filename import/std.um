@@ -111,6 +111,5 @@ fn argv*(i: int): str {
     if i < 0 || i >= rtlargc {
         error("Command line parameter not found")
     }
-    s := ^[64]str(rtlargv)
-    return s[i]
+    return rtlargv[i]
 }
