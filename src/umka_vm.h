@@ -57,6 +57,7 @@ typedef enum
     OP_GET_FIELD_PTR,
     OP_ASSERT_TYPE,
     OP_ASSERT_WEAK_PTR,
+    OP_ASSERT_LEN,
     OP_GOTO,
     OP_GOTO_IF,
     OP_CALL,

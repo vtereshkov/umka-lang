@@ -105,11 +105,56 @@ static void doCharToStrConv(Compiler *comp, Type *dest, Type **src, Const *const
 }
 
 
+static void doCharArrayPtrToStrConv(Compiler *comp, Type *dest, Type **src, Const *constant, bool lhs)
+{
+    if (constant)
+    {
+        if (((char *)constant->ptrVal)[(*src)->base->numItems - 1] != 0)
+            comp->error.handler(comp->error.context, "Character array is not null-terminated");
+    }
+    else
+    {
+        if (lhs)
+            genSwap(&comp->gen);
+
+        genAssertLen(&comp->gen, TYPE_ARRAY, (*src)->base->numItems);
+
+        if (lhs)
+            genSwap(&comp->gen);
+    }
+
+    *src = dest;
+}
+
+
+static void doStrToCharArrayPtrConv(Compiler *comp, Type *dest, Type **src, Const *constant, bool lhs)
+{
+    if (constant)
+    {
+        if (strlen((char *)constant->ptrVal) + 1 < dest->base->numItems)
+            comp->error.handler(comp->error.context, "String is too short");
+    }
+    else
+    {
+        if (lhs)
+            genSwap(&comp->gen);
+
+        genAssertLen(&comp->gen, TYPE_STR, dest->base->numItems);
+
+        if (lhs)
+            genSwap(&comp->gen);
+    }
+
+    *src = dest;
+}
+
+
 static void doDynArrayPtrToArrayPtrConv(Compiler *comp, Type *dest, Type **src, Const *constant)
 {
     if (constant)
         comp->error.handler(comp->error.context, "Conversion to array is not allowed in constant expressions");
 
+    genAssertLen(&comp->gen, TYPE_DYNARRAY, dest->base->numItems);
     genGetFieldPtr(&comp->gen, offsetof(DynArray, data));
     genDeref(&comp->gen, TYPE_PTR);
 
@@ -272,6 +317,18 @@ void doImplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant,
         doCharToStrConv(comp, dest, src, constant, lhs);
     }
 
+    // Pointer to array of characters to string
+    else if (dest->kind == TYPE_STR && typeCharArrayPtr(*src))
+    {
+        doCharArrayPtrToStrConv(comp, dest, src, constant, lhs);
+    }
+
+    // String to pointer to array of characters
+    else if (typeCharArrayPtr(dest) && (*src)->kind == TYPE_STR)
+    {
+        doStrToCharArrayPtrConv(comp, dest, src, constant, lhs);
+    }
+
     // Array to dynamic array
     else if (dest->kind == TYPE_DYNARRAY && (*src)->kind == TYPE_ARRAY && typeEquivalent(dest->base, (*src)->base))
     {
@@ -345,8 +402,11 @@ static void doApplyStrCat(Compiler *comp, Const *constant, Const *rightConstant)
 
 void doApplyOperator(Compiler *comp, Type **type, Type **rightType, Const *constant, Const *rightConstant, TokenKind op, bool apply, bool convertLhs)
 {
-    doImplicitTypeConv(comp, *type, rightType, rightConstant, false);
+    // First, the right-hand side type is converted to the left-hand side type, except for ^[...]char and str when the former is converted to str
+    if (!(convertLhs && typeCharArrayPtr(*type) && (*rightType)->kind == TYPE_STR))
+        doImplicitTypeConv(comp, *type, rightType, rightConstant, false);
 
+    // Second, the left-hand side type is converted to the right-hand side type for symmetric operators
     if (convertLhs)
         doImplicitTypeConv(comp, *rightType, type, constant, true);
 
@@ -626,7 +686,7 @@ static void parseBuiltinLenCall(Compiler *comp, Type **type, Const *constant)
             else
             {
                 genPop(&comp->gen);
-                genPushIntConst(&comp->gen, (*type)->numItems);                
+                genPushIntConst(&comp->gen, (*type)->numItems);
             }
             break;
         }
@@ -983,12 +1043,10 @@ static void parseTypeCast(Compiler *comp, Type **type, Const *constant)
     parseExpr(comp, &originalType, constant);
     doImplicitTypeConv(comp, *type, &originalType, constant, false);
 
-    if (!typeEquivalent(*type, originalType)                           &&
-        !(typeCastable(*type)       && typeCastable(originalType))     &&
-        !typeCastablePtrs(&comp->types, *type, originalType)           &&
-        !(typeCharArrayPtr(*type)   && originalType->kind == TYPE_STR) &&
-        !((*type)->kind == TYPE_STR && typeCharArrayPtr(originalType)))
-        comp->error.handler(comp->error.context, "Invalid type cast");
+    if (!typeEquivalent(*type, originalType)                 &&
+        !(typeCastable(*type) && typeCastable(originalType)) &&
+        !typeCastablePtrs(&comp->types, *type, originalType))
+            comp->error.handler(comp->error.context, "Invalid type cast");
 
     lexEat(&comp->lex, TOK_RPAR);
 }

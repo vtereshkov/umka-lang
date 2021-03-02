@@ -45,6 +45,7 @@ static const char *opcodeSpelling [] =
     "GET_FIELD_PTR",
     "ASSERT_TYPE",
     "ASSERT_WEAK_PTR",
+    "ASSERT_LEN",
     "GOTO",
     "GOTO_IF",
     "CALL",
@@ -610,21 +611,21 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, Error *e
     int len = 0;
     switch (type->kind)
     {
-        case TYPE_VOID:     len = snprintf(buf, maxLen, "void ");                                           break;
+        case TYPE_VOID:     len = snprintf(buf, maxLen, "void ");                                                             break;
         case TYPE_INT8:
         case TYPE_INT16:
         case TYPE_INT32:
         case TYPE_INT:
         case TYPE_UINT8:
         case TYPE_UINT16:
-        case TYPE_UINT32:   len = snprintf(buf, maxLen, "%lld ",  (long long int)slot->intVal);             break;
-        case TYPE_UINT:     len = snprintf(buf, maxLen, "%llu ", (unsigned long long int)slot->uintVal);    break;
-        case TYPE_BOOL:     len = snprintf(buf, maxLen, slot->intVal ? "true " : "false ");                 break;
-        case TYPE_CHAR:     len = snprintf(buf, maxLen, "%c ", (char)slot->intVal);                         break;
+        case TYPE_UINT32:   len = snprintf(buf, maxLen, "%lld ",  (long long int)slot->intVal);                               break;
+        case TYPE_UINT:     len = snprintf(buf, maxLen, "%llu ", (unsigned long long int)slot->uintVal);                      break;
+        case TYPE_BOOL:     len = snprintf(buf, maxLen, slot->intVal ? "true " : "false ");                                   break;
+        case TYPE_CHAR:     len = snprintf(buf, maxLen, (char)slot->intVal >= ' ' ? "'%c' " : "0x%02X ", (char)slot->intVal); break;
         case TYPE_REAL32:
-        case TYPE_REAL:     len = snprintf(buf, maxLen, "%lf ", slot->realVal);                             break;
-        case TYPE_PTR:      len = snprintf(buf, maxLen, "%p ", (void *)slot->ptrVal);                       break;
-        case TYPE_STR:      len = snprintf(buf, maxLen, "\"%s\" ", (char *)slot->ptrVal);                   break;
+        case TYPE_REAL:     len = snprintf(buf, maxLen, "%lf ", slot->realVal);                                               break;
+        case TYPE_PTR:      len = snprintf(buf, maxLen, "%p ", (void *)slot->ptrVal);                                         break;
+        case TYPE_STR:      len = snprintf(buf, maxLen, "\"%s\" ", (char *)slot->ptrVal);                                     break;
 
         case TYPE_ARRAY:
         {
@@ -1557,6 +1558,35 @@ static FORCE_INLINE void doAssertWeakPtr(Fiber *fiber, HeapPages *pages)
 }
 
 
+static FORCE_INLINE void doAssertLen(Fiber *fiber, Error *error)
+{
+    // Ensure that a dynamic array or a string is not shorter than the specified minimum length
+    // or that an array of characters is null-terminated
+
+    void *data        = (void *)fiber->top->ptrVal;
+    TypeKind typeKind = fiber->code[fiber->ip].typeKind;
+    int len           = -1;
+    int minLen        = fiber->code[fiber->ip].operand.intVal;
+
+    if (typeKind == TYPE_ARRAY)
+    {
+        if (((char *)data)[minLen - 1] == 0)
+            len = minLen;
+        else
+            error->handlerRuntime(error->context, "Character array is not null-terminated");
+    }
+    else if (typeKind == TYPE_DYNARRAY)
+        len = ((DynArray *)data)->len;
+    else if (typeKind == TYPE_STR)
+        len = strlen((char *)data) + 1;
+
+    if (len < minLen)
+        error->handlerRuntime(error->context, "Dynamic array or string is too short");
+
+    fiber->ip++;
+}
+
+
 static FORCE_INLINE void doGoto(Fiber *fiber)
 {
     fiber->ip = fiber->code[fiber->ip].operand.intVal;
@@ -1784,6 +1814,7 @@ static FORCE_INLINE void vmLoop(VM *vm)
             case OP_GET_FIELD_PTR:                  doGetFieldPtr(fiber, error);                  break;
             case OP_ASSERT_TYPE:                    doAssertType(fiber);                          break;
             case OP_ASSERT_WEAK_PTR:                doAssertWeakPtr(fiber, pages);                break;
+            case OP_ASSERT_LEN:                     doAssertLen(fiber, error);                    break;
             case OP_GOTO:                           doGoto(fiber);                                break;
             case OP_GOTO_IF:                        doGotoIf(fiber);                              break;
             case OP_CALL:                           doCall(fiber, error);                         break;
@@ -1885,6 +1916,7 @@ int vmAsm(int ip, Instruction *instr, char *buf)
         case OP_ASSIGN:
         case OP_BINARY:
         case OP_GET_FIELD_PTR:
+        case OP_ASSERT_LEN:
         case OP_GOTO:
         case OP_GOTO_IF:
         case OP_CALL:

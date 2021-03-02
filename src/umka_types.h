@@ -213,8 +213,8 @@ void typeAssertCompatible   (Types *types, Type *left, Type *right, bool symmetr
 static inline bool typeCastablePtrs(Types *types, Type *left, Type *right)
 {
     return left->kind  == TYPE_PTR && right->kind == TYPE_PTR &&
-           (left->base->kind == TYPE_VOID || 
-           (typeSize(types, left->base) == typeSize(types, right->base) && 
+           (left->base->kind == TYPE_VOID ||
+           (typeSize(types, left->base) <= typeSize(types, right->base) &&
            !typeGarbageCollected(left->base) && !typeGarbageCollected(right->base)));
 }
 

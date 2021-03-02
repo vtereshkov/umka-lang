@@ -11,6 +11,7 @@ import (
     "tour.um"
     "typeeq.um"
     "constfold.um"
+    "safecast.um"
 )
 
 fn main() {
@@ -26,4 +27,5 @@ fn main() {
     printf("\n\n>>> Language tour\n\n");        tour.test()
     printf("\n\n>>> Type equivalence\n\n");     typeeq.test()
     printf("\n\n>>> Constant folding\n\n");     constfold.test()
+    printf("\n\n>>> Safe type casts\n\n");      safecast.test()
 }

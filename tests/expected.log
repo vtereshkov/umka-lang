@@ -29,12 +29,6 @@ b: 5 7
 b: 10 14
 b: 15 21
 b: 20 28
-b: 25 35
-b: 30 42
-b: 35 49
-b: 40 56
-b: 45 63
-b: 666 777
 Appending...
 e: 0 0
 e: 5 7
@@ -155,8 +149,8 @@ Population of Russia was 146.73 million. Now it is 146.75 million
 { 9 8 }  { 3 2 }  { 7 6 } 
 Hello World
 World Hello
-23  45.600000  "Hello"  z 
-{ a b }  { c d }  { e f } 
+23  45.600000  "Hello"  'z' 
+{ 'a' 'b' }  { 'c' 'd' }  { 'e' 'f' } 
 12.000000  -3.000000  17.000000 
 
 
@@ -203,10 +197,10 @@ repr():
 { { 0 0 0 0 0 } { 0 0 0 0 0 } { 0 0 0 0 0 } { 10 20 30 40 50 } } 
 { q: { 1.000000 0.000000 0.000000 0.000000 } normalized: true } 
 4.680000 
-a 
+'a' 
 fn 
 { 0.500000 0.700000 0.900000 } 
-0000000000519f80 
+000000000036b440 
 
 
 >>> Type equivalence
@@ -217,3 +211,13 @@ fn
 >>> Constant folding
 
 -1.479060 2 true true 
+
+
+>>> Safe type casts
+
+{ 1 5 7 10 } 
+{ 1 4 7 } 
+Hey Hello
+{ 'H' 'e' 'l' 'l' 0x00 } Hell
+HellHell
+HellHell

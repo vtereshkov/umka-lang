@@ -1,0 +1,38 @@
+fn test*() {
+	// Dynamic arrays
+	var p: ^[3]int
+	{
+		a := []int{1, 4, 7}
+
+		p = ^[3]int(&a)
+		a = append(a, 10)
+		a[1] = 5
+
+		printf(repr(a) + '\n')
+	}
+
+	printf(repr(p^) + '\n')
+
+	// Strings
+	var pc: ^[5]char
+
+	{
+		s := "Hello"
+		pc = s
+		s = "Hey " + s
+
+		printf(s + '\n')				
+	}
+
+	pc[len(pc^) - 1] = '\0'
+
+	var s2: str = pc
+	
+	printf(repr(pc^) + s2 + '\n')
+	printf(pc + s2 + '\n')
+	printf(s2 + pc + '\n')
+}
+
+fn main() {
+	test()
+}

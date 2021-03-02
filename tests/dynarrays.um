@@ -1,8 +1,8 @@
 import "../import/std.um"
 
-fn f(b: ^[100][2]^int, length: int) {
-    for i := 0; i < length; i++ {
-        std.println("b: " + std.itoa(b[i][0]^) + " " + std.itoa(b[i][1]^))
+fn f(b: ^[5][2]^int) {
+    for x in b {
+        std.println("b: " + std.itoa(x[0]^) + " " + std.itoa(x[1]^))
     }
 }    
 
@@ -28,7 +28,7 @@ fn test*() {
         std.println("a: " + std.itoa(x[0]^) + " " + std.itoa(x[1]^))
     }   
 
-    f(&a, len(a))
+    f(&a)
         
     std.println("Appending...")
     e := append(a, [2]^int {new(int), new(int)})

@@ -360,8 +360,10 @@ If the type `S` is given where some other type `T` is expected, the type `S` is 
 * `S` and `T` are compatible
 * `S` is an integer type and `T` is a real type
 * `S` is `char` and `T` is `str`
-* `S` is an array type and `T` is a dynamic array type and the item types of `S` and `T` are equivalent.
-* `S` is a pointer to a dynamic array and `T` is a pointer to an array and  the item types of `S` and `T` are equivalent
+* `S` is a pointer to an array of `char` and `T` is `str` and the last item of `S` is the null character
+* `S` is `str` and `T` is a pointer to an array of `char` and `len(S) + 1 >= len(T)` 
+* `S` is an array type and `T` is a dynamic array type and the item types of `S` and `T` are equivalent
+* `S` is a pointer to a dynamic array and `T` is a pointer to an array and the item types of `S` and `T` are equivalent and `len(S) >= len(T)` 
 * `S` is an interface type and `T` is a type that implements all the methods of `S` 
 * `S` is a pointer type and `T` is an interface type
 * `S` is a weak pointer type and `T` is a strong pointer type and the base types of `S` and `T` are equivalent 
@@ -373,10 +375,6 @@ A type `S` can be explicitly converted to a type `T` if
 * `S` can be implicitly converted to `T`
 * `S` and `T` are ordinal types
 * `S` and `T` are pointer types and either `T` is `^void` or the base types of `S` and `T` have equal sizes and don't contain pointers 
-* `S` is `str` and `T` is  an array of `char`
-* `S` is an array of `char` and `T` is `str`
-
-Note: Using explicit conversions between pointer types is considered unsafe in Umka.
 
 ## Declarations
 
@@ -872,6 +870,13 @@ p != null && p[i] > 0
 The `/` operator performs an integer division (with the remainder discarded) if both operands are of integer types, otherwise it performs a real division.
 
 The `&&` and `||` operators don't evaluate the second operand if the first operand is sufficient to evaluate the result.
+
+##### Operand type conversions
+
+Operand types are implicitly converted in two steps:
+
+* The right operand type is converted to the left operand type, except for `^[...]char` and `str`
+* The left operand type is converted to the right operand type
 
 ##### Operator precedence
 

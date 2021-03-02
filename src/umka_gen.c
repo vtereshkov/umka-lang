@@ -113,14 +113,14 @@ static bool optimizeDeref(CodeGen *gen, TypeKind typeKind)
 {
     Instruction *prev = getPrevInstr(gen, 1);
 
-    // Optimization: PUSH_LOCAL_PTR + DEREF -> PUSH_LOCAL 
+    // Optimization: PUSH_LOCAL_PTR + DEREF -> PUSH_LOCAL
     // These sequences constitute 20...30 % of all instructions and need a special, more optimized single instruction
     if (prev && prev->opcode == OP_PUSH_LOCAL_PTR)
     {
         gen->ip -= 1;
         genPushLocal(gen, typeKind, prev->operand.intVal);
         return true;
-    }    
+    }
 
     // Optimization: (PUSH | ...) + DEREF -> (PUSH | ...); DEREF
     if (prev && ((prev->opcode == OP_PUSH && prev->typeKind == TYPE_PTR) ||
@@ -183,7 +183,7 @@ static bool optimizeUnary(CodeGen *gen, TokenKind tokKind, TypeKind typeKind)
 
     // Optimization: PUSH + UNARY -> PUSH
     if (prev && prev->opcode == OP_PUSH && prev->inlineOpcode == OP_NOP && tokKind != TOK_PLUSPLUS && tokKind != TOK_MINUSMINUS)
-    { 
+    {
         Const arg;
         if (typeKindReal(typeKind))
             arg.realVal = prev->operand.realVal;
@@ -213,9 +213,9 @@ static bool optimizeBinary(CodeGen *gen, TokenKind tokKind, TypeKind typeKind)
 
     // Optimization: PUSH + PUSH + BINARY -> PUSH
     if (prev  && prev->opcode  == OP_PUSH && prev->inlineOpcode  == OP_NOP &&
-        prev2 && prev2->opcode == OP_PUSH && prev2->inlineOpcode == OP_NOP && 
+        prev2 && prev2->opcode == OP_PUSH && prev2->inlineOpcode == OP_NOP &&
        (typeKindOrdinal(typeKind) || typeKindReal(typeKind) || typeKind == TYPE_BOOL))
-    { 
+    {
         Const lhs, rhs;
         if (typeKindReal(typeKind))
         {
@@ -229,18 +229,18 @@ static bool optimizeBinary(CodeGen *gen, TokenKind tokKind, TypeKind typeKind)
         }
 
         prev = prev2;
-        gen->ip -= 1;        
+        gen->ip -= 1;
 
         Consts consts = {.error = gen->error};
         constBinary(&consts, &lhs, &rhs, tokKind, typeKind);
 
         prev->typeKind = typeKind;
 
-        if (tokKind == TOK_EQEQ      || tokKind == TOK_NOTEQ   || 
-            tokKind == TOK_GREATER   || tokKind == TOK_LESS    || 
+        if (tokKind == TOK_EQEQ      || tokKind == TOK_NOTEQ   ||
+            tokKind == TOK_GREATER   || tokKind == TOK_LESS    ||
             tokKind == TOK_GREATEREQ || tokKind == TOK_LESSEQ)
         {
-            prev->typeKind = TYPE_BOOL;            
+            prev->typeKind = TYPE_BOOL;
         }
 
         if (typeKindReal(typeKind))
@@ -261,7 +261,7 @@ static bool optimizeCallBuiltin(CodeGen *gen, TypeKind typeKind, BuiltinFunc bui
 
     // Optimization: PUSH + CALL_BUILTIN -> PUSH
     if (prev && prev->opcode == OP_PUSH && prev->inlineOpcode == OP_NOP)
-    { 
+    {
         Const arg, arg2;
         TypeKind resultTypeKind = TYPE_NONE;
 
@@ -271,18 +271,18 @@ static bool optimizeCallBuiltin(CodeGen *gen, TypeKind typeKind, BuiltinFunc bui
             {
                 arg.intVal = prev->operand.intVal;
                 resultTypeKind = TYPE_REAL;
-                break;                
+                break;
             }
             case BUILTIN_REAL_LHS:
             {
                 if (prev2 && prev2->opcode == OP_PUSH && prev2->inlineOpcode == OP_NOP)
                 {
                     arg.intVal = prev2->operand.intVal;
-                    resultTypeKind = TYPE_REAL; 
+                    resultTypeKind = TYPE_REAL;
                     prev = prev2;
                 }
-                break;                
-            }            
+                break;
+            }
             case BUILTIN_ROUND:
             case BUILTIN_TRUNC:
             case BUILTIN_FABS:
@@ -295,7 +295,7 @@ static bool optimizeCallBuiltin(CodeGen *gen, TypeKind typeKind, BuiltinFunc bui
             {
                 arg.realVal = prev->operand.realVal;
                 resultTypeKind = (builtin == BUILTIN_ROUND || builtin == BUILTIN_TRUNC) ? TYPE_INT : TYPE_REAL;
-                break;                
+                break;
             }
             case BUILTIN_ATAN2:
             {
@@ -303,16 +303,16 @@ static bool optimizeCallBuiltin(CodeGen *gen, TypeKind typeKind, BuiltinFunc bui
                 {
                     arg.realVal = prev2->operand.realVal;
                     arg2.realVal = prev->operand.realVal;
-                    
+
                     resultTypeKind = TYPE_REAL;
                     prev = prev2;
                     gen->ip -= 1;
                 }
-                break; 
-            }   
-            default: break;                        
+                break;
+            }
+            default: break;
         }
-            
+
         if (resultTypeKind != TYPE_NONE)
         {
             Consts consts = {.error = gen->error};
@@ -325,7 +325,7 @@ static bool optimizeCallBuiltin(CodeGen *gen, TypeKind typeKind, BuiltinFunc bui
             else
                 prev->operand.intVal = arg.intVal;
 
-            return true;            
+            return true;
         }
     }
 
@@ -505,7 +505,7 @@ void genUnary(CodeGen *gen, TokenKind tokKind, TypeKind typeKind)
     if (!optimizeUnary(gen, tokKind, typeKind))
     {
         const Instruction instr = {.opcode = OP_UNARY, .tokKind = tokKind, .typeKind = typeKind, .operand.intVal = 0};
-        genAddInstr(gen, &instr);        
+        genAddInstr(gen, &instr);
     }
 }
 
@@ -561,6 +561,13 @@ void genAssertWeakPtr(CodeGen *gen)
 }
 
 
+void genAssertLen(CodeGen *gen, TypeKind typeKind, int minLen)
+{
+    const Instruction instr = {.opcode = OP_ASSERT_LEN, .tokKind = TOK_NONE, .typeKind = typeKind, .operand.intVal = minLen};
+    genAddInstr(gen, &instr);
+}
+
+
 void genGoto(CodeGen *gen, int dest)
 {
     const Instruction instr = {.opcode = OP_GOTO, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = dest};
@@ -601,7 +608,7 @@ void genCallBuiltin(CodeGen *gen, TypeKind typeKind, BuiltinFunc builtin)
     if (!optimizeCallBuiltin(gen, typeKind, builtin))
     {
         const Instruction instr = {.opcode = OP_CALL_BUILTIN, .tokKind = TOK_NONE, .typeKind = typeKind, .operand.builtinVal = builtin};
-        genAddInstr(gen, &instr);        
+        genAddInstr(gen, &instr);
     }
 }
 
