@@ -985,7 +985,7 @@ static void parseTypeCast(Compiler *comp, Type **type, Const *constant)
 
     if (!typeEquivalent(*type, originalType)                           &&
         !(typeCastable(*type)       && typeCastable(originalType))     &&
-        !((*type)->kind == TYPE_PTR && originalType->kind == TYPE_PTR) &&
+        !typeCastablePtrs(&comp->types, *type, originalType)           &&
         !(typeCharArrayPtr(*type)   && originalType->kind == TYPE_STR) &&
         !((*type)->kind == TYPE_STR && typeCharArrayPtr(originalType)))
         comp->error.handler(comp->error.context, "Invalid type cast");

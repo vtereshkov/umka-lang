@@ -209,6 +209,16 @@ void typeAssertEquivalent   (Types *types, Type *left, Type *right);
 bool typeCompatible         (Type *left, Type *right, bool symmetric);
 void typeAssertCompatible   (Types *types, Type *left, Type *right, bool symmetric);
 
+
+static inline bool typeCastablePtrs(Types *types, Type *left, Type *right)
+{
+    return left->kind  == TYPE_PTR && right->kind == TYPE_PTR &&
+           (left->base->kind == TYPE_VOID || 
+           (typeSize(types, left->base) == typeSize(types, right->base) && 
+           !typeGarbageCollected(left->base) && !typeGarbageCollected(right->base)));
+}
+
+
 bool typeValidOperator      (Type *type, TokenKind op);
 void typeAssertValidOperator(Types *types, Type *type, TokenKind op);
 

@@ -372,7 +372,7 @@ A type `S` can be explicitly converted to a type `T` if
 
 * `S` can be implicitly converted to `T`
 * `S` and `T` are ordinal types
-* `S` and `T` are pointer types
+* `S` and `T` are pointer types and either `T` is `^void` or the base types of `S` and `T` have equal sizes and don't contain pointers 
 * `S` is `str` and `T` is  an array of `char`
 * `S` is an array of `char` and `T` is `str`
 
