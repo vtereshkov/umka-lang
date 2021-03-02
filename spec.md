@@ -355,26 +355,26 @@ Two types are *compatible* if
 
 #### Implicit conversions
 
-If the type `S` is given where some other type `T` is expected, the type `S` is implicitly converted to `T` if
+If a value `s` of type `S` is given where a value `t` of some other type `T` is expected, the `s` is implicitly converted to `t` if
 
 * `S` and `T` are compatible
 * `S` is an integer type and `T` is a real type
 * `S` is `char` and `T` is `str`
 * `S` is a pointer to an array of `char` and `T` is `str` and the last item of `S` is the null character
-* `S` is `str` and `T` is a pointer to an array of `char` and `len(S) + 1 >= len(T)` 
+* `S` is `str` and `T` is a pointer to an array of `char` and `len(s) + 1 >= len(t^)` 
 * `S` is an array type and `T` is a dynamic array type and the item types of `S` and `T` are equivalent
-* `S` is a pointer to a dynamic array and `T` is a pointer to an array and the item types of `S` and `T` are equivalent and `len(S) >= len(T)` 
+* `S` is a pointer to a dynamic array and `T` is a pointer to an array and the item types of `S` and `T` are equivalent and `len(s) >= len(t)` 
 * `S` is an interface type and `T` is a type that implements all the methods of `S` 
 * `S` is a pointer type and `T` is an interface type
 * `S` is a weak pointer type and `T` is a strong pointer type and the base types of `S` and `T` are equivalent 
 
 #### Explicit conversions
 
-A type `S` can be explicitly converted to a type `T` if
+If a value `s` of type `S` is given where a value `t` of some other type `T` is expected, the `s` can be explicitly converted (cast) to `t` if
 
 * `S` can be implicitly converted to `T`
 * `S` and `T` are ordinal types
-* `S` and `T` are pointer types and either `T` is `^void` or the base types of `S` and `T` have equal sizes and don't contain pointers 
+* `S` and `T` are pointer types and either `T` is `^void` or  `sizeof(s^) >= sizeof(t^)` and both `S` and `T` don't contain pointers 
 
 ## Declarations
 
