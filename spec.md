@@ -1348,7 +1348,7 @@ Umka fiber stack slot.
 typedef void (*UmkaExternFunc)(UmkaStackSlot *params, UmkaStackSlot *result);
 ```
 
-Umka external function pointer.
+Umka external function pointer. When an external C/C++ function is called from Umka, its parameters are stored in `params` in right-to-left order. 
 
 ```
 enum
