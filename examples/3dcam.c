@@ -6,6 +6,7 @@
 
 
 // Umka extension functions
+// The order of the parameters is counted from the end, not the beginning. if your function is `add(x, y: int)`, x is on params[1] and y is on params[0].
 void rlDrawPlane(UmkaStackSlot *params, UmkaStackSlot *result)
 {
     Color *color = (Color *)&params[0];
