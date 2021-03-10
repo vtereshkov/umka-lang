@@ -1745,8 +1745,7 @@ static FORCE_INLINE void doEnterFrame(Fiber *fiber, HeapPages *pages, Error *err
     // Allocate heap frame
     Slot *heapFrame = chunkAlloc(pages, (localVarSlots + 2 + paramSlots) * sizeof(Slot), error);      // + 2 for old base pointer and return address
 
-    // Initialize heap frame
-    memset(heapFrame, 0, (localVarSlots + 2) * sizeof(Slot));
+    // Copy parameters to heap frame
     memcpy(heapFrame + localVarSlots + 2, fiber->top + 1, paramSlots * sizeof(Slot));
 
     // Push old heap frame base pointer, set new one
