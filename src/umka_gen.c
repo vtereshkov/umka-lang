@@ -620,9 +620,9 @@ void genReturn(CodeGen *gen, int paramSlots)
 }
 
 
-void genEnterFrame(CodeGen *gen, int localVarSize)
+void genEnterFrame(CodeGen *gen, int localVarSize, int paramSize)
 {
-    const Instruction instr = {.opcode = OP_ENTER_FRAME, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = localVarSize};
+    const Instruction instr = {.opcode = OP_ENTER_FRAME, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.int32Val = {localVarSize, paramSize}};
     genAddInstr(gen, &instr);
 }
 
@@ -824,12 +824,12 @@ void genEnterFrameStub(CodeGen *gen)
 }
 
 
-void genLeaveFrameFixup(CodeGen *gen, int localVarSize)
+void genLeaveFrameFixup(CodeGen *gen, int localVarSize, int paramSize)
 {
     // Fixup enter stub
     int next = gen->ip;
     gen->ip = genRestorePos(gen);
-    genEnterFrame(gen, localVarSize);
+    genEnterFrame(gen, localVarSize, paramSize);
     gen->ip = next;
 
     genLeaveFrame(gen);

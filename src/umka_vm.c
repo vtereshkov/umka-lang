@@ -1070,17 +1070,14 @@ static FORCE_INLINE void doBuiltinFiberspawn(Fiber *fiber, HeapPages *pages, Err
 
     // Copy whole fiber context
     Fiber *child = chunkAlloc(pages, sizeof(Fiber), error);
+
     *child = *fiber;
-
-    child->stack = malloc(fiber->stackSize * sizeof(Slot));
-    *(child->stack) = *(fiber->stack);
-
-    child->top  = child->stack + (fiber->top  - fiber->stack);
-    child->base = child->stack + (fiber->base - fiber->stack);
+    child->stack = malloc(child->stackSize * sizeof(Slot));
+    child->top = child->base = child->stack + child->stackSize - 1;
 
     // Call child fiber function
-    (--child->top)->ptrVal = (int64_t)fiber;                  // Push parent fiber pointer
-    (--child->top)->ptrVal = (int64_t)anyParam;               // Push arbitrary pointer parameter
+    (--child->top)->ptrVal = (int64_t)fiber;         // Push parent fiber pointer
+    (--child->top)->ptrVal = (int64_t)anyParam;      // Push arbitrary pointer parameter
     (--child->top)->intVal = VM_FIBER_KILL_SIGNAL;   // Push fiber kill signal instead of return address
     child->ip = childEntryOffset;                    // Call
 
@@ -1136,7 +1133,7 @@ static FORCE_INLINE void doPush(Fiber *fiber, Error *error)
 
 static FORCE_INLINE void doPushLocalPtr(Fiber *fiber)
 {
-    // Local variable addresses are offsets (in bytes) from the stack frame base pointer
+    // Local variable addresses are offsets (in bytes) from the heap frame base pointer
     (--fiber->top)->ptrVal = (int64_t)((int8_t *)fiber->base + fiber->code[fiber->ip].operand.intVal);
     fiber->ip++;
 }
@@ -1144,7 +1141,7 @@ static FORCE_INLINE void doPushLocalPtr(Fiber *fiber)
 
 static FORCE_INLINE void doPushLocal(Fiber *fiber, Error *error)
 {
-    // Local variable addresses are offsets (in bytes) from the stack frame base pointer
+    // Local variable addresses are offsets (in bytes) from the heap frame base pointer
     (--fiber->top)->ptrVal = (int64_t)((int8_t *)fiber->base + fiber->code[fiber->ip].operand.intVal);
     doBasicDeref(fiber->top, fiber->code[fiber->ip].typeKind, error);
     fiber->ip++;
@@ -1737,24 +1734,24 @@ static FORCE_INLINE void doReturn(Fiber *fiber, Fiber **newFiber)
 }
 
 
-static FORCE_INLINE void doEnterFrame(Fiber *fiber, Error *error)
+static FORCE_INLINE void doEnterFrame(Fiber *fiber, HeapPages *pages, Error *error)
 {
-    // Push old stack frame base pointer, move new one to stack top, shift stack top by local variables' size
-    int size = fiber->code[fiber->ip].operand.intVal;
-    int slots = align(size, sizeof(Slot)) / sizeof(Slot);
+    int localVarSize = fiber->code[fiber->ip].operand.int32Val[0];
+    int paramSize    = fiber->code[fiber->ip].operand.int32Val[1];
 
-    if (fiber->top - slots - fiber->stack < VM_MIN_FREE_STACK)
-        error->handlerRuntime(error->context, "Stack overflow");
+    int localVarSlots = align(localVarSize, sizeof(Slot)) / sizeof(Slot);
+    int paramSlots    = align(paramSize,    sizeof(Slot)) / sizeof(Slot);
 
+    // Allocate heap frame
+    Slot *heapFrame = chunkAlloc(pages, (localVarSlots + 2 + paramSlots) * sizeof(Slot), error);      // + 2 for old base pointer and return address
+
+    // Initialize heap frame
+    memset(heapFrame, 0, (localVarSlots + 2) * sizeof(Slot));
+    memcpy(heapFrame + localVarSlots + 2, fiber->top + 1, paramSlots * sizeof(Slot));
+
+    // Push old heap frame base pointer, set new one
     (--fiber->top)->ptrVal = (int64_t)fiber->base;
-    fiber->base = fiber->top;
-    fiber->top -= slots;
-
-    // Zero the whole stack frame
-    if (slots == 1)
-        fiber->top->intVal = 0;
-    else if (slots > 0)
-        memset(fiber->top, 0, slots * sizeof(Slot));
+    fiber->base = heapFrame + localVarSlots;
 
     // Push I/O registers
     *(--fiber->top) = fiber->reg[VM_REG_IO_STREAM];
@@ -1765,15 +1762,18 @@ static FORCE_INLINE void doEnterFrame(Fiber *fiber, Error *error)
 }
 
 
-static FORCE_INLINE void doLeaveFrame(Fiber *fiber)
+static FORCE_INLINE void doLeaveFrame(Fiber *fiber, HeapPages *pages)
 {
     // Pop I/O registers
     fiber->reg[VM_REG_IO_COUNT]  = *(fiber->top++);
     fiber->reg[VM_REG_IO_FORMAT] = *(fiber->top++);
     fiber->reg[VM_REG_IO_STREAM] = *(fiber->top++);
 
-    // Restore stack top, pop old stack frame base pointer
-    fiber->top = fiber->base;
+    // Decrease heap frame ref count
+    HeapPage *page = pageFind(pages, fiber->base);
+    chunkChangeRefCnt(pages, page, fiber->base, -1);
+
+    // Pop old heap frame base pointer
     fiber->base = (Slot *)(fiber->top++)->ptrVal;
 
     fiber->ip++;
@@ -1846,8 +1846,8 @@ static FORCE_INLINE void vmLoop(VM *vm)
 
                 break;
             }
-            case OP_ENTER_FRAME:                    doEnterFrame(fiber, error);                   break;
-            case OP_LEAVE_FRAME:                    doLeaveFrame(fiber);                          break;
+            case OP_ENTER_FRAME:                    doEnterFrame(fiber, pages, error);            break;
+            case OP_LEAVE_FRAME:                    doLeaveFrame(fiber, pages);                   break;
             case OP_HALT:                           return;
 
             default: error->handlerRuntime(error->context, "Illegal instruction"); return;
@@ -1921,8 +1921,8 @@ int vmAsm(int ip, Instruction *instr, char *buf)
         case OP_GOTO_IF:
         case OP_CALL:
         case OP_CALL_INDIRECT:
-        case OP_RETURN:
-        case OP_ENTER_FRAME:            chars += sprintf(buf + chars, " %lld",  (long long int)instr->operand.intVal); break;
+        case OP_RETURN:                 chars += sprintf(buf + chars, " %lld",  (long long int)instr->operand.intVal); break;
+        case OP_ENTER_FRAME:
         case OP_GET_ARRAY_PTR:          chars += sprintf(buf + chars, " %d %d", (int)instr->operand.int32Val[0], (int)instr->operand.int32Val[1]); break;
         case OP_CALL_EXTERN:            chars += sprintf(buf + chars, " %p",    (void *)instr->operand.ptrVal); break;
         case OP_CALL_BUILTIN:           chars += sprintf(buf + chars, " %s",    builtinSpelling[instr->operand.builtinVal]); break;

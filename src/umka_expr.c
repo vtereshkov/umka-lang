@@ -1243,20 +1243,14 @@ static void parseCompositeLiteral(Compiler *comp, Type **type, Const *constant)
 }
 
 
-static void parseTypeCastOrCompositeLiteral(Compiler *comp, Ident *ident, Type **type, Const *constant, bool *isVar, bool *isCall, bool *isCompLit)
+static void parseTypeCastOrCompositeLiteral(Compiler *comp, Ident *ident, Type **type, Const *constant, bool *isVar, bool *isCall)
 {
     *type = parseType(comp, ident);
 
     if (comp->lex.tok.kind == TOK_LPAR)
-    {
         parseTypeCast(comp, type, constant);
-        *isCompLit = false;
-    }
     else if (comp->lex.tok.kind == TOK_LBRACE)
-    {
         parseCompositeLiteral(comp, type, constant);
-        *isCompLit = true;
-    }
     else
         comp->error.handler(comp->error.context, "Type cast or composite literal expected");
 
@@ -1449,7 +1443,7 @@ static void parseCallSelector(Compiler *comp, Type **type, Const *constant, bool
 
 
 // selectors = {derefSelector | indexSelector | fieldSelector | callSelector}.
-static void parseSelectors(Compiler *comp, Type **type, Const *constant, bool *isVar, bool *isCall, bool *isCompLit)
+static void parseSelectors(Compiler *comp, Type **type, Const *constant, bool *isVar, bool *isCall)
 {
     while (comp->lex.tok.kind == TOK_CARET  || comp->lex.tok.kind == TOK_LBRACKET ||
            comp->lex.tok.kind == TOK_PERIOD || comp->lex.tok.kind == TOK_LPAR)
@@ -1465,32 +1459,27 @@ static void parseSelectors(Compiler *comp, Type **type, Const *constant, bool *i
             case TOK_LPAR:      parseCallSelector (comp, type, constant, isVar, isCall); break;
             default:            break;
         } // switch
-
-        *isCompLit = false;
     } // while
 }
 
 
 // designator = (primary | typeCast | compositeLiteral) selectors.
-void parseDesignator(Compiler *comp, Type **type, Const *constant, bool *isVar, bool *isCall, bool *isCompLit)
+void parseDesignator(Compiler *comp, Type **type, Const *constant, bool *isVar, bool *isCall)
 {
-    *isCompLit = false;
-
     Ident *ident = NULL;
     if (comp->lex.tok.kind == TOK_IDENT && (ident = parseQualIdent(comp)) && ident->kind != IDENT_TYPE)
         parsePrimary(comp, ident, type, constant, isVar, isCall);
     else
-        parseTypeCastOrCompositeLiteral(comp, ident, type, constant, isVar, isCall, isCompLit);
+        parseTypeCastOrCompositeLiteral(comp, ident, type, constant, isVar, isCall);
 
-    parseSelectors(comp, type, constant, isVar, isCall, isCompLit);
+    parseSelectors(comp, type, constant, isVar, isCall);
 }
 
 
 // designatorList = designator {"," designator}.
 void parseDesignatorList(Compiler *comp, Type **type, Const *constant, bool *isVar, bool *isCall)
 {
-    bool isCompLit;
-    parseDesignator(comp, type, constant, isVar, isCall, &isCompLit);
+    parseDesignator(comp, type, constant, isVar, isCall);
 
     if (comp->lex.tok.kind == TOK_COMMA)
     {
@@ -1511,8 +1500,8 @@ void parseDesignatorList(Compiler *comp, Type **type, Const *constant, bool *isV
 
             lexNext(&comp->lex);
 
-            bool fieldIsVar, fieldIsCall, fieldIsCompLit;
-            parseDesignator(comp, &fieldType, NULL, &fieldIsVar, &fieldIsCall, &fieldIsCompLit);
+            bool fieldIsVar, fieldIsCall;
+            parseDesignator(comp, &fieldType, NULL, &fieldIsVar, &fieldIsCall);
 
             if (fieldIsVar != *isVar || fieldIsCall != *isCall)
                 comp->error.handler(comp->error.context, "Inconsistent designator list");
@@ -1537,8 +1526,8 @@ static void parseFactor(Compiler *comp, Type **type, Const *constant)
         case TOK_FN:
         {
             // A designator that isVar is always an addressable quantity (a structured type or a pointer to a value type)
-            bool isVar, isCall, isCompLit;
-            parseDesignator(comp, type, constant, &isVar, &isCall, &isCompLit);
+            bool isVar, isCall;
+            parseDesignator(comp, type, constant, &isVar, &isCall);
             if (isVar)
             {
                 if (!typeStructured(*type))
@@ -1635,8 +1624,8 @@ static void parseFactor(Compiler *comp, Type **type, Const *constant)
 
             lexNext(&comp->lex);
 
-            bool isVar, isCall, isCompLit;
-            parseDesignator(comp, type, constant, &isVar, &isCall, &isCompLit);
+            bool isVar, isCall;
+            parseDesignator(comp, type, constant, &isVar, &isCall);
 
             if (!isVar)
                 comp->error.handler(comp->error.context, "Unable to take address");
@@ -1644,10 +1633,6 @@ static void parseFactor(Compiler *comp, Type **type, Const *constant)
             // A value type is already a pointer, a structured type needs to have it added
             if (typeStructured(*type))
                 *type = typeAddPtrTo(&comp->types, &comp->blocks, *type);
-
-            // Allow returning addresses of composite literals from functions
-            if (isCompLit)
-                doEscapeToHeap(comp, *type);
             break;
         }
 

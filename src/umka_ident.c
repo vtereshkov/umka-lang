@@ -213,7 +213,7 @@ int identAllocStack(Idents *idents, Blocks *blocks, int size)
             break;
         }
     if (!localVarSize)
-        idents->error->handler(idents->error->context, "No stack frame");
+        idents->error->handler(idents->error->context, "No heap frame");
 
     (*localVarSize) += size;
     return -(*localVarSize);
