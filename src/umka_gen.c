@@ -44,6 +44,15 @@ static void genAddInstr(CodeGen *gen, const Instruction *instr)
 }
 
 
+static bool genNeedHeapFrame(CodeGen *gen, int ipBegin, int ipEnd)
+{
+    // If any ref count is incremented within a function, it needs a heap frame instead of a stack frame
+    for (int ip = ipBegin; ip < ipEnd; ip++)
+        if ((gen->code[ip].opcode == OP_CHANGE_REF_CNT && gen->code[ip].tokKind == TOK_PLUSPLUS) || gen->code[ip].opcode == OP_CHANGE_REF_CNT_ASSIGN)
+            return true;
+    return false;
+}
+
 
 // Peephole optimizations
 
@@ -620,16 +629,16 @@ void genReturn(CodeGen *gen, int paramSlots)
 }
 
 
-void genEnterFrame(CodeGen *gen, int localVarSize, int paramSize)
+void genEnterFrame(CodeGen *gen, int localVarSlots, int paramSlots, bool inHeap)
 {
-    const Instruction instr = {.opcode = OP_ENTER_FRAME, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.int32Val = {localVarSize, paramSize}};
+    const Instruction instr = {.opcode = OP_ENTER_FRAME, .tokKind = TOK_NONE, .typeKind = inHeap ? TYPE_PTR : TYPE_NONE, .operand.int32Val = {localVarSlots, paramSlots}};
     genAddInstr(gen, &instr);
 }
 
 
-void genLeaveFrame(CodeGen *gen)
+void genLeaveFrame(CodeGen *gen, bool inHeap)
 {
-    const Instruction instr = {.opcode = OP_LEAVE_FRAME, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = 0};
+    const Instruction instr = {.opcode = OP_LEAVE_FRAME, .tokKind = TOK_NONE, .typeKind = inHeap ? TYPE_PTR : TYPE_NONE, .operand.intVal = 0};
     genAddInstr(gen, &instr);
 }
 
@@ -824,15 +833,17 @@ void genEnterFrameStub(CodeGen *gen)
 }
 
 
-void genLeaveFrameFixup(CodeGen *gen, int localVarSize, int paramSize)
+void genLeaveFrameFixup(CodeGen *gen, int localVarSlots, int paramSlots)
 {
     // Fixup enter stub
     int next = gen->ip;
     gen->ip = genRestorePos(gen);
-    genEnterFrame(gen, localVarSize, paramSize);
+    bool inHeap = genNeedHeapFrame(gen, gen->ip, next);
+
+    genEnterFrame(gen, localVarSlots, paramSlots, inHeap);
     gen->ip = next;
 
-    genLeaveFrame(gen);
+    genLeaveFrame(gen, inHeap);
 }
 
 

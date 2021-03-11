@@ -128,6 +128,9 @@ static FORCE_INLINE HeapPage *pageAdd(HeapPages *pages, int numChunks, int chunk
     const int size = numChunks * chunkSize;
 
     page->ptr = malloc(size);
+    if (!page->ptr)
+        return NULL;
+
     memset(page->ptr, 0, size);
     page->numChunks = numChunks;
     page->numOccupiedChunks = 0;
@@ -228,6 +231,8 @@ static FORCE_INLINE void *chunkAlloc(HeapPages *pages, int size, Error *error)
             numChunks = 1;
 
         page = pageAdd(pages, numChunks, chunkSize);
+        if (!page)
+            error->handlerRuntime(error->context, "No memory");
     }
 
     HeapChunkHeader *chunk = (HeapChunkHeader *)((char *)page->ptr + page->numOccupiedChunks * page->chunkSize);
@@ -1133,7 +1138,7 @@ static FORCE_INLINE void doPush(Fiber *fiber, Error *error)
 
 static FORCE_INLINE void doPushLocalPtr(Fiber *fiber)
 {
-    // Local variable addresses are offsets (in bytes) from the heap frame base pointer
+    // Local variable addresses are offsets (in bytes) from the stack/heap frame base pointer
     (--fiber->top)->ptrVal = (int64_t)((int8_t *)fiber->base + fiber->code[fiber->ip].operand.intVal);
     fiber->ip++;
 }
@@ -1141,7 +1146,7 @@ static FORCE_INLINE void doPushLocalPtr(Fiber *fiber)
 
 static FORCE_INLINE void doPushLocal(Fiber *fiber, Error *error)
 {
-    // Local variable addresses are offsets (in bytes) from the heap frame base pointer
+    // Local variable addresses are offsets (in bytes) from the stack/heap frame base pointer
     (--fiber->top)->ptrVal = (int64_t)((int8_t *)fiber->base + fiber->code[fiber->ip].operand.intVal);
     doBasicDeref(fiber->top, fiber->code[fiber->ip].typeKind, error);
     fiber->ip++;
@@ -1736,21 +1741,37 @@ static FORCE_INLINE void doReturn(Fiber *fiber, Fiber **newFiber)
 
 static FORCE_INLINE void doEnterFrame(Fiber *fiber, HeapPages *pages, Error *error)
 {
-    int localVarSize = fiber->code[fiber->ip].operand.int32Val[0];
-    int paramSize    = fiber->code[fiber->ip].operand.int32Val[1];
+    int localVarSlots = fiber->code[fiber->ip].operand.int32Val[0];
+    int paramSlots    = fiber->code[fiber->ip].operand.int32Val[1];
 
-    int localVarSlots = align(localVarSize, sizeof(Slot)) / sizeof(Slot);
-    int paramSlots    = align(paramSize,    sizeof(Slot)) / sizeof(Slot);
+    bool inHeap = fiber->code[fiber->ip].typeKind == TYPE_PTR;      // TYPE_PTR for heap frame, TYPE_NONE for stack frame
 
-    // Allocate heap frame
-    Slot *heapFrame = chunkAlloc(pages, (localVarSlots + 2 + paramSlots) * sizeof(Slot), error);      // + 2 for old base pointer and return address
+    if (inHeap)     // Heap frame
+    {
+        // Allocate heap frame
+        Slot *heapFrame = chunkAlloc(pages, (localVarSlots + 2 + paramSlots) * sizeof(Slot), error);      // + 2 for old base pointer and return address
 
-    // Copy parameters to heap frame
-    memcpy(heapFrame + localVarSlots + 2, fiber->top + 1, paramSlots * sizeof(Slot));
+        // Copy parameters to heap frame
+        memcpy(heapFrame + localVarSlots + 2, fiber->top + 1, paramSlots * sizeof(Slot));
 
-    // Push old heap frame base pointer, set new one
-    (--fiber->top)->ptrVal = (int64_t)fiber->base;
-    fiber->base = heapFrame + localVarSlots;
+        // Push old heap frame base pointer, set new one
+        (--fiber->top)->ptrVal = (int64_t)fiber->base;
+        fiber->base = heapFrame + localVarSlots;
+    }
+    else            // Stack frame
+    {
+        // Allocate stack frame
+        if (fiber->top - localVarSlots - fiber->stack < VM_MIN_FREE_STACK)
+            error->handlerRuntime(error->context, "Stack overflow");
+
+        // Push old stack frame base pointer, set new one, move stack top
+        (--fiber->top)->ptrVal = (int64_t)fiber->base;
+        fiber->base = fiber->top;
+        fiber->top -= localVarSlots;
+
+        // Zero the whole stack frame
+        memset(fiber->top, 0, localVarSlots * sizeof(Slot));
+    }
 
     // Push I/O registers
     *(--fiber->top) = fiber->reg[VM_REG_IO_STREAM];
@@ -1768,11 +1789,21 @@ static FORCE_INLINE void doLeaveFrame(Fiber *fiber, HeapPages *pages)
     fiber->reg[VM_REG_IO_FORMAT] = *(fiber->top++);
     fiber->reg[VM_REG_IO_STREAM] = *(fiber->top++);
 
-    // Decrease heap frame ref count
-    HeapPage *page = pageFind(pages, fiber->base);
-    chunkChangeRefCnt(pages, page, fiber->base, -1);
+    bool inHeap = fiber->code[fiber->ip].typeKind == TYPE_PTR;      // TYPE_PTR for heap frame, TYPE_NONE for stack frame
 
-    // Pop old heap frame base pointer
+    if (inHeap)     // Heap frame
+    {
+        // Decrease heap frame ref count
+        HeapPage *page = pageFind(pages, fiber->base);
+        chunkChangeRefCnt(pages, page, fiber->base, -1);        
+    }
+    else            // Stack frame
+    {
+        // Restore stack top
+        fiber->top = fiber->base;
+    }
+
+    // Pop old stack/heap frame base pointer
     fiber->base = (Slot *)(fiber->top++)->ptrVal;
 
     fiber->ip++;

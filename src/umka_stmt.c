@@ -72,10 +72,10 @@ void doResolveExtern(Compiler *comp)
             doGarbageCollection(comp, blocksCurrent(&comp->blocks));
             identFree(&comp->idents, blocksCurrent(&comp->blocks));
 
-            int paramSize = typeParamSizeTotal(&comp->types, &ident->type->sig);
+            int paramSlots = align(typeParamSizeTotal(&comp->types, &ident->type->sig), sizeof(Slot)) / sizeof(Slot);
 
-            genLeaveFrameFixup(&comp->gen, 0, paramSize);
-            genReturn(&comp->gen, paramSize / sizeof(Slot));
+            genLeaveFrameFixup(&comp->gen, 0, paramSlots);
+            genReturn(&comp->gen, paramSlots);
 
             blocksLeave(&comp->blocks);
         }
@@ -844,10 +844,11 @@ void parseFnBlock(Compiler *comp, Ident *fn)
     doGarbageCollection(comp, blocksCurrent(&comp->blocks));
     identFree(&comp->idents, blocksCurrent(&comp->blocks));
 
-    int paramSize = typeParamSizeTotal(&comp->types, &fn->type->sig);
+    int localVarSlots = align(comp->blocks.item[comp->blocks.top].localVarSize, sizeof(Slot)) / sizeof(Slot);
+    int paramSlots    = align(typeParamSizeTotal(&comp->types, &fn->type->sig), sizeof(Slot)) / sizeof(Slot);
 
-    genLeaveFrameFixup(&comp->gen, comp->blocks.item[comp->blocks.top].localVarSize, paramSize);
-    genReturn(&comp->gen, paramSize / sizeof(Slot));
+    genLeaveFrameFixup(&comp->gen, localVarSlots, paramSlots);
+    genReturn(&comp->gen, paramSlots);
 
     blocksLeave(&comp->blocks);
     lexEat(&comp->lex, TOK_RBRACE);
