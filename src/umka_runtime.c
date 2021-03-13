@@ -74,6 +74,13 @@ void rtltime(Slot *params, Slot *result)
 
 void rtlclock(Slot *params, Slot *result)
 {
+#ifdef _WIN32
     result->realVal = (double)clock() / CLOCKS_PER_SEC;
+#else
+    // On Linux, clock() measures per-process time and may produce wrong actual time estimates
+    struct timespec t;
+    clock_gettime(CLOCK_REALTIME, &t);
+    result->realVal = (double)t.tv_sec + (double)t.tv_nsec * 1e-9;    
+#endif
 }
 
