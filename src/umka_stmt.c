@@ -15,9 +15,11 @@ void doGarbageCollection(Compiler *comp, int block)
         if (ident->kind == IDENT_VAR && ident->block == block && typeGarbageCollected(ident->type) && strcmp(ident->name, "__result") != 0)
         {
             doPushVarPtr(comp, ident);
+            genDup(&comp->gen);
             genDeref(&comp->gen, ident->type->kind);
             genChangeRefCnt(&comp->gen, TOK_MINUSMINUS, ident->type);
             genPop(&comp->gen);
+            genZero(&comp->gen, typeSize(&comp->types, ident->type));
         }
 }
 
