@@ -1265,17 +1265,23 @@ static void parseDerefSelector(Compiler *comp, Type **type, Const *constant, boo
     if ((*type)->kind != TYPE_PTR)
         comp->error.handler(comp->error.context, "Typed pointer expected");
 
-    if ((*type)->base->kind == TYPE_PTR)
+    if (*isVar)
     {
-        if ((*type)->base->base->kind == TYPE_VOID || (*type)->base->base->kind == TYPE_NULL)
-            comp->error.handler(comp->error.context, "Typed pointer expected");
+        if ((*type)->base->kind == TYPE_PTR)
+        {
+            if ((*type)->base->base->kind == TYPE_VOID || (*type)->base->base->kind == TYPE_NULL)
+                comp->error.handler(comp->error.context, "Typed pointer expected");
 
-        genDeref(&comp->gen, TYPE_PTR);
-        *type = (*type)->base;
+            genDeref(&comp->gen, TYPE_PTR);
+            *type = (*type)->base;
+        }
+        else
+            comp->error.handler(comp->error.context, "Typed pointer expected");
     }
-    // Accept type-cast lvalues like ^T(x)^ which are not variables and don't need to be dereferenced, so just skip the selector
-    else if (*isVar)
-        comp->error.handler(comp->error.context, "Typed pointer expected");
+    else
+    {
+        // Accept type-cast lvalues like ^T(x)^ which are not variables and don't need to be dereferenced, so just skip the selector
+    }
 
     if ((*type)->weak)
         comp->error.handler(comp->error.context, "Weak pointer cannot be dereferenced");
