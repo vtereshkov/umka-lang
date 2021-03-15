@@ -930,8 +930,16 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
             doImplicitTypeConv(comp, formalParamType, &actualParamType, constant, false);
             typeAssertCompatible(&comp->types, formalParamType, actualParamType, false);
 
+            // Check overflow for not-full-size types
+            if ((typeOrdinal(formalParamType) || typeReal(formalParamType)) && typeSizeNoCheck(formalParamType) < typeSizeNoCheck(comp->intType))
+                genAssertRange(&comp->gen, formalParamType->kind);
+
             // Increase parameter's reference count
             genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, formalParamType);
+
+            // Convert 64-bit temporary real to 32-bit 'true' real
+            if (formalParamType->kind == TYPE_REAL32)
+                genCallBuiltin(&comp->gen, TYPE_REAL32, BUILTIN_REAL32);
 
             // Copy structured parameter if passed by value
             if (typeStructured(formalParamType))

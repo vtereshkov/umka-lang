@@ -46,6 +46,7 @@ static const char *opcodeSpelling [] =
     "ASSERT_TYPE",
     "ASSERT_WEAK_PTR",
     "ASSERT_LEN",
+    "ASSERT_RANGE",
     "GOTO",
     "GOTO_IF",
     "CALL",
@@ -69,6 +70,7 @@ static const char *builtinSpelling [] =
     "sscanf",
     "real",
     "real_lhs",
+    "real32",
     "round",
     "trunc",
     "fabs",
@@ -412,7 +414,7 @@ static FORCE_INLINE void doBasicAssign(void *lhs, Slot rhs, TypeKind typeKind, i
 
     Const rhsConstant = {.intVal = rhs.intVal};
     if (typeOverflow(typeKind, rhsConstant))
-        error->handlerRuntime(error->context, "Overflow in assignment to %s", typeKindSpelling(typeKind));
+        error->handlerRuntime(error->context, "Overflow of %s", typeKindSpelling(typeKind));
 
     switch (typeKind)
     {
@@ -1589,6 +1591,18 @@ static FORCE_INLINE void doAssertLen(Fiber *fiber, Error *error)
 }
 
 
+static FORCE_INLINE void doAssertRange(Fiber *fiber, Error *error)
+{
+    TypeKind typeKind = fiber->code[fiber->ip].typeKind;
+
+    Const arg = {.intVal = fiber->top->intVal};
+    if (typeOverflow(typeKind, arg))
+        error->handlerRuntime(error->context, "Overflow of %s", typeKindSpelling(typeKind));
+
+    fiber->ip++;
+}
+
+
 static FORCE_INLINE void doGoto(Fiber *fiber)
 {
     fiber->ip = fiber->code[fiber->ip].operand.intVal;
@@ -1662,6 +1676,12 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
                 (fiber->top + depth)->realVal = (fiber->top + depth)->uintVal;
             else
                 (fiber->top + depth)->realVal = (fiber->top + depth)->intVal;
+            break;
+        }
+        case BUILTIN_REAL32:
+        {
+            float val = fiber->top->realVal;
+            fiber->top->uintVal = *(uint32_t *)&val;
             break;
         }
         case BUILTIN_ROUND:         fiber->top->intVal = (int64_t)round(fiber->top->realVal); break;
@@ -1845,6 +1865,7 @@ static FORCE_INLINE void vmLoop(VM *vm)
             case OP_ASSERT_TYPE:                    doAssertType(fiber);                          break;
             case OP_ASSERT_WEAK_PTR:                doAssertWeakPtr(fiber, pages);                break;
             case OP_ASSERT_LEN:                     doAssertLen(fiber, error);                    break;
+            case OP_ASSERT_RANGE:                   doAssertRange(fiber, error);                  break;
             case OP_GOTO:                           doGoto(fiber);                                break;
             case OP_GOTO_IF:                        doGotoIf(fiber);                              break;
             case OP_CALL:                           doCall(fiber, error);                         break;

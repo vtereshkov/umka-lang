@@ -577,6 +577,13 @@ void genAssertLen(CodeGen *gen, TypeKind typeKind, int minLen)
 }
 
 
+void genAssertRange(CodeGen *gen, TypeKind typeKind)
+{
+    const Instruction instr = {.opcode = OP_ASSERT_RANGE, .tokKind = TOK_NONE, .typeKind = typeKind, .operand.intVal = 0};
+    genAddInstr(gen, &instr);
+}
+
+
 void genGoto(CodeGen *gen, int dest)
 {
     const Instruction instr = {.opcode = OP_GOTO, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = dest};

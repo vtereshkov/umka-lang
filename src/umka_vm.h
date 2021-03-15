@@ -58,6 +58,7 @@ typedef enum
     OP_ASSERT_TYPE,
     OP_ASSERT_WEAK_PTR,
     OP_ASSERT_LEN,
+    OP_ASSERT_RANGE,
     OP_GOTO,
     OP_GOTO_IF,
     OP_CALL,
@@ -84,6 +85,7 @@ typedef enum
     // Math
     BUILTIN_REAL,           // Integer to real at stack top (right operand)
     BUILTIN_REAL_LHS,       // Integer to real at stack top + 1 (left operand) - implicit calls only
+    BUILTIN_REAL32,         // 64-bit real to 32-bit real
     BUILTIN_ROUND,
     BUILTIN_TRUNC,
     BUILTIN_FABS,
