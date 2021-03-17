@@ -42,6 +42,7 @@ static void doCopyResultToTempVar(Compiler *comp, Type *type)
 static void doEscapeToHeap(Compiler *comp, Type *ptrType)
 {
     // Allocate heap
+    genPushGlobalPtr(&comp->gen, ptrType->base);
     genPushIntConst(&comp->gen, typeSize(&comp->types, ptrType->base));
     genCallBuiltin(&comp->gen, TYPE_PTR, BUILTIN_NEW);
     doCopyResultToTempVar(comp, ptrType);
@@ -85,6 +86,7 @@ static void doCharToStrConv(Compiler *comp, Type *dest, Type **src, Const *const
             genSwap(&comp->gen);
 
         // Allocate heap for two chars
+        genPushGlobalPtr(&comp->gen, NULL);
         genPushIntConst(&comp->gen, 2 * typeSize(&comp->types, *src));
         genCallBuiltin(&comp->gen, TYPE_PTR, BUILTIN_NEW);
         doCopyResultToTempVar(comp, comp->strType);
@@ -167,10 +169,9 @@ static void doArrayToDynArrayConv(Compiler *comp, Type *dest, Type **src, Const 
     if (constant)
         comp->error.handler(comp->error.context, "Conversion to dynamic array is not allowed in constant expressions");
 
-    // fn makefrom(array: [...] type, [] type: Type, itemSize: int, len: int): [] type
+    // fn makefrom(src: [...]ItemType, type: Type, len: int): type
 
     genPushGlobalPtr(&comp->gen, dest);                                 // Dynamic array type
-    genPushIntConst(&comp->gen, typeSize(&comp->types, (*src)->base));  // Dynamic array item size
     genPushIntConst(&comp->gen, (*src)->numItems);                      // Dynamic array length
 
     int resultOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, dest));
@@ -545,7 +546,7 @@ static void parseBuiltinMathCall(Compiler *comp, Type **type, Const *constant, B
 }
 
 
-// fn new(type (actually size: int)): ^type
+// fn new(type: Type, size: int): ^type
 static void parseBuiltinNewCall(Compiler *comp, Type **type, Const *constant)
 {
     if (constant)
@@ -554,6 +555,7 @@ static void parseBuiltinNewCall(Compiler *comp, Type **type, Const *constant)
     *type = parseType(comp, NULL);
     int size = typeSize(&comp->types, *type);
 
+    genPushGlobalPtr(&comp->gen, *type);
     genPushIntConst(&comp->gen, size);
     genCallBuiltin(&comp->gen, TYPE_PTR, BUILTIN_NEW);
 
@@ -561,19 +563,18 @@ static void parseBuiltinNewCall(Compiler *comp, Type **type, Const *constant)
 }
 
 
-// fn make([] type (actually itemSize: int), len: int): [] type
+// fn make(type: Type, len: int): type
 static void parseBuiltinMakeCall(Compiler *comp, Type **type, Const *constant)
 {
     if (constant)
         comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
 
-    // Dynamic array type and item size
+    // Dynamic array type
     *type = parseType(comp, NULL);
     if ((*type)->kind != TYPE_DYNARRAY)
         comp->error.handler(comp->error.context, "Incompatible type in make()");
 
-    int itemSize = typeSize(&comp->types, (*type)->base);
-    genPushIntConst(&comp->gen, itemSize);
+    genPushGlobalPtr(&comp->gen, *type);
 
     lexEat(&comp->lex, TOK_COMMA);
 
@@ -590,7 +591,7 @@ static void parseBuiltinMakeCall(Compiler *comp, Type **type, Const *constant)
 }
 
 
-// fn append(array: [] type, item: (^type | [] type), single: bool, [] type: Type): [] type
+// fn append(array: [] type, item: (^type | [] type), single: bool): [] type
 static void parseBuiltinAppendCall(Compiler *comp, Type **type, Const *constant)
 {
     if (constant)
@@ -635,9 +636,6 @@ static void parseBuiltinAppendCall(Compiler *comp, Type **type, Const *constant)
     // 'Append single item' flag (hidden parameter)
     genPushIntConst(&comp->gen, singleItem);
 
-    // Result type (hidden parameter)
-    genPushGlobalPtr(&comp->gen, *type);
-
     // Pointer to result (hidden parameter)
     int resultOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, *type));
     genPushLocalPtr(&comp->gen, resultOffset);
@@ -646,7 +644,7 @@ static void parseBuiltinAppendCall(Compiler *comp, Type **type, Const *constant)
 }
 
 
-// fn delete(array: [] type, index: int, [] type: Type): [] type
+// fn delete(array: [] type, index: int): [] type
 static void parseBuiltinDeleteCall(Compiler *comp, Type **type, Const *constant)
 {
     if (constant)
@@ -664,9 +662,6 @@ static void parseBuiltinDeleteCall(Compiler *comp, Type **type, Const *constant)
     parseExpr(comp, &indexType, NULL);
     doImplicitTypeConv(comp, comp->intType, &indexType, NULL, false);
     typeAssertCompatible(&comp->types, comp->intType, indexType, false);
-
-    // Result type (hidden parameter)
-    genPushGlobalPtr(&comp->gen, *type);
 
     // Pointer to result (hidden parameter)
     int resultOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, *type));

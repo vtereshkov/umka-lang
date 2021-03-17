@@ -20,8 +20,9 @@ enum
 
 typedef struct
 {
+    struct tagType *type;
     int64_t len;
-    int64_t itemSize;
+    int64_t itemSize;       // Duplicates information contained in type, but useful for better performance
     void *data;
 } DynArray;
 

@@ -171,6 +171,8 @@ typedef struct
 {
     int64_t magic;
     int refCnt;
+    int size;
+    struct tagType *type;   // Optional type for garbage collection
 } HeapChunkHeader;
 
 

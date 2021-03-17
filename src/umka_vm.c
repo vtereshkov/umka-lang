@@ -194,7 +194,11 @@ static FORCE_INLINE HeapPage *pageFind(HeapPages *pages, void *ptr)
         if (ptr >= page->ptr && ptr < (void *)((char *)page->ptr + page->numChunks * page->chunkSize))
         {
             HeapChunkHeader *chunk = pageGetChunkHeader(page, ptr);
-            if (chunk->magic == VM_HEAP_CHUNK_MAGIC)
+
+            if (chunk->refCnt == 0)
+                printf("Dangling pointer at %p\n", ptr);
+
+            if (chunk->magic == VM_HEAP_CHUNK_MAGIC && chunk->refCnt > 0)
                 return page;
             return NULL;
         }
@@ -217,7 +221,7 @@ static FORCE_INLINE HeapPage *pageFindForAlloc(HeapPages *pages, int size)
 }
 
 
-static FORCE_INLINE void *chunkAlloc(HeapPages *pages, int size, Error *error)
+static FORCE_INLINE void *chunkAlloc(HeapPages *pages, int size, Type *type, Error *error)
 {
     if (size < 0)
         error->handlerRuntime(error->context, "Allocated memory block size cannot be negative");
@@ -240,6 +244,8 @@ static FORCE_INLINE void *chunkAlloc(HeapPages *pages, int size, Error *error)
     HeapChunkHeader *chunk = (HeapChunkHeader *)((char *)page->ptr + page->numOccupiedChunks * page->chunkSize);
     chunk->magic = VM_HEAP_CHUNK_MAGIC;
     chunk->refCnt = 1;
+    chunk->size = size;
+    chunk->type = type;
 
     page->numOccupiedChunks++;
     page->refCnt++;
@@ -261,6 +267,9 @@ static FORCE_INLINE void chunkChangeRefCnt(HeapPages *pages, HeapPage *page, voi
     {
         chunk->refCnt += delta;
         page->refCnt += delta;
+
+        if (chunk->refCnt == 0)
+            memset(chunk, 0, page->chunkSize);
 
 #ifdef DEBUG_REF_CNT
         printf("%p: delta: %d  chunk: %d  page: %d\n", ptr, delta, chunk->refCnt, page->refCnt);
@@ -460,14 +469,14 @@ static FORCE_INLINE void doChangePtrBaseRefCnt(Fiber *fiber, HeapPages *pages, v
 }
 
 
-static FORCE_INLINE void doChangeArrayItemsRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type *type, TokenKind tokKind, Error *error)
+static FORCE_INLINE void doChangeArrayItemsRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type *type, int len, TokenKind tokKind, Error *error)
 {
     if (typeKindGarbageCollected(type->base->kind))
     {
         char *itemPtr = ptr;
         int itemSize = typeSizeNoCheck(type->base);
 
-        for (int i = 0; i < type->numItems; i++)
+        for (int i = 0; i < len; i++)
         {
             void *item = itemPtr;
             if (type->base->kind == TYPE_PTR || type->base->kind == TYPE_STR)
@@ -475,25 +484,6 @@ static FORCE_INLINE void doChangeArrayItemsRefCnt(Fiber *fiber, HeapPages *pages
 
             doBasicChangeRefCnt(fiber, pages, item, type->base, tokKind, error);
             itemPtr += itemSize;
-        }
-    }
-}
-
-
-static FORCE_INLINE void doChangeDynArrayItemsRefCnt(Fiber *fiber, HeapPages *pages, DynArray *array, Type *type, TokenKind tokKind, Error *error)
-{
-    if (typeKindGarbageCollected(type->base->kind))
-    {
-        char *itemPtr = array->data;
-
-        for (int i = 0; i < array->len; i++)
-        {
-            void *item = itemPtr;
-            if (type->base->kind == TYPE_PTR || type->base->kind == TYPE_STR)
-                item = *(void **)item;
-
-            doBasicChangeRefCnt(fiber, pages, item, type->base, tokKind, error);
-            itemPtr += array->itemSize;
         }
     }
 }
@@ -535,7 +525,41 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
                     // Traverse children only before removing the last remaining ref
                     HeapChunkHeader *chunk = pageGetChunkHeader(page, ptr);
                     if (chunk->refCnt == 1)
-                        doChangePtrBaseRefCnt(fiber, pages, ptr, type, tokKind, error);
+                    {
+                        // Sometimes the last remaining ref to chunk data is a pointer to a single item
+                        // In this case, we should traverse children as for the actual composite type, rather than for a pointer
+                        if (chunk->type)
+                        {
+                            void *chunkDataPtr = (char *)chunk + sizeof(HeapChunkHeader);
+
+                            switch (chunk->type->kind)
+                            {
+                                case TYPE_ARRAY:
+                                {
+                                    doChangeArrayItemsRefCnt(fiber, pages, chunkDataPtr, chunk->type, chunk->type->numItems, tokKind, error);
+                                    break;
+                                }
+                                case TYPE_DYNARRAY:
+                                {
+                                    int len = chunk->size / typeSizeNoCheck(chunk->type->base);
+                                    doChangeArrayItemsRefCnt(fiber, pages, chunkDataPtr, chunk->type, len, tokKind, error);
+                                    break;
+                                }
+                                case TYPE_STRUCT:
+                                {
+                                    doChangeStructFieldsRefCnt(fiber, pages, chunkDataPtr, chunk->type, tokKind, error);
+                                    break;
+                                }
+                                default:
+                                {
+                                    doChangePtrBaseRefCnt(fiber, pages, ptr, type, tokKind, error);
+                                    break;
+                                }
+                            }
+                        }
+                        else
+                            doChangePtrBaseRefCnt(fiber, pages, ptr, type, tokKind, error);
+                    }
 
                     chunkChangeRefCnt(pages, page, ptr, -1);
                 }
@@ -553,7 +577,7 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
 
         case TYPE_ARRAY:
         {
-            doChangeArrayItemsRefCnt(fiber, pages, ptr, type, tokKind, error);
+            doChangeArrayItemsRefCnt(fiber, pages, ptr, type, type->numItems, tokKind, error);
             break;
         }
 
@@ -570,7 +594,7 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
                     // Traverse children only before removing the last remaining ref
                     HeapChunkHeader *chunk = pageGetChunkHeader(page, array->data);
                     if (chunk->refCnt == 1)
-                        doChangeDynArrayItemsRefCnt(fiber, pages, ptr, type, tokKind, error);
+                        doChangeArrayItemsRefCnt(fiber, pages, array->data, type, array->len, tokKind, error);
 
                     chunkChangeRefCnt(pages, page, array->data, -1);
                 }
@@ -913,7 +937,7 @@ static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool con
             doBasicChangeRefCnt(fiber, pages, *dest, &destType, TOK_MINUSMINUS, error);
 
             // Allocate new string
-            *dest = chunkAlloc(pages, strlen(src) + 1, error);
+            *dest = chunkAlloc(pages, strlen(src) + 1, NULL, error);
             strcpy(*dest, src);
             free(src);
 
@@ -932,41 +956,58 @@ static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool con
 }
 
 
-// fn make([...] type (actually itemSize: int), len: int): [] type
-static FORCE_INLINE void doBuiltinMake(Fiber *fiber, HeapPages *pages, Error *error)
+// fn new(type: Type, size: int): ^type
+static FORCE_INLINE void doBuiltinNew(Fiber *fiber, HeapPages *pages, Error *error)
 {
-    DynArray *result = (DynArray *)(fiber->top++)->ptrVal;
-    result->len      = (fiber->top++)->intVal;
-    result->itemSize = (fiber->top++)->intVal;
-    result->data     = chunkAlloc(pages, result->len * result->itemSize, error);
+    int size     = (fiber->top++)->intVal;
+    Type *type   = (Type *)(fiber->top++)->ptrVal;
+
+    // For dynamic arrays, we mark with type the data chunk, not the header chunk
+    if (type && type->kind == TYPE_DYNARRAY)
+        type = NULL;
+
+    void *result = chunkAlloc(pages, size, type, error);
 
     (--fiber->top)->ptrVal = (int64_t)result;
 }
 
 
-// fn makefrom(array: [...] type, [] type: Type, itemSize: int, len: int): [] type
+// fn make(type: Type, len: int): type
+static FORCE_INLINE void doBuiltinMake(Fiber *fiber, HeapPages *pages, Error *error)
+{
+    DynArray *result = (DynArray *)(fiber->top++)->ptrVal;
+
+    result->len      = (fiber->top++)->intVal;
+    result->type     = (Type *)(fiber->top++)->ptrVal;
+
+    result->itemSize = typeSizeNoCheck(result->type->base);
+    result->data     = chunkAlloc(pages, result->len * result->itemSize, result->type, error);
+
+    (--fiber->top)->ptrVal = (int64_t)result;
+}
+
+
+// fn makefrom(src: [...]ItemType, type: Type, len: int): type
 static FORCE_INLINE void doBuiltinMakefrom(Fiber *fiber, HeapPages *pages, Error *error)
 {
     doBuiltinMake(fiber, pages, error);
 
     DynArray *dest = (DynArray *)(fiber->top++)->ptrVal;
-    Type *type     = (Type     *)(fiber->top++)->ptrVal;
     void *src      = (void     *)(fiber->top++)->ptrVal;
 
     memcpy(dest->data, src, dest->len * dest->itemSize);
 
     // Increase result items' ref counts, as if they have been assigned one by one
-    doChangeDynArrayItemsRefCnt(fiber, pages, dest, type, TOK_PLUSPLUS, error);
+    doChangeArrayItemsRefCnt(fiber, pages, dest->data, dest->type, dest->len, TOK_PLUSPLUS, error);
 
     (--fiber->top)->ptrVal = (int64_t)dest;
 }
 
 
-// fn append(array: [] type, item: (^type | [] type), single: bool, [] type: Type): [] type
+// fn append(array: [] type, item: (^type | [] type), single: bool): [] type
 static FORCE_INLINE void doBuiltinAppend(Fiber *fiber, HeapPages *pages, Error *error)
 {
     DynArray *result = (DynArray *)(fiber->top++)->ptrVal;
-    Type *type       = (Type     *)(fiber->top++)->ptrVal;
     bool single      = (bool      )(fiber->top++)->intVal;
     void *item       = (void     *)(fiber->top++)->ptrVal;
     DynArray *array  = (DynArray *)(fiber->top++)->ptrVal;
@@ -988,40 +1029,41 @@ static FORCE_INLINE void doBuiltinAppend(Fiber *fiber, HeapPages *pages, Error *
         rhsLen = rhsArray->len;
     }
 
+    result->type     = array->type;
     result->len      = array->len + rhsLen;
     result->itemSize = array->itemSize;
-    result->data     = chunkAlloc(pages, result->len * result->itemSize, error);
+    result->data     = chunkAlloc(pages, result->len * result->itemSize, result->type, error);
 
     memcpy((char *)result->data, (char *)array->data, array->len * array->itemSize);
     memcpy((char *)result->data + array->len * array->itemSize, (char *)rhs, rhsLen * array->itemSize);
 
     // Increase result items' ref counts, as if they have been assigned one by one
-    doChangeDynArrayItemsRefCnt(fiber, pages, result, type, TOK_PLUSPLUS, error);
+    doChangeArrayItemsRefCnt(fiber, pages, result->data, result->type, result->len, TOK_PLUSPLUS, error);
 
     (--fiber->top)->ptrVal = (int64_t)result;
 }
 
 
-// fn delete(array: [] type, index: int, [] type: Type): [] type
+// fn delete(array: [] type, index: int): [] type
 static FORCE_INLINE void doBuiltinDelete(Fiber *fiber, HeapPages *pages, Error *error)
 {
     DynArray *result = (DynArray *)(fiber->top++)->ptrVal;
-    Type *type       = (Type     *)(fiber->top++)->ptrVal;
     int index        =             (fiber->top++)->intVal;
     DynArray *array  = (DynArray *)(fiber->top++)->ptrVal;
 
     if (!array || !array->data)
         error->handlerRuntime(error->context, "Dynamic array is null");
 
+    result->type     = array->type;
     result->len      = array->len - 1;
     result->itemSize = array->itemSize;
-    result->data     = chunkAlloc(pages, result->len * result->itemSize, error);
+    result->data     = chunkAlloc(pages, result->len * result->itemSize, result->type, error);
 
     memcpy((char *)result->data, (char *)array->data, index * array->itemSize);
     memcpy((char *)result->data + index * result->itemSize, (char *)array->data + (index + 1) * result->itemSize, (result->len - index) * result->itemSize);
 
     // Increase result items' ref counts, as if they have been assigned one by one
-    doChangeDynArrayItemsRefCnt(fiber, pages, result, type, TOK_PLUSPLUS, error);
+    doChangeArrayItemsRefCnt(fiber, pages, result->data, result->type, result->len, TOK_PLUSPLUS, error);
 
     (--fiber->top)->ptrVal = (int64_t)result;
 }
@@ -1076,7 +1118,7 @@ static FORCE_INLINE void doBuiltinFiberspawn(Fiber *fiber, HeapPages *pages, Err
     int childEntryOffset = (fiber->top++)->intVal;
 
     // Copy whole fiber context
-    Fiber *child = chunkAlloc(pages, sizeof(Fiber), error);
+    Fiber *child = chunkAlloc(pages, sizeof(Fiber), NULL, error);
 
     *child = *fiber;
     child->stack = malloc(child->stackSize * sizeof(Slot));
@@ -1120,7 +1162,7 @@ static FORCE_INLINE void doBuiltinRepr(Fiber *fiber, HeapPages *pages, Error *er
     Slot *val = fiber->top;
 
     int len = doFillReprBuf(val, type, NULL, 0, error);     // Predict buffer length
-    char *buf = chunkAlloc(pages, len + 1, error);          // Allocate buffer
+    char *buf = chunkAlloc(pages, len + 1, NULL, error);    // Allocate buffer
     doFillReprBuf(val, type, buf, INT_MAX, error);          // Fill buffer
 
     fiber->top->ptrVal = (int64_t)buf;
@@ -1354,7 +1396,7 @@ static FORCE_INLINE void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
         {
             case TOK_PLUS:
             {
-                char *buf = chunkAlloc(pages, strlen((char *)fiber->top->ptrVal) + strlen((char *)rhs.ptrVal) + 1, error);
+                char *buf = chunkAlloc(pages, strlen((char *)fiber->top->ptrVal) + strlen((char *)rhs.ptrVal) + 1, NULL, error);
                 strcpy(buf, (char *)fiber->top->ptrVal);
                 strcat(buf, (char *)rhs.ptrVal);
                 fiber->top->ptrVal = (int64_t)buf;
@@ -1716,7 +1758,7 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         }
 
         // Memory
-        case BUILTIN_NEW:           fiber->top->ptrVal = (int64_t)chunkAlloc(pages, fiber->top->intVal, error); break;
+        case BUILTIN_NEW:           doBuiltinNew(fiber, pages, error); break;
         case BUILTIN_MAKE:          doBuiltinMake(fiber, pages, error); break;
         case BUILTIN_MAKEFROM:      doBuiltinMakefrom(fiber, pages, error); break;
         case BUILTIN_APPEND:        doBuiltinAppend(fiber, pages, error); break;
@@ -1769,7 +1811,7 @@ static FORCE_INLINE void doEnterFrame(Fiber *fiber, HeapPages *pages, Error *err
     if (inHeap)     // Heap frame
     {
         // Allocate heap frame
-        Slot *heapFrame = chunkAlloc(pages, (localVarSlots + 2 + paramSlots) * sizeof(Slot), error);      // + 2 for old base pointer and return address
+        Slot *heapFrame = chunkAlloc(pages, (localVarSlots + 2 + paramSlots) * sizeof(Slot), NULL, error);      // + 2 for old base pointer and return address
 
         // Copy parameters to heap frame
         memcpy(heapFrame + localVarSlots + 2, fiber->top + 1, paramSlots * sizeof(Slot));
@@ -1815,7 +1857,7 @@ static FORCE_INLINE void doLeaveFrame(Fiber *fiber, HeapPages *pages)
     {
         // Decrease heap frame ref count
         HeapPage *page = pageFind(pages, fiber->base);
-        chunkChangeRefCnt(pages, page, fiber->base, -1);        
+        chunkChangeRefCnt(pages, page, fiber->base, -1);
     }
     else            // Stack frame
     {

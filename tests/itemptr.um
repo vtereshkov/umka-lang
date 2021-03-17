@@ -1,0 +1,36 @@
+var p: ^^int
+
+fn test1() {
+	a := new([2]^int)
+	a^ = [2]^int{new(int), new(int)}
+	a[1]^ = 15
+	p = &a[1]
+	printf(repr(p^^) + '\n')
+}
+
+type ent = []int	
+
+fn test2() {
+	s := []^ent{}
+	t := []ent{}
+	
+	for i := 0; i < 6; i++ {
+		t = append(t, []int{i, 2 * i})
+		s = append(s, &t[len(t) - 1])
+	}
+
+	printf(repr(t) + '\n')
+	
+	for x in s {
+		printf(repr(x^) + '\n')
+	}
+}
+
+fn test*() {
+	test1()
+	test2()
+}
+
+fn main() {
+	test()
+}
