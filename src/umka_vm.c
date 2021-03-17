@@ -114,7 +114,7 @@ static void pageFree(HeapPages *pages)
         HeapPage *next = page->next;
         if (page->ptr)
         {
-            printf("Memory leak at %p (%d refs)\n", page->ptr, page->refCnt);
+            printf("Warning: Memory leak at %p (%d refs)\n", page->ptr, page->refCnt);
             free(page->ptr);
         }
         free(page);
@@ -196,7 +196,7 @@ static FORCE_INLINE HeapPage *pageFind(HeapPages *pages, void *ptr)
             HeapChunkHeader *chunk = pageGetChunkHeader(page, ptr);
 
             if (chunk->refCnt == 0)
-                printf("Dangling pointer at %p\n", ptr);
+                printf("Warning: Dangling pointer at %p\n", ptr);
 
             if (chunk->magic == VM_HEAP_CHUNK_MAGIC && chunk->refCnt > 0)
                 return page;
@@ -258,11 +258,10 @@ static FORCE_INLINE void *chunkAlloc(HeapPages *pages, int size, Type *type, Err
 }
 
 
-static FORCE_INLINE void chunkChangeRefCnt(HeapPages *pages, HeapPage *page, void *ptr, int delta)
+static FORCE_INLINE int chunkChangeRefCnt(HeapPages *pages, HeapPage *page, void *ptr, int delta)
 {
     HeapChunkHeader *chunk = pageGetChunkHeader(page, ptr);
 
-    // TODO: double-check the suspicious condition
     if (chunk->refCnt > 0)
     {
         chunk->refCnt += delta;
@@ -277,7 +276,12 @@ static FORCE_INLINE void chunkChangeRefCnt(HeapPages *pages, HeapPage *page, voi
     }
 
     if (page->refCnt == 0)
+    {
         pageRemove(pages, page);
+        return 0;
+    }
+
+    return chunk->refCnt;
 }
 
 
@@ -1844,7 +1848,7 @@ static FORCE_INLINE void doEnterFrame(Fiber *fiber, HeapPages *pages, Error *err
 }
 
 
-static FORCE_INLINE void doLeaveFrame(Fiber *fiber, HeapPages *pages)
+static FORCE_INLINE void doLeaveFrame(Fiber *fiber, HeapPages *pages, Error *error)
 {
     // Pop I/O registers
     fiber->reg[VM_REG_IO_COUNT]  = *(fiber->top++);
@@ -1857,7 +1861,10 @@ static FORCE_INLINE void doLeaveFrame(Fiber *fiber, HeapPages *pages)
     {
         // Decrease heap frame ref count
         HeapPage *page = pageFind(pages, fiber->base);
-        chunkChangeRefCnt(pages, page, fiber->base, -1);
+        int refCnt = chunkChangeRefCnt(pages, page, fiber->base, -1);
+
+        if (refCnt > 0)
+            error->handlerRuntime(error->context, "Pointer to a local variable escapes the function");
     }
     else            // Stack frame
     {
@@ -1940,7 +1947,7 @@ static FORCE_INLINE void vmLoop(VM *vm)
                 break;
             }
             case OP_ENTER_FRAME:                    doEnterFrame(fiber, pages, error);            break;
-            case OP_LEAVE_FRAME:                    doLeaveFrame(fiber, pages);                   break;
+            case OP_LEAVE_FRAME:                    doLeaveFrame(fiber, pages, error);            break;
             case OP_HALT:                           return;
 
             default: error->handlerRuntime(error->context, "Illegal instruction"); return;

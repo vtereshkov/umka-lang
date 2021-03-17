@@ -23,7 +23,7 @@ fn main() {
     printf("\n\n>>> Interfaces - 1\n\n");       interfaces.test()
     printf("\n\n>>> Interfaces - 2\n\n");       interfaces2.test()
     printf("\n\n>>> Interfaces - 3\n\n");       interfaces3.test()
-    //printf("\n\n>>> Maps\n\n");                 maps.test()
+    printf("\n\n>>> Maps\n\n");                 maps.test()
     printf("\n\n>>> Multiple returns\n\n");     multret.test()
     printf("\n\n>>> Language tour\n\n");        tour.test()
     printf("\n\n>>> Type equivalence\n\n");     typeeq.test()

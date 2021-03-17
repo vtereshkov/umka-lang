@@ -568,8 +568,14 @@ static void parseForInHeader(Compiler *comp, TokenKind lookaheadTokKind)
 
     // Declare variable for the collection
     collectionIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "__collection", collectionType, false);
+    doZeroVar(comp, collectionIdent);
     doPushVarPtr(comp, collectionIdent);
     genSwapChangeRefCntAssign(&comp->gen, collectionType);
+
+    // Declare variable for the collection item
+    Type *itemType = (collectionType->kind == TYPE_STR) ? comp->charType : collectionType->base;
+    itemIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, itemName, itemType, false);
+    doZeroVar(comp, itemIdent);
 
     genForCondProlog(&comp->gen);
 
@@ -597,10 +603,6 @@ static void parseForInHeader(Compiler *comp, TokenKind lookaheadTokKind)
     genBinary(&comp->gen, TOK_GREATER, TYPE_INT, 0);
 
     genForCondEpilog(&comp->gen);
-
-    // Declare variable for the collection item
-    Type *itemType = (collectionType->kind == TYPE_STR) ? comp->charType : collectionType->base;
-    itemIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, itemName, itemType, false);
 
     // Implicit simpleStmt: index++
     doPushVarPtr(comp, indexIdent);

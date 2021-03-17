@@ -14,7 +14,7 @@ type (
 
 const (
     defLen = 32
-    rehashThreshold = 5
+    rehashThreshold = 2
 )
 
 
@@ -31,6 +31,8 @@ fn (m: ^Map) rehash()
 
 
 fn (m: ^Map) get*(key: str): Any {
+    if len(m^) == 0 {return null}
+
     b := hash(key) % len(m^)
 
     for item in m[b] {
@@ -65,7 +67,11 @@ fn (m: ^Map) set*(key: str, val: Any) {
             }
         }
 
-        m[b] = append(m[b], Item{key, val})
+        if len(m[b]) == 0 {
+            m[b] = []Item{Item{key, val}}
+        } else {
+            m[b] = append(m[b], Item{key, val})
+        }
     }
 }
 
@@ -84,10 +90,12 @@ fn (m: ^Map) del*(key: str) {
 
 fn (m: ^Map) rehash() {
     n := make(Map, 2 * len(m^))
+
     for bucket in m {
         for item in bucket {
             n.set(item.key, item.val)
         }
     }
+  
     m^ = n
 }

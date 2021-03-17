@@ -39,7 +39,7 @@ static void doCopyResultToTempVar(Compiler *comp, Type *type)
 }
 
 
-static void doEscapeToHeap(Compiler *comp, Type *ptrType)
+static void doEscapeToHeap(Compiler *comp, Type *ptrType, bool useRefCnt)
 {
     // Allocate heap
     genPushGlobalPtr(&comp->gen, ptrType->base);
@@ -52,7 +52,11 @@ static void doEscapeToHeap(Compiler *comp, Type *ptrType)
     genPopReg(&comp->gen, VM_REG_COMMON_0);
 
     // Copy to heap and use heap pointer
-    genSwapAssign(&comp->gen, ptrType->base->kind, typeSize(&comp->types, ptrType->base));
+    if (useRefCnt)
+        genSwapChangeRefCntAssign(&comp->gen, ptrType->base);
+    else
+        genSwapAssign(&comp->gen, ptrType->base->kind, typeSize(&comp->types, ptrType->base));
+
     genPushReg(&comp->gen, VM_REG_COMMON_0);
 }
 
@@ -279,7 +283,7 @@ static void doValueToInterfaceConv(Compiler *comp, Type *dest, Type **src, Const
         comp->error.handler(comp->error.context, "Conversion to interface is not allowed in constant expressions");
 
     *src = typeAddPtrTo(&comp->types, &comp->blocks, *src);
-    doEscapeToHeap(comp, *src);
+    doEscapeToHeap(comp, *src, false);
     doPtrToInterfaceConv(comp, dest, src, constant);
 }
 
@@ -1150,7 +1154,11 @@ static void parseArrayOrStructLiteral(Compiler *comp, Type **type, Const *consta
         comp->error.handler(comp->error.context, "Too few elements in literal");
 
     if (!constant)
+    {
         genPushLocalPtr(&comp->gen, bufOffset);
+        doEscapeToHeap(comp, typeAddPtrTo(&comp->types, &comp->blocks, *type), true);
+    }
+
 
     lexEat(&comp->lex, TOK_RBRACE);
 }
@@ -1202,6 +1210,8 @@ static void parseDynArrayLiteral(Compiler *comp, Type **type, Const *constant)
 
     // Convert to dynamic array
     genPushLocalPtr(&comp->gen, bufOffset);
+    doEscapeToHeap(comp, typeAddPtrTo(&comp->types, &comp->blocks, staticArrayType), true);
+
     doImplicitTypeConv(comp, *type, &staticArrayType, NULL, false);
     typeAssertCompatible(&comp->types, *type, staticArrayType, false);
 }
@@ -1877,7 +1887,10 @@ void parseExprList(Compiler *comp, Type **type, Type *destType, Const *constant)
         }
 
         if (!constant)
+        {
             genPushLocalPtr(&comp->gen, bufOffset);
+            doEscapeToHeap(comp, typeAddPtrTo(&comp->types, &comp->blocks, *type), true);
+        }
     }
 }
 
