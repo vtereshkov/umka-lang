@@ -287,9 +287,9 @@ static FORCE_INLINE int chunkChangeRefCnt(HeapPages *pages, HeapPage *page, void
 
 // I/O functions
 
-static FORCE_INLINE char fsgetc(bool string, void *stream, int *len)
+static FORCE_INLINE int fsgetc(bool string, void *stream, int *len)
 {
-    char ch = string ? ((char *)stream)[*len] : fgetc((FILE *)stream);
+    int ch = string ? ((char *)stream)[*len] : fgetc((FILE *)stream);
     (*len)++;
     return ch;
 }
@@ -326,7 +326,7 @@ static FORCE_INLINE char *fsscanfString(bool string, void *stream, int *len)
 
     *len = 0;
     int writtenLen = 0;
-    char ch = ' ';
+    int ch = ' ';
 
     // Skip whitespace
     while (isspace(ch))
