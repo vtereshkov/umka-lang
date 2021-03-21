@@ -103,7 +103,7 @@ fn time*(): int {return rtltime()}
 fn rtlclock(): real
 fn clock*(): real {return rtlclock()}
 
-// Command line
+// Command line and environment
 
 fn argc*(): int {return rtlargc}
 
@@ -112,4 +112,9 @@ fn argv*(i: int): str {
         error("Command line parameter not found")
     }
     return rtlargv[i]
+}
+
+fn rtlgetenv(name: str): str
+fn getenv*(name: str): str {
+    return "" + rtlgetenv(name)
 }

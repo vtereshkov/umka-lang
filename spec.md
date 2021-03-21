@@ -1317,7 +1317,7 @@ fn clock*(): real
 
 Returns the number of seconds since the start of the program.
 
-### Command line
+### Command line and environment
 
 ```
 fn argc*(): int
@@ -1330,6 +1330,12 @@ fn argv*(i: int): str
 ```
 
 Returns the `i`-th command line parameter, where `i` should be between 0 and  `argc() - 1 ` inclusive.
+
+```
+fn getenv*(name: str): str
+```
+
+Returns the environment variable with the specified `name`.
 
 ## Embedding API
 

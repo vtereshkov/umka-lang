@@ -84,3 +84,15 @@ void rtlclock(Slot *params, Slot *result)
 #endif
 }
 
+
+void rtlgetenv(Slot *params, Slot *result)
+{
+    const char *name = (const char *)params[0].ptrVal;
+    static char empty[] = "";
+
+    char *val = getenv(name);
+    if (!val)
+        val = empty;
+    result->ptrVal = (int64_t)val;
+}
+
