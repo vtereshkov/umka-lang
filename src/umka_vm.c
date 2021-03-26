@@ -133,7 +133,6 @@ static FORCE_INLINE HeapPage *pageAdd(HeapPages *pages, int numChunks, int chunk
     if (!page->ptr)
         return NULL;
 
-    memset(page->ptr, 0, size);
     page->numChunks = numChunks;
     page->numOccupiedChunks = 0;
     page->chunkSize = chunkSize;
@@ -242,6 +241,8 @@ static FORCE_INLINE void *chunkAlloc(HeapPages *pages, int size, Type *type, Err
     }
 
     HeapChunkHeader *chunk = (HeapChunkHeader *)((char *)page->ptr + page->numOccupiedChunks * page->chunkSize);
+    
+    memset(chunk, 0, page->chunkSize);
     chunk->magic = VM_HEAP_CHUNK_MAGIC;
     chunk->refCnt = 1;
     chunk->size = size;
