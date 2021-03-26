@@ -675,6 +675,45 @@ static void parseBuiltinDeleteCall(Compiler *comp, Type **type, Const *constant)
 }
 
 
+// fn slice(array: [] type, startIndex [, endIndex]: int): [] type
+static void parseBuiltinSliceCall(Compiler *comp, Type **type, Const *constant)
+{
+    if (constant)
+        comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
+
+    // Dynamic array
+    parseExpr(comp, type, NULL);
+    if ((*type)->kind != TYPE_DYNARRAY)
+        comp->error.handler(comp->error.context, "Incompatible type in slice()");
+
+    lexEat(&comp->lex, TOK_COMMA);
+
+    Type *indexType;
+
+    // Start index
+    parseExpr(comp, &indexType, NULL);
+    doImplicitTypeConv(comp, comp->intType, &indexType, NULL, false);
+    typeAssertCompatible(&comp->types, comp->intType, indexType, false);
+
+    if (comp->lex.tok.kind == TOK_COMMA)
+    {
+        // Optional end index
+        lexNext(&comp->lex);
+        parseExpr(comp, &indexType, NULL);
+        doImplicitTypeConv(comp, comp->intType, &indexType, NULL, false);
+        typeAssertCompatible(&comp->types, comp->intType, indexType, false);
+    }
+    else
+        genPushIntConst(&comp->gen, INT_MIN);
+
+    // Pointer to result (hidden parameter)
+    int resultOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, *type));
+    genPushLocalPtr(&comp->gen, resultOffset);
+
+    genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_SLICE);
+}
+
+
 static void parseBuiltinLenCall(Compiler *comp, Type **type, Const *constant)
 {
     parseExpr(comp, type, constant);
@@ -863,6 +902,7 @@ static void parseBuiltinCall(Compiler *comp, Type **type, Const *constant, Built
         case BUILTIN_MAKE:          parseBuiltinMakeCall(comp, type, constant);             break;
         case BUILTIN_APPEND:        parseBuiltinAppendCall(comp, type, constant);           break;
         case BUILTIN_DELETE:        parseBuiltinDeleteCall(comp, type, constant);           break;
+        case BUILTIN_SLICE:         parseBuiltinSliceCall(comp, type, constant);            break;
         case BUILTIN_LEN:           parseBuiltinLenCall(comp, type, constant);              break;
         case BUILTIN_SIZEOF:        parseBuiltinSizeofCall(comp, type, constant);           break;
         case BUILTIN_SIZEOFSELF:    parseBuiltinSizeofselfCall(comp, type, constant);       break;

@@ -72,6 +72,34 @@ c: { 3 4 5 6 7 }
 d: { { 666 777 } { 888 999 } } 
 Appending...
 d: { { 666 777 } { 888 999 } { 444 555 } } 
+Slicing...
+{ "Hello World" "Hallo Welt" "Salut le Monde" "Privet Mir" } 
+{ "Hello World" "Hallo Welt" "Salut le Monde" } 
+{ "Hello World" "Hallo Welt" } 
+{ "Hello World" } 
+{ } 
+
+{ "Hallo Welt" "Salut le Monde" "Privet Mir" } 
+{ "Salut le Monde" "Privet Mir" } 
+{ "Privet Mir" } 
+
+{ "Hallo Welt" } 
+{ "Hallo Welt" "Salut le Monde" } 
+{ "Hallo Welt" "Salut le Monde" "Privet Mir" } 
+
+{ "Salut le Monde" } 
+{ "Salut le Monde" "Privet Mir" } 
+
+{ "Hallo Welt" "Salut le Monde" } 
+{ "Hallo Welt" } 
+{ } 
+
+{ "Hello World" "Hallo Welt" "Salut le Monde" "Privet Mir" } 
+{ "Hallo Welt" "Salut le Monde" "Privet Mir" } 
+{ "Salut le Monde" "Privet Mir" } 
+{ "Privet Mir" } 
+
+{ } 
 
 
 >>> Fibers
@@ -200,7 +228,7 @@ repr():
 'a' 
 fn 
 { 0.500000 0.700000 0.900000 } 
-0000000000529490 
+00000000004f8420 
 
 
 >>> Type equivalence

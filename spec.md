@@ -605,6 +605,12 @@ fn delete(a: []T, index: int): []T
 Constructs a copy of the dynamic array `a` and deletes the item at position `index` from it.
 
 ```
+fn slice(a: []T, startIndex [, endIndex]: int): []T
+```
+
+Constructs a copy of the part of the dynamic array `a` starting at `startIndex` and ending before `endIndex`. If `endIndex` is omitted, it is treated as equal to `len(a)`. If `endIndex` is negative, `len(a)` is implicitly added to it.
+
+```
 fn len(a: ([...]T | []T | str)): int
 ```
 

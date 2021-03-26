@@ -86,6 +86,7 @@ static const char *builtinSpelling [] =
     "makefrom",
     "append",
     "delete",
+    "slice",
     "len",
     "sizeof",
     "sizeofself",
@@ -241,7 +242,7 @@ static FORCE_INLINE void *chunkAlloc(HeapPages *pages, int size, Type *type, Err
     }
 
     HeapChunkHeader *chunk = (HeapChunkHeader *)((char *)page->ptr + page->numOccupiedChunks * page->chunkSize);
-    
+
     memset(chunk, 0, page->chunkSize);
     chunk->magic = VM_HEAP_CHUNK_MAGIC;
     chunk->refCnt = 1;
@@ -1059,6 +1060,9 @@ static FORCE_INLINE void doBuiltinDelete(Fiber *fiber, HeapPages *pages, Error *
     if (!array || !array->data)
         error->handlerRuntime(error->context, "Dynamic array is null");
 
+    if (index < 0 || index > array->len - 1)
+        error->handlerRuntime(error->context, "Index %d is out of range 0...%d", index, array->len - 1);
+
     result->type     = array->type;
     result->len      = array->len - 1;
     result->itemSize = array->itemSize;
@@ -1066,6 +1070,45 @@ static FORCE_INLINE void doBuiltinDelete(Fiber *fiber, HeapPages *pages, Error *
 
     memcpy((char *)result->data, (char *)array->data, index * array->itemSize);
     memcpy((char *)result->data + index * result->itemSize, (char *)array->data + (index + 1) * result->itemSize, (result->len - index) * result->itemSize);
+
+    // Increase result items' ref counts, as if they have been assigned one by one
+    doChangeArrayItemsRefCnt(fiber, pages, result->data, result->type, result->len, TOK_PLUSPLUS, error);
+
+    (--fiber->top)->ptrVal = (int64_t)result;
+}
+
+
+// fn slice(array: [] type, startIndex [, endIndex]: int): [] type
+static FORCE_INLINE void doBuiltinSlice(Fiber *fiber, HeapPages *pages, Error *error)
+{
+    DynArray *result = (DynArray *)(fiber->top++)->ptrVal;
+    int endIndex     =             (fiber->top++)->intVal;
+    int startIndex   =             (fiber->top++)->intVal;
+    DynArray *array  = (DynArray *)(fiber->top++)->ptrVal;
+
+    if (!array || !array->data)
+        error->handlerRuntime(error->context, "Dynamic array is null");
+
+    // Missing end index means the end of the array
+    if (endIndex == INT_MIN)
+        endIndex = array->len;
+
+    // Negative end index is counted from the end of the array
+    if (endIndex < 0)
+        endIndex += array->len;
+
+    if (startIndex < 0 || startIndex > array->len - 1)
+        error->handlerRuntime(error->context, "Index %d is out of range 0...%d", startIndex, array->len - 1);
+
+    if (endIndex < startIndex || endIndex > array->len)
+        error->handlerRuntime(error->context, "Index %d is out of range %d...%d", endIndex, startIndex, array->len);
+
+    result->type     = array->type;
+    result->len      = endIndex - startIndex;
+    result->itemSize = array->itemSize;
+    result->data     = chunkAlloc(pages, result->len * result->itemSize, result->type, error);
+
+    memcpy((char *)result->data, (char *)array->data + startIndex * result->itemSize, result->len * result->itemSize);
 
     // Increase result items' ref counts, as if they have been assigned one by one
     doChangeArrayItemsRefCnt(fiber, pages, result->data, result->type, result->len, TOK_PLUSPLUS, error);
@@ -1768,6 +1811,7 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         case BUILTIN_MAKEFROM:      doBuiltinMakefrom(fiber, pages, error); break;
         case BUILTIN_APPEND:        doBuiltinAppend(fiber, pages, error); break;
         case BUILTIN_DELETE:        doBuiltinDelete(fiber, pages, error); break;
+        case BUILTIN_SLICE:         doBuiltinSlice(fiber, pages, error); break;
         case BUILTIN_LEN:           doBuiltinLen(fiber, error); break;
         case BUILTIN_SIZEOF:        error->handlerRuntime(error->context, "Illegal instruction"); return;       // Done at compile time
         case BUILTIN_SIZEOFSELF:    doBuiltinSizeofself(fiber, error); break;

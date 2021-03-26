@@ -103,6 +103,7 @@ typedef enum
     BUILTIN_MAKEFROM,       // Array to dynamic array - implicit calls only
     BUILTIN_APPEND,
     BUILTIN_DELETE,
+    BUILTIN_SLICE,
     BUILTIN_LEN,
     BUILTIN_SIZEOF,
     BUILTIN_SIZEOFSELF,
