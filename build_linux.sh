@@ -1,33 +1,30 @@
 #!/bin/sh
-cd src
 
-gcc -fPIC -O3 -fno-strict-aliasing -fvisibility=hidden -DUMKA_BUILD -DUMKA_EXT_LIBS -Wall -Wno-format-security -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast -c umka_api.c umka_common.c umka_compiler.c umka_const.c umka_decl.c umka_expr.c umka_gen.c umka_ident.c umka_lexer.c umka_runtime.c umka_stmt.c umka_types.c umka_vm.c 
-gcc -shared -fPIC -static-libgcc *.o -o libumka.so -lm -ldl
+gccwflags="-Wall -Wno-format-security -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast"
+gccflags="-fPIC -O3 -fno-strict-aliasing -fvisibility=hidden -DUMKA_BUILD -DUMKA_EXT_LIBS $gccwflags"
+sourcefiles="umka_api.c umka_common.c umka_compiler.c umka_const.c   umka_decl.c umka_expr.c
+             umka_gen.c umka_ident.c  umka_lexer.c    umka_runtime.c umka_stmt.c umka_types.c umka_vm.c"
 
-gcc -O3 -fno-strict-aliasing -Wall -c umka.c 
-gcc umka.o -o umka -static-libgcc -L$PWD -lm -lumka -Wl,-rpath,'$ORIGIN'
+rm umka_linux -rf && # remove previous build
 
-rm -f *.o
-cd ..
+cd src &&
 
-mkdir umka_linux
+gcc $gccflags -c $sourcefiles &&
+gcc -shared -fPIC -static-libgcc *.o -o libumka.so -lm -ldl &&
 
-mv src/libumka.* umka_linux
-mv src/umka umka_linux
-cp src/umka_api.h umka_linux
-cp LICENSE umka_linux
-cp spec.md umka_linux
-cp Umka.sublime-syntax umka_linux
+gcc $gccflags -c umka.c &&
+gcc umka.o -o umka -static-libgcc -L$PWD -lm -lumka -Wl,-rpath,'$ORIGIN' &&
 
-mkdir umka_linux/examples
-mkdir umka_linux/examples/lisp
-mkdir umka_linux/import
- 
-cp examples/*.* umka_linux/examples
-cp examples/lisp/*.* umka_linux/examples/lisp
-cp import/*.* umka_linux/import
+rm -f *.o &&
 
+cd .. &&
 
+mkdir umka_linux/examples/lisp -p &&
+mkdir umka_linux/import &&
 
+mv src/libumka.* src/umka umka_linux/ &&
+cp src/umka_api.h Umka.sublime-syntax spec.md LICENSE umka_linux/ &&
 
-
+cp examples/* umka_linux/examples -r &&
+cp import/*   umka_linux/import &&
+echo build successful
