@@ -8,7 +8,7 @@ type (
 
 // External functions
 fn drawPlane(centerPos: Vector3, size: Vector2, color: Color)
-fn drawCube(position: Vector3, width, height, length: real32, color: Color)   
+fn drawCube(position: Vector3, width, height, length: real, color: Color)   
 
 const maxColumns = 20
 
