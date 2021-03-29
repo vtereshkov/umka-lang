@@ -23,12 +23,15 @@ int main(int argc, char **argv)
         printf("    -storage <storage-size>\n");
         printf("    -stack   <stack-size>\n");
         printf("    -asm     <output.asm>\n");
+        printf("    -vet     <check file for errors>\n");
         return 1;
     }
 
     int storageSize     = 1024 * 1024;  // Bytes
     int stackSize       = 1024 * 1024;  // Slots
     char *asmFileName   = NULL;
+
+		int compileOnly;
 
     for (int i = 0; i < 4; i += 2)
     {
@@ -74,6 +77,10 @@ int main(int argc, char **argv)
 
                 asmFileName = argv[2 + i + 1];
             }
+						else if (strcmp(argv[2], "-vet") == 0)
+						{
+							compileOnly = 1;
+						}
         }
     }
 
@@ -82,8 +89,18 @@ int main(int argc, char **argv)
     if (ok)
         ok = umkaCompile(umka);
 
-    if (ok)
+    if (!ok)
     {
+        UmkaError error;
+        umkaGetError(umka, &error);
+        printf("Error %s (%d, %d): %s\n", error.fileName, error.line, error.pos, error.msg);
+    }
+    else
+    {
+				if (compileOnly) {
+					return 0;
+				}
+
         if (asmFileName)
         {
             char *asmBuf = malloc(ASM_BUF_SIZE);
@@ -112,12 +129,6 @@ int main(int argc, char **argv)
             umkaGetError(umka, &error);
             printf("\nRuntime error %s (%d): %s\n", error.fileName, error.line, error.msg);
         }
-    }
-    else
-    {
-        UmkaError error;
-        umkaGetError(umka, &error);
-        printf("Error %s (%d, %d): %s\n", error.fileName, error.line, error.pos, error.msg);
     }
 
     umkaFree(umka);
