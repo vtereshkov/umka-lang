@@ -31,7 +31,7 @@ int main(int argc, char **argv)
     int stackSize       = 1024 * 1024;  // Slots
     char *asmFileName   = NULL;
 
-    int compileOnly;
+    int compileOnly     = 0;
 
     for (int i = 0; i < 4; i += 2)
     {
