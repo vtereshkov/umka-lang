@@ -31,7 +31,7 @@ int main(int argc, char **argv)
     int stackSize       = 1024 * 1024;  // Slots
     char *asmFileName   = NULL;
 
-    int compileOnly     = 0;
+    bool compileOnly     = 0;
 
     for (int i = 0; i < 4; i += 2)
     {
@@ -77,9 +77,9 @@ int main(int argc, char **argv)
 
                 asmFileName = argv[2 + i + 1];
             }
-            else if (strcmp(argv[2], "-vet") == 0)
+            else if (strcmp(argv[2 + i], "-vet") == 0)
             {
-              compileOnly = 1;
+              compileOnly = true;
             }
         }
     }
@@ -97,8 +97,9 @@ int main(int argc, char **argv)
     }
     else
     {
-        if (compileOnly) {
-          return 0;
+        if (compileOnly)
+				{
+            return 0;
         }
 
         if (asmFileName)
