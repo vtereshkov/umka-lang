@@ -98,7 +98,7 @@ int main(int argc, char **argv)
     else
     {
         if (compileOnly)
-				{
+        {
             return 0;
         }
 
