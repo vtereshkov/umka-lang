@@ -20,67 +20,65 @@ int main(int argc, char **argv)
         printf("Umka interpreter (C) Vasiliy Tereshkov, 2020-2021\n");
         printf("Usage: umka <file.um> [<parameters>] [<script-parameters>]\n");
         printf("Parameters:\n");
-        printf("    -storage <storage-size>\n");
-        printf("    -stack   <stack-size>\n");
-        printf("    -asm     <output.asm>\n");
-        printf("    -vet     <check file for errors>\n");
+        printf("    -storage <storage-size> - Set static storage size\n");
+        printf("    -stack <stack-size>     - Set stack size\n");
+        printf("    -asm                    - Write assembly listing\n");
+        printf("    -check                  - Compile only\n");
         return 1;
     }
 
     int storageSize     = 1024 * 1024;  // Bytes
     int stackSize       = 1024 * 1024;  // Slots
     char *asmFileName   = NULL;
+    bool compileOnly    = false;
 
-    bool compileOnly     = 0;
-
-    for (int i = 0; i < 4; i += 2)
+    int i = 2;
+    while (i < argc)
     {
-        if (argc > 2 + i)
+        if (strcmp(argv[i], "-storage") == 0)
         {
-            if (strcmp(argv[2 + i], "-storage") == 0)
+            if (i + 1 == argc)
             {
-                if (argc == 2 + i + 1)
-                {
-                    printf("Illegal command line parameter\n");
-                    return 1;
-                }
+                printf("Illegal command line parameter\n");
+                return 1;
+            }
 
-                storageSize = strtol(argv[2 + i + 1], NULL, 0);
-                if (storageSize <= 0)
-                {
-                    printf("Illegal storage size\n");
-                    return 1;
-                }
-            }
-            else if (strcmp(argv[2 + i], "-stack") == 0)
+            storageSize = strtol(argv[i + 1], NULL, 0);
+            if (storageSize <= 0)
             {
-                if (argc == 2 + i + 1)
-                {
-                    printf("Illegal command line parameter\n");
-                    return 1;
-                }
+                printf("Illegal storage size\n");
+                return 1;
+            }
 
-                stackSize = strtol(argv[2 + i + 1], NULL, 0);
-                if (stackSize <= 0)
-                {
-                    printf("Illegal stack size\n");
-                    return 1;
-                }
-            }
-            else if (strcmp(argv[2 + i], "-asm") == 0)
+            i += 2;
+        }
+        else if (strcmp(argv[i], "-stack") == 0)
+        {
+            if (i + 1 == argc)
             {
-                if (argc == 2 + i + 1)
-                {
-                    printf("Illegal command line parameter\n");
-                    return 1;
-                }
+                printf("Illegal command line parameter\n");
+                return 1;
+            }
 
-                asmFileName = argv[2 + i + 1];
-            }
-            else if (strcmp(argv[2 + i], "-vet") == 0)
+            stackSize = strtol(argv[i + 1], NULL, 0);
+            if (stackSize <= 0)
             {
-              compileOnly = true;
+                printf("Illegal stack size\n");
+                return 1;
             }
+
+            i += 2;
+        }
+        else if (strcmp(argv[i], "-asm") == 0)
+        {
+            asmFileName = malloc(strlen(argv[1]) + 4 + 1);
+            sprintf(asmFileName, "%s.asm", argv[1]);
+            i += 1;
+        }
+        else if (strcmp(argv[i], "-check") == 0)
+        {
+        	compileOnly = true;
+        	i += 1;
         }
     }
 
@@ -89,19 +87,8 @@ int main(int argc, char **argv)
     if (ok)
         ok = umkaCompile(umka);
 
-    if (!ok)
+    if (ok)
     {
-        UmkaError error;
-        umkaGetError(umka, &error);
-        printf("Error %s (%d, %d): %s\n", error.fileName, error.line, error.pos, error.msg);
-    }
-    else
-    {
-        if (compileOnly)
-        {
-            return 0;
-        }
-
         if (asmFileName)
         {
             char *asmBuf = malloc(ASM_BUF_SIZE);
@@ -121,9 +108,12 @@ int main(int argc, char **argv)
 
             fclose(asmFile);
             free(asmBuf);
+            free(asmFileName);
         }
 
-        ok = umkaRun(umka);
+        if (!compileOnly)    
+        	ok = umkaRun(umka);
+
         if (!ok)
         {
             UmkaError error;
@@ -131,6 +121,12 @@ int main(int argc, char **argv)
             printf("\nRuntime error %s (%d): %s\n", error.fileName, error.line, error.msg);
         }
     }
+    else
+    {
+        UmkaError error;
+        umkaGetError(umka, &error);
+        printf("Error %s (%d, %d): %s\n", error.fileName, error.line, error.pos, error.msg);
+    }    
 
     umkaFree(umka);
     return ok ? 0 : 1;
