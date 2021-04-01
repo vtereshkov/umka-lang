@@ -77,8 +77,8 @@ int main(int argc, char **argv)
         }
         else if (strcmp(argv[i], "-check") == 0)
         {
-        	compileOnly = true;
-        	i += 1;
+            compileOnly = true;
+            i += 1;
         }
     }
 
@@ -112,7 +112,7 @@ int main(int argc, char **argv)
         }
 
         if (!compileOnly)    
-        	ok = umkaRun(umka);
+            ok = umkaRun(umka);
 
         if (!ok)
         {
