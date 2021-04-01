@@ -213,7 +213,11 @@ static void doPtrToInterfaceConv(Compiler *comp, Type *dest, Type **src, Const *
     for (int i = 2; i < dest->numItems; i++)
     {
         const char *name = dest->field[i]->name;
-        Ident *srcMethod = identFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, name, *src);
+
+        Type *rcvType = (*src)->base;
+        int rcvTypeModule = rcvType->typeIdent ? rcvType->typeIdent->module : -1;
+
+        Ident *srcMethod = identFind(&comp->idents, &comp->modules, &comp->blocks, rcvTypeModule, name, *src);
         if (!srcMethod)
             comp->error.handler(comp->error.context, "Method %s is not implemented", name);
 
@@ -283,7 +287,7 @@ static void doValueToInterfaceConv(Compiler *comp, Type *dest, Type **src, Const
         comp->error.handler(comp->error.context, "Conversion to interface is not allowed in constant expressions");
 
     *src = typeAddPtrTo(&comp->types, &comp->blocks, *src);
-    doEscapeToHeap(comp, *src, false);
+    doEscapeToHeap(comp, *src, true);
     doPtrToInterfaceConv(comp, dest, src, constant);
 }
 
