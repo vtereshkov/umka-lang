@@ -1,3 +1,5 @@
+#define __USE_MINGW_ANSI_STDIO 1
+
 #include <stdio.h>
 #include <string.h>
 
@@ -638,7 +640,7 @@ static void parseImportItem(Compiler *comp)
 
     char path[DEFAULT_STR_LEN + 1];
     char *folder = comp->modules.module[comp->blocks.module]->folder;
-    sprintf(path, "%s%s", folder, comp->lex.tok.strVal);
+    snprintf(path, DEFAULT_STR_LEN + 1, "%s%s", folder, comp->lex.tok.strVal);
 
     int importedModule = moduleFindByPath(&comp->modules, path);
     if (importedModule < 0)
@@ -714,7 +716,7 @@ void parseProgram(Compiler *comp)
 
     Ident *mainFn = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, mainModule, "main", NULL);
 
-    if (mainFn->kind != IDENT_CONST || mainFn->type->kind != TYPE_FN || mainFn->type->sig.method || 
+    if (mainFn->kind != IDENT_CONST || mainFn->type->kind != TYPE_FN || mainFn->type->sig.method ||
         mainFn->type->sig.numParams != 0 || mainFn->type->sig.resultType->kind != TYPE_VOID)
         comp->error.handler(comp->error.context, "Illegal main() function");
 

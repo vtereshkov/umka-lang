@@ -1,3 +1,5 @@
+#define __USE_MINGW_ANSI_STDIO 1
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
@@ -80,7 +82,7 @@ void rtlclock(Slot *params, Slot *result)
     // On Linux, clock() measures per-process time and may produce wrong actual time estimates
     struct timespec t;
     clock_gettime(CLOCK_REALTIME, &t);
-    result->realVal = (double)t.tv_sec + (double)t.tv_nsec * 1e-9;    
+    result->realVal = (double)t.tv_sec + (double)t.tv_nsec * 1e-9;
 #endif
 }
 

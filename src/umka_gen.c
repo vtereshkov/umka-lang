@@ -1,3 +1,5 @@
+#define __USE_MINGW_ANSI_STDIO 1
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -899,22 +901,22 @@ void genGotosEpilog(CodeGen *gen, Gotos *gotos)
 
 // Assembly output
 
-char *genAsm(CodeGen *gen, char *buf)
+char *genAsm(CodeGen *gen, char *buf, int size)
 {
     int ip = 0, chars = 0;
     do
     {
         if (ip == 0 || gen->code[ip].debug.fileName != gen->code[ip - 1].debug.fileName)
-            chars += sprintf(buf + chars, "\n\nModule: %s\n", gen->code[ip].debug.fileName);
+            chars += snprintf(buf + chars, nonneg(size - chars), "\n\nModule: %s\n", gen->code[ip].debug.fileName);
 
         if (gen->code[ip].opcode == OP_ENTER_FRAME)
-            chars += sprintf(buf + chars, "\n\n");
+            chars += snprintf(buf + chars, nonneg(size - chars), "\n\n");
 
-        chars += vmAsm(ip, &gen->code[ip], buf + chars);
-        chars += sprintf(buf + chars, "\n");
+        chars += vmAsm(ip, &gen->code[ip], buf + chars, nonneg(size - chars));
+        chars += snprintf(buf + chars, nonneg(size - chars), "\n");
 
         if (gen->code[ip].opcode == OP_GOTO || gen->code[ip].opcode == OP_GOTO_IF)
-            chars += sprintf(buf + chars, "\n");
+            chars += snprintf(buf + chars, nonneg(size - chars), "\n");
 
     } while (gen->code[ip++].opcode != OP_HALT);
 

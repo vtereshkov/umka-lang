@@ -2028,28 +2028,28 @@ void vmRun(VM *vm, int entryOffset, int numParamSlots, Slot *params, Slot *resul
 }
 
 
-int vmAsm(int ip, Instruction *instr, char *buf)
+int vmAsm(int ip, Instruction *instr, char *buf, int size)
 {
     char opcodeBuf[DEFAULT_STR_LEN + 1];
-    sprintf(opcodeBuf, "%s%s", instr->inlineOpcode == OP_SWAP ? "SWAP; " : "", opcodeSpelling[instr->opcode]);
-    int chars = sprintf(buf, "%09d %6d %28s", ip, instr->debug.line, opcodeBuf);
+    snprintf(opcodeBuf, DEFAULT_STR_LEN + 1, "%s%s", instr->inlineOpcode == OP_SWAP ? "SWAP; " : "", opcodeSpelling[instr->opcode]);
+    int chars = snprintf(buf, size, "%09d %6d %28s", ip, instr->debug.line, opcodeBuf);
 
     if (instr->tokKind != TOK_NONE)
-        chars += sprintf(buf + chars, " %s", lexSpelling(instr->tokKind));
+        chars += snprintf(buf + chars, nonneg(size - chars), " %s", lexSpelling(instr->tokKind));
 
     if (instr->typeKind != TYPE_NONE)
-        chars += sprintf(buf + chars, " %s", typeKindSpelling(instr->typeKind));
+        chars += snprintf(buf + chars, nonneg(size - chars), " %s", typeKindSpelling(instr->typeKind));
 
     switch (instr->opcode)
     {
         case OP_PUSH:
         {
             if (instr->typeKind == TYPE_REAL)
-                chars += sprintf(buf + chars, " %.8lf", instr->operand.realVal);
+                chars += snprintf(buf + chars, nonneg(size - chars), " %.8lf", instr->operand.realVal);
             else if (instr->typeKind == TYPE_PTR)
-                chars += sprintf(buf + chars, " %p", (void *)instr->operand.ptrVal);
+                chars += snprintf(buf + chars, nonneg(size - chars), " %p", (void *)instr->operand.ptrVal);
             else
-                chars += sprintf(buf + chars, " %lld", (long long int)instr->operand.intVal);
+                chars += snprintf(buf + chars, nonneg(size - chars), " %lld", (long long int)instr->operand.intVal);
             break;
         }
         case OP_PUSH_LOCAL_PTR:
@@ -2066,27 +2066,27 @@ int vmAsm(int ip, Instruction *instr, char *buf)
         case OP_GOTO_IF:
         case OP_CALL:
         case OP_CALL_INDIRECT:
-        case OP_RETURN:                 chars += sprintf(buf + chars, " %lld",  (long long int)instr->operand.intVal); break;
+        case OP_RETURN:                 chars += snprintf(buf + chars, nonneg(size - chars), " %lld",  (long long int)instr->operand.intVal); break;
         case OP_ENTER_FRAME:
-        case OP_GET_ARRAY_PTR:          chars += sprintf(buf + chars, " %d %d", (int)instr->operand.int32Val[0], (int)instr->operand.int32Val[1]); break;
-        case OP_CALL_EXTERN:            chars += sprintf(buf + chars, " %p",    (void *)instr->operand.ptrVal); break;
-        case OP_CALL_BUILTIN:           chars += sprintf(buf + chars, " %s",    builtinSpelling[instr->operand.builtinVal]); break;
+        case OP_GET_ARRAY_PTR:          chars += snprintf(buf + chars, nonneg(size - chars), " %d %d", (int)instr->operand.int32Val[0], (int)instr->operand.int32Val[1]); break;
+        case OP_CALL_EXTERN:            chars += snprintf(buf + chars, nonneg(size - chars), " %p",    (void *)instr->operand.ptrVal); break;
+        case OP_CALL_BUILTIN:           chars += snprintf(buf + chars, nonneg(size - chars), " %s",    builtinSpelling[instr->operand.builtinVal]); break;
         case OP_CHANGE_REF_CNT:
         case OP_CHANGE_REF_CNT_ASSIGN:
         case OP_ASSERT_TYPE:
         {
             char typeBuf[DEFAULT_STR_LEN + 1];
-            chars += sprintf(buf + chars, " %s", typeSpelling((Type *)instr->operand.ptrVal, typeBuf));
+            chars += snprintf(buf + chars, nonneg(size - chars), " %s", typeSpelling((Type *)instr->operand.ptrVal, typeBuf));
             break;
         }
         default: break;
     }
 
     if (instr->inlineOpcode == OP_DEREF)
-        chars += sprintf(buf + chars, "; DEREF");
+        chars += snprintf(buf + chars, nonneg(size - chars), "; DEREF");
 
     else if (instr->inlineOpcode == OP_POP)
-        chars += sprintf(buf + chars, "; POP");
+        chars += snprintf(buf + chars, nonneg(size - chars), "; POP");
 
     return chars;
 }

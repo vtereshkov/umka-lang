@@ -1430,10 +1430,10 @@ void UMKA_API umkaGetError(void *umka, UmkaError *err);
 Gets the last compile-time or run-time error. Here, `umka` is the interpreter instance handle, `err` is the pointer to the error description structure to be filled.
 
 ```
-void UMKA_API umkaAsm(void *umka, char *buf);
+void UMKA_API umkaAsm(void *umka, char *buf, int size);
 ```
 
-Generates the Umka assembly listing for the Umka program previously compiled to bytecode. Here, `umka` is the interpreter instance handle, `buf` is the pointer to the string buffer to be filled.
+Generates the Umka assembly listing for the Umka program previously compiled to bytecode. Here, `umka` is the interpreter instance handle, `buf` is the pointer to the string buffer to be filled, `size` is the buffer size.
 
 ```
 void UMKA_API umkaAddFunc(void *umka, const char *name, UmkaExternFunc entry);

@@ -1,3 +1,5 @@
+#define __USE_MINGW_ANSI_STDIO 1
+
 #include <stdio.h>
 #include <string.h>
 #include <limits.h>
@@ -79,6 +81,9 @@ static void doCharToStrConv(Compiler *comp, Type *dest, Type **src, Const *const
     {
         char *buf = &comp->storage.data[comp->storage.len];
         comp->storage.len += 2 * typeSize(&comp->types, *src);
+
+        if (comp->storage.len >= comp->storage.capacity)
+            comp->error.handler(comp->error.context, "String is too long");
 
         buf[0] = constant->intVal;
         buf[1] = 0;
@@ -396,6 +401,9 @@ static void doApplyStrCat(Compiler *comp, Const *constant, Const *rightConstant)
         int bufLen = strlen((char *)constant->ptrVal) + strlen((char *)rightConstant->ptrVal) + 1;
         char *buf = &comp->storage.data[comp->storage.len];
         comp->storage.len += bufLen;
+
+        if (comp->storage.len >= comp->storage.capacity)
+            comp->error.handler(comp->error.context, "String is too long");
 
         strcpy(buf, (char *)constant->ptrVal);
         constant->ptrVal = (int64_t)buf;
@@ -1132,6 +1140,9 @@ static void parseArrayOrStructLiteral(Compiler *comp, Type **type, Const *consta
     {
         constant->ptrVal = (int64_t)&comp->storage.data[comp->storage.len];
         comp->storage.len += size;
+
+        if (comp->storage.len >= comp->storage.capacity)
+            comp->error.handler(comp->error.context, "Storage overflow");
 
         if (namedFields)
             constZero((void *)constant->ptrVal, size);
@@ -1910,6 +1921,9 @@ void parseExprList(Compiler *comp, Type **type, Type *destType, Const *constant)
         {
             constant->ptrVal = (int64_t)&comp->storage.data[comp->storage.len];
             comp->storage.len += typeSize(&comp->types, *type);
+
+            if (comp->storage.len >= comp->storage.capacity)
+                comp->error.handler(comp->error.context, "Storage overflow");
         }
         else
             bufOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, *type));

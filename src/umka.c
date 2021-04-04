@@ -80,6 +80,8 @@ int main(int argc, char **argv)
             compileOnly = true;
             i += 1;
         }
+        else
+            break;
     }
 
     void *umka = umkaAlloc();
@@ -92,7 +94,7 @@ int main(int argc, char **argv)
         if (asmFileName)
         {
             char *asmBuf = malloc(ASM_BUF_SIZE);
-            umkaAsm(umka, asmBuf);
+            umkaAsm(umka, asmBuf, ASM_BUF_SIZE);
 
             FILE *asmFile = fopen(asmFileName, "w");
             if (!asmFile)
@@ -111,7 +113,7 @@ int main(int argc, char **argv)
             free(asmFileName);
         }
 
-        if (!compileOnly)    
+        if (!compileOnly)
             ok = umkaRun(umka);
 
         if (!ok)
@@ -126,7 +128,7 @@ int main(int argc, char **argv)
         UmkaError error;
         umkaGetError(umka, &error);
         printf("Error %s (%d, %d): %s\n", error.fileName, error.line, error.pos, error.msg);
-    }    
+    }
 
     umkaFree(umka);
     return ok ? 0 : 1;

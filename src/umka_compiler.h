@@ -50,7 +50,7 @@ void compilerFree   (Compiler *comp);
 void compilerCompile(Compiler *comp);
 void compilerRun    (Compiler *comp);
 void compilerCall   (Compiler *comp, int entryOffset, int numParamSlots, Slot *params, Slot *result);
-void compilerAsm    (Compiler *comp, char *buf);
+void compilerAsm    (Compiler *comp, char *buf, int size);
 int compilerGetFunc (Compiler *comp, const char *moduleName, const char *funcName);
 
 #endif // UMKA_COMPILER_H_INCLUDED

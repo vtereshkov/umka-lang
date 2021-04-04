@@ -1,3 +1,5 @@
+#define __USE_MINGW_ANSI_STDIO 1
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -477,7 +479,7 @@ Field *typeAddField(Types *types, Type *structType, Type *fieldType, const char 
     else
     {
         // Automatic field naming
-        sprintf(fieldNameBuf, "__field%d", structType->numItems);
+        snprintf(fieldNameBuf, DEFAULT_STR_LEN + 1, "__field%d", structType->numItems);
         name = fieldNameBuf;
     }
 
@@ -496,7 +498,9 @@ Field *typeAddField(Types *types, Type *structType, Type *fieldType, const char 
 
     field = malloc(sizeof(Field));
 
-    strcpy(field->name, name);
+    strncpy(field->name, name, MAX_IDENT_LEN);
+    field->name[MAX_IDENT_LEN] = 0;
+
     field->hash = hash(name);
     field->type = fieldType;
     field->offset = typeSize(types, structType);
@@ -528,7 +532,9 @@ Param *typeAddParam(Types *types, Signature *sig, Type *type, const char *name)
 
     param = malloc(sizeof(Param));
 
-    strcpy(param->name, name);
+    strncpy(param->name, name, MAX_IDENT_LEN);
+    param->name[MAX_IDENT_LEN] = 0;
+
     param->hash = hash(name);
     param->type = type;
     param->defaultVal.intVal = 0;
@@ -560,39 +566,39 @@ const char *typeKindSpelling(TypeKind kind)
 }
 
 
-static char *typeSpellingRecursive(Type *type, char *buf, int depth)
+static char *typeSpellingRecursive(Type *type, char *buf, int size, int depth)
 {
     if (type->typeIdent)
-        sprintf(buf, "%s", type->typeIdent->name);
+        snprintf(buf, size, "%s", type->typeIdent->name);
     else
     {
         int len = 0;
 
         if (type->weak)
-            len += sprintf(buf + len, "weak ");
+            len += snprintf(buf + len, nonneg(size - len), "weak ");
 
         if (type->kind == TYPE_ARRAY)
-            len += sprintf(buf + len, "[%d]", type->numItems);
+            len += snprintf(buf + len, nonneg(size - len), "[%d]", type->numItems);
         else if (typeExprListStruct(type))
         {
-            len += sprintf(buf + len, "{ ");
+            len += snprintf(buf + len, nonneg(size - len), "{ ");
             for (int i = 0; i < type->numItems; i++)
             {
                 char fieldBuf[DEFAULT_STR_LEN + 1];
-                len += sprintf(buf + len, "%s ", typeSpellingRecursive(type->field[i]->type, fieldBuf, depth - 1));
+                len += snprintf(buf + len, nonneg(size - len), "%s ", typeSpellingRecursive(type->field[i]->type, fieldBuf, DEFAULT_STR_LEN + 1, depth - 1));
             }
-            len += sprintf(buf + len, "}");
+            len += snprintf(buf + len, nonneg(size - len), "}");
         }
         else
-            sprintf(buf + len, "%s", spelling[type->kind]);
+            snprintf(buf + len, nonneg(size - len), "%s", spelling[type->kind]);
 
         if (type->kind == TYPE_PTR || type->kind == TYPE_ARRAY || type->kind == TYPE_DYNARRAY)
         {
             char baseBuf[DEFAULT_STR_LEN + 1];
             if (depth > 0)
-                strcat(buf, typeSpellingRecursive(type->base, baseBuf, depth - 1));
+                strncat(buf, typeSpellingRecursive(type->base, baseBuf, DEFAULT_STR_LEN + 1, depth - 1), nonneg(size - len - 1));
             else
-                strcat(buf, "...");
+                strncat(buf, "...", nonneg(size - len - 1));
         }
     }
     return buf;
@@ -602,6 +608,6 @@ static char *typeSpellingRecursive(Type *type, char *buf, int depth)
 char *typeSpelling(Type *type, char *buf)
 {
     enum {MAX_TYPE_SPELLING_DEPTH = 10};
-    return typeSpellingRecursive(type, buf, MAX_TYPE_SPELLING_DEPTH);
+    return typeSpellingRecursive(type, buf, DEFAULT_STR_LEN + 1, MAX_TYPE_SPELLING_DEPTH);
 }
 

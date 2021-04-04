@@ -1,3 +1,5 @@
+#define __USE_MINGW_ANSI_STDIO 1
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -119,7 +121,7 @@ int moduleFindByPath(Modules *modules, const char *path)
 }
 
 
-static void moduleNameFromPath(Modules *modules, const char *path, char *folder, char *name)
+static void moduleNameFromPath(Modules *modules, const char *path, char *folder, char *name, int size)
 {
     const char *slash = strrchr(path, '/');
     const char *backslash = strrchr(path, '\\');
@@ -135,8 +137,11 @@ static void moduleNameFromPath(Modules *modules, const char *path, char *folder,
     if (stop <= start)
         modules->error->handler(modules->error->context, "Illegal module path %s", path);
 
-    strncpy(folder, path, start - path);
-    strncpy(name, start, stop - start);
+    strncpy(folder, path, (start - path < size - 1) ? (start - path) : (size - 1));
+    strncpy(name, start,  (stop - start < size - 1) ? (stop - start) : (size - 1));
+
+    folder[size - 1] = 0;
+    name[size - 1] = 0;
 }
 
 
@@ -145,7 +150,7 @@ int moduleAdd(Modules *modules, const char *path)
     char folder[DEFAULT_STR_LEN + 1] = "";
     char name  [DEFAULT_STR_LEN + 1] = "";
 
-    moduleNameFromPath(modules, path, folder, name);
+    moduleNameFromPath(modules, path, folder, name, DEFAULT_STR_LEN + 1);
 
     int res = moduleFind(modules, name);
     if (res >= 0)
@@ -153,9 +158,14 @@ int moduleAdd(Modules *modules, const char *path)
 
     Module *module = malloc(sizeof(Module));
 
-    strcpy(module->path, path);
-    strcpy(module->folder, folder);
-    strcpy(module->name, name);
+    strncpy(module->path, path, DEFAULT_STR_LEN);
+    module->path[DEFAULT_STR_LEN] = 0;
+
+    strncpy(module->folder, folder, DEFAULT_STR_LEN);
+    module->folder[DEFAULT_STR_LEN] = 0;
+
+    strncpy(module->name, name, DEFAULT_STR_LEN);
+    module->name[DEFAULT_STR_LEN] = 0;
 
     module->hash = hash(name);
     module->pathHash = hash(path);
@@ -264,9 +274,10 @@ External *externalAdd(Externals *externals, const char *name, void *entry)
 
     external->entry = entry;
 
-    strcpy(external->name, name);
-    external->hash = hash(name);
+    strncpy(external->name, name, DEFAULT_STR_LEN);
+    external->name[DEFAULT_STR_LEN] = 0;
 
+    external->hash = hash(name);
     external->next = NULL;
 
     // Add to list

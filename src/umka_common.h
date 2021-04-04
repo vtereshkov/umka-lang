@@ -141,6 +141,12 @@ static inline unsigned int hash(const char *str)
 }
 
 
+static inline int nonneg(int size)
+{
+    return (size > 0) ? size : 0;
+}
+
+
 static inline int align(int size, int alignment)
 {
     return ((size + (alignment - 1)) / alignment) * alignment;

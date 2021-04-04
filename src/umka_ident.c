@@ -1,3 +1,5 @@
+#define __USE_MINGW_ANSI_STDIO 1
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -141,7 +143,9 @@ static Ident *identAdd(Idents *idents, Modules *modules, Blocks *blocks, IdentKi
     ident = malloc(sizeof(Ident));
     ident->kind = kind;
 
-    strcpy(ident->name, name);
+    strncpy(ident->name, name, MAX_IDENT_LEN);
+    ident->name[MAX_IDENT_LEN] = 0;
+
     ident->hash = hash(name);
 
     ident->type             = type;
@@ -250,7 +254,7 @@ Ident *identAllocParam(Idents *idents, Types *types, Modules *modules, Blocks *b
 
 char *identTempVarName(Idents *idents, char *buf)
 {
-    sprintf(buf, "__temp%d", idents->tempVarNameSuffix++);
+    snprintf(buf, DEFAULT_STR_LEN + 1, "__temp%d", idents->tempVarNameSuffix++);
     return buf;
 }
 

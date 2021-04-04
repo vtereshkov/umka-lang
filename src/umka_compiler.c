@@ -1,3 +1,5 @@
+#define __USE_MINGW_ANSI_STDIO 1
+
 #include <stddef.h>
 #include <string.h>
 #include <stdio.h>
@@ -188,9 +190,9 @@ void compilerCall(Compiler *comp, int entryOffset, int numParamSlots, Slot *para
 }
 
 
-void compilerAsm(Compiler *comp, char *buf)
+void compilerAsm(Compiler *comp, char *buf, int size)
 {
-    genAsm(&comp->gen, buf);
+    genAsm(&comp->gen, buf, size);
 }
 
 

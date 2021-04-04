@@ -19,7 +19,7 @@ static void compileError(void *context, const char *format, ...)
     strcpy(comp->error.fileName, comp->lex.fileName);
     comp->error.line = comp->lex.line;
     comp->error.pos = comp->lex.pos;
-    vsprintf(comp->error.msg, format, args);
+    vsnprintf(comp->error.msg, UMKA_MSG_LEN, format, args);
 
     va_end(args);
     longjmp(comp->error.jumper, 1);
@@ -37,7 +37,7 @@ static void runtimeError(void *context, const char *format, ...)
     strcpy(comp->error.fileName, instr->debug.fileName);
     comp->error.line = instr->debug.line;
     comp->error.pos = 1;
-    vsprintf(comp->error.msg, format, args);
+    vsnprintf(comp->error.msg, UMKA_MSG_LEN, format, args);
 
     va_end(args);
     longjmp(comp->error.jumper, 1);
@@ -128,10 +128,10 @@ void UMKA_API umkaGetError(void *umka, UmkaError *err)
 }
 
 
-void UMKA_API umkaAsm(void *umka, char *buf)
+void UMKA_API umkaAsm(void *umka, char *buf, int size)
 {
     Compiler *comp = umka;
-    compilerAsm(comp, buf);
+    compilerAsm(comp, buf, size);
 }
 
 
