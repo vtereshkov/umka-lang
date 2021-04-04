@@ -19,7 +19,7 @@ static void compileError(void *context, const char *format, ...)
     strcpy(comp->error.fileName, comp->lex.fileName);
     comp->error.line = comp->lex.line;
     comp->error.pos = comp->lex.pos;
-    vsnprintf(comp->error.msg, UMKA_MSG_LEN, format, args);
+    vsnprintf(comp->error.msg, UMKA_MSG_LEN + 1, format, args);
 
     va_end(args);
     longjmp(comp->error.jumper, 1);
@@ -37,7 +37,7 @@ static void runtimeError(void *context, const char *format, ...)
     strcpy(comp->error.fileName, instr->debug.fileName);
     comp->error.line = instr->debug.line;
     comp->error.pos = 1;
-    vsnprintf(comp->error.msg, UMKA_MSG_LEN, format, args);
+    vsnprintf(comp->error.msg, UMKA_MSG_LEN + 1, format, args);
 
     va_end(args);
     longjmp(comp->error.jumper, 1);

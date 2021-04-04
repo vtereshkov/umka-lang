@@ -35,9 +35,9 @@ typedef struct
     jmp_buf jumper;
 
     // Error report
-    char fileName[DEFAULT_STR_LEN];
+    char fileName[DEFAULT_STR_LEN + 1];
     int line, pos;
-    char msg[DEFAULT_STR_LEN];
+    char msg[DEFAULT_STR_LEN + 1];
 } Error;
 
 

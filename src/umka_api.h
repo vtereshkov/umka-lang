@@ -45,15 +45,15 @@ typedef void (*UmkaExternFunc)(UmkaStackSlot *params, UmkaStackSlot *result);
 
 enum
 {
-    UMKA_MSG_LEN = 512
+    UMKA_MSG_LEN = 255
 };
 
 
 typedef struct
 {
-    char fileName[UMKA_MSG_LEN];
+    char fileName[UMKA_MSG_LEN + 1];
     int line, pos;
-    char msg[UMKA_MSG_LEN];
+    char msg[UMKA_MSG_LEN + 1];
 } UmkaError;
 
 
