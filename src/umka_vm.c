@@ -1078,42 +1078,78 @@ static FORCE_INLINE void doBuiltinDelete(Fiber *fiber, HeapPages *pages, Error *
 }
 
 
-// fn slice(array: [] type, startIndex [, endIndex]: int): [] type
+// fn slice(array: [] type | str, startIndex [, endIndex]: int): [] type | str
 static FORCE_INLINE void doBuiltinSlice(Fiber *fiber, HeapPages *pages, Error *error)
 {
     DynArray *result = (DynArray *)(fiber->top++)->ptrVal;
     int endIndex     =             (fiber->top++)->intVal;
     int startIndex   =             (fiber->top++)->intVal;
-    DynArray *array  = (DynArray *)(fiber->top++)->ptrVal;
+    void *arg        =     (void *)(fiber->top++)->ptrVal;
 
-    if (!array || !array->data)
-        error->handlerRuntime(error->context, "Dynamic array is null");
+    if (!arg)
+        error->handlerRuntime(error->context, "Dynamic array or string is null");
+
+    DynArray *array = NULL;
+    char *str = NULL;
+    int len = 0;
+
+    if (result)
+    {
+        // Dynamic array
+        array = (DynArray *)arg;
+
+        if (!array->data)
+            error->handlerRuntime(error->context, "Dynamic array is null");
+
+        len = array->len;
+    }
+    else
+    {
+        // String
+        str = (char *)arg;
+        len = strlen(str);
+    }
 
     // Missing end index means the end of the array
     if (endIndex == INT_MIN)
-        endIndex = array->len;
+        endIndex = len;
 
     // Negative end index is counted from the end of the array
     if (endIndex < 0)
-        endIndex += array->len;
+        endIndex += len;
 
-    if (startIndex < 0 || startIndex > array->len - 1)
-        error->handlerRuntime(error->context, "Index %d is out of range 0...%d", startIndex, array->len - 1);
+    if (startIndex < 0 || startIndex > len - 1)
+        error->handlerRuntime(error->context, "Index %d is out of range 0...%d", startIndex, len - 1);
 
-    if (endIndex < startIndex || endIndex > array->len)
-        error->handlerRuntime(error->context, "Index %d is out of range %d...%d", endIndex, startIndex, array->len);
+    if (endIndex < startIndex || endIndex > len)
+        error->handlerRuntime(error->context, "Index %d is out of range %d...%d", endIndex, startIndex, len);
 
-    result->type     = array->type;
-    result->len      = endIndex - startIndex;
-    result->itemSize = array->itemSize;
-    result->data     = chunkAlloc(pages, result->len * result->itemSize, result->type, error);
+    if (result)
+    {
+        // Dynamic array
+        result->type     = array->type;
+        result->len      = endIndex - startIndex;
+        result->itemSize = array->itemSize;
+        result->data     = chunkAlloc(pages, result->len * result->itemSize, result->type, error);
 
-    memcpy((char *)result->data, (char *)array->data + startIndex * result->itemSize, result->len * result->itemSize);
+        memcpy((char *)result->data, (char *)array->data + startIndex * result->itemSize, result->len * result->itemSize);
 
-    // Increase result items' ref counts, as if they have been assigned one by one
-    doChangeArrayItemsRefCnt(fiber, pages, result->data, result->type, result->len, TOK_PLUSPLUS, error);
+        // Increase result items' ref counts, as if they have been assigned one by one
+        doChangeArrayItemsRefCnt(fiber, pages, result->data, result->type, result->len, TOK_PLUSPLUS, error);
 
-    (--fiber->top)->ptrVal = (int64_t)result;
+        (--fiber->top)->ptrVal = (int64_t)result;
+    }
+    else
+    {
+        // String
+        char *substr = chunkAlloc(pages, endIndex - startIndex + 1, NULL, error);
+        memcpy(substr, &str[startIndex], endIndex - startIndex);
+        substr[endIndex] = 0;
+
+        (--fiber->top)->ptrVal = (int64_t)substr;
+    }
+
+
 }
 
 

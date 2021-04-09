@@ -687,7 +687,7 @@ static void parseBuiltinDeleteCall(Compiler *comp, Type **type, Const *constant)
 }
 
 
-// fn slice(array: [] type, startIndex [, endIndex]: int): [] type
+// fn slice(array: [] type | str, startIndex [, endIndex]: int): [] type | str
 static void parseBuiltinSliceCall(Compiler *comp, Type **type, Const *constant)
 {
     if (constant)
@@ -695,7 +695,7 @@ static void parseBuiltinSliceCall(Compiler *comp, Type **type, Const *constant)
 
     // Dynamic array
     parseExpr(comp, type, NULL);
-    if ((*type)->kind != TYPE_DYNARRAY)
+    if ((*type)->kind != TYPE_DYNARRAY && (*type)->kind != TYPE_STR)
         comp->error.handler(comp->error.context, "Incompatible type in slice()");
 
     lexEat(&comp->lex, TOK_COMMA);
@@ -718,9 +718,14 @@ static void parseBuiltinSliceCall(Compiler *comp, Type **type, Const *constant)
     else
         genPushIntConst(&comp->gen, INT_MIN);
 
-    // Pointer to result (hidden parameter)
-    int resultOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, *type));
-    genPushLocalPtr(&comp->gen, resultOffset);
+    if ((*type)->kind == TYPE_DYNARRAY)
+    {
+        // Pointer to result (hidden parameter)
+        int resultOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, *type));
+        genPushLocalPtr(&comp->gen, resultOffset);
+    }
+    else
+        genPushGlobalPtr(&comp->gen, NULL);
 
     genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_SLICE);
 }
