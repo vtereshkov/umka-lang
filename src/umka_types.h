@@ -210,6 +210,12 @@ bool typeCompatible         (Type *left, Type *right, bool symmetric);
 void typeAssertCompatible   (Types *types, Type *left, Type *right, bool symmetric);
 
 
+static inline bool typeCompatibleRcv(Type *left, Type *right)
+{
+    return left->kind  == TYPE_PTR && right->kind == TYPE_PTR && left->base->typeIdent == right->base->typeIdent;
+}
+
+
 static inline bool typeCastablePtrs(Types *types, Type *left, Type *right)
 {
     return left->kind  == TYPE_PTR && right->kind == TYPE_PTR &&

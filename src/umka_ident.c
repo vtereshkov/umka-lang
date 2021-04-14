@@ -74,8 +74,7 @@ Ident *identFind(Idents *idents, Modules *modules, Blocks *blocks, int module, c
                         return ident;
 
                     // We need a method and what we found is a method
-                    if (rcvType && method && (typeCompatible(ident->type->sig.param[0]->type, rcvType, false) ||
-                                              typeCompatible(rcvType, ident->type->sig.param[0]->type, false)))
+                    if (rcvType && method && typeCompatibleRcv(ident->type->sig.param[0]->type, rcvType))
                         return ident;
             }
     }
