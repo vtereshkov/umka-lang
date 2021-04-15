@@ -70,8 +70,8 @@ static void parseRcvSignature(Compiler *comp, Signature *sig)
     if (rcvType->kind != TYPE_PTR || !rcvType->base->typeIdent)
         comp->error.handler(comp->error.context, "Receiver should be a pointer to a defined type");
 
-    if (rcvType->base->kind == TYPE_INTERFACE)
-    	comp->error.handler(comp->error.context, "Receiver cannot be an interface");
+    if (rcvType->base->kind == TYPE_PTR || rcvType->base->kind == TYPE_INTERFACE)
+    	comp->error.handler(comp->error.context, "Receiver base type cannot be a pointer or an interface");
 
     sig->method = true;
     typeAddParam(&comp->types, sig, rcvType, rcvName);
