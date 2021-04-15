@@ -74,8 +74,12 @@ static void *moduleLoadImplLibFunc(void *lib, const char *name)
 void moduleInit(Modules *modules, Error *error)
 {
     for (int i = 0; i < MAX_MODULES; i++)
+    {
         modules->module[i] = NULL;
+        modules->moduleSource[i] = NULL;
+    }
     modules->numModules = 0;
+    modules->numModuleSources = 0;
     modules->error = error;
 }
 
@@ -83,41 +87,20 @@ void moduleInit(Modules *modules, Error *error)
 void moduleFree(Modules *modules)
 {
     for (int i = 0; i < MAX_MODULES; i++)
+    {
         if (modules->module[i])
         {
             if (modules->module[i]->implLib)
                 moduleFreeImplLib(modules->module[i]->implLib);
             free(modules->module[i]);
         }
-}
 
-
-int moduleFind(Modules *modules, const char *name)
-{
-    unsigned int nameHash = hash(name);
-    for (int i = 0; i < modules->numModules; i++)
-        if (modules->module[i]->hash == nameHash && strcmp(modules->module[i]->name, name) == 0)
-            return i;
-    return -1;
-}
-
-
-int moduleAssertFind(Modules *modules, const char *name)
-{
-    int res = moduleFind(modules, name);
-    if (res < 0)
-        modules->error->handler(modules->error->context, "Unknown module %s", name);
-    return res;
-}
-
-
-int moduleFindByPath(Modules *modules, const char *path)
-{
-    unsigned int pathHash = hash(path);
-    for (int i = 0; i < modules->numModules; i++)
-        if (modules->module[i]->pathHash == pathHash && strcmp(modules->module[i]->path, path) == 0)
-            return i;
-    return -1;
+        if (modules->moduleSource[i])
+        {
+            free(modules->moduleSource[i]->source);
+            free(modules->moduleSource[i]);
+        }
+    }
 }
 
 
@@ -145,8 +128,41 @@ static void moduleNameFromPath(Modules *modules, const char *path, char *folder,
 }
 
 
+int moduleFind(Modules *modules, const char *name)
+{
+    unsigned int nameHash = hash(name);
+    for (int i = 0; i < modules->numModules; i++)
+        if (modules->module[i]->hash == nameHash && strcmp(modules->module[i]->name, name) == 0)
+            return i;
+    return -1;
+}
+
+
+int moduleAssertFind(Modules *modules, const char *name)
+{
+    int res = moduleFind(modules, name);
+    if (res < 0)
+        modules->error->handler(modules->error->context, "Unknown module %s", name);
+    return res;
+}
+
+
+int moduleFindByPath(Modules *modules, const char *path)
+{
+    char folder[DEFAULT_STR_LEN + 1] = "";
+    char name  [DEFAULT_STR_LEN + 1] = "";
+
+    moduleNameFromPath(modules, path, folder, name, DEFAULT_STR_LEN + 1);
+
+    return moduleFind(modules, name);
+}
+
+
 int moduleAdd(Modules *modules, const char *path)
 {
+    if (modules->numModules >= MAX_MODULES)
+        modules->error->handler(modules->error->context, "Too many modules");
+
     char folder[DEFAULT_STR_LEN + 1] = "";
     char name  [DEFAULT_STR_LEN + 1] = "";
 
@@ -180,6 +196,53 @@ int moduleAdd(Modules *modules, const char *path)
 
     modules->module[modules->numModules] = module;
     return modules->numModules++;
+}
+
+
+char *moduleFindSource(Modules *modules, const char *name)
+{
+    unsigned int nameHash = hash(name);
+    for (int i = 0; i < modules->numModuleSources; i++)
+        if (modules->moduleSource[i]->hash == nameHash && strcmp(modules->moduleSource[i]->name, name) == 0)
+            return modules->moduleSource[i]->source;
+    return NULL;
+}
+
+
+char *moduleFindSourceByPath(Modules *modules, const char *path)
+{
+    char folder[DEFAULT_STR_LEN + 1] = "";
+    char name  [DEFAULT_STR_LEN + 1] = "";
+
+    moduleNameFromPath(modules, path, folder, name, DEFAULT_STR_LEN + 1);
+
+    return moduleFindSource(modules, name);
+}
+
+
+void moduleAddSource(Modules *modules, const char *path, const char *source)
+{
+    if (modules->numModuleSources >= MAX_MODULES)
+        modules->error->handler(modules->error->context, "Too many module sources");
+
+    char folder[DEFAULT_STR_LEN + 1] = "";
+    char name  [DEFAULT_STR_LEN + 1] = "";
+
+    moduleNameFromPath(modules, path, folder, name, DEFAULT_STR_LEN + 1);
+
+    ModuleSource *moduleSource = malloc(sizeof(ModuleSource));
+
+    strncpy(moduleSource->name, name, DEFAULT_STR_LEN);
+    moduleSource->name[DEFAULT_STR_LEN] = 0;
+
+    int sourceLen = strlen(source);
+    moduleSource->source = malloc(sourceLen + 1);
+    strcpy(moduleSource->source, source);
+    moduleSource->source[sourceLen] = 0;
+
+    moduleSource->hash = hash(name);
+
+    modules->moduleSource[modules->numModuleSources++] = moduleSource;
 }
 
 

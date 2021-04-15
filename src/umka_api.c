@@ -135,6 +135,13 @@ void UMKA_API umkaAsm(void *umka, char *buf, int size)
 }
 
 
+void UMKA_API umkaAddModule(void *umka, const char *fileName, const char *sourceString)
+{
+    Compiler *comp = umka;
+    moduleAddSource(&comp->modules, fileName, sourceString);
+}
+
+
 void UMKA_API umkaAddFunc(void *umka, const char *name, UmkaExternFunc entry)
 {
     Compiler *comp = umka;

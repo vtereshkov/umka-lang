@@ -645,11 +645,14 @@ static void parseImportItem(Compiler *comp)
     int importedModule = moduleFindByPath(&comp->modules, path);
     if (importedModule < 0)
     {
+        // Module source strings, if any, have precedence over files
+        char *sourceString = moduleFindSourceByPath(&comp->modules, path);
+
         // Save context
         int currentModule       = comp->blocks.module;
         DebugInfo currentDebug  = comp->debug;
         Lexer currentLex        = comp->lex;
-        lexInit(&comp->lex, &comp->storage, &comp->debug, path, NULL, &comp->error);
+        lexInit(&comp->lex, &comp->storage, &comp->debug, path, sourceString, &comp->error);
 
         lexNext(&comp->lex);
         importedModule = parseModule(comp);

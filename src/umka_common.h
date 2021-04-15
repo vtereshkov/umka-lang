@@ -59,8 +59,17 @@ typedef struct
 
 typedef struct
 {
+    char name[DEFAULT_STR_LEN + 1];
+    unsigned int hash;
+    char *source;
+} ModuleSource;
+
+
+typedef struct
+{
     Module *module[MAX_MODULES];
-    int numModules;
+    ModuleSource *moduleSource[MAX_MODULES];
+    int numModules, numModuleSources;
     Error *error;
 } Modules;
 
@@ -114,7 +123,10 @@ int   moduleFind             (Modules *modules, const char *name);
 int   moduleAssertFind       (Modules *modules, const char *name);
 int   moduleFindByPath       (Modules *modules, const char *path);
 int   moduleAdd              (Modules *modules, const char *path);
-void *moduleGetImplLibFunc   (Module *module, const char *name);
+char *moduleFindSource       (Modules *modules, const char *name);
+char *moduleFindSourceByPath (Modules *modules, const char *path);
+void  moduleAddSource        (Modules *modules, const char *path, const char *source);
+void *moduleGetImplLibFunc   (Module  *module,  const char *name);
 
 void blocksInit   (Blocks *blocks, Error *error);
 void blocksFree   (Blocks *blocks);

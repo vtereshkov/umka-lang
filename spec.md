@@ -1436,6 +1436,12 @@ void UMKA_API umkaAsm(void *umka, char *buf, int size);
 Generates the Umka assembly listing for the Umka program previously compiled to bytecode. Here, `umka` is the interpreter instance handle, `buf` is the pointer to the string buffer to be filled, `size` is the buffer size.
 
 ```
+void UMKA_API umkaAddModule(void *umka, const char *fileName, const char *sourceString);
+```
+
+Adds an Umka module contained in the `sourceString`. A fictitious `fileName` should be specified.
+
+```
 void UMKA_API umkaAddFunc(void *umka, const char *name, UmkaExternFunc entry);
 ```
 
