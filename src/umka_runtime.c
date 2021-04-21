@@ -62,8 +62,8 @@ void rtlfseek(Slot *params, Slot *result)
 
 void rtlftell(Slot *params, Slot *result)
 {
-	FILE *file = (FILE *)params[0].ptrVal;
-	result->intVal = ftell(file);
+    FILE *file = (FILE *)params[0].ptrVal;
+    result->intVal = ftell(file);
 }
 
 
