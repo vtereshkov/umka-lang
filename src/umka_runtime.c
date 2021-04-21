@@ -60,6 +60,12 @@ void rtlfseek(Slot *params, Slot *result)
     result->intVal = fseek(file, offset, originC);
 }
 
+void rtlftell(Slot *params, Slot *result)
+{
+	FILE *file = (FILE *)params[0].ptrVal;
+	result->intVal = ftell(file);
+}
+
 
 void rtlremove(Slot *params, Slot *result)
 {
