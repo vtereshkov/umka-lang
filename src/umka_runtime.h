@@ -9,6 +9,7 @@ void rtlfclose (Slot *params, Slot *result);
 void rtlfread  (Slot *params, Slot *result);
 void rtlfwrite (Slot *params, Slot *result);
 void rtlfseek  (Slot *params, Slot *result);
+void rtlftell  (Slot *params, Slot *result);
 void rtlremove (Slot *params, Slot *result);
 void rtltime   (Slot *params, Slot *result);
 void rtlclock  (Slot *params, Slot *result);

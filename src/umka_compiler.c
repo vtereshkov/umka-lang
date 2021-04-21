@@ -112,6 +112,7 @@ static void compilerDeclareExternalFuncs(Compiler *comp)
     externalAdd(&comp->externals, "rtlfread",   &rtlfread);
     externalAdd(&comp->externals, "rtlfwrite",  &rtlfwrite);
     externalAdd(&comp->externals, "rtlfseek",   &rtlfseek);
+    externalAdd(&comp->externals, "rtlftell",   &rtlftell);
     externalAdd(&comp->externals, "rtlremove",  &rtlremove);
     externalAdd(&comp->externals, "rtltime",    &rtltime);
     externalAdd(&comp->externals, "rtlclock",   &rtlclock);
