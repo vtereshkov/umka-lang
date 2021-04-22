@@ -1234,19 +1234,25 @@ Closes the file `f`. Returns 0 if successful.
 fn fread*(f: File, buf: interface{}): int
 ```
 
-Reads the `buf` variable from the file `f`. `buf` can be of any type that doesn't contain pointers, strings, dynamic arrays, interfaces or fibers. Returns 1 if successful.
+Reads the `buf` variable from the file `f`. `buf` can be of any type that doesn't contain pointers, strings, dynamic arrays, interfaces or fibers, except for `^[]uint8`. Returns 1 if successful.
 
 ```
 fn fwrite*(f: File, buf: interface{}): int
 ```
 
-Writes the `buf` variable to the file `f`. `buf` can be of any type that doesn't contain pointers, strings, dynamic arrays, interfaces or fibers. Returns 1 if successful.
+Writes the `buf` variable to the file `f`. `buf` can be of any type that doesn't contain pointers, strings, dynamic arrays, interfaces or fibers, except for `^[]uint8`. Returns 1 if successful.
 
 ```
 fn fseek*(f: File, offset, origin: int): int
 ```
 
 Sets the file pointer in the file `f` to the given `offset`  from the `origin` , which is either `seekBegin`, or `seekCur`, or `seekEnd`. Returns 0 if successful.
+
+```
+fn ftell*(f: File): int
+```
+
+Returns the file pointer position.
 
 ```
 fn remove*(name: str): int
