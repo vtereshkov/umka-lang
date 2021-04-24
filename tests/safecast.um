@@ -1,17 +1,17 @@
 fn test*() {
 	// Dynamic arrays
-	var p: ^[3]int
+	var p: [3]int
 	{
 		a := []int{1, 4, 7}
 
-		p = ^[3]int(&a)
+		p = [3]int(a)
 		a = append(a, 10)
 		a[1] = 5
 
 		printf(repr(a) + '\n')
 	}
 
-	printf(repr(p^) + '\n')
+	printf(repr(p) + '\n')
 
 	// Strings
 	var pc: ^[5]char

@@ -363,7 +363,7 @@ If a value `s` of type `S` is given where a value `t` of some other type `T` is 
 * `S` is a pointer to an array of `char` and `T` is `str` and the last item of `S` is the null character
 * `S` is `str` and `T` is a pointer to an array of `char` and `len(s) + 1 >= len(t^)` 
 * `S` is an array type and `T` is a dynamic array type and the item types of `S` and `T` are equivalent
-* `S` is a pointer to a dynamic array and `T` is a pointer to an array and the item types of `S` and `T` are equivalent and `len(s^) >= len(t^)` 
+* `S` is a dynamic array type and `T` is an array type and the item types of `S` and `T` are equivalent and `len(s) <= len(t)` 
 * `S` is an interface type and `T` is a type that implements all the methods of `S` 
 * `S` is a pointer type and `T` is an interface type
 * `S` is a weak pointer type and `T` is a strong pointer type and the base types of `S` and `T` are equivalent 

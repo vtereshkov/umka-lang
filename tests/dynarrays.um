@@ -1,6 +1,6 @@
 import "../import/std.um"
 
-fn f(b: ^[5][2]^int) {
+fn f(b: [11][2]^int) {
     for x in b {
         std.println("b: " + std.itoa(x[0]^) + " " + std.itoa(x[1]^))
     }
@@ -60,7 +60,7 @@ fn test*() {
         std.println("a: " + std.itoa(x[0]^) + " " + std.itoa(x[1]^))
     }   
 
-    f(&a)
+    f(a)
         
     std.println("Appending...")
     e := append(a, [2]^int {new(int), new(int)})

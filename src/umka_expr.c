@@ -160,14 +160,22 @@ static void doStrToCharArrayPtrConv(Compiler *comp, Type *dest, Type **src, Cons
 }
 
 
-static void doDynArrayPtrToArrayPtrConv(Compiler *comp, Type *dest, Type **src, Const *constant)
+static void doDynArrayToArrayConv(Compiler *comp, Type *dest, Type **src, Const *constant)
 {
     if (constant)
         comp->error.handler(comp->error.context, "Conversion to array is not allowed in constant expressions");
 
-    genAssertLen(&comp->gen, TYPE_DYNARRAY, dest->base->numItems);
-    genGetFieldPtr(&comp->gen, offsetof(DynArray, data));
-    genDeref(&comp->gen, TYPE_PTR);
+    // fn unmakefrom(src: []ItemType, type: Type): [...]ItemType
+
+    genPushGlobalPtr(&comp->gen, dest);                                 // Array type
+
+    int resultOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, dest));
+    genPushLocalPtr(&comp->gen, resultOffset);                          // Pointer to result (hidden parameter)
+
+    genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_UNMAKEFROM);
+
+    // Copy result to a temporary local variable to collect it as garbage when leaving the block
+    doCopyResultToTempVar(comp, dest);
 
     *src = dest;
 }
@@ -349,12 +357,10 @@ void doImplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant,
         doArrayToDynArrayConv(comp, dest, src, constant);
     }
 
-    // Dynamic array pointer to array pointer
-    else if (dest->kind == TYPE_PTR && dest->base->kind == TYPE_ARRAY &&
-            (*src)->kind == TYPE_PTR && (*src)->base->kind == TYPE_DYNARRAY &&
-             typeEquivalent(dest->base->base, (*src)->base->base))
+    // Dynamic array to array
+    else if (dest->kind == TYPE_ARRAY && (*src)->kind == TYPE_DYNARRAY && typeEquivalent(dest->base, (*src)->base))
     {
-        doDynArrayPtrToArrayPtrConv(comp, dest, src, constant);
+        doDynArrayToArrayConv(comp, dest, src, constant);
     }
 
     // Concrete to interface or interface to interface

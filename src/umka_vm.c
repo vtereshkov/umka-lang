@@ -84,6 +84,7 @@ static const char *builtinSpelling [] =
     "new",
     "make",
     "makefrom",
+    "unmakefrom",
     "append",
     "delete",
     "slice",
@@ -1010,6 +1011,29 @@ static FORCE_INLINE void doBuiltinMakefrom(Fiber *fiber, HeapPages *pages, Error
 }
 
 
+// fn unmakefrom(src: []ItemType, type: Type): [...]ItemType
+static FORCE_INLINE void doBuiltinUnmakefrom(Fiber *fiber, HeapPages *pages, Error *error)
+{
+    void *dest     = (void     *)(fiber->top++)->ptrVal;
+    Type *destType = (Type     *)(fiber->top++)->ptrVal;
+    DynArray *src  = (DynArray *)(fiber->top++)->ptrVal;
+
+    if (!src || !src->data)
+        error->handlerRuntime(error->context, "Dynamic array is null");
+
+    if (src->len > destType->numItems)
+        error->handlerRuntime(error->context, "Dynamic array is too long");
+
+    memset(dest, 0, typeSizeNoCheck(destType));
+    memcpy(dest, src->data, src->len * src->itemSize);
+
+    // Increase result items' ref counts, as if they have been assigned one by one
+    doChangeArrayItemsRefCnt(fiber, pages, dest, destType, destType->numItems, TOK_PLUSPLUS, error);
+
+    (--fiber->top)->ptrVal = (int64_t)dest;
+}
+
+
 // fn append(array: [] type, item: (^type | [] type), single: bool): [] type
 static FORCE_INLINE void doBuiltinAppend(Fiber *fiber, HeapPages *pages, Error *error)
 {
@@ -1845,6 +1869,7 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         case BUILTIN_NEW:           doBuiltinNew(fiber, pages, error); break;
         case BUILTIN_MAKE:          doBuiltinMake(fiber, pages, error); break;
         case BUILTIN_MAKEFROM:      doBuiltinMakefrom(fiber, pages, error); break;
+        case BUILTIN_UNMAKEFROM:    doBuiltinUnmakefrom(fiber, pages, error); break;
         case BUILTIN_APPEND:        doBuiltinAppend(fiber, pages, error); break;
         case BUILTIN_DELETE:        doBuiltinDelete(fiber, pages, error); break;
         case BUILTIN_SLICE:         doBuiltinSlice(fiber, pages, error); break;
