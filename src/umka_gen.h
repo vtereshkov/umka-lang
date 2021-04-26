@@ -65,7 +65,6 @@ void genGetFieldPtr   (CodeGen *gen, int fieldOffset);
 
 void genAssertType   (CodeGen *gen, Type *type);
 void genAssertWeakPtr(CodeGen *gen);
-void genAssertLen    (CodeGen *gen, TypeKind typeKind, int minLen);
 void genAssertRange  (CodeGen *gen, TypeKind typeKind);
 
 void genGoto  (CodeGen *gen, int dest);

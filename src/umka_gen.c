@@ -572,13 +572,6 @@ void genAssertWeakPtr(CodeGen *gen)
 }
 
 
-void genAssertLen(CodeGen *gen, TypeKind typeKind, int minLen)
-{
-    const Instruction instr = {.opcode = OP_ASSERT_LEN, .tokKind = TOK_NONE, .typeKind = typeKind, .operand.intVal = minLen};
-    genAddInstr(gen, &instr);
-}
-
-
 void genAssertRange(CodeGen *gen, TypeKind typeKind)
 {
     const Instruction instr = {.opcode = OP_ASSERT_RANGE, .tokKind = TOK_NONE, .typeKind = typeKind, .operand.intVal = 0};

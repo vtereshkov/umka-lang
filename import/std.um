@@ -75,14 +75,14 @@ fn atof*(s: str): real {
 }
 
 fn itoa*(x: int): str {
-    s := str(new([256]char))
+    s := str(make([]char, 256))
     sprintf(s, "%lld", x)
     return s
 }
 
 fn ftoa*(x: real, decimals: int): str {
-    fmt := str(new([256]char))
-    s := str(new([256]char))
+    fmt := str(make([]char, 256))
+    s := str(make([]char, 256))
     sprintf(fmt, "%%.%dlf", decimals)
     sprintf(s, fmt, x)
     return s

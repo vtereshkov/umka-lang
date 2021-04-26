@@ -1,0 +1,31 @@
+fn foo(s: [3]str) {
+    printf("foo: " + repr(s) + '\n')
+
+    s1 := str([]char([100]char([]char(s[1]))))
+    s2 := str([]char(s[2]))
+
+    printf("foo: " + s[1] + " = " + s1 + " : " + repr(s[1] == s1) + '\n')
+    printf("foo: " + s[2] + " = " + s2 + " : " + repr(s[2] == s2) + '\n')
+}
+
+fn bar() {
+	var b: [5][]int
+    {
+        a := [][]int{[]int{3, 5}, []int{4, 6, 8}, []int{9}}
+        b = a        
+    }
+    b[1][2] = -8
+
+    b2 := [5][]int([][]int(b))
+
+    printf("bar: " + repr(b) + " = " + repr(b2) + '\n')
+}
+
+fn test*() {
+    foo([]str{"Hello " + "World", "Hallo " + "Welt", "Salut " + "le Monde"})
+    bar()
+}
+
+fn main() {
+	test()
+}

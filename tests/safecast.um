@@ -14,7 +14,7 @@ fn test*() {
 	printf(repr(p) + '\n')
 
 	// Strings
-	var pc: ^[5]char
+	pc := []char{}
 
 	{
 		s := "Hello"
@@ -24,13 +24,13 @@ fn test*() {
 		printf(s + '\n')				
 	}
 
-	pc[len(pc^) - 1] = '\0'
+	pc[len(pc) - 2] = '\0'
 
 	var s2: str = pc
 	
-	printf(repr(pc^) + s2 + '\n')
-	printf(pc + s2 + '\n')
-	printf(s2 + pc + '\n')
+	printf(repr(pc) + s2 + '\n')
+	printf(str(pc) + s2 + '\n')
+	printf(s2 + str(pc) + '\n')
 }
 
 fn main() {

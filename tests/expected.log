@@ -1,6 +1,6 @@
 
 
->>> Dynamic arrays
+>>> Dynamic arrays - 1
 
 a: 0 0
 a: 5 7
@@ -106,6 +106,14 @@ Slicing...
 { "Privet Mir" } 
 
 { } 
+
+
+>>> Dynamic arrays - 2
+
+foo: { "Hello World" "Hallo Welt" "Salut le Monde" } 
+foo: Hallo Welt = Hallo Welt : true 
+foo: Salut le Monde = Salut le Monde : true 
+bar: { { 3 5 } { 4 6 -8 } { 9 } { } { } }  = { { 3 5 } { 4 6 -8 } { 9 } { } { } } 
 
 
 >>> Fibers
@@ -234,7 +242,7 @@ repr():
 'a' 
 fn 
 { 0.500000 0.700000 0.900000 } 
-00000000004d1660 
+00000000005b5c80 
 
 
 >>> Type equivalence
@@ -264,6 +272,6 @@ fn
 { 1 5 7 10 } 
 { 1 4 7 } 
 Hey Hello
-{ 'H' 'e' 'l' 'l' 0x00 } Hell
+{ 'H' 'e' 'l' 'l' 0x00 0x00 } Hell
 HellHell
 HellHell

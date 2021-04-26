@@ -45,7 +45,6 @@ static const char *opcodeSpelling [] =
     "GET_FIELD_PTR",
     "ASSERT_TYPE",
     "ASSERT_WEAK_PTR",
-    "ASSERT_LEN",
     "ASSERT_RANGE",
     "GOTO",
     "GOTO_IF",
@@ -83,8 +82,10 @@ static const char *builtinSpelling [] =
     "log",
     "new",
     "make",
-    "makefrom",
-    "unmakefrom",
+    "makefromarr",
+    "makefromstr",
+    "maketoarr",
+    "maketostr",
     "append",
     "delete",
     "slice",
@@ -994,8 +995,8 @@ static FORCE_INLINE void doBuiltinMake(Fiber *fiber, HeapPages *pages, Error *er
 }
 
 
-// fn makefrom(src: [...]ItemType, type: Type, len: int): type
-static FORCE_INLINE void doBuiltinMakefrom(Fiber *fiber, HeapPages *pages, Error *error)
+// fn makefromarr(src: [...]ItemType, type: Type, len: int): type
+static FORCE_INLINE void doBuiltinMakefromarr(Fiber *fiber, HeapPages *pages, Error *error)
 {
     doBuiltinMake(fiber, pages, error);
 
@@ -1011,8 +1012,28 @@ static FORCE_INLINE void doBuiltinMakefrom(Fiber *fiber, HeapPages *pages, Error
 }
 
 
-// fn unmakefrom(src: []ItemType, type: Type): [...]ItemType
-static FORCE_INLINE void doBuiltinUnmakefrom(Fiber *fiber, HeapPages *pages, Error *error)
+// fn makefromstr(src: str, type: Type): []char
+static FORCE_INLINE void doBuiltinMakefromstr(Fiber *fiber, HeapPages *pages, Error *error)
+{
+    DynArray *dest   = (DynArray *)(fiber->top++)->ptrVal;
+    dest->type       = (Type     *)(fiber->top++)->ptrVal;
+    char *src        = (char     *)(fiber->top++)->ptrVal;
+
+    if (!src)
+        error->handlerRuntime(error->context, "String is null");    
+
+    dest->len      = strlen(src) + 1;
+    dest->itemSize = 1;
+    dest->data     = chunkAlloc(pages, dest->len, dest->type, error);
+
+    memcpy(dest->data, src, dest->len);
+
+    (--fiber->top)->ptrVal = (int64_t)dest;
+}
+
+
+// fn maketoarr(src: []ItemType, type: Type): [...]ItemType
+static FORCE_INLINE void doBuiltinMaketoarr(Fiber *fiber, HeapPages *pages, Error *error)
 {
     void *dest     = (void     *)(fiber->top++)->ptrVal;
     Type *destType = (Type     *)(fiber->top++)->ptrVal;
@@ -1029,6 +1050,24 @@ static FORCE_INLINE void doBuiltinUnmakefrom(Fiber *fiber, HeapPages *pages, Err
 
     // Increase result items' ref counts, as if they have been assigned one by one
     doChangeArrayItemsRefCnt(fiber, pages, dest, destType, destType->numItems, TOK_PLUSPLUS, error);
+
+    (--fiber->top)->ptrVal = (int64_t)dest;
+}
+
+
+// fn maketostr(src: []ItemType): str
+static FORCE_INLINE void doBuiltinMaketostr(Fiber *fiber, HeapPages *pages, Error *error)
+{
+    DynArray *src  = (DynArray *)(fiber->top++)->ptrVal;
+
+    if (!src || !src->data)
+        error->handlerRuntime(error->context, "Dynamic array is null");
+
+    if (((char *)src->data)[src->len - 1] != 0)
+        error->handlerRuntime(error->context, "Dynamic array is not null-terminated");
+
+    char *dest = chunkAlloc(pages, src->len, NULL, error);
+    strcpy(dest, (char *)src->data);
 
     (--fiber->top)->ptrVal = (int64_t)dest;
 }
@@ -1868,8 +1907,10 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         // Memory
         case BUILTIN_NEW:           doBuiltinNew(fiber, pages, error); break;
         case BUILTIN_MAKE:          doBuiltinMake(fiber, pages, error); break;
-        case BUILTIN_MAKEFROM:      doBuiltinMakefrom(fiber, pages, error); break;
-        case BUILTIN_UNMAKEFROM:    doBuiltinUnmakefrom(fiber, pages, error); break;
+        case BUILTIN_MAKEFROMARR:   doBuiltinMakefromarr(fiber, pages, error); break;
+        case BUILTIN_MAKEFROMSTR:   doBuiltinMakefromstr(fiber, pages, error); break;
+        case BUILTIN_MAKETOARR:     doBuiltinMaketoarr(fiber, pages, error); break;
+        case BUILTIN_MAKETOSTR:     doBuiltinMaketostr(fiber, pages, error); break;
         case BUILTIN_APPEND:        doBuiltinAppend(fiber, pages, error); break;
         case BUILTIN_DELETE:        doBuiltinDelete(fiber, pages, error); break;
         case BUILTIN_SLICE:         doBuiltinSlice(fiber, pages, error); break;
@@ -2019,7 +2060,6 @@ static FORCE_INLINE void vmLoop(VM *vm)
             case OP_GET_FIELD_PTR:                  doGetFieldPtr(fiber, error);                  break;
             case OP_ASSERT_TYPE:                    doAssertType(fiber);                          break;
             case OP_ASSERT_WEAK_PTR:                doAssertWeakPtr(fiber, pages);                break;
-            case OP_ASSERT_LEN:                     doAssertLen(fiber, error);                    break;
             case OP_ASSERT_RANGE:                   doAssertRange(fiber, error);                  break;
             case OP_GOTO:                           doGoto(fiber);                                break;
             case OP_GOTO_IF:                        doGotoIf(fiber);                              break;
@@ -2122,7 +2162,6 @@ int vmAsm(int ip, Instruction *instr, char *buf, int size)
         case OP_ASSIGN:
         case OP_BINARY:
         case OP_GET_FIELD_PTR:
-        case OP_ASSERT_LEN:
         case OP_GOTO:
         case OP_GOTO_IF:
         case OP_CALL:

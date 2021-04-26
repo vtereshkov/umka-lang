@@ -116,45 +116,38 @@ static void doCharToStrConv(Compiler *comp, Type *dest, Type **src, Const *const
 }
 
 
-static void doCharArrayPtrToStrConv(Compiler *comp, Type *dest, Type **src, Const *constant, bool lhs)
+static void doDynArrayToStrConv(Compiler *comp, Type *dest, Type **src, Const *constant, bool lhs)
 {
     if (constant)
-    {
-        if (((char *)constant->ptrVal)[(*src)->base->numItems - 1] != 0)
-            comp->error.handler(comp->error.context, "Character array is not null-terminated");
-    }
-    else
-    {
-        if (lhs)
-            genSwap(&comp->gen);
+        comp->error.handler(comp->error.context, "Conversion to string is not allowed in constant expressions");
 
-        genAssertLen(&comp->gen, TYPE_ARRAY, (*src)->base->numItems);
+    // fn maketostr(src: []ItemType): str
 
-        if (lhs)
-            genSwap(&comp->gen);
-    }
+    genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_MAKETOSTR);
+
+    // Copy result to a temporary local variable to collect it as garbage when leaving the block
+    doCopyResultToTempVar(comp, dest);
 
     *src = dest;
 }
 
 
-static void doStrToCharArrayPtrConv(Compiler *comp, Type *dest, Type **src, Const *constant, bool lhs)
+static void doStrToDynArrayConv(Compiler *comp, Type *dest, Type **src, Const *constant, bool lhs)
 {
     if (constant)
-    {
-        if (strlen((char *)constant->ptrVal) + 1 < dest->base->numItems)
-            comp->error.handler(comp->error.context, "String is too short");
-    }
-    else
-    {
-        if (lhs)
-            genSwap(&comp->gen);
+        comp->error.handler(comp->error.context, "Conversion to dynamic array is not allowed in constant expressions");
 
-        genAssertLen(&comp->gen, TYPE_STR, dest->base->numItems);
+    // fn makefromstr(src: str, type: Type): []char
 
-        if (lhs)
-            genSwap(&comp->gen);
-    }
+    genPushGlobalPtr(&comp->gen, dest);                                 // Dynamic array type
+
+    int resultOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, dest));
+    genPushLocalPtr(&comp->gen, resultOffset);                          // Pointer to result (hidden parameter)
+
+    genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_MAKEFROMSTR);
+
+    // Copy result to a temporary local variable to collect it as garbage when leaving the block
+    doCopyResultToTempVar(comp, dest);    
 
     *src = dest;
 }
@@ -165,14 +158,14 @@ static void doDynArrayToArrayConv(Compiler *comp, Type *dest, Type **src, Const 
     if (constant)
         comp->error.handler(comp->error.context, "Conversion to array is not allowed in constant expressions");
 
-    // fn unmakefrom(src: []ItemType, type: Type): [...]ItemType
+    // fn maketoarr(src: []ItemType, type: Type): [...]ItemType
 
     genPushGlobalPtr(&comp->gen, dest);                                 // Array type
 
     int resultOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, dest));
     genPushLocalPtr(&comp->gen, resultOffset);                          // Pointer to result (hidden parameter)
 
-    genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_UNMAKEFROM);
+    genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_MAKETOARR);
 
     // Copy result to a temporary local variable to collect it as garbage when leaving the block
     doCopyResultToTempVar(comp, dest);
@@ -186,7 +179,7 @@ static void doArrayToDynArrayConv(Compiler *comp, Type *dest, Type **src, Const 
     if (constant)
         comp->error.handler(comp->error.context, "Conversion to dynamic array is not allowed in constant expressions");
 
-    // fn makefrom(src: [...]ItemType, type: Type, len: int): type
+    // fn makefromarr(src: [...]ItemType, type: Type, len: int): type
 
     genPushGlobalPtr(&comp->gen, dest);                                 // Dynamic array type
     genPushIntConst(&comp->gen, (*src)->numItems);                      // Dynamic array length
@@ -194,7 +187,7 @@ static void doArrayToDynArrayConv(Compiler *comp, Type *dest, Type **src, Const 
     int resultOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, dest));
     genPushLocalPtr(&comp->gen, resultOffset);                          // Pointer to result (hidden parameter)
 
-    genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_MAKEFROM);
+    genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_MAKEFROMARR);
 
     // Copy result to a temporary local variable to collect it as garbage when leaving the block
     doCopyResultToTempVar(comp, dest);
@@ -339,16 +332,16 @@ void doImplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant,
         doCharToStrConv(comp, dest, src, constant, lhs);
     }
 
-    // Pointer to array of characters to string
-    else if (dest->kind == TYPE_STR && typeCharArrayPtr(*src))
+    // Dynamic array to string
+    else if (dest->kind == TYPE_STR && (*src)->kind == TYPE_DYNARRAY && (*src)->base->kind == TYPE_CHAR)
     {
-        doCharArrayPtrToStrConv(comp, dest, src, constant, lhs);
+        doDynArrayToStrConv(comp, dest, src, constant, lhs);
     }
 
-    // String to pointer to array of characters
-    else if (typeCharArrayPtr(dest) && (*src)->kind == TYPE_STR)
+    // String to dynamic array
+    else if (dest->kind == TYPE_DYNARRAY && dest->base->kind == TYPE_CHAR && (*src)->kind == TYPE_STR)
     {
-        doStrToCharArrayPtrConv(comp, dest, src, constant, lhs);
+        doStrToDynArrayConv(comp, dest, src, constant, lhs);
     }
 
     // Array to dynamic array
@@ -425,9 +418,8 @@ static void doApplyStrCat(Compiler *comp, Const *constant, Const *rightConstant)
 
 void doApplyOperator(Compiler *comp, Type **type, Type **rightType, Const *constant, Const *rightConstant, TokenKind op, bool apply, bool convertLhs)
 {
-    // First, the right-hand side type is converted to the left-hand side type, except for ^[...]char and str when the former is converted to str
-    if (!(convertLhs && typeCharArrayPtr(*type) && (*rightType)->kind == TYPE_STR))
-        doImplicitTypeConv(comp, *type, rightType, rightConstant, false);
+    // First, the right-hand side type is converted to the left-hand side type
+    doImplicitTypeConv(comp, *type, rightType, rightConstant, false);
 
     // Second, the left-hand side type is converted to the right-hand side type for symmetric operators
     if (convertLhs)

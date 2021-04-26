@@ -178,12 +178,6 @@ static inline bool typeKindGarbageCollected(TypeKind typeKind)
 bool typeGarbageCollected(Type *type);
 
 
-static inline bool typeCharArrayPtr(Type *type)
-{
-    return type->kind == TYPE_PTR && type->base->kind == TYPE_ARRAY && type->base->base->kind == TYPE_CHAR;
-}
-
-
 static inline bool typeExprListStruct(Type *type)
 {
     return type->kind == TYPE_STRUCT && type->isExprList && type->numItems > 0;

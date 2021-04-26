@@ -57,7 +57,6 @@ typedef enum
     OP_GET_FIELD_PTR,
     OP_ASSERT_TYPE,
     OP_ASSERT_WEAK_PTR,
-    OP_ASSERT_LEN,
     OP_ASSERT_RANGE,
     OP_GOTO,
     OP_GOTO_IF,
@@ -100,8 +99,10 @@ typedef enum
     // Memory
     BUILTIN_NEW,
     BUILTIN_MAKE,
-    BUILTIN_MAKEFROM,       // Array to dynamic array - implicit calls only
-    BUILTIN_UNMAKEFROM,     // Dynamic array to array - implicit calls only    
+    BUILTIN_MAKEFROMARR,    // Array to dynamic array - implicit calls only
+    BUILTIN_MAKEFROMSTR,    // String to dynamic array - implicit calls only
+    BUILTIN_MAKETOARR,      // Dynamic array to array - implicit calls only 
+    BUILTIN_MAKETOSTR,      // Dynamic array to string - implicit calls only   
     BUILTIN_APPEND,
     BUILTIN_DELETE,
     BUILTIN_SLICE,

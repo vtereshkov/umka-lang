@@ -360,8 +360,8 @@ If a value `s` of type `S` is given where a value `t` of some other type `T` is 
 * `S` and `T` are compatible
 * `S` is an integer type and `T` is a real type
 * `S` is `char` and `T` is `str`
-* `S` is a pointer to an array of `char` and `T` is `str` and the last item of `S` is the null character
-* `S` is `str` and `T` is a pointer to an array of `char` and `len(s) + 1 >= len(t^)` 
+* `S` is a `[]char` and `T` is `str` and the last item of `S` is the null character
+* `S` is `str` and `T` is `[]char` 
 * `S` is an array type and `T` is a dynamic array type and the item types of `S` and `T` are equivalent
 * `S` is a dynamic array type and `T` is an array type and the item types of `S` and `T` are equivalent and `len(s) <= len(t)` 
 * `S` is an interface type and `T` is a type that implements all the methods of `S` 
@@ -881,7 +881,7 @@ The `&&` and `||` operators don't evaluate the second operand if the first opera
 
 Operand types are implicitly converted in two steps:
 
-* The right operand type is converted to the left operand type, except for `^[...]char` and `str`
+* The right operand type is converted to the left operand type
 * The left operand type is converted to the right operand type
 
 ##### Operator precedence
