@@ -1751,35 +1751,6 @@ static FORCE_INLINE void doAssertWeakPtr(Fiber *fiber, HeapPages *pages)
 }
 
 
-static FORCE_INLINE void doAssertLen(Fiber *fiber, Error *error)
-{
-    // Ensure that a dynamic array or a string is not shorter than the specified minimum length
-    // or that an array of characters is null-terminated
-
-    void *data        = (void *)fiber->top->ptrVal;
-    TypeKind typeKind = fiber->code[fiber->ip].typeKind;
-    int len           = -1;
-    int minLen        = fiber->code[fiber->ip].operand.intVal;
-
-    if (typeKind == TYPE_ARRAY)
-    {
-        if (((char *)data)[minLen - 1] == 0)
-            len = minLen;
-        else
-            error->handlerRuntime(error->context, "Character array is not null-terminated");
-    }
-    else if (typeKind == TYPE_DYNARRAY)
-        len = ((DynArray *)data)->len;
-    else if (typeKind == TYPE_STR)
-        len = strlen((char *)data) + 1;
-
-    if (len < minLen)
-        error->handlerRuntime(error->context, "Dynamic array or string is too short");
-
-    fiber->ip++;
-}
-
-
 static FORCE_INLINE void doAssertRange(Fiber *fiber, Error *error)
 {
     TypeKind typeKind = fiber->code[fiber->ip].typeKind;
