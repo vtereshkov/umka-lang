@@ -318,7 +318,7 @@ static void parseSimpleStmt(Compiler *comp)
 
         TokenKind op = comp->lex.tok.kind;
 
-        if (typeExprListStruct(type) && op != TOK_EQ)
+        if (typeExprListStruct(type) && !isCall && op != TOK_EQ)
             comp->error.handler(comp->error.context, "List assignment expected");
 
         if (op == TOK_EQ || lexShortAssignment(op) != TOK_NONE)
