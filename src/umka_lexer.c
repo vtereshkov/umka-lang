@@ -200,12 +200,12 @@ static char lexChar(Lexer *lex)
 
 static char lexEscChar(Lexer *lex, bool *escaped)
 {
-    if (escaped) *escaped = false;
+    if (escaped) *escaped = 0;
     char ch = lexChar(lex);
 
     if (ch == '\\')
     {
-        if (escaped) *escaped = true;
+        if (escaped) *escaped = 1;
         ch = lexChar(lex);
 
         switch (ch)
