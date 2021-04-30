@@ -40,11 +40,11 @@ _C+Umka 3D camera example_
 
 ## Projects in Umka
 
-[tophat](https://github.com/marekmaskarinec/tophat) - a 2D game engine focused on minimalism
+* [tophat](https://github.com/marekmaskarinec/tophat) - a 2D game engine focused on minimalism
 
 ![](tophat.png)
 
-TractorSim3D - a 6 DOF tractor dynamics simulator with scriptable automatic steering controller logic and  [raylib](https://www.raylib.com) graphics
+* TractorSim3D - a 6 DOF tractor dynamics simulator with scriptable automatic steering controller logic and  [raylib](https://www.raylib.com) graphics
 
 ![](tractor.png)
 
