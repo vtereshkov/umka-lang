@@ -44,7 +44,7 @@ _C+Umka 3D camera example_
 
 ![](tophat.png)
 
-* TractorSim3D - a 6 DOF tractor dynamics simulator with scriptable automatic steering controller and [raylib](https://www.raylib.com)-based graphics
+* TractorSim3D - a 6 DOF tractor dynamics simulator with scriptable steering controller and [raylib](https://www.raylib.com)-based graphics
 
 ![](tractor.png)
 
