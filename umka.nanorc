@@ -1,6 +1,7 @@
 # Umka for Gnu nano
 
 syntax "Umka" "\.um$"
+comment "//"
 
 color brightblue "\<(break|case|const|continue|default|else|for|fn|import|interface|if|in|return|str|struct|switch|type|var|weak)\>"
 
@@ -8,6 +9,9 @@ color brightblue "\<(break|case|const|continue|default|else|for|fn|import|interf
 
 color brightwhite "\<(\(|\)|\[|\]|\{|\}|\^|;|:|.)\>"
 
-color green "\<(true|false|null)\>"
+color brightgreen "\<(true|false|null)\>"
 
 color yellow "\<(void|int8|int16|int32|int|uint8|uint16|uint32|uint|bool|char|real32|real|fiber)\>"
+
+color cyan "//.*"
+color green start="^\s*/\*" end="\*/"
