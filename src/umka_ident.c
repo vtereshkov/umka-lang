@@ -60,13 +60,20 @@ Ident *identFind(Idents *idents, Modules *modules, Blocks *blocks, int module, c
             continue;
 
         for (Ident *ident = idents->first; ident; ident = ident->next)
-            if (ident->hash == nameHash && strcmp(ident->name, name) == 0 && ident->block == blocks->item[i].block &&
-
-               // What we found has correct name and block scope, check module scope
-               (ident->module == 0 ||                                                               // Universe module
-               (ident->module == module && (blocks->module == module ||                             // Current module
-               (ident->exported && modules->module[blocks->module]->imports[ident->module])))))     // Imported module
+            if (ident->hash == nameHash && strcmp(ident->name, name) == 0 && ident->block == blocks->item[i].block)
             {
+                // What we found has correct name and block scope, check module scope
+
+                bool identModuleValid;
+                if (rcvType)
+                    identModuleValid = ident->module == module;                                                       // Module where the method receiver type identifier is declared
+                else
+                    identModuleValid = ident->module == 0 ||                                                          // Universe module
+                                      (ident->module == module && (blocks->module == module ||                        // Current module
+                                      (ident->exported && modules->module[blocks->module]->imports[ident->module]))); // Imported module
+
+                if (identModuleValid)
+                {
                     bool method = ident->type->kind == TYPE_FN && ident->type->sig.method;
 
                     // We don't need a method and what we found is not a method
@@ -76,6 +83,7 @@ Ident *identFind(Idents *idents, Modules *modules, Blocks *blocks, int module, c
                     // We need a method and what we found is a method
                     if (rcvType && method && typeCompatibleRcv(ident->type->sig.param[0]->type, rcvType))
                         return ident;
+                }
             }
     }
 
