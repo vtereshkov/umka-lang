@@ -71,7 +71,7 @@ static void parseRcvSignature(Compiler *comp, Signature *sig)
         comp->error.handler(comp->error.context, "Receiver should be a pointer to a defined type");
 
      if (rcvType->base->typeIdent->module != comp->blocks.module)
-        comp->error.handler(comp->error.context, "Receiver base type cannot be defined in another module");   
+        comp->error.handler(comp->error.context, "Receiver base type cannot be defined in another module");
 
     if (rcvType->base->kind == TYPE_PTR || rcvType->base->kind == TYPE_INTERFACE)
     	comp->error.handler(comp->error.context, "Receiver base type cannot be a pointer or an interface");

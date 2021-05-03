@@ -147,7 +147,7 @@ static void doStrToDynArrayConv(Compiler *comp, Type *dest, Type **src, Const *c
     genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_MAKEFROMSTR);
 
     // Copy result to a temporary local variable to collect it as garbage when leaving the block
-    doCopyResultToTempVar(comp, dest);    
+    doCopyResultToTempVar(comp, dest);
 
     *src = dest;
 }
@@ -1426,7 +1426,8 @@ static void parseFieldSelector(Compiler *comp, Type **type, Const *constant, boo
         *type = (*type)->base;
     }
 
-    if ((*type)->kind == TYPE_PTR && typeStructured((*type)->base))
+    // Search for a method
+    if ((*type)->kind == TYPE_PTR)
         *type = (*type)->base;
 
     lexNext(&comp->lex);
@@ -1435,8 +1436,7 @@ static void parseFieldSelector(Compiler *comp, Type **type, Const *constant, boo
     Type *rcvType = *type;
     int rcvTypeModule = rcvType->typeIdent ? rcvType->typeIdent->module : -1;
 
-    if (typeStructured(rcvType))
-        rcvType = typeAddPtrTo(&comp->types, &comp->blocks, rcvType);
+    rcvType = typeAddPtrTo(&comp->types, &comp->blocks, rcvType);
 
     Ident *method = identFind(&comp->idents, &comp->modules, &comp->blocks,
                                rcvTypeModule, comp->lex.tok.name, rcvType);
