@@ -513,9 +513,9 @@ s, val := "Hello", sin(0.1 * a)
 
 A function or method declaration can be either a complete definition that includes the function block, or a *prototype* declaration if the function block is omitted. A prototype should be resolved somewhere below in the same module by duplicating the declaration, now with the function block. If a prototype is not resolved, it is considered an external C/C++ function. If such a function has not been registered via the Umka API, it is searched in the shared library (Umka implementation file) `mod.umi`, where `mod` is the current module name. If the library does not exist or contains no such function, an error is triggered. 
 
-Function and method declarations are only allowed in the module scope. In the block scope, functions should be declared as constants or variables of a function type. Methods cannot be declared in the block scope.
+Function and method declarations are only allowed in the module scope. In the block scope, functions should be declared as constants or variables of a function type. Methods cannot be declared in the block scope. 
 
-The method receiver type should be a pointer to any declared type, except interface types.
+The method receiver type should be a pointer to any declared type, except interface types. Methods should be declared in the same module as the method receiver type name.
 
 Syntax:
 
