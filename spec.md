@@ -42,21 +42,30 @@ Point_1
 
 ### Numbers
 
-Numbers in Umka can be integer (decimal or hexadecimal) or real.
+Numbers in Umka can be integer (decimal, hexadecimal, octal or binary) or real.
 
 Syntax:
 
 ```
-intNumber   = decNumber | hexHumber.
-decNumber   = digit {digit}.
-hexNumber   = "0" ("X | "x") hexDigit {hexDigit}.
-realNumber  = decNumber ["." decNumber] [("E" | "e") decNumber].
-hexDigit    = digit | "A".."F" | "a".."f".
+intNumber    = decNumber | hexNumber | octNumber | binNumber.
+decNumber    = nonZeroDigit {digit}.
+hexNumber    = "0" ("X" | "x") hexDigit {hexDigit}.
+octNumber    = ("0" ("O" | "o") octDigit {octDigit}) | ("0" octDigit {octDigit})
+binNumber    = "0" ("B" | "b") binDigit {binDigit}
+realNumber   = decNumber ["." decNumber] [("E" | "e") decNumber].
+
+hexDigit     = digit | "A".."F" | "a".."f".
+octDigit     = "0".."7".
+binDigit     = "0".."1".
+nonZeroDigit = "1".."9".
 ```
 
 Examples:
 
 ```
+0b101
+0o777
+0123
 16
 0xA6
 0xffff

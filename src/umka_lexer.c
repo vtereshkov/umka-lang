@@ -5,6 +5,7 @@
 #include <string.h>
 #include <math.h>
 #include <errno.h>
+#include <ctype.h>
 
 #include "umka_common.h"
 #include "umka_lexer.h"
@@ -634,6 +635,29 @@ static void lexOperator(Lexer *lex)
     } // switch
 }
 
+// Since strtoull can't automatically detect binary and octal numbers, this function provides a wrapper
+// that will detect the base and pass it down to strtoull
+uint64_t parseInt(const char *string, char **tail)
+{
+    // Numbers with leading 0 may or may not need special treatment that strtoull doesn't provide
+    if (string[0] == '0')
+    {
+        if (tolower(string[1]) == 'b')
+            return strtoull(string + 2, tail, 2);
+        // The reason we parse hexadecimal here (even though strtoull can do it itself)
+        // is because it will be mistaken for octal due to the leading 0 octal number 
+        else if (tolower(string[1]) == 'x')
+            return strtoull(string + 2, tail, 16);
+        // Similar to Go, octal numbers can use 0o notaion: 0o123 --
+        else if (tolower(string[1]) == 'o')
+            return strtoull(string + 2, tail, 8);
+        // -- as well as using leading zero notation: 0123
+        else
+            return strtoull(string + 1, tail, 8);
+    }
+    // Decimal
+    return strtoull(string, tail, 10);
+}   
 
 static void lexNumber(Lexer *lex)
 {
@@ -643,7 +667,7 @@ static void lexNumber(Lexer *lex)
 
     // Integer number
     lex->tok.kind = TOK_INTNUMBER;
-    lex->tok.uintVal = strtoull(lex->buf + lex->bufPos, &tail, 0);
+    lex->tok.uintVal = parseInt(lex->buf + lex->bufPos, &tail);
 
     if (errno == ERANGE)
         lex->error->handler(lex->error->context, "Number is too large");
