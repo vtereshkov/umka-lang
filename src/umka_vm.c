@@ -1026,7 +1026,7 @@ static FORCE_INLINE void doBuiltinMakefromstr(Fiber *fiber, HeapPages *pages, Er
     char *src        = (char     *)(fiber->top++)->ptrVal;
 
     if (!src)
-        error->handlerRuntime(error->context, "String is null");    
+        error->handlerRuntime(error->context, "String is null");
 
     dest->len      = strlen(src) + 1;
     dest->itemSize = 1;
@@ -1213,7 +1213,7 @@ static FORCE_INLINE void doBuiltinSlice(Fiber *fiber, HeapPages *pages, Error *e
         // String
         char *substr = chunkAlloc(pages, endIndex - startIndex + 1, NULL, error);
         memcpy(substr, &str[startIndex], endIndex - startIndex);
-        substr[endIndex] = 0;
+        substr[endIndex - startIndex] = 0;
 
         (--fiber->top)->ptrVal = (int64_t)substr;
     }
