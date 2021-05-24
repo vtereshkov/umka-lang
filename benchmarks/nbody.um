@@ -122,8 +122,8 @@ fn advance(sys: ^System, dt: real) {
 
 
 fn main() {
-   if std.argc() == 3 {
-      iter := std.atoi(std.argv(2))
+   if std.argc() == 2 {
+      iter := std.atoi(std.argv(1))
       
       var bodies: []Body = [5]Body{sun, jupiter, saturn, uranus, neptune}
       system := NewSystem(&bodies)
