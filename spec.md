@@ -432,11 +432,13 @@ fiber
 
 ### Constant declarations
 
+A constant declaration generally requires an explicit constant value. However, if a constant declaration is preceded by another integer constant declaration within the same declaration list, its explicit value can be omitted. In this case, the value will be set to the preceding constant value incremented by 1. 
+
 Syntax:
 
 ```
 constDecl     = "const" (constDeclItem | "(" {constDeclItem ";"} ")").
-constDeclItem = ident exportMark "=" expr.
+constDeclItem = ident exportMark ["=" expr].
 ```
 
 Examples:
@@ -447,6 +449,13 @@ const b* = 2.38
 const (
     c = sin(b) / 5
     d = "Hello" + " World"
+)
+const (
+    a = 5
+    b       // 6
+    c       // 7
+    d = 19
+    e       // 20
 )
 ```
 

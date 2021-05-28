@@ -441,8 +441,8 @@ static void parseTypeDecl(Compiler *comp)
 }
 
 
-// constDeclItem = ident exportMark "=" expr.
-static void parseConstDeclItem(Compiler *comp)
+// constDeclItem = ident exportMark ["=" expr].
+static void parseConstDeclItem(Compiler *comp, Type **type, Const *constant)
 {
     lexCheck(&comp->lex, TOK_IDENT);
     IdentName name;
@@ -451,12 +451,15 @@ static void parseConstDeclItem(Compiler *comp)
     lexNext(&comp->lex);
     bool exported = parseExportMark(comp);
 
-    lexEat(&comp->lex, TOK_EQ);
-    Type *type;
-    Const constant;
-    parseExpr(comp, &type, &constant);
+    if (*type && typeInteger(*type) && comp->lex.tok.kind != TOK_EQ)
+        constant->intVal++;
+    else
+    {
+        lexEat(&comp->lex, TOK_EQ);
+        parseExpr(comp, type, constant);
+    }
 
-    identAddConst(&comp->idents, &comp->modules, &comp->blocks, name, type, exported, constant);
+    identAddConst(&comp->idents, &comp->modules, &comp->blocks, name, *type, exported, *constant);
 }
 
 
@@ -465,18 +468,21 @@ static void parseConstDecl(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_CONST);
 
+    Type *type = NULL;
+    Const constant;
+
     if (comp->lex.tok.kind == TOK_LPAR)
     {
         lexNext(&comp->lex);
         while (comp->lex.tok.kind == TOK_IDENT)
         {
-            parseConstDeclItem(comp);
+            parseConstDeclItem(comp, &type, &constant);
             lexEat(&comp->lex, TOK_SEMICOLON);
         }
         lexEat(&comp->lex, TOK_RPAR);
     }
     else
-        parseConstDeclItem(comp);
+        parseConstDeclItem(comp, &type, &constant);
 }
 
 
