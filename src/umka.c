@@ -12,29 +12,34 @@ enum
     ASM_BUF_SIZE = 2 * 1024 * 1024
 };
 
+void help()
+{
+    printf("Umka interpreter (C) Vasiliy Tereshkov, 2020-2021\n");
+    printf("Usage: umka <file.um> [<parameters>] [<script-parameters>]\n");
+    printf("Parameters:\n");
+    printf("    -storage <storage-size> - Set static storage size\n");
+    printf("    -stack <stack-size>     - Set stack size\n");
+    printf("    -asm                    - Write assembly listing\n");
+    printf("    -check                  - Compile only\n");
+}
 
 int main(int argc, char **argv)
 {
-    if (argc < 2)
-    {
-        printf("Umka interpreter (C) Vasiliy Tereshkov, 2020-2021\n");
-        printf("Usage: umka <file.um> [<parameters>] [<script-parameters>]\n");
-        printf("Parameters:\n");
-        printf("    -storage <storage-size> - Set static storage size\n");
-        printf("    -stack <stack-size>     - Set stack size\n");
-        printf("    -asm                    - Write assembly listing\n");
-        printf("    -check                  - Compile only\n");
-        return 1;
-    }
-
     int storageSize     = 1024 * 1024;  // Bytes
     int stackSize       = 1024 * 1024;  // Slots
-    char *asmFileName   = NULL;
+    bool writeAsm       = false;
     bool compileOnly    = false;
 
-    int i = 2;
-    while (i < argc)
+    int i = 1;
+    while (i < argc && argv[i][0] == '-')
     {
+        if (i == argc - 1)
+        {
+            printf("File not provided\n");
+            help();
+            return 1;   
+        }
+
         if (strcmp(argv[i], "-storage") == 0)
         {
             if (i + 1 == argc)
@@ -71,8 +76,7 @@ int main(int argc, char **argv)
         }
         else if (strcmp(argv[i], "-asm") == 0)
         {
-            asmFileName = malloc(strlen(argv[1]) + 4 + 1);
-            sprintf(asmFileName, "%s.asm", argv[1]);
+                    writeAsm = true;
             i += 1;
         }
         else if (strcmp(argv[i], "-check") == 0)
@@ -85,14 +89,16 @@ int main(int argc, char **argv)
     }
 
     void *umka = umkaAlloc();
-    bool ok = umkaInit(umka, argv[1], NULL, storageSize, stackSize, argc - 1, argv + 1);
+    bool ok = umkaInit(umka, argv[i], NULL, storageSize, stackSize, argc - i, argv + i);
     if (ok)
         ok = umkaCompile(umka);
 
     if (ok)
     {
-        if (asmFileName)
+        if (writeAsm)
         {
+            char *asmFileName = malloc(strlen(argv[i]) + 4 + 1);
+            sprintf(asmFileName, "%s.asm", argv[i]);
             char *asmBuf = malloc(ASM_BUF_SIZE);
             umkaAsm(umka, asmBuf, ASM_BUF_SIZE);
 
@@ -131,6 +137,6 @@ int main(int argc, char **argv)
     }
 
     umkaFree(umka);
-    return ok ? 0 : 1;
+    return !ok;
 }
 
