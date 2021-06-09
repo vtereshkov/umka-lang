@@ -12,10 +12,11 @@ enum
     ASM_BUF_SIZE = 2 * 1024 * 1024
 };
 
+
 void help()
 {
     printf("Umka interpreter (C) Vasiliy Tereshkov, 2020-2021\n");
-    printf("Usage: umka <file.um> [<parameters>] [<script-parameters>]\n");
+    printf("Usage: umka [<parameters>] <file.um> [<script-parameters>]\n");
     printf("Parameters:\n");
     printf("    -storage <storage-size> - Set static storage size\n");
     printf("    -stack <stack-size>     - Set stack size\n");
@@ -23,8 +24,10 @@ void help()
     printf("    -check                  - Compile only\n");
 }
 
+
 int main(int argc, char **argv)
 {
+    // Parse interpreter parameters
     int storageSize     = 1024 * 1024;  // Bytes
     int stackSize       = 1024 * 1024;  // Slots
     bool writeAsm       = false;
@@ -33,18 +36,11 @@ int main(int argc, char **argv)
     int i = 1;
     while (i < argc && argv[i][0] == '-')
     {
-        if (i == argc - 1)
-        {
-            printf("File not provided\n");
-            help();
-            return 1;   
-        }
-
         if (strcmp(argv[i], "-storage") == 0)
         {
             if (i + 1 == argc)
             {
-                printf("Illegal command line parameter\n");
+                printf("No storage size\n");
                 return 1;
             }
 
@@ -61,7 +57,7 @@ int main(int argc, char **argv)
         {
             if (i + 1 == argc)
             {
-                printf("Illegal command line parameter\n");
+                printf("No stack size\n");
                 return 1;
             }
 
@@ -76,7 +72,7 @@ int main(int argc, char **argv)
         }
         else if (strcmp(argv[i], "-asm") == 0)
         {
-                    writeAsm = true;
+            writeAsm = true;
             i += 1;
         }
         else if (strcmp(argv[i], "-check") == 0)
@@ -86,6 +82,13 @@ int main(int argc, char **argv)
         }
         else
             break;
+    }
+
+    // Parse file name
+    if (i >= argc)
+    {
+        help();
+        return 1;
     }
 
     void *umka = umkaAlloc();
