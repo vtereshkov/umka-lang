@@ -421,7 +421,16 @@ static void parseCase(Compiler *comp, Type *selectorType)
     lexEat(&comp->lex, TOK_COLON);
 
     genCaseBlockProlog(&comp->gen);
+
+    // Additional scope embracing stmtList
+    blocksEnter(&comp->blocks, NULL);
+
     parseStmtList(comp);
+
+    // Additional scope embracing stmtList
+    doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+    blocksLeave(&comp->blocks);
+
     genCaseBlockEpilog(&comp->gen);
 }
 
@@ -431,7 +440,15 @@ static void parseDefault(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_DEFAULT);
     lexEat(&comp->lex, TOK_COLON);
+
+    // Additional scope embracing stmtList
+    blocksEnter(&comp->blocks, NULL);
+
     parseStmtList(comp);
+
+    // Additional scope embracing stmtList
+    doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+    blocksLeave(&comp->blocks);
 }
 
 
