@@ -33,7 +33,9 @@ static void doCopyResultToTempVar(Compiler *comp, Type *type)
 {
     IdentName tempName;
     identTempVarName(&comp->idents, tempName);
+
     Ident *__temp = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, tempName, type, false);
+    doZeroVar(comp, __temp);
 
     genDup(&comp->gen);
     doPushVarPtr(comp, __temp);

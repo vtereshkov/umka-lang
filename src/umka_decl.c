@@ -497,7 +497,10 @@ static void parseVarDeclItem(Compiler *comp)
 
     Ident *var[MAX_FIELDS];
     for (int i = 0; i < numVars; i++)
+    {
         var[i] = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, varNames[i], varType, varExported[i]);
+        doZeroVar(comp, var[i]);
+    }
 
     // Initializer
     if (comp->lex.tok.kind == TOK_EQ)
@@ -530,10 +533,6 @@ static void parseVarDeclItem(Compiler *comp)
         lexNext(&comp->lex);
         parseAssignmentStmt(comp, designatorListType, (comp->blocks.top == 0) ? varPtrConstList : NULL);
     }
-    // Zeros
-    else
-        for (int i = 0; i < numVars; i++)
-            doZeroVar(comp, var[i]);
 }
 
 
