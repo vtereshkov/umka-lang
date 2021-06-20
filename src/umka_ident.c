@@ -48,17 +48,9 @@ void identFree(Idents *idents, int startBlock)
 Ident *identFind(Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, Type *rcvType)
 {
     unsigned int nameHash = hash(name);
-    int curFnBlockPos = -1;
 
     for (int i = blocks->top; i >= 0; i--)
     {
-        // Forbid accessing locals of any function other than the current one
-        if (curFnBlockPos == -1 && blocks->item[i].fn)
-            curFnBlockPos = i;
-
-        if (i > 0 && i < curFnBlockPos)
-            continue;
-
         for (Ident *ident = idents->first; ident; ident = ident->next)
             if (ident->hash == nameHash && strcmp(ident->name, name) == 0 && ident->block == blocks->item[i].block)
             {
@@ -97,6 +89,25 @@ Ident *identAssertFind(Idents *idents, Modules *modules, Blocks *blocks, int mod
     if (!res)
         idents->error->handler(idents->error->context, "Unknown identifier %s", name);
     return res;
+}
+
+
+bool identIsOuterLocalVar(Blocks *blocks, Ident *ident)
+{
+    if (!ident || ident->kind != IDENT_VAR || ident->block == 0)
+        return false;
+
+    bool curFnBlockFound = false;
+    for (int i = blocks->top; i >= 0; i--)
+    {
+        if (blocks->item[i].block == ident->block && curFnBlockFound)
+            return true;
+
+        if (blocks->item[i].fn)
+            curFnBlockFound = true;
+    }
+
+    return false;
 }
 
 

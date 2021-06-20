@@ -275,3 +275,8 @@ Hey Hello
 { 'H' 'e' 'l' 'l' 0x00 0x00 } Hell
 HellHell
 HellHell
+
+
+>>> Non-local scope
+
+86 

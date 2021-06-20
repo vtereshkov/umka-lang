@@ -391,7 +391,7 @@ decl  = typeDecl | constDecl | varDecl | fnDecl.
 
 * Universe scope. All built-in identifiers implicitly belong to the universe scope. They are valid throughout the program.
 * Module scope. Identifiers declared outside any function body belong to the module scope. They are valid from the point of declaration to the end of the module. If the declared identifiers are marked as exported and the module in which they are declared is imported from some other module, the identifiers are also valid in that other module, if qualified with the module name. Non-constant expressions are not allowed in declarations belonging to the module scope.
-* Block scope. Identifiers declared within a function body belong to the block scope. They are valid from the point of declaration to the end of the block, including all the nested non-function blocks. A declaration can be shadowed by a declaration of the same name in a nested block.
+* Block scope. Identifiers declared within a function body belong to the block scope. They are valid from the point of declaration to the end of the block, including all the nested blocks. A declaration can be shadowed by a declaration of the same name in a nested block.
 
 Declaration export syntax:
 

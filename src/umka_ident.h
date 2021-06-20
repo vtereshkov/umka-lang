@@ -49,6 +49,8 @@ void identFree(Idents *idents, int startBlock /* < 0 to free in all blocks*/);
 Ident *identFind          (Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, Type *rcvType);
 Ident *identAssertFind    (Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, Type *rcvType);
 
+bool identIsOuterLocalVar (Blocks *blocks, Ident *ident);
+
 Ident *identAddConst      (Idents *idents, Modules *modules, Blocks *blocks, const char *name, Type *type, bool exported, Const constant);
 Ident *identAddGlobalVar  (Idents *idents, Modules *modules, Blocks *blocks, const char *name, Type *type, bool exported, void *ptr);
 Ident *identAddLocalVar   (Idents *idents, Modules *modules, Blocks *blocks, const char *name, Type *type, bool exported, int offset);
@@ -59,6 +61,6 @@ int    identAllocStack    (Idents *idents, Blocks *blocks, int size);
 Ident *identAllocVar      (Idents *idents, Types *types, Modules *modules, Blocks *blocks, const char *name, Type *type, bool exported);
 Ident *identAllocParam    (Idents *idents, Types *types, Modules *modules, Blocks *blocks, Signature *sig, int index);
 
-char *identTempVarName(Idents *idents, char *buf);
+char *identTempVarName    (Idents *idents, char *buf);
 
 #endif // UMKA_IDENT_H_INCLUDED

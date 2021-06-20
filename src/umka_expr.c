@@ -462,7 +462,12 @@ Ident *parseQualIdent(Compiler *comp)
     else
         module = comp->blocks.module;
 
-    return identAssertFind(&comp->idents, &comp->modules, &comp->blocks, module, comp->lex.tok.name, NULL);
+    Ident *ident = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, module, comp->lex.tok.name, NULL);
+
+    if (identIsOuterLocalVar(&comp->blocks, ident))
+        comp->error.handler(comp->error.context, "Closures are not supported, cannot close over %s", ident->name);
+
+    return ident;
 }
 
 
