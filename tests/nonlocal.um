@@ -1,0 +1,30 @@
+a := 4
+
+fn f(): fn (z: int): int {
+        type S = struct {
+                x: int
+        }
+
+        const g = fn (y: int): int {
+                return y * y
+        }
+
+        return fn (z: int): int {
+                b := 6
+                s := S{7}
+
+                if z > 0 {
+                       return (z * g(z) - s.x) * a + b
+                }
+                return 0
+        }
+}
+
+fn test*() {
+        u := f()
+        printf(repr(u(3)) + '\n')
+}
+
+fn main() {
+        test()
+}
