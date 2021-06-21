@@ -110,7 +110,12 @@ int lexInit(Lexer *lex, Storage *storage, DebugInfo *debug, const char *fileName
 
     // Initialize lexer
     if (storage->len + strlen(fileName) + 1 > storage->capacity)
+    {
+        lex->fileName = (char *)fileName;
+        lex->line = 1;
+        lex->pos = 1;
         error->handler(error->context, "Storage overflow");
+    }
 
     strcpy(&storage->data[storage->len], fileName);
     lex->fileName = &storage->data[storage->len];
