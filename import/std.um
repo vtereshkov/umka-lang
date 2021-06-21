@@ -44,10 +44,13 @@ fn rtlfseek  (f: File, offset, origin: int): int
 fn fseek*    (f: File, offset, origin: int): int {return rtlfseek(f, offset, origin)}
 
 fn rtlftell (f: File): int
-fn ftell*   (f: File): int { return rtlftell(f) }
+fn ftell*   (f: File): int {return rtlftell(f)}
 
 fn rtlremove (name: str): int
 fn remove*   (name: str): int {return rtlremove(name)}
+
+fn rtlfeof  (f: File): int
+fn feof*    (f: File): bool {return bool(rtlfeof(f))}
 
 // I/O utilities
 

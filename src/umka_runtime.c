@@ -74,6 +74,13 @@ void rtlremove(Slot *params, Slot *result)
 }
 
 
+void rtlfeof(Slot *params, Slot *result)
+{
+    FILE *file = (FILE *)params[0].ptrVal;
+    result->intVal = feof(file);
+}
+
+
 void rtltime(Slot *params, Slot *result)
 {
     result->intVal = time(NULL);

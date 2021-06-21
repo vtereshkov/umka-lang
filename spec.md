@@ -1270,6 +1270,12 @@ fn remove*(name: str): int
 Removes the file specified by the `name`. Returns 0 if successful.
 
 ```
+fn feof*(f: File): bool
+```
+
+Returns the end-of-file indicator.
+
+```
 fn println*(s: str): int
 fn fprintln*(f: File, s: str): int
 ```
