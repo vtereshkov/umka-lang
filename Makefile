@@ -24,7 +24,7 @@ ifeq ($(shortplatform), MINGW64_NT)
   LPATH = PATH
   STATIC_LDFLAGS = -rs 
   DYNAMIC_LDFLAGS = -shared -lm
-  DYNAMIC_LIB = $(buildpath)/libumka.so
+  DYNAMIC_LIB = $(buildpath)/libumka.dll
   EXECUTABLE_DEPS = -lm
   RANLIB = ar
 endif
