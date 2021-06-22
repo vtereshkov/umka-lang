@@ -1,0 +1,1321 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+  <meta name="generator" content="Madoko, version 1.2.3" />
+  <meta name="viewport" content="initial-scale=1.0" />
+  <style type="text/css"  class="link">
+  /*# sourceURL=madoko.css */
+  
+  .madoko .toc>.tocblock .tocblock .tocblock {
+    margin-left: 2.25em;
+  }
+  .madoko .toc>.tocblock .tocblock {
+    margin-left: 1.5em;
+  }
+  .madoko .toc-contents>.tocblock>.tocitem {
+    font-weight: bold;
+  }
+  .madoko .toc {
+    margin-top: 1em;
+  }
+  .madoko p.para-continue {
+    margin-bottom: 0pt;
+  }
+  .madoko .para-block+p {
+    margin-top: 0pt;
+  }
+  .madoko ul.para-block, .madoko ol.para-block {
+    margin-top: 0pt;
+    margin-bottom: 0pt;
+  }
+  .madoko ul.para-end, .madoko ol.para-end {
+    margin-bottom: 1em;
+  }
+  .madoko dl {
+    margin-left: 0em;
+  }
+  .madoko blockquote {
+    font-style: italic;
+  }
+  .madoko a.localref {
+    text-decoration: none;
+  }
+  .madoko a.localref:hover {
+    text-decoration: underline;
+  }
+  .madoko .footnotes {
+    font-size: smaller;
+    margin-top: 2em;
+  }
+  .madoko .footnotes hr {
+    width: 50%;
+    text-align: left;
+  }
+  .madoko .footnote {
+    margin-left: 1em;
+  }
+  .madoko .footnote-before {
+    margin-left: -1em;
+    width: 1em;
+    display: inline-block;
+  }
+  .madoko .align-center, .madoko .align-center>p {
+    text-align: center !important;
+  }
+  .madoko .align-center pre {
+    text-align: left;
+  }
+  .madoko .align-center>* {
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+  .madoko .align-left, .madoko .align-left>p {
+    text-align: left !important;
+  }
+  .madoko .align-left>* {
+    margin-left: 0pt !important;
+    margin-right: auto !important;
+  }
+  .madoko .align-right, .madoko .align-right>p {
+    text-align: right !important;
+  }
+  .madoko .align-right>* {
+    margin-left: auto !important;
+    margin-right: 0pt !important;
+  }
+  .madoko .align-center>table,
+  .madoko .align-left>table,
+  .madoko .align-right>table {
+    text-align: left !important;
+  }
+  .madoko .equation-before {
+    float: right;
+  }
+  .madoko .bibitem {
+    font-size: smaller;
+  }
+  .madoko .bibsearch {
+    font-size: x-small;
+    text-decoration:none;
+    color: black;
+    font-family: "Segoe UI Symbol", Symbola, serif;
+  }
+  .madoko .block, .madoko .figure, .madoko .bibitem, .madoko .equation, .madoko div.math {
+    margin-top: 1ex;
+    margin-bottom: 1ex;
+  }
+  .madoko .figure {
+    padding: 0.5em;
+    margin-left: 0pt;
+    margin-right: 0pt;
+  }
+  .madoko .hidden {
+    display: none;
+  }
+  .madoko .invisible {
+    visibility: hidden;
+  }
+  .madoko.preview .invisible {
+    visibility: visible;
+    opacity: 0.5;
+  }
+  .madoko code.code, .madoko span.code {
+    white-space: pre-wrap;
+  }
+  .madoko hr, hr.madoko {
+    border: none;
+    border-bottom: black solid 1px;
+    margin-bottom: 0.5ex;
+  }
+  .madoko .framed>*:first-child {
+    margin-top: 0pt;
+  }
+  .madoko .framed>*:last-child {
+    margin-bottom: 0pt;
+  }
+  .madoko ul.list-style-type-dash {
+      list-style-type: none !important;
+  }
+  .madoko ul.list-style-type-dash > li:before {
+      content: "\2013";
+      position: absolute;
+      margin-left: -1em;
+  }
+  .madoko table.madoko {
+    border-collapse: collapse;
+  }
+  .madoko td, .madoko th {
+    padding: 0ex 0.5ex;
+    margin: 0pt;
+    vertical-align: top;
+  }
+  .madoko .cell-border-left {
+    border-left: 1px solid black;
+  }
+  .madoko .cell-border-right {
+    border-right: 1px solid black;
+  }
+  .madoko thead>tr:first-child>.cell-line,
+  .madoko tbody:first-child>tr:first-child>.cell-line {
+    border-top: 1px solid black;
+    border-bottom: none;
+  }
+  .madoko .cell-line, .madoko .cell-double-line {
+    border-bottom: 1px solid black;
+    border-top: none;
+  }
+  .madoko .cell-double-line {
+    border-top: 1px solid black;
+    padding-top: 1.5px !important;
+  }
+  .madoko .input-mathpre .MathJax_Display {
+    text-align: left !important;
+  }
+  .madoko div.input-mathpre {
+    text-align: left;
+    margin-top: 1.5ex;
+    margin-bottom: 1ex;
+  }
+  .madoko .math-rendering {
+    text-align: left;
+    white-space: pre;
+    color: gray;
+  }
+  .madoko .mathdisplay {
+    text-align: center;
+  }
+  .madoko span.math-rendering {
+    display:inline-block;
+    width:8em;
+    overflow-x:auto;
+    font-size:70%;
+  }
+  .madoko span.math-rendering::-webkit-scrollbar {
+    width:4px;
+  }
+  .madoko .pretty table {
+    border-collapse: collapse;
+  }
+  .madoko .pretty td {
+    padding: 0em;
+  }
+  .madoko .pretty td.empty {
+    min-width: 1.5ex;
+  }
+  .madoko .pretty td.expander {
+    width: 100em;
+  }
+  body.madoko, .madoko .serif {
+    font-family: Cambria,"Times New Roman","Liberation Serif","Times",serif;
+  }
+  .madoko .sans-serif {
+    font-family: "Calibri", "Optima", sans-serif;
+  }
+  .madoko .symbol {
+    font-family: "Segoe UI Symbol", Symbola, serif;
+  }
+  body.madoko {
+    -webkit-text-size-adjust: 100%;       
+    text-rendering: optimizeLegibility;
+  }
+  body.madoko {
+    max-width: 88ex; 
+    margin: 1em auto;
+    padding: 0em 2em;
+  }
+  body.preview.madoko {
+    padding: 0em 1em;
+  }
+  .madoko p {
+    text-align: justify;
+  }
+  .madoko h1, .madoko h2, .madoko h3, .madoko h4 {
+    margin-top: 1.22em;
+    margin-bottom: 1ex;
+  }
+  .madoko h1+p, .madoko h2+p, .madoko h3+p, .madoko h4+p, .madoko h5+p  {
+    margin-top: 1ex;
+  }
+  .madoko h5, .madoko h6 {
+    margin-top: 1ex;
+    font-size: 1em;
+  }
+  .madoko h5 {
+    margin-bottom: 0.5ex;
+  }
+  .madoko h5 + p {
+    margin-top: 0.5ex;
+  }
+  .madoko h6 {
+    margin-bottom: 0pt;
+  }
+  .madoko h6 + p {
+    margin-top: 0pt;
+  }
+  .madoko pre, .madoko code, .madoko kbd, .madoko samp, .madoko tt,
+  .madoko .monospace, .madoko .token-indent, .madoko .reveal pre, .madoko .reveal code, .madoko .email {
+    font-family: Consolas,"Andale Mono WT","Andale Mono",Lucida Console,Monaco,monospace,monospace;
+    font-size: 0.85em;
+  }
+  .madoko pre code, .madoko .token-indent {
+    font-size: 0.95em;
+  }
+  .madoko pre code {
+    font-family: inherit !important;
+  }
+  .madoko ol.linenums li {
+    background-color: white;
+    list-style-type: decimal;
+  }
+  .madoko .remote {
+    background-color: #F0FFF0;
+  }
+  .madoko .remote + * {
+    margin-top: 0pt;
+  }
+  @media print {
+    body.madoko {
+      font-size: 10pt;
+    }
+    @page {
+      margin: 1in 1.5in;
+    }
+  }
+  @media only screen and (max-device-width:1024px) {
+    body.madoko {
+      padding: 0em 0.5em;
+    }
+    .madoko li {
+      text-align: left;
+    }
+  }
+  
+    </style>
+  
+  </head>
+<body class="madoko">
+
+<div class="body madoko" style="line-adjust:0"><h2 id="sec-the-umka-language-specification" class="h1" data-line="1" data-heading-depth="1" style="display:block"><span data-line="1"></span><span class="heading-before"><span class="heading-label">1</span>.&#8194;</span><span data-line="1"></span>The Umka Language Specification</h2><h3 id="sec-introduction" class="h2" data-line="3" data-heading-depth="2" style="display:block"><span data-line="3"></span><span class="heading-before"><span class="heading-label">1.1</span>.&#8194;</span><span data-line="3"></span>Introduction</h3>
+<p class="p noindent" data-line="5"><span data-line="5"></span>Umka is a statically typed embeddable scripting language. It combines the simplicity and flexibility needed for scripting with a compile-time protection against type errors.
+</p>
+<p class="p indent" data-line="7"><span data-line="7"></span>Language grammar in this manual is specified in the EBNF notation.
+</p><h3 id="sec-lexical-elements" class="h2" data-line="9" data-heading-depth="2" style="display:block"><span data-line="9"></span><span class="heading-before"><span class="heading-label">1.2</span>.&#8194;</span><span data-line="9"></span>Lexical elements</h3>
+<p class="p noindent" data-line="11"><span data-line="11"></span>A program consists of keywords, identifiers, numbers, character literals, string literals, operators, punctuation and comments.
+</p><h4 id="sec-keywords" class="h3" data-line="13" data-heading-depth="3" style="display:block"><span data-line="13"></span><span class="heading-before"><span class="heading-label">1.2.1</span>.&#8194;</span><span data-line="13"></span>Keywords</h4>
+<p class="p noindent" data-line="15"><span data-line="15"></span>Keywords have special meaning and cannot be used in any other role. Umka has the following keywords:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="17" data-line-first="18" style="display:block"><code data-line="18">break case const continue default else for fn import 
+interface if in return str struct switch type var weak</code></pre><h4 id="sec-identifiers" class="h3" data-line="22" data-heading-depth="3" style="display:block"><span data-line="22"></span><span class="heading-before"><span class="heading-label">1.2.2</span>.&#8194;</span><span data-line="22"></span>Identifiers</h4>
+<p class="p noindent" data-line="24"><span data-line="24"></span>Identifiers denote constants, types, variables and functions.
+</p>
+<p class="p indent" data-line="26"><span data-line="26"></span>Syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="28" data-line-first="29" style="display:block"><code data-line="29">ident  = (letter | &quot;_&quot;) {letter | &quot;_&quot; | digit}.
+letter = &quot;A&quot;..&quot;Z&quot; | &quot;a&quot;..&quot;z&quot;.
+digit  = &quot;0&quot;..&quot;9&quot;.</code></pre>
+<p class="p noindent para-continued" data-line="34"><span data-line="34"></span>Examples:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="36" data-line-first="37" style="display:block"><code data-line="37">i
+myName
+printf
+Point_1</code></pre><h4 id="sec-numbers" class="h3" data-line="43" data-heading-depth="3" style="display:block"><span data-line="43"></span><span class="heading-before"><span class="heading-label">1.2.3</span>.&#8194;</span><span data-line="43"></span>Numbers</h4>
+<p class="p noindent" data-line="45"><span data-line="45"></span>Numbers in Umka can be integer (decimal or hexadecimal) or real.
+</p>
+<p class="p indent" data-line="47"><span data-line="47"></span>Syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="49" data-line-first="50" style="display:block"><code data-line="50">intNumber   = decNumber | hexHumber.
+decNumber   = digit {digit}.
+hexNumber   = &quot;0&quot; (&quot;X | &quot;x&quot;) hexDigit {hexDigit}.
+realNumber  = decNumber [&quot;.&quot; decNumber] [(&quot;E&quot; | &quot;e&quot;) decNumber].
+hexDigit    = digit | &quot;A&quot;..&quot;F&quot; | &quot;a&quot;..&quot;f&quot;.</code></pre>
+<p class="p noindent para-continued" data-line="57"><span data-line="57"></span>Examples:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="59" data-line-first="60" style="display:block"><code data-line="60">16
+0xA6
+0xffff
+3.14
+2.6e-5
+7e8</code></pre><h4 id="sec-character-literals" class="h3" data-line="68" data-heading-depth="3" style="display:block"><span data-line="68"></span><span class="heading-before"><span class="heading-label">1.2.4</span>.&#8194;</span><span data-line="68"></span>Character literals</h4>
+<p class="p noindent" data-line="70"><span data-line="70"></span>A character literal is an ASCII character enclosed in single quotes. Character literals can be specified <span data-line="70"></span>&#8220;as is&#8221;<span data-line="70"></span> or by an escape sequence. Escape sequence prefixes have the same meaning as in C or other languages.
+</p>
+<p class="p indent" data-line="72"><span data-line="72"></span>Syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="74" data-line-first="75" style="display:block"><code data-line="75">charLiteral = &quot;&#39;&quot; (char | escSeq) &quot;&#39;&quot;.
+char        = &quot;\x00&quot;..&quot;\xFF&quot;.
+escSeq      = &quot;\&quot; (&quot;0&quot; | &quot;a&quot; | &quot;b&quot; | &quot;e&quot; | &quot;f&quot; | &quot;n&quot; | &quot;r&quot; | &quot;t&quot; | &quot;v&quot; | &quot;x&quot; hexNumber).
+hexDigit    = digit | &quot;A&quot;..&quot;F&quot; | &quot;a&quot;..&quot;f&quot;</code></pre>
+<p class="p noindent para-continued" data-line="81"><span data-line="81"></span>Examples:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="83" data-line-first="84" style="display:block"><code data-line="84">&#39;a&#39;
+&#39;\n&#39;
+&#39;\xFF&#39;</code></pre><h4 id="sec-string-literals" class="h3" data-line="89" data-heading-depth="3" style="display:block"><span data-line="89"></span><span class="heading-before"><span class="heading-label">1.2.5</span>.&#8194;</span><span data-line="89"></span>String literals</h4>
+<p class="p noindent" data-line="91"><span data-line="91"></span>A string literal is a sequence of ASCII characters enclosed in double quotes. Characters can be specified <span data-line="91"></span>&#8220;as is&#8221;<span data-line="91"></span> or by an escape sequence.
+</p>
+<p class="p indent" data-line="93"><span data-line="93"></span>Syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="95" data-line-first="96" style="display:block"><code data-line="96">stringLiteral = &quot;&quot;&quot; {char | escSeq} &quot;&quot;&quot;.</code></pre>
+<p class="p noindent para-continued" data-line="99"><span data-line="99"></span>Examples:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="101" data-line-first="102" style="display:block"><code data-line="102">&quot;A long string&quot;
+&quot;Hello, World\n&quot;
+&quot;&quot;</code></pre><h4 id="sec-operators-and-punctuation" class="h3" data-line="107" data-heading-depth="3" style="display:block"><span data-line="107"></span><span class="heading-before"><span class="heading-label">1.2.6</span>.&#8194;</span><span data-line="107"></span>Operators and punctuation</h4>
+<p class="p noindent" data-line="109"><span data-line="109"></span>Umka has a set of arithmetical, bitwise, logical, relation operators, as well as a set of punctuation characters:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="111" data-line-first="112" style="display:block"><code data-line="112">+    -    *    /    %    &amp;    |    ~    &lt;&lt;    &gt;&gt;
++=   -=   *=   /=   %=   &amp;=   |=   ~=   &lt;&lt;=   &gt;&gt;=
+&amp;&amp;   ||   !    ++   --
+==   &lt;    &gt;    !=   &lt;=   &gt;=
+=    :=   (    )    [    ]    {    }    
+^    ;    :    .</code></pre><h5 id="sec-implicit-semicolons" class="h4" data-line="120" data-heading-depth="4" style="display:block"><span data-line="120"></span>Implicit semicolons</h5>
+<p class="p noindent" data-line="122"><span data-line="122"></span>Umka uses semicolons as statement terminators. To reduce the number of semicolons, an implicit semicolon is automatically inserted immediately after a line<span data-line="122"></span>&#39;<span data-line="122"></span>s final token if that token is
+</p>
+<ul class="ul list-star loose" data-line="124">
+<li class="li ul-li list-star-li loose-li" data-line="124">
+<p data-line="124"><span data-line="124"></span>An identifier
+</p></li>
+<li class="li ul-li list-star-li loose-li" data-line="126">
+<p data-line="126"><span data-line="126"></span>A number, character literal or string literal
+</p></li>
+<li class="li ul-li list-star-li loose-li" data-line="128">
+<p data-line="128"><span data-line="128"></span><code class="code code1">str</code><span data-line="128"></span>,  <span data-line="128"></span><code class="code code1">break</code><span data-line="128"></span>,  <span data-line="128"></span><code class="code code1">continue</code><span data-line="128"></span> or <span data-line="128"></span><code class="code code1">return</code><span data-line="128"></span>
+</p></li>
+<li class="li ul-li list-star-li loose-li" data-line="129">
+<p data-line="129"><span data-line="129"></span><code class="code code1">++</code><span data-line="129"></span>, <span data-line="129"></span><code class="code code1">--</code><span data-line="129"></span>, <span data-line="129"></span><code class="code code1">)</code><span data-line="129"></span>, <span data-line="129"></span><code class="code code1">]</code><span data-line="129"></span>, <span data-line="129"></span><code class="code code1">}</code><span data-line="129"></span>or <span data-line="129"></span><code class="code code1">^</code><span data-line="129"></span>
+</p></li></ul>
+
+<p class="p noindent" data-line="131"><span data-line="131"></span>A semicolon may be omitted before a closing <span data-line="131"></span><code class="code code1">)</code><span data-line="131"></span> or <span data-line="131"></span><code class="code code1">}</code><span data-line="131"></span>.
+</p><h4 id="sec-comments" class="h3" data-line="133" data-heading-depth="3" style="display:block"><span data-line="133"></span><span class="heading-before"><span class="heading-label">1.2.7</span>.&#8194;</span><span data-line="133"></span>Comments</h4>
+<p class="p noindent" data-line="135"><span data-line="135"></span>Umka supports line comments starting with <span data-line="135"></span><code class="code code1">//</code><span data-line="135"></span>  and block comments starting with <span data-line="135"></span><code class="code code1">/*</code><span data-line="135"></span> and ending with <span data-line="135"></span><code class="code code1">*/</code><span data-line="135"></span>.
+</p>
+<p class="p indent" data-line="137"><span data-line="137"></span>Examples:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="139" data-line-first="140" style="display:block"><code data-line="140">// This is a line comment
+
+/*
+This is
+a block
+comment
+*/</code></pre><h3 id="sec-data-types" class="h2" data-line="149" data-heading-depth="2" style="display:block"><span data-line="149"></span><span class="heading-before"><span class="heading-label">1.3</span>.&#8194;</span><span data-line="149"></span>Data Types</h3>
+<p class="p noindent" data-line="151"><span data-line="151"></span>Umka is a statically typed language. Each variable or constant has a type that is either explicitly specified in the variable declaration or inferred from the type of the right-hand side expression in a variable assignment or constant declaration. After a variable or constant is declared or assigned for the first time, it cannot change its type.
+</p>
+<p class="p indent" data-line="153"><span data-line="153"></span>Syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="155" data-line-first="156" style="display:block"><code data-line="156">type = qualIdent | ptrType | arrayType | dynArrayType | strType | 
+       structType | interfaceType | fnType.
+qualIdent = [ident &quot;.&quot;] ident.</code></pre>
+<p class="p noindent para-continued" data-line="161"><span data-line="161"></span>Any data type except the interface type can have a set of functions attached to it, which are called <span data-line="161"></span><em class="em-star1">methods</em><span data-line="161"></span>. A variable of that type is called the <span data-line="161"></span><em class="em-star1">receiver</em><span data-line="161"></span> with respect to any method which is called on it. Methods are not considered a part of the type declaration. 
+</p><h4 id="sec-simple-types" class="h3" data-line="163" data-heading-depth="3" style="display:block"><span data-line="163"></span><span class="heading-before"><span class="heading-label">1.3.1</span>.&#8194;</span><span data-line="163"></span>Simple types</h4>
+<p class="p noindent" data-line="165"><span data-line="165"></span>Simple type represent single values.
+</p><h5 id="sec-ordinal-types" class="h4" data-line="167" data-heading-depth="4" style="display:block"><span data-line="167"></span>Ordinal types</h5>
+<p class="p noindent" data-line="169"><span data-line="169"></span>Umka supports the following ordinal types:
+</p>
+<ul class="ul list-star compact" data-line="171">
+<li class="li ul-li list-star-li compact-li" data-line="171"><span data-line="171"></span>Signed integer types  <span data-line="171"></span><code class="code code1">int8</code><span data-line="171"></span>,  <span data-line="171"></span><code class="code code1">int16</code><span data-line="171"></span> , <span data-line="171"></span><code class="code code1">int32</code><span data-line="171"></span>,  <span data-line="171"></span><code class="code code1">int</code><span data-line="171"></span>
+</li>
+<li class="li ul-li list-star-li compact-li" data-line="172"><span data-line="172"></span>Unsigned integer types <span data-line="172"></span><code class="code code1">uint8</code><span data-line="172"></span>,  <span data-line="172"></span><code class="code code1">uint16</code><span data-line="172"></span> , <span data-line="172"></span><code class="code code1">uint32</code><span data-line="172"></span>,  <span data-line="172"></span><code class="code code1">uint</code><span data-line="172"></span>
+</li>
+<li class="li ul-li list-star-li compact-li" data-line="173"><span data-line="173"></span>Boolean type <span data-line="173"></span><code class="code code1">bool</code><span data-line="173"></span>
+</li>
+<li class="li ul-li list-star-li compact-li" data-line="174"><span data-line="174"></span>Character type <span data-line="174"></span><code class="code code1">char</code><span data-line="174"></span>
+</li></ul>
+
+<p class="p noindent" data-line="176"><span data-line="176"></span>The  <span data-line="176"></span><code class="code code1">int</code><span data-line="176"></span>  and  <span data-line="176"></span><code class="code code1">uint</code><span data-line="176"></span>  are the recommended 64-bit integer types. Other integer types are for compatibility with an external environment.
+</p>
+<p class="p indent" data-line="178"><span data-line="178"></span>The two possible values of the Boolean type are <span data-line="178"></span><code class="code code1">true</code><span data-line="178"></span> and <span data-line="178"></span><code class="code code1">false</code><span data-line="178"></span>. 
+</p><h5 id="sec-real-types" class="h4" data-line="180" data-heading-depth="4" style="display:block"><span data-line="180"></span>Real types</h5>
+<p class="p noindent" data-line="182"><span data-line="182"></span>Umka supports the  <span data-line="182"></span><code class="code code1">real32</code><span data-line="182"></span> and  <span data-line="182"></span><code class="code code1">real</code><span data-line="182"></span>  floating-point types.  The  <span data-line="182"></span><code class="code code1">real</code><span data-line="182"></span>  is the recommended 64-bit real type. The <span data-line="182"></span><code class="code code1">real32</code><span data-line="182"></span>  type is for compatibility with an external environment.
+</p><h5 id="sec-pointer-types" class="h4" data-line="184" data-heading-depth="4" style="display:block"><span data-line="184"></span>Pointer types</h5>
+<p class="p noindent" data-line="186"><span data-line="186"></span>A variable that stores a memory address of another variable has a pointer type. The type of that another variable is called the <span data-line="186"></span><em class="em-star1">base type</em><span data-line="186"></span> of the pointer type. The pointer type is specified by a <span data-line="186"></span><code class="code code1">^</code><span data-line="186"></span>  followed by the base type specification. If the base type is unknown, it should be specified as <span data-line="186"></span><code class="code code1">void</code><span data-line="186"></span>.
+</p>
+<p class="p indent" data-line="188"><span data-line="188"></span>Umka performs automatic memory management using reference counting. All pointers are reference-counted by default. However, in processing data structures with cyclic references (like doubly-linked lists), reference counting is unable to deallocate memory properly. In this case, one of the pointers that constitute the cycle can be declared <span data-line="188"></span><code class="code code1">weak</code><span data-line="188"></span> . A weak pointer is not reference-counted and its existence does not prevent the pointed-to variable from being deallocated. A weak pointer cannot be dereferenced. Instead, it should be first converted to a conventional (or strong) pointer of the same base type. If the weak pointer does not point to a valid dynamically allocated memory block, the result of this conversion is <span data-line="188"></span><code class="code code1">null</code><span data-line="188"></span>.
+</p>
+<p class="p indent" data-line="190"><span data-line="190"></span>Syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="192" data-line-first="193" style="display:block"><code data-line="193">ptrType = [&quot;weak&quot;] &quot;^&quot; type.</code></pre>
+<p class="p noindent para-continued" data-line="196"><span data-line="196"></span>Examples:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="198" data-line-first="199" style="display:block"><code data-line="199">^int16
+^void
+weak ^Vec</code></pre>
+<p class="p noindent para-continued" data-line="204"><span data-line="204"></span>An uninitialized pointer has the value <span data-line="204"></span><code class="code code1">null</code><span data-line="204"></span>.
+</p><h5 id="sec-function-types" class="h4" data-line="206" data-heading-depth="4" style="display:block"><span data-line="206"></span>Function types</h5>
+<p class="p noindent" data-line="208"><span data-line="208"></span>A constant or variable that stores an entry point of a function has a function type. A function is characterized by its <span data-line="208"></span><em class="em-star1">signature</em><span data-line="208"></span> that consists of a set of parameter names, types and optional default values, and an optional set of returned value types.
+</p>
+<p class="p indent" data-line="210"><span data-line="210"></span>Syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="212" data-line-first="213" style="display:block"><code data-line="213">fnType    = &quot;fn&quot; signature.
+signature = &quot;(&quot; [typedIdentList [&quot;=&quot; expr] {&quot;,&quot; typedIdentList [&quot;=&quot; expr]}] &quot;)&quot; 
+            [&quot;:&quot; (type | &quot;(&quot; type {&quot;,&quot; type} &quot;)&quot;)].</code></pre>
+<p class="p noindent para-continued" data-line="218"><span data-line="218"></span>Examples:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="220" data-line-first="221" style="display:block"><code data-line="221">fn (code: int)
+fn (p: int, x, y: real): (bool, real)</code></pre><h4 id="sec-structured-types" class="h3" data-line="225" data-heading-depth="3" style="display:block"><span data-line="225"></span><span class="heading-before"><span class="heading-label">1.3.2</span>.&#8194;</span><span data-line="225"></span>Structured types</h4>
+<p class="p noindent" data-line="227"><span data-line="227"></span>Structured types represents sequences of values.
+</p><h5 id="sec-array-types" class="h4" data-line="229" data-heading-depth="4" style="display:block"><span data-line="229"></span>Array types</h5>
+<p class="p noindent" data-line="231"><span data-line="231"></span>An array is a numbered sequence of items of a single type. The number of items is called the <span data-line="231"></span><em class="em-star1">length</em><span data-line="231"></span> of the array and should be a non-negative integer constant expression.
+</p>
+<p class="p indent" data-line="233"><span data-line="233"></span>Syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="235" data-line-first="236" style="display:block"><code data-line="236">arrayType = &quot;[&quot; expr &quot;]&quot; type.</code></pre>
+<p class="p noindent para-continued" data-line="239"><span data-line="239"></span>Examples:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="241" data-line-first="242" style="display:block"><code data-line="242">[3]real
+[len1 + len2][10]Vec</code></pre>
+<p class="p noindent para-continued" data-line="246"><span data-line="246"></span>Array assignment copies the contents of the array.
+</p><h5 id="sec-dynamic-array-types" class="h4" data-line="248" data-heading-depth="4" style="display:block"><span data-line="248"></span>Dynamic array types</h5>
+<p class="p noindent" data-line="250"><span data-line="250"></span>A dynamic array is a numbered sequence of items of a single type. Its length is not fixed at compile time and can change at run time due to appending or deleting of items.
+</p>
+<p class="p indent" data-line="252"><span data-line="252"></span>Syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="254" data-line-first="255" style="display:block"><code data-line="255">dynArrayType = &quot;[&quot; &quot;]&quot; type.</code></pre>
+<p class="p noindent para-continued" data-line="258"><span data-line="258"></span>Examples:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="260" data-line-first="261" style="display:block"><code data-line="261">[]real
+[][3]uint8</code></pre>
+<p class="p noindent para-continued" data-line="265"><span data-line="265"></span>Dynamic arrays require initialization by assignment from a static array or from a dynamic array literal, or by explicitly calling <span data-line="265"></span><code class="code code1">make()</code><span data-line="265"></span>. 
+</p>
+<p class="p indent" data-line="267"><span data-line="267"></span>Dynamic array assignment copies the pointer, but not the contents of the array. 
+</p><h5 id="sec-string-type" class="h4" data-line="269" data-heading-depth="4" style="display:block"><span data-line="269"></span>String type</h5>
+<p class="p noindent" data-line="271"><span data-line="271"></span>A string is a sequence of ASCII characters. Its length is not fixed at compile time and can change at run time due to concatenation by using the  <span data-line="271"></span><code class="code code1">+</code><span data-line="271"></span> operator.
+</p>
+<p class="p indent" data-line="273"><span data-line="273"></span>Syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="275" data-line-first="276" style="display:block"><code data-line="276">strType = &quot;str&quot;</code></pre>
+<p class="p noindent para-continued" data-line="279"><span data-line="279"></span>String assignment copies the contents of the string.
+</p><h5 id="sec-structure-types" class="h4" data-line="281" data-heading-depth="4" style="display:block"><span data-line="281"></span>Structure types</h5>
+<p class="p noindent" data-line="283"><span data-line="283"></span>A structure is a sequence of named items, called <span data-line="283"></span><em class="em-star1">fields</em><span data-line="283"></span>, that possibly have different types. Each field should have a unique name.
+</p>
+<p class="p indent" data-line="285"><span data-line="285"></span>Syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="287" data-line-first="288" style="display:block"><code data-line="288">structType = &quot;struct&quot; &quot;{&quot; {typedIdentList &quot;;&quot;} &quot;}&quot;.</code></pre>
+<p class="p noindent para-continued" data-line="291"><span data-line="291"></span>Examples:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="293" data-line-first="294" style="display:block"><code data-line="294">struct {x, y, z: int}
+
+struct {
+    q: [4]real
+    normalized: bool
+}</code></pre>
+<p class="p noindent para-continued" data-line="302"><span data-line="302"></span>Structure assignment copies the contents of the structure.
+</p><h5 id="sec-interface-types" class="h4" data-line="304" data-heading-depth="4" style="display:block"><span data-line="304"></span>Interface types</h5>
+<p class="p noindent" data-line="306"><span data-line="306"></span>An interface is a sequence of method names and signatures. Each method should have a unique name. It is allowed to specify either a method name and its signature, or a name of some other interface type whose methods are to be included to the new interface type.
+</p>
+<p class="p indent" data-line="308"><span data-line="308"></span>Syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="310" data-line-first="311" style="display:block"><code data-line="311">interfaceType = &quot;interface&quot; &quot;{&quot; {(ident signature | qualIdent) &quot;;&quot;} &quot;}&quot;.</code></pre>
+<p class="p noindent para-continued" data-line="314"><span data-line="314"></span>Examples:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="316" data-line-first="317" style="display:block"><code data-line="317">interface {
+    print(): int
+    Saveable
+}</code></pre>
+<p class="p noindent para-continued" data-line="323"><span data-line="323"></span>The interface does not implement these methods itself. Instead, any type that implements all the methods declared in the interface can be converted to that interface. Since different types can be converted to the same interface, interfaces provide polymorphic behavior in Umka.
+</p>
+<p class="p indent" data-line="325"><span data-line="325"></span>If a pointer of type <span data-line="325"></span><code class="code code1">^T</code><span data-line="325"></span> is converted to the interface, the interface stores that pointer. If a non-pointer variable of type <span data-line="325"></span><code class="code code1">T</code><span data-line="325"></span>  is converted to the interface, the variable is first copied to a new memory location, and the interface stores the pointer to that location. In any case, the interface can be converted back to the type <span data-line="325"></span><code class="code code1">^T</code><span data-line="325"></span>. If a conversion of the interface to some type <span data-line="325"></span><code class="code code1">^S</code><span data-line="325"></span> not equivalent to <span data-line="325"></span><code class="code code1">^T</code><span data-line="325"></span> is attempted, the result is <span data-line="325"></span><code class="code code1">null</code><span data-line="325"></span>. 
+</p>
+<p class="p indent" data-line="327"><span data-line="327"></span>Any type can be converted to the empty interface <span data-line="327"></span><code class="code code1">interface{}</code><span data-line="327"></span>.
+</p>
+<p class="p indent" data-line="329"><span data-line="329"></span>Interface assignment copies the pointer, but not the contents of the variable that has been converted to the interface.
+</p><h5 id="sec-fiber-type" class="h4" data-line="331" data-heading-depth="4" style="display:block"><span data-line="331"></span>Fiber type</h5>
+<p class="p noindent" data-line="333"><span data-line="333"></span>The <span data-line="333"></span><code class="code code1">fiber</code><span data-line="333"></span> type represents a fiber context to use in multitasking.
+</p><h4 id="sec-type-compatibility" class="h3" data-line="335" data-heading-depth="3" style="display:block"><span data-line="335"></span><span class="heading-before"><span class="heading-label">1.3.3</span>.&#8194;</span><span data-line="335"></span>Type compatibility</h4>
+<p class="p noindent" data-line="337"><span data-line="337"></span>Two types are <span data-line="337"></span><em class="em-star1">equivalent</em><span data-line="337"></span> if
+</p>
+<ul class="ul list-star compact" data-line="339">
+<li class="li ul-li list-star-li compact-li" data-line="339"><span data-line="339"></span>They are the same type
+</li>
+<li class="li ul-li list-star-li compact-li" data-line="340"><span data-line="340"></span>They are pointer types and have equivalent base types and both are either strong or weak
+</li>
+<li class="li ul-li list-star-li compact-li" data-line="341"><span data-line="341"></span>They are array types and have equal length and equivalent item types
+</li>
+<li class="li ul-li list-star-li compact-li" data-line="342"><span data-line="342"></span>They are dynamic array types and have equivalent item types
+</li>
+<li class="li ul-li list-star-li compact-li" data-line="343"><span data-line="343"></span>They are structure or interface types and have equal number of fields, equal field names and equivalent field types
+</li>
+<li class="li ul-li list-star-li compact-li" data-line="344"><span data-line="344"></span>They are function types, which are both either methods or non-methods, and have equal number of parameters, equal parameter names, equivalent parameter types, equal parameter default values (excluding the receiver parameter) and equivalent result type.
+</li></ul>
+
+<p class="p noindent" data-line="346"><span data-line="346"></span>Two types are <span data-line="346"></span><em class="em-star1">compatible</em><span data-line="346"></span> if
+</p>
+<ul class="ul list-star compact" data-line="348">
+<li class="li ul-li list-star-li compact-li" data-line="348"><span data-line="348"></span>They are equivalent
+</li>
+<li class="li ul-li list-star-li compact-li" data-line="349"><span data-line="349"></span>They are integer types
+</li>
+<li class="li ul-li list-star-li compact-li" data-line="350"><span data-line="350"></span>They are real types
+</li>
+<li class="li ul-li list-star-li compact-li" data-line="351"><span data-line="351"></span>They are pointer types and the left-hand side pointer type has the <span data-line="351"></span><code class="code code1">void</code><span data-line="351"></span> base type or the right-hand side is <span data-line="351"></span><code class="code code1">null</code><span data-line="351"></span> 
+</li>
+<li class="li ul-li list-star-li compact-li" data-line="352"><span data-line="352"></span>They are pointer types and have equivalent base types and the left-hand side pointer type is weak and the right-hand side pointer type is strong
+</li></ul>
+<h4 id="sec-type-conversions" class="h3" data-line="354" data-heading-depth="3" style="display:block"><span data-line="354"></span><span class="heading-before"><span class="heading-label">1.3.4</span>.&#8194;</span><span data-line="354"></span>Type conversions</h4><h5 id="sec-implicit-conversions" class="h4" data-line="356" data-heading-depth="4" style="display:block"><span data-line="356"></span>Implicit conversions</h5>
+<p class="p noindent" data-line="358"><span data-line="358"></span>If a value <span data-line="358"></span><code class="code code1">s</code><span data-line="358"></span> of type <span data-line="358"></span><code class="code code1">S</code><span data-line="358"></span> is given where a value <span data-line="358"></span><code class="code code1">t</code><span data-line="358"></span> of some other type <span data-line="358"></span><code class="code code1">T</code><span data-line="358"></span> is expected, the <span data-line="358"></span><code class="code code1">s</code><span data-line="358"></span> is implicitly converted to <span data-line="358"></span><code class="code code1">t</code><span data-line="358"></span> if
+</p>
+<ul class="ul list-star compact" data-line="360">
+<li class="li ul-li list-star-li compact-li" data-line="360"><span data-line="360"></span><code class="code code1">S</code><span data-line="360"></span> and <span data-line="360"></span><code class="code code1">T</code><span data-line="360"></span> are compatible
+</li>
+<li class="li ul-li list-star-li compact-li" data-line="361"><span data-line="361"></span><code class="code code1">S</code><span data-line="361"></span> is an integer type and <span data-line="361"></span><code class="code code1">T</code><span data-line="361"></span> is a real type
+</li>
+<li class="li ul-li list-star-li compact-li" data-line="362"><span data-line="362"></span><code class="code code1">S</code><span data-line="362"></span> is <span data-line="362"></span><code class="code code1">char</code><span data-line="362"></span> and <span data-line="362"></span><code class="code code1">T</code><span data-line="362"></span> is <span data-line="362"></span><code class="code code1">str</code><span data-line="362"></span>
+</li>
+<li class="li ul-li list-star-li compact-li" data-line="363"><span data-line="363"></span><code class="code code1">S</code><span data-line="363"></span> is a <span data-line="363"></span><code class="code code1">[]char</code><span data-line="363"></span> and <span data-line="363"></span><code class="code code1">T</code><span data-line="363"></span> is <span data-line="363"></span><code class="code code1">str</code><span data-line="363"></span> and the last item of <span data-line="363"></span><code class="code code1">S</code><span data-line="363"></span> is the null character
+</li>
+<li class="li ul-li list-star-li compact-li" data-line="364"><span data-line="364"></span><code class="code code1">S</code><span data-line="364"></span> is <span data-line="364"></span><code class="code code1">str</code><span data-line="364"></span> and <span data-line="364"></span><code class="code code1">T</code><span data-line="364"></span> is <span data-line="364"></span><code class="code code1">[]char</code><span data-line="364"></span> 
+</li>
+<li class="li ul-li list-star-li compact-li" data-line="365"><span data-line="365"></span><code class="code code1">S</code><span data-line="365"></span> is an array type and <span data-line="365"></span><code class="code code1">T</code><span data-line="365"></span> is a dynamic array type and the item types of <span data-line="365"></span><code class="code code1">S</code><span data-line="365"></span> and <span data-line="365"></span><code class="code code1">T</code><span data-line="365"></span> are equivalent
+</li>
+<li class="li ul-li list-star-li compact-li" data-line="366"><span data-line="366"></span><code class="code code1">S</code><span data-line="366"></span> is a dynamic array type and <span data-line="366"></span><code class="code code1">T</code><span data-line="366"></span> is an array type and the item types of <span data-line="366"></span><code class="code code1">S</code><span data-line="366"></span> and <span data-line="366"></span><code class="code code1">T</code><span data-line="366"></span> are equivalent and <span data-line="366"></span><code class="code code1">len(s) &lt;= len(t)</code><span data-line="366"></span> 
+</li>
+<li class="li ul-li list-star-li compact-li" data-line="367"><span data-line="367"></span><code class="code code1">S</code><span data-line="367"></span> is an interface type and <span data-line="367"></span><code class="code code1">T</code><span data-line="367"></span> is a type that implements all the methods of <span data-line="367"></span><code class="code code1">S</code><span data-line="367"></span> 
+</li>
+<li class="li ul-li list-star-li compact-li" data-line="368"><span data-line="368"></span><code class="code code1">S</code><span data-line="368"></span> is a pointer type and <span data-line="368"></span><code class="code code1">T</code><span data-line="368"></span> is an interface type
+</li>
+<li class="li ul-li list-star-li compact-li" data-line="369"><span data-line="369"></span><code class="code code1">S</code><span data-line="369"></span> is a weak pointer type and <span data-line="369"></span><code class="code code1">T</code><span data-line="369"></span> is a strong pointer type and the base types of <span data-line="369"></span><code class="code code1">S</code><span data-line="369"></span> and <span data-line="369"></span><code class="code code1">T</code><span data-line="369"></span> are equivalent 
+</li></ul>
+<h5 id="sec-explicit-conversions" class="h4" data-line="371" data-heading-depth="4" style="display:block"><span data-line="371"></span>Explicit conversions</h5>
+<p class="p noindent" data-line="373"><span data-line="373"></span>If a value <span data-line="373"></span><code class="code code1">s</code><span data-line="373"></span> of type <span data-line="373"></span><code class="code code1">S</code><span data-line="373"></span> is given where a value <span data-line="373"></span><code class="code code1">t</code><span data-line="373"></span> of some other type <span data-line="373"></span><code class="code code1">T</code><span data-line="373"></span> is expected, the <span data-line="373"></span><code class="code code1">s</code><span data-line="373"></span> can be explicitly converted (cast) to <span data-line="373"></span><code class="code code1">t</code><span data-line="373"></span> if
+</p>
+<ul class="ul list-star compact" data-line="375">
+<li class="li ul-li list-star-li compact-li" data-line="375"><span data-line="375"></span><code class="code code1">S</code><span data-line="375"></span> can be implicitly converted to <span data-line="375"></span><code class="code code1">T</code><span data-line="375"></span>
+</li>
+<li class="li ul-li list-star-li compact-li" data-line="376"><span data-line="376"></span><code class="code code1">S</code><span data-line="376"></span> and <span data-line="376"></span><code class="code code1">T</code><span data-line="376"></span> are ordinal types
+</li>
+<li class="li ul-li list-star-li compact-li" data-line="377"><span data-line="377"></span><code class="code code1">S</code><span data-line="377"></span> and <span data-line="377"></span><code class="code code1">T</code><span data-line="377"></span> are pointer types and either <span data-line="377"></span><code class="code code1">T</code><span data-line="377"></span> is <span data-line="377"></span><code class="code code1">^void</code><span data-line="377"></span> or  <span data-line="377"></span><code class="code code1">sizeof(s^) &gt;= sizeof(t^)</code><span data-line="377"></span> and both <span data-line="377"></span><code class="code code1">S</code><span data-line="377"></span> and <span data-line="377"></span><code class="code code1">T</code><span data-line="377"></span> don<span data-line="377"></span>&#39;<span data-line="377"></span>t contain pointers 
+</li></ul>
+<h3 id="sec-declarations" class="h2" data-line="379" data-heading-depth="2" style="display:block"><span data-line="379"></span><span class="heading-before"><span class="heading-label">1.4</span>.&#8194;</span><span data-line="379"></span>Declarations</h3>
+<p class="p noindent" data-line="381"><span data-line="381"></span>All types, constants, variables and functions should be declared before the first use. The only exception is that a pointer base type <span data-line="381"></span><code class="code code1">T</code><span data-line="381"></span> may be declared after using the pointer type <span data-line="381"></span><code class="code code1">^T</code><span data-line="381"></span> but before the end of the same <span data-line="381"></span><code class="code code1">type</code><span data-line="381"></span> declaration list. No identifier may be declared twice in the same block.
+</p>
+<p class="p indent" data-line="383"><span data-line="383"></span>Syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="385" data-line-first="386" style="display:block"><code data-line="386">decls = decl {&quot;;&quot; decl}.
+decl  = typeDecl | constDecl | varDecl | fnDecl.</code></pre><h4 id="sec-scopes" class="h3" data-line="390" data-heading-depth="3" style="display:block"><span data-line="390"></span><span class="heading-before"><span class="heading-label">1.4.1</span>.&#8194;</span><span data-line="390"></span>Scopes</h4>
+<ul class="ul list-star compact" data-line="392">
+<li class="li ul-li list-star-li compact-li" data-line="392"><span data-line="392"></span>Universe scope. All built-in identifiers implicitly belong to the universe scope. They are valid throughout the program.
+</li>
+<li class="li ul-li list-star-li compact-li" data-line="393"><span data-line="393"></span>Module scope. Identifiers declared outside any function body belong to the module scope. They are valid from the point of declaration to the end of the module. If the declared identifiers are marked as exported and the module in which they are declared is imported from some other module, the identifiers are also valid in that other module, if qualified with the module name. Non-constant expressions are not allowed in declarations belonging to the module scope.
+</li>
+<li class="li ul-li list-star-li compact-li" data-line="394"><span data-line="394"></span>Block scope. Identifiers declared within a function body belong to the block scope. They are valid from the point of declaration to the end of the block, including all the nested blocks, except that a variable belonging to the block scope is not valid within the nested function blocks. A declaration can be shadowed by a declaration of the same name in a nested block.
+</li></ul>
+
+<p class="p noindent" data-line="396"><span data-line="396"></span>Declaration export syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="398" data-line-first="399" style="display:block"><code data-line="399">exportMark = [&quot;*&quot;].</code></pre><h4 id="sec-type-declarations" class="h3" data-line="402" data-heading-depth="3" style="display:block"><span data-line="402"></span><span class="heading-before"><span class="heading-label">1.4.2</span>.&#8194;</span><span data-line="402"></span>Type declarations</h4>
+<p class="p noindent" data-line="404"><span data-line="404"></span>Syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="406" data-line-first="407" style="display:block"><code data-line="407">typeDecl     = &quot;type&quot; (typeDeclItem | &quot;(&quot; {typeDeclItem &quot;;&quot;} &quot;)&quot;).
+typeDeclItem = ident exportMark &quot;=&quot; type.</code></pre>
+<p class="p noindent para-continued" data-line="411"><span data-line="411"></span>Examples:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="413" data-line-first="414" style="display:block"><code data-line="414">type Vec = struct {x, y, z: int}
+type (
+    i8 = int8
+    u8 = uint8
+)</code></pre><h5 id="sec-built-in-types" class="h4" data-line="421" data-heading-depth="4" style="display:block"><span data-line="421"></span>Built-in types</h5>
+<pre class="para-block pre-fenced pre-fenced3" data-line="423" data-line-first="424" style="display:block"><code data-line="424">void
+int8 int16 int32 int
+uint8 uint16 uint32 uint
+bool
+char
+real32 real
+fiber</code></pre><h4 id="sec-constant-declarations" class="h3" data-line="433" data-heading-depth="3" style="display:block"><span data-line="433"></span><span class="heading-before"><span class="heading-label">1.4.3</span>.&#8194;</span><span data-line="433"></span>Constant declarations</h4>
+<p class="p noindent" data-line="435"><span data-line="435"></span>A constant declaration generally requires an explicit constant value. However, if a constant declaration is preceded by another integer constant declaration within the same declaration list, its explicit value can be omitted. In this case, the value will be set to the preceding constant value incremented by 1. 
+</p>
+<p class="p indent" data-line="437"><span data-line="437"></span>Syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="439" data-line-first="440" style="display:block"><code data-line="440">constDecl     = &quot;const&quot; (constDeclItem | &quot;(&quot; {constDeclItem &quot;;&quot;} &quot;)&quot;).
+constDeclItem = ident exportMark [&quot;=&quot; expr].</code></pre>
+<p class="p noindent para-continued" data-line="444"><span data-line="444"></span>Examples:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="446" data-line-first="447" style="display:block"><code data-line="447">const a = 3
+const b* = 2.38
+const (
+    c = sin(b) / 5
+    d = &quot;Hello&quot; + &quot; World&quot;
+)
+const (
+    a = 5
+    b       // 6
+    c       // 7
+    d = 19
+    e       // 20
+)</code></pre><h5 id="sec-built-in-constants" class="h4" data-line="462" data-heading-depth="4" style="display:block"><span data-line="462"></span>Built-in constants</h5>
+<pre class="para-block pre-fenced pre-fenced3" data-line="464" data-line-first="465" style="display:block"><code data-line="465">true false
+null</code></pre><h4 id="sec-variable-declarations" class="h3" data-line="469" data-heading-depth="3" style="display:block"><span data-line="469"></span><span class="heading-before"><span class="heading-label">1.4.4</span>.&#8194;</span><span data-line="469"></span>Variable declarations</h4>
+<p class="p noindent" data-line="471"><span data-line="471"></span>Syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="473" data-line-first="474" style="display:block"><code data-line="474">varDecl = fullVarDecl | shortVarDecl.</code></pre><h5 id="sec-full-variable-declarations" class="h4" data-line="477" data-heading-depth="4" style="display:block"><span data-line="477"></span>Full variable declarations</h5>
+<p class="p noindent" data-line="479"><span data-line="479"></span>Full variable declarations require explicit type specification and have an optional list of initializer expressions. If the initializer expressions are omitted, the variables are initialized with zeros.
+</p>
+<p class="p indent" data-line="481"><span data-line="481"></span>Syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="483" data-line-first="484" style="display:block"><code data-line="484">fullVarDecl    = &quot;var&quot; (varDeclItem | &quot;(&quot; {varDeclItem &quot;;&quot;} &quot;)&quot;).
+varDeclItem    = typedIdentList [&quot;=&quot; exprList].
+typedIdentList = identList &quot;:&quot; type.
+identList      = ident exportMark {&quot;,&quot; ident exportMark}.</code></pre>
+<p class="p noindent para-continued" data-line="490"><span data-line="490"></span>Examples:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="492" data-line-first="493" style="display:block"><code data-line="493">var e1, e2: int = 2, 3
+var f: String = d + &quot;!&quot;
+var (
+    g: Arr
+    h: []real
+)</code></pre><h5 id="sec-short-variable-declarations" class="h4" data-line="501" data-heading-depth="4" style="display:block"><span data-line="501"></span>Short variable declarations</h5>
+<p class="p noindent" data-line="503"><span data-line="503"></span>Short variable declarations are always combined with the assignment statements. They don<span data-line="503"></span>&#39;<span data-line="503"></span>t require explicit type specifications, since they infer the variable types from the types of the right-hand side expressions.
+</p>
+<p class="p indent" data-line="505"><span data-line="505"></span>Syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="507" data-line-first="508" style="display:block"><code data-line="508">shortVarDecl        = declAssignmentStmt.
+singleDeclAssgnStmt = ident &quot;:=&quot; expr.
+listDeclAssgnStmt   = identList &quot;:=&quot; exprList.
+declAssignmentStmt  = singleDeclAssgnStmt | listDeclAssgnStmt.</code></pre>
+<p class="p noindent para-continued" data-line="514"><span data-line="514"></span>Examples:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="516" data-line-first="517" style="display:block"><code data-line="517">a := 5
+s, val := &quot;Hello&quot;, sin(0.1 * a)</code></pre><h4 id="sec-function-and-method-declarations" class="h3" data-line="521" data-heading-depth="3" style="display:block"><span data-line="521"></span><span class="heading-before"><span class="heading-label">1.4.5</span>.&#8194;</span><span data-line="521"></span>Function and method declarations</h4>
+<p class="p noindent" data-line="523"><span data-line="523"></span>A function or method declaration can be either a complete definition that includes the function block, or a <span data-line="523"></span><em class="em-star1">prototype</em><span data-line="523"></span> declaration if the function block is omitted. A prototype should be resolved somewhere below in the same module by duplicating the declaration, now with the function block. If a prototype is not resolved, it is considered an external C/C++ function. If such a function has not been registered via the Umka API, it is searched in the shared library (Umka implementation file) <span data-line="523"></span><code class="code code1">mod.umi</code><span data-line="523"></span>, where <span data-line="523"></span><code class="code code1">mod</code><span data-line="523"></span> is the current module name. If the library does not exist or contains no such function, an error is triggered. 
+</p>
+<p class="p indent" data-line="525"><span data-line="525"></span>Function and method declarations are only allowed in the module scope. In the block scope, functions should be declared as constants or variables of a function type. Methods cannot be declared in the block scope. 
+</p>
+<p class="p indent" data-line="527"><span data-line="527"></span>The method receiver type should be a pointer to any declared type, except interface types. Methods should be declared in the same module as the method receiver type name.
+</p>
+<p class="p indent" data-line="529"><span data-line="529"></span>Syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="531" data-line-first="532" style="display:block"><code data-line="532">fnDecl       = &quot;fn&quot; [rcvSignature] ident exportMark signature (fnBlock | fnPrototype).
+rcvSignature = &quot;(&quot; ident &quot;:&quot; type &quot;)&quot;.
+fnBlock      = block.
+fnPrototype  = .</code></pre>
+<p class="p noindent para-continued" data-line="538"><span data-line="538"></span>Examples:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="540" data-line-first="541" style="display:block"><code data-line="541">fn tan(x: real): real {return sin(x) / cos(x)}
+
+fn getValue(): (int, bool) {
+    return 42, true
+}
+
+fn (a: ^Arr) print(): int {
+    printf(&quot;Arr: %s\n&quot;, repr(a^))
+    return 0
+}</code></pre><h5 id="sec-built-in-functions" class="h4" data-line="553" data-heading-depth="4" style="display:block"><span data-line="553"></span>Built-in functions</h5>
+<p class="p noindent" data-line="555"><span data-line="555"></span>Built-in functions don<span data-line="555"></span>&#39;<span data-line="555"></span>t necessarily adhere to the general rules for functions.
+</p><h6 id="sec-inputoutput-functions" class="h5" data-line="557" data-heading-depth="5" style="display:block"><span data-line="557"></span>Input/output functions</h6>
+<pre class="para-block pre-fenced pre-fenced3" data-line="559" data-line-first="560" style="display:block"><code data-line="560">fn printf(format: str, a1: T1, a2: T2...): int
+fn fprintf(f: ^std.File, format: str, a1: T1, a2: T2...): int
+fn sprintf(buf, format: str, a1: T1, a2: T2...): int</code></pre>
+<p class="p noindent para-continued" data-line="565"><span data-line="565"></span>Write <span data-line="565"></span><code class="code code1">a1</code><span data-line="565"></span>, <span data-line="565"></span><code class="code code1">a2</code><span data-line="565"></span>&#8230;<span data-line="565"></span> to the console, or to the file <span data-line="565"></span><code class="code code1">f</code><span data-line="565"></span>, or to the string <span data-line="565"></span><code class="code code1">buf</code><span data-line="565"></span>, according to the <span data-line="565"></span><code class="code code1">format</code><span data-line="565"></span> string. <span data-line="565"></span><code class="code code1">T1</code><span data-line="565"></span>, <span data-line="565"></span><code class="code code1">T2</code><span data-line="565"></span>&#8230;<span data-line="565"></span> should be ordinal, or real, or string types. Additional run-time type checking is performed to match the <span data-line="565"></span><code class="code code1">format</code><span data-line="565"></span> string. Return the number of bytes written.
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="567" data-line-first="568" style="display:block"><code data-line="568">fn scanf(format: str, a1: ^T1, a2: ^T2...): int
+fn fscanf(f: ^std.File, format: str, a1: ^T1, a2: ^T2...): int
+fn sscanf(buf, format: str, a1: ^T1, a2: ^T2...): int</code></pre>
+<p class="p noindent para-continued" data-line="573"><span data-line="573"></span>Read <span data-line="573"></span><code class="code code1">a1</code><span data-line="573"></span>, <span data-line="573"></span><code class="code code1">a2</code><span data-line="573"></span>&#8230;<span data-line="573"></span> from the console, or from the file <span data-line="573"></span><code class="code code1">f</code><span data-line="573"></span>, or from the string <span data-line="573"></span><code class="code code1">buf</code><span data-line="573"></span>, according to the <span data-line="573"></span><code class="code code1">format</code><span data-line="573"></span> string. <span data-line="573"></span><code class="code code1">T1</code><span data-line="573"></span>, <span data-line="573"></span><code class="code code1">T2</code><span data-line="573"></span>&#8230;<span data-line="573"></span> should be ordinal, or real, or string types. Additional run-time type checking is performed to match the <span data-line="573"></span><code class="code code1">format</code><span data-line="573"></span> string. Return the number of values read.
+</p><h6 id="sec-mathematical-functions" class="h5" data-line="575" data-heading-depth="5" style="display:block"><span data-line="575"></span>Mathematical functions</h6>
+<pre class="para-block pre-fenced pre-fenced3" data-line="577" data-line-first="578" style="display:block"><code data-line="578">fn round(x: real): int          // Rounding to the nearest integer 
+fn trunc(x: real): int          // Rounding towards zero          
+fn fabs (x: real): real         // Absolute value
+fn sqrt (x: real): real         // Square root
+fn sin  (x: real): real         // Sine
+fn cos  (x: real): real         // Cosine
+fn atan (x: real): real         // Arctangent
+fn atan2(y, x: real): real      // Arctangent of y / x
+fn exp  (x: real): real         // Exponent
+fn log  (x: real): real         // Natural logarithm</code></pre><h6 id="sec-memory-management-functions" class="h5" data-line="590" data-heading-depth="5" style="display:block"><span data-line="590"></span>Memory management functions</h6>
+<pre class="para-block pre-fenced pre-fenced3" data-line="592" data-line-first="593" style="display:block"><code data-line="593">fn new(T): ^T</code></pre>
+<p class="p noindent para-continued" data-line="596"><span data-line="596"></span>Allocates memory for a variable of type <span data-line="596"></span><code class="code code1">T</code><span data-line="596"></span> , initializes it with zeros and returns a pointer to it. 
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="598" data-line-first="599" style="display:block"><code data-line="599">fn make([]T, length: int): []T</code></pre>
+<p class="p noindent para-continued" data-line="602"><span data-line="602"></span>Constructs a dynamic array of <span data-line="602"></span><code class="code code1">length</code><span data-line="602"></span> items of type <span data-line="602"></span><code class="code code1">T</code><span data-line="602"></span>.
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="604" data-line-first="605" style="display:block"><code data-line="605">fn append(a: []T, x: (^T | []T)): []T</code></pre>
+<p class="p noindent para-continued" data-line="608"><span data-line="608"></span>Constructs a copy of the dynamic array <span data-line="608"></span><code class="code code1">a</code><span data-line="608"></span> and appends <span data-line="608"></span><code class="code code1">x</code><span data-line="608"></span> to it. The <span data-line="608"></span><code class="code code1">x</code><span data-line="608"></span> can be either a new item of the same type as the item type  <span data-line="608"></span><code class="code code1">T</code><span data-line="608"></span>  of <span data-line="608"></span><code class="code code1">a</code><span data-line="608"></span>, or another dynamic array of the same item type <span data-line="608"></span><code class="code code1">T</code><span data-line="608"></span>. 
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="610" data-line-first="611" style="display:block"><code data-line="611">fn delete(a: []T, index: int): []T</code></pre>
+<p class="p noindent para-continued" data-line="614"><span data-line="614"></span>Constructs a copy of the dynamic array <span data-line="614"></span><code class="code code1">a</code><span data-line="614"></span> and deletes the item at position <span data-line="614"></span><code class="code code1">index</code><span data-line="614"></span> from it.
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="616" data-line-first="617" style="display:block"><code data-line="617">fn slice(a: ([]T | str), startIndex [, endIndex]: int): ([]T | str)</code></pre>
+<p class="p noindent para-continued" data-line="620"><span data-line="620"></span>Constructs a copy of the part of the dynamic array or string <span data-line="620"></span><code class="code code1">a</code><span data-line="620"></span> starting at <span data-line="620"></span><code class="code code1">startIndex</code><span data-line="620"></span> and ending before <span data-line="620"></span><code class="code code1">endIndex</code><span data-line="620"></span>. If <span data-line="620"></span><code class="code code1">endIndex</code><span data-line="620"></span> is omitted, it is treated as equal to <span data-line="620"></span><code class="code code1">len(a)</code><span data-line="620"></span>. If <span data-line="620"></span><code class="code code1">endIndex</code><span data-line="620"></span> is negative, <span data-line="620"></span><code class="code code1">len(a)</code><span data-line="620"></span> is implicitly added to it.
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="622" data-line-first="623" style="display:block"><code data-line="623">fn len(a: ([...]T | []T | str)): int</code></pre>
+<p class="p noindent para-continued" data-line="626"><span data-line="626"></span>Returns the length of <span data-line="626"></span><code class="code code1">a</code><span data-line="626"></span>, where <span data-line="626"></span><code class="code code1">a</code><span data-line="626"></span> can be an array, a dynamic array or a string.
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="628" data-line-first="629" style="display:block"><code data-line="629">fn sizeof(a: T): int</code></pre>
+<p class="p noindent para-continued" data-line="632"><span data-line="632"></span>Returns the size of <span data-line="632"></span><code class="code code1">a</code><span data-line="632"></span> in bytes.
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="634" data-line-first="635" style="display:block"><code data-line="635">fn sizeofself(a: interface{...}): int</code></pre>
+<p class="p noindent para-continued" data-line="638"><span data-line="638"></span>Returns the size in bytes of the variable that has been converted to the interface <span data-line="638"></span><code class="code code1">a</code><span data-line="638"></span>.
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="640" data-line-first="641" style="display:block"><code data-line="641">fn selfhasptr(a: interface{...}): bool</code></pre>
+<p class="p noindent para-continued" data-line="644"><span data-line="644"></span>Checks whether the type of the variable that has been converted to the interface<span data-line="644"></span><code class="code code1">a</code><span data-line="644"></span> is a pointer, string, dynamic array, interfaces or fibers, or has one of these types as its item type or field type.
+</p><h6 id="sec-multitasking-functions" class="h5" data-line="646" data-heading-depth="5" style="display:block"><span data-line="646"></span>Multitasking functions</h6>
+<pre class="para-block pre-fenced pre-fenced3" data-line="648" data-line-first="649" style="display:block"><code data-line="649">type FiberFunc = fn(parent: ^fiber, anyParam: ^T)
+fn fiberspawn(childFunc: FiberFunc, anyParam: ^T): ^fiber</code></pre>
+<p class="p noindent para-continued" data-line="653"><span data-line="653"></span>Creates a new fiber and assigns <span data-line="653"></span><code class="code code1">childFunc</code><span data-line="653"></span> as the fiber function. <span data-line="653"></span><code class="code code1">anyParam</code><span data-line="653"></span> is a pointer to any data buffer that will be passed to <span data-line="653"></span><code class="code code1">childFunc</code><span data-line="653"></span> .
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="655" data-line-first="656" style="display:block"><code data-line="656">fn fibercall(child: ^fiber)</code></pre>
+<p class="p noindent para-continued" data-line="659"><span data-line="659"></span>Resumes the execution of the <span data-line="659"></span><code class="code code1">child</code><span data-line="659"></span> fiber. 
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="661" data-line-first="662" style="display:block"><code data-line="662">fn fiberalive(child: ^fiber)</code></pre>
+<p class="p noindent para-continued" data-line="665"><span data-line="665"></span>Checks whether the <span data-line="665"></span><code class="code code1">child</code><span data-line="665"></span> fiber function has not yet returned.<span data-line="665"></span> <span data-line="665"></span> 
+</p><h6 id="sec-miscellaneous-functions" class="h5" data-line="667" data-heading-depth="5" style="display:block"><span data-line="667"></span>Miscellaneous functions</h6>
+<pre class="para-block pre-fenced pre-fenced3" data-line="669" data-line-first="670" style="display:block"><code data-line="670">fn repr(a: T): str</code></pre>
+<p class="p noindent para-continued" data-line="673"><span data-line="673"></span>Returns the string representation of <span data-line="673"></span><code class="code code1">a</code><span data-line="673"></span>.
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="675" data-line-first="676" style="display:block"><code data-line="676">fn error(msg: str)</code></pre>
+<p class="p noindent para-continued" data-line="679"><span data-line="679"></span>Triggers a run-time error with the message <span data-line="679"></span><code class="code code1">msg</code><span data-line="679"></span>.
+</p><h3 id="sec-expressions" class="h2" data-line="681" data-heading-depth="2" style="display:block"><span data-line="681"></span><span class="heading-before"><span class="heading-label">1.5</span>.&#8194;</span><span data-line="681"></span>Expressions</h3><h4 id="sec-primary-expressions" class="h3" data-line="683" data-heading-depth="3" style="display:block"><span data-line="683"></span><span class="heading-before"><span class="heading-label">1.5.1</span>.&#8194;</span><span data-line="683"></span>Primary expressions</h4>
+<p class="p noindent" data-line="685"><span data-line="685"></span>A primary expression is either an identifier optionally qualified with a module name, or a built-in function call.
+</p>
+<p class="p indent" data-line="687"><span data-line="687"></span>Syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="689" data-line-first="690" style="display:block"><code data-line="690">primary     = qualIdent | builtinCall.
+qualIdent   = [ident &quot;.&quot;] ident.
+builtinCall = qualIdent &quot;(&quot; [expr {&quot;,&quot; expr}] &quot;)&quot;.</code></pre>
+<p class="p noindent para-continued" data-line="695"><span data-line="695"></span>Examples:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="697" data-line-first="698" style="display:block"><code data-line="698">i
+std.File
+atan2(y0, x0)
+printf(&quot;a = %f\n&quot;, a)</code></pre><h4 id="sec-type-casts" class="h3" data-line="704" data-heading-depth="3" style="display:block"><span data-line="704"></span><span class="heading-before"><span class="heading-label">1.5.2</span>.&#8194;</span><span data-line="704"></span>Type casts</h4>
+<p class="p noindent" data-line="706"><span data-line="706"></span>A type cast explicitly converts the type of an expression to another type. It consists of the target type followed by the expression in parentheses.
+</p>
+<p class="p indent" data-line="708"><span data-line="708"></span>Syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="710" data-line-first="711" style="display:block"><code data-line="711">typeCast = type &quot;(&quot; expr &quot;)&quot;.</code></pre>
+<p class="p noindent para-continued" data-line="714"><span data-line="714"></span>Examples:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="716" data-line-first="717" style="display:block"><code data-line="717">int(&#39;b&#39;)
+^[3]real(iface)</code></pre><h4 id="sec-composite-literals" class="h3" data-line="721" data-heading-depth="3" style="display:block"><span data-line="721"></span><span class="heading-before"><span class="heading-label">1.5.3</span>.&#8194;</span><span data-line="721"></span>Composite literals</h4>
+<p class="p noindent" data-line="723"><span data-line="723"></span>A composite literal constructs a value for an array, dynamic array, structure or function and creates a new value each time it is evaluated. It consists of the type followed by the brace-bound list of item values (for arrays or dynamic arrays), list of field values with optional field names (for structures) or the function body (for functions). 
+</p>
+<p class="p indent" data-line="725"><span data-line="725"></span>The number of array item values or structure field values and the names of structure fields should match the literal type. The types of array item values, dynamic array item values or structure field values should be compatible to those of the literal type.
+</p>
+<p class="p indent" data-line="727"><span data-line="727"></span>Syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="729" data-line-first="730" style="display:block"><code data-line="730">compositeLiteral = arrayLiteral | dynArrayLiteral | structLiteral | fnLiteral.
+arrayLiteral     = &quot;{&quot; [expr {&quot;,&quot; expr}] &quot;}&quot;.
+dynArrayLiteral  = arrayLiteral.
+structLiteral    = &quot;{&quot; [[ident &quot;:&quot;] expr {&quot;,&quot; [ident &quot;:&quot;] expr}] &quot;}&quot;.
+fnLiteral        = fnBlock.</code></pre>
+<p class="p noindent para-continued" data-line="737"><span data-line="737"></span>Examples:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="739" data-line-first="740" style="display:block"><code data-line="740">[3]real{2.3, -4.1 / 2, b}
+[]interface{}{7.2, &quot;Hello&quot;, [2]int{3, 5}}
+Vec{x: 2, y: 8}
+fn (x: int) {return 2 * x}</code></pre><h4 id="sec-designators-and-selectors" class="h3" data-line="746" data-heading-depth="3" style="display:block"><span data-line="746"></span><span class="heading-before"><span class="heading-label">1.5.4</span>.&#8194;</span><span data-line="746"></span>Designators and selectors</h4>
+<p class="p noindent" data-line="748"><span data-line="748"></span>A number of postfix <span data-line="748"></span><em class="em-star1">selectors</em><span data-line="748"></span> can be applied to a primary expression, a type cast or a composite literal to get a <span data-line="748"></span><em class="em-star1">designator</em><span data-line="748"></span>.
+</p>
+<p class="p indent" data-line="750"><span data-line="750"></span>Syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="752" data-line-first="753" style="display:block"><code data-line="753">designator = (primary | typeCast | compositeLiteral) selectors.
+selectors  = {derefSelector | indexSelector | fieldSelector | callSelector}.</code></pre><h5 id="sec-dereferencing-selector" class="h4" data-line="757" data-heading-depth="4" style="display:block"><span data-line="757"></span>Dereferencing selector</h5>
+<p class="p noindent" data-line="759"><span data-line="759"></span>The dereferencing selector  <span data-line="759"></span><code class="code code1">^</code><span data-line="759"></span> accesses the value pointed to by a pointer. It can be applied to a pointer with a non-<span data-line="759"></span><code class="code code1">void</code><span data-line="759"></span> base type.
+</p>
+<p class="p indent" data-line="761"><span data-line="761"></span>Syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="763" data-line-first="764" style="display:block"><code data-line="764">derefSelector = &quot;^&quot;.</code></pre>
+<p class="p noindent para-continued" data-line="767"><span data-line="767"></span>Examples:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="769" data-line-first="770" style="display:block"><code data-line="770">p^
+^int(a)^</code></pre><h5 id="sec-index-selector" class="h4" data-line="774" data-heading-depth="4" style="display:block"><span data-line="774"></span>Index selector</h5>
+<p class="p noindent" data-line="776"><span data-line="776"></span>The index selector <span data-line="776"></span><code class="code code1">[...]</code><span data-line="776"></span> accesses an array item. It can be applied to an array, a dynamic array, a string or a pointer to one of these types. The index should be an integer expression. Item indexing starts from 0. If the index is out of bounds, an error is triggered.
+</p>
+<p class="p indent" data-line="778"><span data-line="778"></span>Syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="780" data-line-first="781" style="display:block"><code data-line="781">indexSelector = &quot;[&quot; expr &quot;]&quot;.</code></pre>
+<p class="p noindent para-continued" data-line="784"><span data-line="784"></span>Examples:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="786" data-line-first="787" style="display:block"><code data-line="787">b[5]
+longVector[2 * i + 3 * j]</code></pre><h5 id="sec-field-or-method-selector" class="h4" data-line="791" data-heading-depth="4" style="display:block"><span data-line="791"></span>Field or method selector</h5>
+<p class="p noindent" data-line="793"><span data-line="793"></span>The field or method selector <span data-line="793"></span><code class="code code1">.</code><span data-line="793"></span>  accesses a field or method. For accessing a field, it can be applied to a structure that has this field or to a pointer to such a structure. For accessing a method, it can be applied to any declared type <span data-line="793"></span><code class="code code1">T</code><span data-line="793"></span>  or <span data-line="793"></span><code class="code code1">^T</code><span data-line="793"></span> such that <span data-line="793"></span><code class="code code1">^T</code><span data-line="793"></span> is compatible with the type that implements this method. If neither field nor method with the specified name is found, an error is triggered.
+</p>
+<p class="p indent" data-line="795"><span data-line="795"></span>Syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="797" data-line-first="798" style="display:block"><code data-line="798">fieldSelector = &quot;.&quot; ident.</code></pre>
+<p class="p noindent para-continued" data-line="801"><span data-line="801"></span>Examples:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="803" data-line-first="804" style="display:block"><code data-line="804">v.x
+data.print</code></pre><h5 id="sec-call-selector" class="h4" data-line="808" data-heading-depth="4" style="display:block"><span data-line="808"></span>Call selector</h5>
+<p class="p noindent" data-line="810"><span data-line="810"></span>The call selector <span data-line="810"></span><code class="code code1">(...)</code><span data-line="810"></span> calls a function and accesses its returned value. It can be applied to a value of a function type, including methods. All actual parameters are passed by value. If the number and the types of the actual parameters are not compatible with the function signature, an error is triggered. 
+</p>
+<p class="p indent" data-line="812"><span data-line="812"></span>Syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="814" data-line-first="815" style="display:block"><code data-line="815">callSelector = actualParams.
+actualParams = &quot;(&quot; [expr {&quot;,&quot; expr}] &quot;)&quot;.</code></pre>
+<p class="p noindent para-continued" data-line="819"><span data-line="819"></span>Examples:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="821" data-line-first="822" style="display:block"><code data-line="822">f(x + 1, y + 1)
+stop()</code></pre><h4 id="sec-operators" class="h3" data-line="826" data-heading-depth="3" style="display:block"><span data-line="826"></span><span class="heading-before"><span class="heading-label">1.5.5</span>.&#8194;</span><span data-line="826"></span>Operators</h4>
+<p class="p noindent" data-line="828"><span data-line="828"></span>Operators combine expressions into other expressions.
+</p>
+<p class="p indent" data-line="830"><span data-line="830"></span>Syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="832" data-line-first="833" style="display:block"><code data-line="833">expr          = logicalTerm {&quot;||&quot; logicalTerm}.
+logicalTerm   = relation {&quot;&amp;&amp;&quot; relation}.
+relation      = relationTerm [(&quot;==&quot; | &quot;!=&quot; | &quot;&lt;&quot; | &quot;&lt;=&quot; | &quot;&gt;&quot; | &quot;&gt;=&quot;) relationTerm].
+relationTerm  = term {(&quot;+&quot; | &quot;-&quot; | &quot;|&quot; | &quot;~&quot;) term}.
+term          = factor {(&quot;*&quot; | &quot;/&quot; | &quot;%&quot; | &quot;&lt;&lt;&quot; | &quot;&gt;&gt;&quot; | &quot;&amp;&quot;) factor}.
+factor        = designator | intNumber | realNumber | charLiteral | stringLiteral |
+                 (&quot;+&quot; | &quot;-&quot; | &quot;!&quot; | &quot;~&quot;) factor | &quot;&amp;&quot; designator | &quot;(&quot; expr &quot;)&quot;.</code></pre>
+<p class="p noindent para-continued" data-line="842"><span data-line="842"></span>Examples:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="844" data-line-first="845" style="display:block"><code data-line="845">2 + 2
+-f(x) * (a[0] + a[1])
+&quot;Hello, &quot; + person.name + &#39;\n&#39;
+p != null &amp;&amp; p[i] &gt; 0
+&amp;Vec{2, 5}</code></pre><h5 id="sec-unary-operators" class="h4" data-line="852" data-heading-depth="4" style="display:block"><span data-line="852"></span>Unary operators</h5>
+<pre class="para-block pre-fenced pre-fenced3" data-line="854" data-line-first="855" style="display:block"><code data-line="855">+      Unary plus                Integers, reals
+-      Unary minus               Integers, reals
+~      Bitwise &quot;not&quot;             Integers
+!      Logical &quot;not&quot;             Booleans
+&amp;      Address                   Addressable designators</code></pre><h5 id="sec-binary-operators" class="h4" data-line="862" data-heading-depth="4" style="display:block"><span data-line="862"></span>Binary operators</h5>
+<pre class="para-block pre-fenced pre-fenced3" data-line="864" data-line-first="865" style="display:block"><code data-line="865">+      Sum                       Integers, reals, strings
+-      Difference                Integers, reals
+*      Product                   Integers, reals
+/      Quotient                  Integers, reals
+%      Remainder                 Integers
+&amp;      Bitwise &quot;and&quot;             Integers
+|      Bitwise &quot;or&quot;              Integers
+~      Bitwise &quot;xor&quot;             Integers
+&lt;&lt;     Left shift                Integers
+&gt;&gt;     Right shift               Integers
+&amp;&amp;     Logical &quot;and&quot;             Booleans
+||     Logical &quot;or&quot;              Booleans
+==     &quot;Equal&quot;                   Ordinals, reals, pointers, strings
+!=     &quot;Not equal&quot;               Ordinals, reals, pointers, strings
+&gt;      &quot;Greater&quot;                 Ordinals, reals, strings
+&lt;      &quot;Less&quot;                    Ordinals, reals, strings
+&gt;=     &quot;Greater or equal&quot;        Ordinals, reals, strings
+&lt;=     &quot;Less or equal&quot;           Ordinals, reals, strings</code></pre>
+<p class="p noindent para-continued" data-line="885"><span data-line="885"></span>The <span data-line="885"></span><code class="code code1">/</code><span data-line="885"></span> operator performs an integer division (with the remainder discarded) if both operands are of integer types, otherwise it performs a real division.
+</p>
+<p class="p indent" data-line="887"><span data-line="887"></span>The <span data-line="887"></span><code class="code code1">&amp;&amp;</code><span data-line="887"></span> and <span data-line="887"></span><code class="code code1">||</code><span data-line="887"></span> operators don<span data-line="887"></span>&#39;<span data-line="887"></span>t evaluate the second operand if the first operand is sufficient to evaluate the result.
+</p><h6 id="sec-operand-type-conversions" class="h5" data-line="889" data-heading-depth="5" style="display:block"><span data-line="889"></span>Operand type conversions</h6>
+<p class="p noindent" data-line="891"><span data-line="891"></span>Operand types are implicitly converted in two steps:
+</p>
+<ul class="ul list-star compact" data-line="893">
+<li class="li ul-li list-star-li compact-li" data-line="893"><span data-line="893"></span>The right operand type is converted to the left operand type
+</li>
+<li class="li ul-li list-star-li compact-li" data-line="894"><span data-line="894"></span>The left operand type is converted to the right operand type
+</li></ul>
+<h6 id="sec-operator-precedence" class="h5" data-line="896" data-heading-depth="5" style="display:block"><span data-line="896"></span>Operator precedence</h6>
+<pre class="para-block pre-fenced pre-fenced3" data-line="898" data-line-first="899" style="display:block"><code data-line="899">*   /   %   &lt;&lt;   &gt;&gt;   &amp;          Highest
++   -   |   ~
+==  !=  &lt;   &lt;=   &gt;   &gt;=
+&amp;&amp;
+||                               Lowest</code></pre><h3 id="sec-statements" class="h2" data-line="906" data-heading-depth="2" style="display:block"><span data-line="906"></span><span class="heading-before"><span class="heading-label">1.6</span>.&#8194;</span><span data-line="906"></span>Statements</h3>
+<p class="p noindent" data-line="908"><span data-line="908"></span>Statements perform some actions but don<span data-line="908"></span>&#39;<span data-line="908"></span>t evaluate to any value.
+</p>
+<p class="p indent" data-line="910"><span data-line="910"></span>Syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="912" data-line-first="913" style="display:block"><code data-line="913">stmt       = decl | block | simpleStmt | 
+             ifStmt | switchStmt | forStmt | breakStmt | continueStmt | returnStmt.
+simpleStmt = assignmentStmt | shortAssignmentStmt | incDecStmt | callStmt.</code></pre>
+<p class="p noindent para-continued" data-line="918"><span data-line="918"></span>A declaration in a block scope is also considered a statement.
+</p><h4 id="sec-block" class="h3" data-line="920" data-heading-depth="3" style="display:block"><span data-line="920"></span><span class="heading-before"><span class="heading-label">1.6.1</span>.&#8194;</span><span data-line="920"></span>Block</h4>
+<p class="p noindent" data-line="922"><span data-line="922"></span>A block is a statement list enclosed in braces. A block scope is associated with any block.
+</p>
+<p class="p indent" data-line="924"><span data-line="924"></span>Syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="926" data-line-first="927" style="display:block"><code data-line="927">block    = &quot;{&quot; StmtList &quot;}&quot;.
+stmtList = stmt {&quot;;&quot; stmt}.</code></pre><h4 id="sec-assignment" class="h3" data-line="931" data-heading-depth="3" style="display:block"><span data-line="931"></span><span class="heading-before"><span class="heading-label">1.6.2</span>.&#8194;</span><span data-line="931"></span>Assignment</h4>
+<p class="p noindent" data-line="933"><span data-line="933"></span>An assignment evaluates the right-hand expression (or expression list) and assigns it to the left-hand side addressable designator (or designator list).
+</p><h5 id="sec-full-assignment" class="h4" data-line="935" data-heading-depth="4" style="display:block"><span data-line="935"></span>Full assignment</h5>
+<p class="p noindent" data-line="937"><span data-line="937"></span>Syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="939" data-line-first="940" style="display:block"><code data-line="940">assignmentStmt  = singleAssgnStmt | listAssgnStmt.
+singleAssgnStmt = designator &quot;=&quot; expr.
+listAssgnStmt   = designatorList &quot;=&quot; exprList.
+designatorList  = designator {&quot;,&quot; designator}.
+exprList        = expr {&quot;,&quot; expr}.</code></pre>
+<p class="p noindent para-continued" data-line="947"><span data-line="947"></span>Examples:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="949" data-line-first="950" style="display:block"><code data-line="950">b = 2
+person.msg = &quot;Hello, &quot; + person.name + &#39;\n&#39;
+x[i], x[i + 1] = x[i + 1], x[i]</code></pre><h5 id="sec-short-assignment" class="h4" data-line="955" data-heading-depth="4" style="display:block"><span data-line="955"></span>Short assignment</h5>
+<p class="p noindent" data-line="957"><span data-line="957"></span>A short assignment combines one of the operators <span data-line="957"></span><code class="code code1">+</code><span data-line="957"></span>, <span data-line="957"></span><code class="code code1">-</code><span data-line="957"></span>, <span data-line="957"></span><code class="code code1">*</code><span data-line="957"></span>, <span data-line="957"></span><code class="code code1">/</code><span data-line="957"></span>, <span data-line="957"></span><code class="code code1">%</code><span data-line="957"></span>, <span data-line="957"></span><code class="code code1">&amp;</code><span data-line="957"></span>, <span data-line="957"></span><code class="code code1">|</code><span data-line="957"></span>, <span data-line="957"></span><code class="code code1">~</code><span data-line="957"></span>  with assignment according to the following rule: <span data-line="957"></span><code class="code code1">a op= b</code><span data-line="957"></span> is equivalent to <span data-line="957"></span><code class="code code1">a = a op b</code><span data-line="957"></span>. 
+</p>
+<p class="p indent" data-line="959"><span data-line="959"></span>Syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="961" data-line-first="962" style="display:block"><code data-line="962">shortAssignmentStmt = designator 
+                      (&quot;+=&quot; | &quot;-=&quot; | &quot;*=&quot; | &quot;/=&quot; | &quot;%=&quot; | &quot;&amp;=&quot; | &quot;|=&quot; | &quot;~=&quot;) expr.</code></pre>
+<p class="p noindent para-continued" data-line="966"><span data-line="966"></span>Examples:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="968" data-line-first="969" style="display:block"><code data-line="969">b += 2
+mask[i] &lt;&lt;= 3</code></pre><h4 id="sec-increment-and-decrement" class="h3" data-line="973" data-heading-depth="3" style="display:block"><span data-line="973"></span><span class="heading-before"><span class="heading-label">1.6.3</span>.&#8194;</span><span data-line="973"></span>Increment and decrement</h4>
+<p class="p noindent" data-line="975"><span data-line="975"></span>Increments or decrements an addressable integer designator by 1.
+</p>
+<p class="p indent" data-line="977"><span data-line="977"></span>Syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="979" data-line-first="980" style="display:block"><code data-line="980">incDecStmt = designator (&quot;++&quot; | &quot;--&quot;).</code></pre>
+<p class="p noindent para-continued" data-line="983"><span data-line="983"></span>Examples:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="985" data-line-first="986" style="display:block"><code data-line="986">b++
+numSteps[i]--</code></pre><h4 id="sec-function-or-method-call" class="h3" data-line="990" data-heading-depth="3" style="display:block"><span data-line="990"></span><span class="heading-before"><span class="heading-label">1.6.4</span>.&#8194;</span><span data-line="990"></span>Function or method call</h4>
+<p class="p noindent" data-line="992"><span data-line="992"></span>Calls a function or method. If the returned value type is non-<span data-line="992"></span><code class="code code1">void</code><span data-line="992"></span>, the value is discarded.
+</p>
+<p class="p indent" data-line="994"><span data-line="994"></span>Syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="996" data-line-first="997" style="display:block"><code data-line="997">callStmt = designator.</code></pre>
+<p class="p noindent para-continued" data-line="1000"><span data-line="1000"></span>Examples:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1002" data-line-first="1003" style="display:block"><code data-line="1003">setValue(2, 4)
+v[i].print()</code></pre><h4 id="sec-the-if-statement" class="h3" data-line="1007" data-heading-depth="3" style="display:block"><span data-line="1007"></span><span class="heading-before"><span class="heading-label">1.6.5</span>.&#8194;</span><span data-line="1007"></span>The <span data-line="1007"></span><code class="code code1">if</code><span data-line="1007"></span> statement</h4>
+<p class="p noindent" data-line="1009"><span data-line="1009"></span>Executes a block if a given Boolean expression evaluates to <span data-line="1009"></span><code class="code code1">true</code><span data-line="1009"></span>. Optionally, executes another block if the expression evaluates to <span data-line="1009"></span><code class="code code1">false</code><span data-line="1009"></span>. An optional short variable declaration may precede the Boolean expression. Its scope encloses the Boolean expression and the two blocks.
+</p>
+<p class="p indent" data-line="1011"><span data-line="1011"></span>Syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1013" data-line-first="1014" style="display:block"><code data-line="1014">ifStmt = &quot;if&quot; [shortVarDecl &quot;;&quot;] expr block [&quot;else&quot; (ifStmt | block)].</code></pre>
+<p class="p noindent para-continued" data-line="1017"><span data-line="1017"></span>Examples:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1019" data-line-first="1020" style="display:block"><code data-line="1020">if a &gt; max {max = a}
+
+if x, ok := getValue(); ok {
+    printf(&quot;Got &quot; + repr(x) + &quot;\n&quot;)
+} else {
+    printf(&quot;Error\n&quot;)
+}</code></pre><h4 id="sec-the-switch-statement" class="h3" data-line="1029" data-heading-depth="3" style="display:block"><span data-line="1029"></span><span class="heading-before"><span class="heading-label">1.6.6</span>.&#8194;</span><span data-line="1029"></span>The <span data-line="1029"></span><code class="code code1">switch</code><span data-line="1029"></span> statement</h4>
+<p class="p noindent" data-line="1031"><span data-line="1031"></span>Executes one of several statement lists depending on the value of the given ordinal expression. If the expression is equal to any of the constant expressions attached by a <span data-line="1031"></span><code class="code code1">case</code><span data-line="1031"></span> label to a statement list, this statement list is executed and the control is transferred past the end of the <span data-line="1031"></span><code class="code code1">switch</code><span data-line="1031"></span> statement. If no statement list is selected, the optional <span data-line="1031"></span><code class="code code1">default</code><span data-line="1031"></span> statement list is executed. An optional short variable declaration may precede the ordinal expression. Its scope encloses the expression and all the statement lists.
+</p>
+<p class="p indent" data-line="1033"><span data-line="1033"></span>Syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1035" data-line-first="1036" style="display:block"><code data-line="1036">switchStmt = &quot;switch&quot; [shortVarDecl &quot;;&quot;] expr &quot;{&quot; {case} [default] &quot;}&quot;.
+case       = &quot;case&quot; expr {&quot;,&quot; expr} &quot;:&quot; stmtList.
+default    = &quot;default&quot; &quot;:&quot; stmtList.</code></pre>
+<p class="p noindent para-continued" data-line="1041"><span data-line="1041"></span>Examples:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1043" data-line-first="1044" style="display:block"><code data-line="1044">switch a {
+    case 1, 3, 5, 7: printf(repr(a) + &quot; is odd\n&quot;)
+    case 2, 4, 6, 8: printf(repr(a) + &quot; is even\n&quot;)
+    default:         printf(&quot;I don&#39;t know&quot;)
+}</code></pre><h4 id="sec-the-for-statement" class="h3" data-line="1051" data-heading-depth="3" style="display:block"><span data-line="1051"></span><span class="heading-before"><span class="heading-label">1.6.7</span>.&#8194;</span><span data-line="1051"></span>The <span data-line="1051"></span><code class="code code1">for</code><span data-line="1051"></span> statement</h4>
+<p class="p noindent" data-line="1053"><span data-line="1053"></span>Executes a block repeatedly.
+</p>
+<p class="p indent" data-line="1055"><span data-line="1055"></span>Syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1057" data-line-first="1058" style="display:block"><code data-line="1058">forStmt = &quot;for&quot; (forHeader | forInHeader) block.</code></pre><h5 id="sec-the-general-for-statement" class="h4" data-line="1061" data-heading-depth="4" style="display:block"><span data-line="1061"></span>The general <span data-line="1061"></span><code class="code code1">for</code><span data-line="1061"></span> statement</h5>
+<p class="p noindent" data-line="1063"><span data-line="1063"></span>Executes a block while a given Boolean expression evaluates to <span data-line="1063"></span><code class="code code1">true</code><span data-line="1063"></span>. The expression is re-evaluated before each iteration. An optional simple statement may follow the Boolean expression. If present, it is executed after executing the block and before re-evaluating the Boolean expression. An optional short variable declaration may precede the Boolean expression. Its scope encloses the Boolean expression, the simple statement and the block.
+</p>
+<p class="p indent" data-line="1065"><span data-line="1065"></span>Syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1067" data-line-first="1068" style="display:block"><code data-line="1068">forHeader = [shortVarDecl &quot;;&quot;] expr [&quot;;&quot; simpleStmt].</code></pre>
+<p class="p noindent para-continued" data-line="1071"><span data-line="1071"></span>Examples:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1073" data-line-first="1074" style="display:block"><code data-line="1074">for true {
+    printf(&quot;Infinite loop\n&quot;)
+}
+
+for a &gt; 1 {
+    process(&amp;a)
+}
+
+for k := 1; k &lt;= 128; k *= 2 {
+    printf(repr(k) + &#39;\n&#39;)
+}</code></pre><h5 id="sec-the-forin-statement" class="h4" data-line="1087" data-heading-depth="4" style="display:block"><span data-line="1087"></span>The <span data-line="1087"></span><code class="code code1">for...in</code><span data-line="1087"></span> statement</h5>
+<p class="p noindent" data-line="1089"><span data-line="1089"></span>Iterates through all items of an array, a dynamic array or a string. Before each iteration, the index and the value of the next item are evaluated and assigned to the corresponding variables declared via an implicit short variable declaration in the statement header. The index variable may be omitted.
+</p>
+<p class="p indent" data-line="1091"><span data-line="1091"></span>Syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1093" data-line-first="1094" style="display:block"><code data-line="1094">forInHeader = [ident &quot;,&quot;] ident &quot;in&quot; expr.</code></pre>
+<p class="p noindent para-continued" data-line="1097"><span data-line="1097"></span>Examples:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1099" data-line-first="1100" style="display:block"><code data-line="1100">for x in a {
+    sum += x
+}
+
+for index, item in data {
+    if item &gt; maxItem {
+        maxItem = item
+        maxIndex = index
+    }
+}</code></pre><h4 id="sec-the-break-statement" class="h3" data-line="1112" data-heading-depth="3" style="display:block"><span data-line="1112"></span><span class="heading-before"><span class="heading-label">1.6.8</span>.&#8194;</span><span data-line="1112"></span>The <span data-line="1112"></span><code class="code code1">break</code><span data-line="1112"></span> statement</h4>
+<p class="p noindent" data-line="1114"><span data-line="1114"></span>Terminates the execution of the innermost enclosing <span data-line="1114"></span><code class="code code1">for</code><span data-line="1114"></span> statement and transfers the control past the end of the <span data-line="1114"></span><code class="code code1">for</code><span data-line="1114"></span> statement.
+</p>
+<p class="p indent" data-line="1116"><span data-line="1116"></span>Syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1118" data-line-first="1119" style="display:block"><code data-line="1119">breakStmt = &quot;break&quot;.</code></pre>
+<p class="p noindent para-continued" data-line="1122"><span data-line="1122"></span>Examples:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1124" data-line-first="1125" style="display:block"><code data-line="1125">for x in a {
+    if fabs(x) &gt; 1e12 {break}
+    sum += x
+}</code></pre><h4 id="sec-the-continue-statement" class="h3" data-line="1131" data-heading-depth="3" style="display:block"><span data-line="1131"></span><span class="heading-before"><span class="heading-label">1.6.9</span>.&#8194;</span><span data-line="1131"></span>The <span data-line="1131"></span><code class="code code1">continue</code><span data-line="1131"></span> statement</h4>
+<p class="p noindent" data-line="1133"><span data-line="1133"></span>Terminates the execution of the current iteration of the innermost enclosing <span data-line="1133"></span><code class="code code1">for</code><span data-line="1133"></span> statement and transfers the control to the point immediately before the end of the <span data-line="1133"></span><code class="code code1">for</code><span data-line="1133"></span> statement block.
+</p>
+<p class="p indent" data-line="1135"><span data-line="1135"></span>Syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1137" data-line-first="1138" style="display:block"><code data-line="1138">continueStmt = &quot;continue&quot;.</code></pre>
+<p class="p noindent para-continued" data-line="1141"><span data-line="1141"></span>Examples:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1143" data-line-first="1144" style="display:block"><code data-line="1144">for x in a {
+    if x &lt; 0 {continue}
+    sum += x
+}</code></pre><h4 id="sec-the-return-statement" class="h3" data-line="1150" data-heading-depth="3" style="display:block"><span data-line="1150"></span><span class="heading-before"><span class="heading-label">1.6.10</span>.&#8194;</span><span data-line="1150"></span>The <span data-line="1150"></span><code class="code code1">return</code><span data-line="1150"></span> statement</h4>
+<p class="p noindent" data-line="1152"><span data-line="1152"></span>Terminates the execution of the innermost enclosing function and transfers the control to the calling function. For functions with non-<span data-line="1152"></span><code class="code code1">void</code><span data-line="1152"></span> return value types, the <span data-line="1152"></span><code class="code code1">return</code><span data-line="1152"></span> keyword should be followed by an expression or expression list whose types are compatible with the return value types declared in the function signature.
+</p>
+<p class="p indent" data-line="1154"><span data-line="1154"></span>For functions with non-<span data-line="1154"></span><code class="code code1">void</code><span data-line="1154"></span> return value types, the function block should have at least one <span data-line="1154"></span><code class="code code1">return</code><span data-line="1154"></span> statement. 
+</p>
+<p class="p indent" data-line="1156"><span data-line="1156"></span>Syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1158" data-line-first="1159" style="display:block"><code data-line="1159">returnStmt = &quot;return&quot; [exprList].</code></pre>
+<p class="p noindent para-continued" data-line="1162"><span data-line="1162"></span>Examples:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1164" data-line-first="1165" style="display:block"><code data-line="1165">fn doNothing() {
+    return
+}
+
+fn sqr(x: real): real {
+    return x * x
+}
+
+fn p(a: int): (int, bool) {
+    return 2 * a, true
+}</code></pre><h3 id="sec-modules" class="h2" data-line="1178" data-heading-depth="2" style="display:block"><span data-line="1178"></span><span class="heading-before"><span class="heading-label">1.7</span>.&#8194;</span><span data-line="1178"></span>Modules</h3>
+<p class="p noindent" data-line="1180"><span data-line="1180"></span>An Umka program consists of one or more source files, or modules. The main module should have the <span data-line="1180"></span><code class="code code1">main()</code><span data-line="1180"></span> function with no parameters and no return values, which is the entry point of the program.
+</p>
+<p class="p indent" data-line="1182"><span data-line="1182"></span>Modules can be imported from other modules. In this case, all the identifiers declared as exported in the module scope of the imported module become valid in the importing module, if qualified with the imported module name.
+</p>
+<p class="p indent" data-line="1184"><span data-line="1184"></span>Syntax:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1186" data-line-first="1187" style="display:block"><code data-line="1187">program    = module.
+module     = [import &quot;;&quot;] decls.
+import     = &quot;import&quot; (importItem | &quot;(&quot; {importItem &quot;;&quot;} &quot;)&quot;).
+importItem = stringLiteral.</code></pre>
+<p class="p noindent para-continued" data-line="1193"><span data-line="1193"></span>Examples:
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1195" data-line-first="1196" style="display:block"><code data-line="1196">import &quot;../import/std.um&quot;
+fn main() {
+    std.println(&quot;Hello, World!&quot;)
+}</code></pre><h3 id="sec-standard-library" class="h2" data-line="1202" data-heading-depth="2" style="display:block"><span data-line="1202"></span><span class="heading-before"><span class="heading-label">1.8</span>.&#8194;</span><span data-line="1202"></span>Standard library</h3>
+<p class="p noindent" data-line="1204"><span data-line="1204"></span>The standard library is contained in the <span data-line="1204"></span><code class="code code1">std.um</code><span data-line="1204"></span> module.
+</p><h4 id="sec-inputoutput" class="h3" data-line="1206" data-heading-depth="3" style="display:block"><span data-line="1206"></span><span class="heading-before"><span class="heading-label">1.8.1</span>.&#8194;</span><span data-line="1206"></span>Input/output</h4><h5 id="sec-types" class="h4" data-line="1208" data-heading-depth="4" style="display:block"><span data-line="1208"></span>Types</h5>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1210" data-line-first="1211" style="display:block"><code data-line="1211">type File* = ^struct {}</code></pre>
+<p class="p noindent para-continued" data-line="1214"><span data-line="1214"></span>File handle.
+</p><h5 id="sec-constants" class="h4" data-line="1216" data-heading-depth="4" style="display:block"><span data-line="1216"></span>Constants</h5>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1218" data-line-first="1219" style="display:block"><code data-line="1219">const (
+    seekBegin* = 0
+    seekCur*   = 1
+    seekEnd*   = 2
+)</code></pre>
+<p class="p noindent para-continued" data-line="1226"><span data-line="1226"></span>Codes defining the offset origins in <span data-line="1226"></span><code class="code code1">fseek()</code><span data-line="1226"></span>: the beginning of file, the current position, the end of file.
+</p><h5 id="sec-functions" class="h4" data-line="1228" data-heading-depth="4" style="display:block"><span data-line="1228"></span>Functions</h5>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1230" data-line-first="1231" style="display:block"><code data-line="1231">fn fopen*(name: str, mode: str): File</code></pre>
+<p class="p noindent para-continued" data-line="1234"><span data-line="1234"></span>Opens the file specified by the <span data-line="1234"></span><code class="code code1">name</code><span data-line="1234"></span> in the given <span data-line="1234"></span><code class="code code1">mode</code><span data-line="1234"></span> (identical to C): <span data-line="1234"></span><code class="code code1">&quot;r&quot;</code><span data-line="1234"></span> to read from a text file, <span data-line="1234"></span><code class="code code1">&quot;rb&quot;</code><span data-line="1234"></span> to read from a binary file, <span data-line="1234"></span><code class="code code1">&quot;w&quot;</code><span data-line="1234"></span> to write to a text file, <span data-line="1234"></span><code class="code code1">&quot;wb&quot;</code><span data-line="1234"></span> to write to a binary file, etc. Returns the file handle.
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1236" data-line-first="1237" style="display:block"><code data-line="1237">fn fclose*(f: File): int</code></pre>
+<p class="p noindent para-continued" data-line="1240"><span data-line="1240"></span>Closes the file <span data-line="1240"></span><code class="code code1">f</code><span data-line="1240"></span>. Returns 0 if successful.
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1242" data-line-first="1243" style="display:block"><code data-line="1243">fn fread*(f: File, buf: interface{}): int</code></pre>
+<p class="p noindent para-continued" data-line="1246"><span data-line="1246"></span>Reads the <span data-line="1246"></span><code class="code code1">buf</code><span data-line="1246"></span> variable from the file <span data-line="1246"></span><code class="code code1">f</code><span data-line="1246"></span>. <span data-line="1246"></span><code class="code code1">buf</code><span data-line="1246"></span> can be of any type that doesn<span data-line="1246"></span>&#39;<span data-line="1246"></span>t contain pointers, strings, dynamic arrays, interfaces or fibers, except for <span data-line="1246"></span><code class="code code1">^[]uint8</code><span data-line="1246"></span>. Returns 1 if successful.
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1248" data-line-first="1249" style="display:block"><code data-line="1249">fn fwrite*(f: File, buf: interface{}): int</code></pre>
+<p class="p noindent para-continued" data-line="1252"><span data-line="1252"></span>Writes the <span data-line="1252"></span><code class="code code1">buf</code><span data-line="1252"></span> variable to the file <span data-line="1252"></span><code class="code code1">f</code><span data-line="1252"></span>. <span data-line="1252"></span><code class="code code1">buf</code><span data-line="1252"></span> can be of any type that doesn<span data-line="1252"></span>&#39;<span data-line="1252"></span>t contain pointers, strings, dynamic arrays, interfaces or fibers, except for <span data-line="1252"></span><code class="code code1">^[]uint8</code><span data-line="1252"></span>. Returns 1 if successful.
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1254" data-line-first="1255" style="display:block"><code data-line="1255">fn fseek*(f: File, offset, origin: int): int</code></pre>
+<p class="p noindent para-continued" data-line="1258"><span data-line="1258"></span>Sets the file pointer in the file <span data-line="1258"></span><code class="code code1">f</code><span data-line="1258"></span> to the given <span data-line="1258"></span><code class="code code1">offset</code><span data-line="1258"></span>  from the <span data-line="1258"></span><code class="code code1">origin</code><span data-line="1258"></span> , which is either <span data-line="1258"></span><code class="code code1">seekBegin</code><span data-line="1258"></span>, or <span data-line="1258"></span><code class="code code1">seekCur</code><span data-line="1258"></span>, or <span data-line="1258"></span><code class="code code1">seekEnd</code><span data-line="1258"></span>. Returns 0 if successful.
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1260" data-line-first="1261" style="display:block"><code data-line="1261">fn ftell*(f: File): int</code></pre>
+<p class="p noindent para-continued" data-line="1264"><span data-line="1264"></span>Returns the file pointer position.
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1266" data-line-first="1267" style="display:block"><code data-line="1267">fn remove*(name: str): int</code></pre>
+<p class="p noindent para-continued" data-line="1270"><span data-line="1270"></span>Removes the file specified by the <span data-line="1270"></span><code class="code code1">name</code><span data-line="1270"></span>. Returns 0 if successful.
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1272" data-line-first="1273" style="display:block"><code data-line="1273">fn feof*(f: File): bool</code></pre>
+<p class="p noindent para-continued" data-line="1276"><span data-line="1276"></span>Returns the end-of-file indicator.
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1278" data-line-first="1279" style="display:block"><code data-line="1279">fn println*(s: str): int
+fn fprintln*(f: File, s: str): int</code></pre>
+<p class="p noindent para-continued" data-line="1283"><span data-line="1283"></span>Write the string <span data-line="1283"></span><code class="code code1">s</code><span data-line="1283"></span>  followed by a newline character to the console or to the file <span data-line="1283"></span><code class="code code1">f</code><span data-line="1283"></span>. Return the number of bytes written.
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1285" data-line-first="1286" style="display:block"><code data-line="1286">fn getchar*(): char</code></pre>
+<p class="p noindent para-continued" data-line="1289"><span data-line="1289"></span>Returns a character read from the console.
+</p><h4 id="sec-conversions" class="h3" data-line="1291" data-heading-depth="3" style="display:block"><span data-line="1291"></span><span class="heading-before"><span class="heading-label">1.8.2</span>.&#8194;</span><span data-line="1291"></span>Conversions</h4><h5 id="sec-functions" class="h4" data-line="1293" data-heading-depth="4" style="display:block"><span data-line="1293"></span>Functions</h5>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1295" data-line-first="1296" style="display:block"><code data-line="1296">fn atoi*(s: str): int                   // String to integer
+fn atof*(s: str): real                  // String to real
+fn itoa*(x: int): str                   // Integer to string
+fn ftoa*(x: real, decimals: int): str   // Real to string with `decimals` decimal places </code></pre><h4 id="sec-math" class="h3" data-line="1302" data-heading-depth="3" style="display:block"><span data-line="1302"></span><span class="heading-before"><span class="heading-label">1.8.3</span>.&#8194;</span><span data-line="1302"></span>Math</h4><h5 id="sec-constants" class="h4" data-line="1304" data-heading-depth="4" style="display:block"><span data-line="1304"></span>Constants</h5>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1306" data-line-first="1307" style="display:block"><code data-line="1307">const pi* = 3.14159265358979323846
+const randMax* = 0x7FFFFFFF</code></pre><h5 id="sec-functions" class="h4" data-line="1311" data-heading-depth="4" style="display:block"><span data-line="1311"></span>Functions</h5>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1313" data-line-first="1314" style="display:block"><code data-line="1314">fn srand*(seed: int)</code></pre>
+<p class="p noindent para-continued" data-line="1317"><span data-line="1317"></span>Initializes the pseudo-random number generator with <span data-line="1317"></span><code class="code code1">seed</code><span data-line="1317"></span>.
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1319" data-line-first="1320" style="display:block"><code data-line="1320">fn rand*(): int</code></pre>
+<p class="p noindent para-continued" data-line="1323"><span data-line="1323"></span>Returns an integer pseudo-random number between 0 and <span data-line="1323"></span><code class="code code1">randMax</code><span data-line="1323"></span> inclusive.
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1325" data-line-first="1326" style="display:block"><code data-line="1326">fn frand*(): real</code></pre>
+<p class="p noindent para-continued" data-line="1329"><span data-line="1329"></span>Returns a real pseudo-random number between 0 and 1 inclusive.
+</p><h4 id="sec-timer" class="h3" data-line="1331" data-heading-depth="3" style="display:block"><span data-line="1331"></span><span class="heading-before"><span class="heading-label">1.8.4</span>.&#8194;</span><span data-line="1331"></span>Timer</h4><h5 id="sec-functions" class="h4" data-line="1333" data-heading-depth="4" style="display:block"><span data-line="1333"></span>Functions</h5>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1335" data-line-first="1336" style="display:block"><code data-line="1336">fn time*(): int</code></pre>
+<p class="p noindent para-continued" data-line="1339"><span data-line="1339"></span>Returns the number of seconds since 00:00, January 1, 1970 UTC.
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1341" data-line-first="1342" style="display:block"><code data-line="1342">fn clock*(): real</code></pre>
+<p class="p noindent para-continued" data-line="1345"><span data-line="1345"></span>Returns the number of seconds since the start of the program.
+</p><h4 id="sec-command-line-and-environment" class="h3" data-line="1347" data-heading-depth="3" style="display:block"><span data-line="1347"></span><span class="heading-before"><span class="heading-label">1.8.5</span>.&#8194;</span><span data-line="1347"></span>Command line and environment</h4>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1349" data-line-first="1350" style="display:block"><code data-line="1350">fn argc*(): int</code></pre>
+<p class="p noindent para-continued" data-line="1353"><span data-line="1353"></span>Returns the number of command line parameters.
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1355" data-line-first="1356" style="display:block"><code data-line="1356">fn argv*(i: int): str</code></pre>
+<p class="p noindent para-continued" data-line="1359"><span data-line="1359"></span>Returns the <span data-line="1359"></span><code class="code code1">i</code><span data-line="1359"></span>-th command line parameter, where <span data-line="1359"></span><code class="code code1">i</code><span data-line="1359"></span> should be between 0 and  <span data-line="1359"></span><code class="code code1">argc() - 1 </code><span data-line="1359"></span> inclusive.
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1361" data-line-first="1362" style="display:block"><code data-line="1362">fn getenv*(name: str): str</code></pre>
+<p class="p noindent para-continued" data-line="1365"><span data-line="1365"></span>Returns the environment variable with the specified <span data-line="1365"></span><code class="code code1">name</code><span data-line="1365"></span>.
+</p><h3 id="sec-embedding-api" class="h2" data-line="1367" data-heading-depth="2" style="display:block"><span data-line="1367"></span><span class="heading-before"><span class="heading-label">1.9</span>.&#8194;</span><span data-line="1367"></span>Embedding API</h3>
+<p class="p noindent" data-line="1369"><span data-line="1369"></span>The Umka interpreter is a shared library that provides the API for embedding into a C/C++ host application.
+</p><h4 id="sec-api-types" class="h3" data-line="1371" data-heading-depth="3" style="display:block"><span data-line="1371"></span><span class="heading-before"><span class="heading-label">1.9.1</span>.&#8194;</span><span data-line="1371"></span>API types</h4>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1373" data-line-first="1374" style="display:block"><code data-line="1374">typedef union
+{
+    int64_t intVal;
+    uint64_t uintVal;
+    int64_t ptrVal;
+    double realVal;
+} UmkaStackSlot;</code></pre>
+<p class="p noindent para-continued" data-line="1383"><span data-line="1383"></span>Umka fiber stack slot.
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1385" data-line-first="1386" style="display:block"><code data-line="1386">typedef void (*UmkaExternFunc)(UmkaStackSlot *params, UmkaStackSlot *result);</code></pre>
+<p class="p noindent para-continued" data-line="1389"><span data-line="1389"></span>Umka external function pointer. When an external C/C++ function is called from Umka, its parameters are stored in <span data-line="1389"></span><code class="code code1">params</code><span data-line="1389"></span> in right-to-left order. 
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1391" data-line-first="1392" style="display:block"><code data-line="1392">enum
+{
+    UMKA_MSG_LEN = 512
+};
+
+typedef struct
+{
+    char fileName[UMKA_MSG_LEN];
+    int line, pos;
+    char msg[UMKA_MSG_LEN];
+} UmkaError;</code></pre>
+<p class="p noindent para-continued" data-line="1405"><span data-line="1405"></span>Umka error description structure.
+</p><h4 id="sec-api-functions" class="h3" data-line="1407" data-heading-depth="3" style="display:block"><span data-line="1407"></span><span class="heading-before"><span class="heading-label">1.9.2</span>.&#8194;</span><span data-line="1407"></span>API functions</h4>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1409" data-line-first="1410" style="display:block"><code data-line="1410">void UMKA_API *umkaAlloc(void);</code></pre>
+<p class="p noindent para-continued" data-line="1413"><span data-line="1413"></span>Allocates memory for the interpreter and returns the interpreter instance handle.
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1415" data-line-first="1416" style="display:block"><code data-line="1416">bool UMKA_API umkaInit(void *umka, const char *fileName, const char *sourceString, 
+                       int storageSize, int stackSize, int argc, char **argv);</code></pre>
+<p class="p noindent para-continued" data-line="1420"><span data-line="1420"></span>Initializes the interpreter instance. Here, <span data-line="1420"></span><code class="code code1">umka</code><span data-line="1420"></span> is the interpreter instance handle, <span data-line="1420"></span><code class="code code1">fileName</code><span data-line="1420"></span> is the Umka source file name, <span data-line="1420"></span><code class="code code1">sourceString</code><span data-line="1420"></span> is an optional string buffer that contains the program source, <span data-line="1420"></span><code class="code code1">storageSize</code><span data-line="1420"></span> is the size, in bytes, of the static storage used for storing string literals and constant composite literals, <span data-line="1420"></span><code class="code code1">stackSize</code><span data-line="1420"></span> is the fiber stack size, in slots, <span data-line="1420"></span><code class="code code1">argc</code><span data-line="1420"></span> and <span data-line="1420"></span><code class="code code1">argv</code><span data-line="1420"></span> represent the standard C/C++ command-line parameter data. If <span data-line="1420"></span><code class="code code1">sourceString</code><span data-line="1420"></span> is not <span data-line="1420"></span><code class="code code1">NULL</code><span data-line="1420"></span>, the program source is read from this string rather than from a file. A fictitious <span data-line="1420"></span><code class="code code1">fileName</code><span data-line="1420"></span> should nevertheless be specified. Returns <span data-line="1420"></span><code class="code code1">true</code><span data-line="1420"></span> if the source has been successfully loaded.
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1422" data-line-first="1423" style="display:block"><code data-line="1423">bool UMKA_API umkaCompile(void *umka);</code></pre>
+<p class="p noindent para-continued" data-line="1426"><span data-line="1426"></span>Compiles the Umka program into bytecode. Here, <span data-line="1426"></span><code class="code code1">umka</code><span data-line="1426"></span> is the interpreter instance handle. Returns <span data-line="1426"></span><code class="code code1">true</code><span data-line="1426"></span> if the compilation is successful and no compile-time errors are detected.
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1428" data-line-first="1429" style="display:block"><code data-line="1429">bool UMKA_API umkaRun(void *umka);</code></pre>
+<p class="p noindent para-continued" data-line="1432"><span data-line="1432"></span>Runs the Umka program previously compiled to bytecode, i. e., calls its <span data-line="1432"></span><code class="code code1">main()</code><span data-line="1432"></span> function. Here, <span data-line="1432"></span><code class="code code1">umka</code><span data-line="1432"></span> is the interpreter instance handle. Returns <span data-line="1432"></span><code class="code code1">true</code><span data-line="1432"></span> if the program execution finishes successfully and no run-time errors are detected.
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1434" data-line-first="1435" style="display:block"><code data-line="1435">bool UMKA_API umkaCall(void *umka, int entryOffset, 
+                       int numParamSlots, UmkaStackSlot *params, UmkaStackSlot *result);</code></pre>
+<p class="p noindent para-continued" data-line="1439"><span data-line="1439"></span>Calls the specific Umka function. Here, <span data-line="1439"></span><code class="code code1">umka</code><span data-line="1439"></span> is the interpreter instance handle, <span data-line="1439"></span><code class="code code1">entryPoint</code><span data-line="1439"></span> is the function entry point offset previously obtained by calling <span data-line="1439"></span><code class="code code1">umkaGetFunc()</code><span data-line="1439"></span>,  <span data-line="1439"></span><code class="code code1">numParamSlots</code><span data-line="1439"></span> is the number of Umka fiber stack slots occupied by the actual parameters passed to the function (equal to the number of parameters if no structured parameters are passed by value), <span data-line="1439"></span><code class="code code1">params</code><span data-line="1439"></span> is the array of stack slots occupied by the actual parameters, <span data-line="1439"></span><code class="code code1">result</code><span data-line="1439"></span> is the pointer to the stack slot to be occupied by the returned value. Returns <span data-line="1439"></span><code class="code code1">true</code><span data-line="1439"></span> if the Umka function returns successfully and no run-time errors are detected.
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1441" data-line-first="1442" style="display:block"><code data-line="1442">void UMKA_API umkaFree(void *umka);</code></pre>
+<p class="p noindent para-continued" data-line="1445"><span data-line="1445"></span>Deallocates memory allocated for the interpreter. Here, <span data-line="1445"></span><code class="code code1">umka</code><span data-line="1445"></span> is the interpreter instance handle.
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1447" data-line-first="1448" style="display:block"><code data-line="1448">void UMKA_API umkaGetError(void *umka, UmkaError *err);</code></pre>
+<p class="p noindent para-continued" data-line="1451"><span data-line="1451"></span>Gets the last compile-time or run-time error. Here, <span data-line="1451"></span><code class="code code1">umka</code><span data-line="1451"></span> is the interpreter instance handle, <span data-line="1451"></span><code class="code code1">err</code><span data-line="1451"></span> is the pointer to the error description structure to be filled.
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1453" data-line-first="1454" style="display:block"><code data-line="1454">void UMKA_API umkaAsm(void *umka, char *buf, int size);</code></pre>
+<p class="p noindent para-continued" data-line="1457"><span data-line="1457"></span>Generates the Umka assembly listing for the Umka program previously compiled to bytecode. Here, <span data-line="1457"></span><code class="code code1">umka</code><span data-line="1457"></span> is the interpreter instance handle, <span data-line="1457"></span><code class="code code1">buf</code><span data-line="1457"></span> is the pointer to the string buffer to be filled, <span data-line="1457"></span><code class="code code1">size</code><span data-line="1457"></span> is the buffer size.
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1459" data-line-first="1460" style="display:block"><code data-line="1460">void UMKA_API umkaAddModule(void *umka, const char *fileName, const char *sourceString);</code></pre>
+<p class="p noindent para-continued" data-line="1463"><span data-line="1463"></span>Adds an Umka module contained in the <span data-line="1463"></span><code class="code code1">sourceString</code><span data-line="1463"></span>. A fictitious <span data-line="1463"></span><code class="code code1">fileName</code><span data-line="1463"></span> should be specified.
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1465" data-line-first="1466" style="display:block"><code data-line="1466">void UMKA_API umkaAddFunc(void *umka, const char *name, UmkaExternFunc entry);</code></pre>
+<p class="p noindent para-continued" data-line="1469"><span data-line="1469"></span>Adds a C/C++ function to the list of external functions that can be called from Umka. Here, <span data-line="1469"></span><code class="code code1">umka</code><span data-line="1469"></span> is the interpreter instance handle, <span data-line="1469"></span><code class="code code1">name</code><span data-line="1469"></span> is the function name, <span data-line="1469"></span><code class="code code1">entry</code><span data-line="1469"></span> is the function pointer. 
+</p>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1471" data-line-first="1472" style="display:block"><code data-line="1472">int UMKA_API umkaGetFunc(void *umka, const char *moduleName, const char *funcName);</code></pre>
+<p class="p noindent para-continued" data-line="1475"><span data-line="1475"></span>Gets an Umka function that can be called from C/C++ using <span data-line="1475"></span><code class="code code1">umkaCall()</code><span data-line="1475"></span>.  Here, <span data-line="1475"></span><code class="code code1">umka</code><span data-line="1475"></span> is the interpreter instance handle, <span data-line="1475"></span><code class="code code1">moduleName</code><span data-line="1475"></span> is the Umka module name, <span data-line="1475"></span><code class="code code1">funcName</code><span data-line="1475"></span> is the Umka function name. Returns the function entry point offset.
+</p><h3 id="sec-appendix--language-grammar" class="h2" data-line="1477" data-heading-depth="2" style="display:block"><span data-line="1477"></span><span class="heading-before"><span class="heading-label">1.10</span>.&#8194;</span><span data-line="1477"></span>Appendix: Language grammar</h3>
+<pre class="para-block pre-fenced pre-fenced3" data-line="1479" data-line-first="1480" style="display:block"><code data-line="1480">program             = module.
+module              = [import &quot;;&quot;] decls.
+import              = &quot;import&quot; (importItem | &quot;(&quot; {importItem &quot;;&quot;} &quot;)&quot;).
+importItem          = stringLiteral.
+decls               = decl {&quot;;&quot; decl}.
+decl                = typeDecl | constDecl | varDecl | fnDecl.
+typeDecl            = &quot;type&quot; (typeDeclItem | &quot;(&quot; {typeDeclItem &quot;;&quot;} &quot;)&quot;).
+typeDeclItem        = ident exportMark &quot;=&quot; type.
+constDecl           = &quot;const&quot; (constDeclItem | &quot;(&quot; {constDeclItem &quot;;&quot;} &quot;)&quot;).
+constDeclItem       = ident exportMark &quot;=&quot; expr.
+varDecl             = fullVarDecl | shortVarDecl.
+fullVarDecl         = &quot;var&quot; (varDeclItem | &quot;(&quot; {varDeclItem &quot;;&quot;} &quot;)&quot;).
+varDeclItem         = typedIdentList &quot;=&quot; exprList.
+shortVarDecl        = declAssignmentStmt.
+fnDecl              = &quot;fn&quot; [rcvSignature] ident exportMark signature [block].
+rcvSignature        = &quot;(&quot; ident &quot;:&quot; type &quot;)&quot;.
+signature           = &quot;(&quot; [typedIdentList [&quot;=&quot; expr] {&quot;,&quot; typedIdentList [&quot;=&quot; expr]}] &quot;)&quot; 
+                      [&quot;:&quot; (type | &quot;(&quot; type {&quot;,&quot; type} &quot;)&quot;)].
+exportMark          = [&quot;*&quot;].
+identList           = ident exportMark {&quot;,&quot; ident exportMark}.
+typedIdentList      = identList &quot;:&quot; type.
+type                = qualIdent | ptrType | arrayType | dynArrayType | strType |
+                      structType | interfaceType | fnType.
+ptrType             = [&quot;weak&quot;] &quot;^&quot; type.
+arrayType           = &quot;[&quot; expr &quot;]&quot; type.
+dynArrayType        = &quot;[&quot; &quot;]&quot; type.
+strType             = &quot;str&quot;.
+structType          = &quot;struct&quot; &quot;{&quot; {typedIdentList &quot;;&quot;} &quot;}&quot;.
+interfaceType       = &quot;interface&quot; &quot;{&quot; {(ident signature | qualIdent) &quot;;&quot;} &quot;}&quot;.
+fnType              = &quot;fn&quot; signature.
+block               = &quot;{&quot; StmtList &quot;}&quot;.
+fnBlock             = block.
+fnPrototype         = .
+stmtList            = Stmt {&quot;;&quot; Stmt}.
+stmt                = decl | block | simpleStmt | ifStmt | switchStmt | forStmt |
+                      breakStmt | continueStmt | returnStmt.
+simpleStmt          = assignmentStmt | shortAssignmentStmt | incDecStmt | callStmt.
+singleAssgnStmt     = designator &quot;=&quot; expr.
+listAssgnStmt       = designatorList &quot;=&quot; exprList.
+assignmentStmt      = singleAssgnStmt | listAssgnStmt.
+shortAssignmentStmt = designator 
+                      (&quot;+=&quot; | &quot;-=&quot; | &quot;*=&quot; | &quot;/=&quot; | &quot;%=&quot; | &quot;&amp;=&quot; | &quot;|=&quot; | &quot;~=&quot;) expr.
+singleDeclAssgnStmt = ident &quot;:=&quot; expr.
+listDeclAssgnStmt   = identList &quot;:=&quot; exprList.
+declAssignmentStmt  = singleDeclAssgnStmt | listDeclAssgnStmt.
+incDecStmt          = designator (&quot;++&quot; | &quot;--&quot;).
+callStmt            = designator.
+ifStmt              = &quot;if&quot; [shortVarDecl &quot;;&quot;] expr block [&quot;else&quot; (ifStmt | block)].
+switchStmt          = &quot;switch&quot; [shortVarDecl &quot;;&quot;] expr &quot;{&quot; {case} [default] &quot;}&quot;.
+case                = &quot;case&quot; expr {&quot;,&quot; expr} &quot;:&quot; stmtList.
+default             = &quot;default&quot; &quot;:&quot; stmtList.
+forStmt             = &quot;for&quot; (forHeader | forInHeader) block.
+forHeader           = [shortVarDecl &quot;;&quot;] expr [&quot;;&quot; simpleStmt].
+forInHeader         = [ident &quot;,&quot;] ident &quot;in&quot; expr.
+breakStmt           = &quot;break&quot;.
+continueStmt        = &quot;continue&quot;.
+returnStmt          = &quot;return&quot; [exprList].
+exprList            = expr {&quot;,&quot; expr}.
+expr                = logicalTerm {&quot;||&quot; logicalTerm}.
+logicalTerm         = relation {&quot;&amp;&amp;&quot; relation}.
+relation            = relationTerm 
+                      [(&quot;==&quot; | &quot;!=&quot; | &quot;&lt;&quot; | &quot;&lt;=&quot; | &quot;&gt;&quot; | &quot;&gt;=&quot;) relationTerm].
+relationTerm        = term {(&quot;+&quot; | &quot;-&quot; | &quot;|&quot; | &quot;~&quot;) term}.
+term                = factor {(&quot;*&quot; | &quot;/&quot; | &quot;%&quot; | &quot;&lt;&lt;&quot; | &quot;&gt;&gt;&quot; | &quot;&amp;&quot;) factor}.
+factor              = designator | intNumber | realNumber | charLiteral | stringLiteral |
+                      (&quot;+&quot; | &quot;-&quot; | &quot;!&quot; | &quot;~&quot;) factor | &quot;&amp;&quot; designator | &quot;(&quot; expr &quot;)&quot;.
+designatorList      = designator {&quot;,&quot; designator}.
+designator          = (primary | typeCast | compositeLiteral) selectors.
+primary             = qualIdent | builtinCall.
+qualIdent           = [ident &quot;.&quot;] ident.
+builtinCall         = qualIdent &quot;(&quot; [expr {&quot;,&quot; expr}] &quot;)&quot;.
+selectors           = {derefSelector | indexSelector | fieldSelector | callSelector}.
+derefSelector       = &quot;^&quot;.
+indexSelector       = &quot;[&quot; expr &quot;]&quot;.
+fieldSelector       = &quot;.&quot; ident.
+callSelector        = actualParams.
+actualParams        = &quot;(&quot; [expr {&quot;,&quot; expr}] &quot;)&quot;.
+compositeLiteral    = arrayLiteral | dynArrayLiteral | structLiteral | fnLiteral.
+arrayLiteral        = &quot;{&quot; [expr {&quot;,&quot; expr}] &quot;}&quot;.
+dynArrayLiteral     = arrayLiteral.
+structLiteral       = &quot;{&quot; [[ident &quot;:&quot;] expr {&quot;,&quot; [ident &quot;:&quot;] expr}] &quot;}&quot;.
+fnLiteral           = fnBlock.
+typeCast            = type &quot;(&quot; expr &quot;)&quot;.
+ident               = (letter | &quot;_&quot;) {letter | &quot;_&quot; | digit}.
+intNumber           = decNumber | hexHumber.
+decNumber           = digit {digit}.
+hexNumber           = &quot;0&quot; (&quot;X | &quot;x&quot;) hexDigit {hexDigit}.
+realNumber          = decNumber [&quot;.&quot; decNumber] [(&quot;E&quot; | &quot;e&quot;) decNumber].
+charLiteral         = &quot;&#39;&quot; (char | escSeq) &quot;&#39;&quot;.
+stringLiteral       = &quot;&quot;&quot; {char | escSeq} &quot;&quot;&quot;.
+escSeq              = &quot;\&quot; (&quot;0&quot; | &quot;a&quot; | &quot;b&quot; | &quot;e&quot; | &quot;f&quot; | &quot;n&quot; | &quot;r&quot; | &quot;t&quot; | &quot;v&quot; | 
+                           &quot;x&quot; hexNumber).
+letter              = &quot;A&quot;..&quot;Z&quot; | &quot;a&quot;..&quot;z&quot;.
+digit               = &quot;0&quot;..&quot;9&quot;.
+hexDigit            = digit | &quot;A&quot;..&quot;F&quot; | &quot;a&quot;..&quot;f&quot;.
+char                = &quot;\x00&quot;..&quot;\xFF&quot;.</code></pre><span data-line=""></span></div>
+</body>
+
+</html>
