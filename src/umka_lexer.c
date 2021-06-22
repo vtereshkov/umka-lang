@@ -787,6 +787,18 @@ void lexNext(Lexer *lex)
 }
 
 
+void lexNextForcedSemicolon(Lexer *lex)
+{
+    lexNextWithEOLN(lex);
+
+    // Replace end of line with implicit semicolon
+    if (lex->tok.kind == TOK_EOLN)
+        lex->tok.kind = TOK_SEMICOLON;
+
+    lex->prevTok = lex->tok;
+}
+
+
 bool lexCheck(Lexer *lex, TokenKind kind)
 {
     bool res = lex->tok.kind == kind;

@@ -16,7 +16,7 @@ static bool parseExportMark(Compiler *comp)
 {
     if (comp->lex.tok.kind == TOK_MUL)
     {
-        lexNext(&comp->lex);
+        lexNextForcedSemicolon(&comp->lex);
         return true;
     }
     return false;

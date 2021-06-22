@@ -122,11 +122,10 @@ Umka has a set of arithmetical, bitwise, logical, relation operators, as well as
 Umka uses semicolons as statement terminators. To reduce the number of semicolons, an implicit semicolon is automatically inserted immediately after a line's final token if that token is
 
 * An identifier
-
 * A number, character literal or string literal
-
 * `str`,  `break`,  `continue` or `return`
 * `++`, `--`, `)`, `]`, `}`or `^`
+* `*` as an export mark 
 
 A semicolon may be omitted before a closing `)` or `}`.
 
