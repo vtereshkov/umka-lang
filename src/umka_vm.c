@@ -885,8 +885,14 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, bool console, bool string
                                         !(typeKindReal(typeKind)    && typeKindReal(expectedTypeKind)))
         error->handlerRuntime(error->context, "Incompatible types %s and %s in printf()", typeKindSpelling(expectedTypeKind), typeKindSpelling(typeKind));
 
-    char *curFormat = malloc(formatLen + 1);
-    strncpy(curFormat, format, formatLen);
+    char smallBuf[2048]; // Why 2048?
+    char *curFormat;
+    if (formatLen < sizeof(smallBuf))
+        curFormat = smallBuf;
+    else
+        curFormat = malloc(formatLen + 1);
+
+    strncpy(curFormat, format, formatLen); // Use memcpy instead?
     curFormat[formatLen] = 0;
 
     int len = 0;
@@ -903,7 +909,10 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, bool console, bool string
     if (string)
         fiber->reg[VM_REG_IO_STREAM].ptrVal += len;
 
-    free(curFormat);
+    if (formatLen < sizeof(smallBuf))
+        /*Do nothing.*/;
+    else
+        free(curFormat);
 }
 
 
@@ -926,10 +935,17 @@ static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool con
     if (typeKind != expectedTypeKind)
         error->handlerRuntime(error->context, "Incompatible types %s and %s in scanf()", typeKindSpelling(expectedTypeKind), typeKindSpelling(typeKind));
 
-    char *curFormat = malloc(formatLen + 2 + 1);     // + 2 for "%n"
+    char smallBuf[2048];
+    char *curFormat;
+    if (formatLen + 2 < sizeof(smallBuf))
+        curFormat = smallBuf;
+    else
+        curFormat = malloc(formatLen + 2 + 1);     // + 2 for "%n"
+
     strncpy(curFormat, format, formatLen);
-    curFormat[formatLen] = 0;
-    strcat(curFormat, "%n");
+    curFormat[formatLen + 0] = '%';
+    curFormat[formatLen + 1] = 'n';
+    curFormat[formatLen + 2] = '\0';
 
     int len = 0, cnt = 0;
 
@@ -966,7 +982,10 @@ static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool con
     if (string)
         fiber->reg[VM_REG_IO_STREAM].ptrVal += len;
 
-    free(curFormat);
+    if (formatLen + 2 < sizeof(smallBuf))
+        /*Do nothing.*/;
+    else
+        free(curFormat);
 }
 
 
