@@ -15,7 +15,7 @@ enum
 
 void help()
 {
-    printf("Umka interpreter (C) Vasiliy Tereshkov, 2020-2021\n");
+    printf("Umka interpreter version " VERSION_STRING ", (C) Vasiliy Tereshkov, 2020-2021\n");
     printf("Usage: umka [<parameters>] <file.um> [<script-parameters>]\n");
     printf("Parameters:\n");
     printf("    -storage <storage-size> - Set static storage size\n");

@@ -1,5 +1,6 @@
 platform := $(shell uname -s)
 shortplatform := $(shell (X=`uname -s`; echo $${X:0:10}))
+interpreter_version := $(shell git rev-parse --short HEAD)
 
 buildpath = build
 
@@ -67,6 +68,9 @@ $(DYNAMIC_LIB): $(DYNAMIC_LIB_OBJ)
 $(EXECUTABLE): $(EXECUTABLE_OBJ) $(STATIC_LIB) 
 	# Build executable 
 	$(CC) $(STATIC_CFLAGS) -o $(EXECUTABLE) $^ $(EXECUTABLE_DEPS)
+
+src/umka_static.o: src/umka.c
+	$(CC) $(STATIC_CFLAGS) -DVERSION_STRING="\"git-$(interpreter_version)\"" -c -o $@ $^
 
 src/%_static.o: src/%.c
 	$(CC) $(STATIC_CFLAGS) -c -o $@ $^
