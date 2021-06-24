@@ -206,13 +206,12 @@ static void parseShortAssignmentStmt(Compiler *comp, Type *type, TokenKind op)
     genDeref(&comp->gen, type->kind);
 
     // All temporary reals are 64-bit
-    if (type->kind == TYPE_REAL32)
-        type = comp->realType;
+    Type *leftType = (type->kind == TYPE_REAL32) ? comp->realType : type;
 
     Type *rightType;
     parseExpr(comp, &rightType, NULL);
 
-    doApplyOperator(comp, &type, &rightType, NULL, NULL, lexShortAssignment(op), true, false);
+    doApplyOperator(comp, &leftType, &rightType, NULL, NULL, lexShortAssignment(op), true, false);
     genChangeRefCntAssign(&comp->gen, type);
 }
 
