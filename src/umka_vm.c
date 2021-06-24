@@ -754,6 +754,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, Error *e
 }
 
 
+// reference: https://en.cppreference.com/w/c/io/fprintf
 static FORCE_INLINE void doCheckFormatString(const char *format, int *formatLen, TypeKind *typeKind, Error *error)
 {
     enum {SIZE_SHORT_SHORT, SIZE_SHORT, SIZE_NORMAL, SIZE_LONG, SIZE_LONG_LONG} size;
@@ -813,6 +814,10 @@ static FORCE_INLINE void doCheckFormatString(const char *format, int *formatLen,
                     size = SIZE_LONG_LONG;
                     i++;
                 }
+            }
+            else if (format[i] == 'j' || format[i] == 'z' || format[i] == 't') {
+                // size = SIZE_NORMAL;
+                i++;
             }
 
             // type
