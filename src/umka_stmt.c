@@ -584,6 +584,13 @@ static void parseForInHeader(Compiler *comp, TokenKind lookaheadTokKind)
         collectionType = collectionType->base;
     }
 
+    // Check collection type
+    if (collectionType->kind != TYPE_ARRAY && collectionType->kind != TYPE_DYNARRAY && collectionType->kind != TYPE_STR)
+    {
+        char typeBuf[DEFAULT_STR_LEN + 1];
+        comp->error.handler(comp->error.context, "Expression of type %s is not iterable", typeSpelling(collectionType, typeBuf));
+    }
+
     // Declare variable for the collection
     collectionIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "__collection", collectionType, false);
     doZeroVar(comp, collectionIdent);
@@ -606,15 +613,8 @@ static void parseForInHeader(Compiler *comp, TokenKind lookaheadTokKind)
         genPop(&comp->gen);
         genPushIntConst(&comp->gen, collectionType->numItems);
     }
-    else if (collectionType->kind == TYPE_DYNARRAY || collectionType->kind == TYPE_STR)
-    {
-        genCallBuiltin(&comp->gen, collectionType->kind, BUILTIN_LEN);
-    }
     else
-    {
-        char typeBuf[DEFAULT_STR_LEN + 1];
-        comp->error.handler(comp->error.context, "Expression of type %s is not iterable", typeSpelling(collectionType, typeBuf));
-    }
+        genCallBuiltin(&comp->gen, collectionType->kind, BUILTIN_LEN);
 
     doPushVarPtr(comp, indexIdent);
     genDeref(&comp->gen, TYPE_INT);
