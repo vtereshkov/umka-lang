@@ -9,7 +9,7 @@
 #include "umka_ident.h"
 
 
-static char *spelling [] =
+static const char *spelling [] =
 {
     "none",
     "forward",
