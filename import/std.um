@@ -19,6 +19,10 @@ fn fclose*   (f: File): int {return rtlfclose(f)}
 fn rtlfread(buf: ^void, size, cnt: int, f: File): int
 
 fn fread*(f: File, buf: interface{}): int {
+    if f == null {
+        error("File is null")
+    }
+
     if bytes := ^[]uint8(buf); bytes != null {
         return rtlfread(&bytes[0], len(bytes^), 1, f)
     }
@@ -31,6 +35,10 @@ fn fread*(f: File, buf: interface{}): int {
 fn rtlfwrite(buf: ^void, size, cnt: int, f: File): int
 
 fn fwrite*(f: File, buf: interface{}): int {
+    if f == null {
+        error("File is null")
+    }
+
     if bytes := ^[]uint8(buf); bytes != null {
         return rtlfwrite(&bytes[0], len(bytes^), 1, f)
     }    
@@ -41,16 +49,34 @@ fn fwrite*(f: File, buf: interface{}): int {
 }
 
 fn rtlfseek  (f: File, offset, origin: int): int
-fn fseek*    (f: File, offset, origin: int): int {return rtlfseek(f, offset, origin)}
+fn fseek*    (f: File, offset, origin: int): int {
+    if f == null {
+        error("File is null")
+    }
+
+    return rtlfseek(f, offset, origin)
+}
 
 fn rtlftell (f: File): int
-fn ftell*   (f: File): int {return rtlftell(f)}
+fn ftell*   (f: File): int {
+    if f == null {
+        error("File is null")
+    }
+
+    return rtlftell(f)
+}
 
 fn rtlremove (name: str): int
 fn remove*   (name: str): int {return rtlremove(name)}
 
 fn rtlfeof  (f: File): int
-fn feof*    (f: File): bool {return bool(rtlfeof(f))}
+fn feof*    (f: File): bool {
+    if f == null {
+        error("File is null")
+    }
+                
+    return bool(rtlfeof(f)
+}
 
 // I/O utilities
 
@@ -132,3 +158,4 @@ fn rtlgetenv(name: str): str
 fn getenv*(name: str): str {
     return "" + rtlgetenv(name)
 }
+
