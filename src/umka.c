@@ -25,9 +25,29 @@ static void help()
 }
 
 
-static char *loadFn(void *opaque, const char *importPath) {
-    (void)opaque;
-    FILE *f = fopen(importPath, "rb");
+typedef struct
+{
+    const char* umkaLoadPath;
+} LoadFnData;
+
+static LoadFnData *getLoadFnData(char **envVars) {
+    LoadFnData *loadData = calloc(1, sizeof(LoadFnData));
+
+    for (char **pv = envVars; NULL != *pv; pv += 1) {
+        // format of 'v' is: name=value
+        const char *v = *pv;
+
+        if (0 == strncmp("UMKA_LOAD_PATH", v, 14)) { // 14 == strlen("UMKA_LOAD_PATH")
+            loadData->umkaLoadPath = v + 14 + 1; // + 1 to skip the '='
+            break;
+        }
+    }
+
+    return loadData;
+}
+
+static char *readEntireFile(const char *fname) {
+    FILE *f = fopen(fname, "rb");
     if (!f) { return NULL; }
 
     fseek(f, 0, SEEK_END);
@@ -45,8 +65,26 @@ static char *loadFn(void *opaque, const char *importPath) {
     return buf;
 }
 
+static char *loadFn(void *fnLoadData, const char *importPath) {
+    const LoadFnData *loadData = (const LoadFnData*)fnLoadData;
+    char *buf;
 
-int main(int argc, char **argv)
+    // try "importPath"
+    buf = readEntireFile(importPath);
+    if (buf) return buf;
+
+    // try "UMKA_LOAD_PATH/importPath"
+    if (loadData->umkaLoadPath) {
+        char fname[4096];
+        snprintf(fname, sizeof(fname) - 1, "%s/%s", loadData->umkaLoadPath, importPath);
+        buf = readEntireFile(fname);
+    }
+
+    return buf;
+}
+
+
+int main(int argc, char **argv, char **envVars)
 {
     // Parse interpreter parameters
     int storageSize     = 1024 * 1024;  // Bytes
@@ -119,6 +157,7 @@ int main(int argc, char **argv)
     cfg.stackSize = stackSize;
     cfg.argc = argc - i;
     cfg.argv = argv + i;
+    cfg.loadFnData = (void*)getLoadFnData(envVars);
     cfg.loadFn = &loadFn;
 
     bool ok = umkaInit(umka, argv[i], NULL, cfg);
