@@ -22,7 +22,6 @@ fn fread*(f: File, buf: interface{}): int {
     if f == null {
         error("File is null")
     }
-
     if bytes := ^[]uint8(buf); bytes != null {
         return rtlfread(&bytes[0], len(bytes^), 1, f)
     }
@@ -38,7 +37,6 @@ fn fwrite*(f: File, buf: interface{}): int {
     if f == null {
         error("File is null")
     }
-
     if bytes := ^[]uint8(buf); bytes != null {
         return rtlfwrite(&bytes[0], len(bytes^), 1, f)
     }    
@@ -53,7 +51,6 @@ fn fseek*    (f: File, offset, origin: int): int {
     if f == null {
         error("File is null")
     }
-
     return rtlfseek(f, offset, origin)
 }
 
@@ -62,7 +59,6 @@ fn ftell*   (f: File): int {
     if f == null {
         error("File is null")
     }
-
     return rtlftell(f)
 }
 
@@ -73,9 +69,8 @@ fn rtlfeof  (f: File): int
 fn feof*    (f: File): bool {
     if f == null {
         error("File is null")
-    }
-                
-    return bool(rtlfeof(f)
+    }                
+    return bool(rtlfeof(f))
 }
 
 // I/O utilities
