@@ -2,6 +2,7 @@
 #define UMKA_LEXER_H_INCLUDED
 
 #include "umka_common.h"
+#include "umka_api.h"
 
 
 typedef enum
@@ -120,7 +121,7 @@ typedef struct
 } Lexer;
 
 
-int lexInit(Lexer *lex, Storage *storage, DebugInfo *debug, const char *fileName, const char *sourceString, Error *error);
+int lexInit(Lexer *lex, const UmkaConfig *cfg, Storage *storage, DebugInfo *debug, const char *fileName, const char *sourceString, Error *error);
 void lexFree(Lexer *lex);
 void lexNext(Lexer *lex);
 void lexNextForcedSemicolon(Lexer *lex);

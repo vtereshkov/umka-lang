@@ -102,7 +102,7 @@ enum
 static unsigned int keywordHash[NUM_KEYWORDS];
 
 
-int lexInit(Lexer *lex, Storage *storage, DebugInfo *debug, const char *fileName, const char *sourceString, Error *error)
+int lexInit(Lexer *lex, const UmkaConfig *cfg, Storage *storage, DebugInfo *debug, const char *fileName, const char *sourceString, Error *error)
 {
     // Fill keyword hashes
     for (int i = 0; i < NUM_KEYWORDS; i++)
@@ -145,29 +145,11 @@ int lexInit(Lexer *lex, Storage *storage, DebugInfo *debug, const char *fileName
     }
     else
     {
-        // Read source from a file
-        FILE *file = fopen(lex->fileName, "rb");
-
-        if (!file)
-        {
-            lex->error->handler(lex->error->context, "Cannot open file %s", lex->fileName);
-            return 0;
-        }
-
-        fseek(file, 0, SEEK_END);
-        bufLen = ftell(file);
-        rewind(file);
-
-        lex->buf = malloc(bufLen + 1);
-
-        if (fread(lex->buf, bufLen, 1, file) != 1)
-        {
+        lex->buf = cfg->loadFn(cfg->loadFnData, lex->fileName);
+        if (NULL == lex->buf) {
             lex->error->handler(lex->error->context, "Cannot read file %s", lex->fileName);
             return 0;
         }
-
-        lex->buf[bufLen] = 0;
-        fclose(file);
     }
 
     return bufLen;

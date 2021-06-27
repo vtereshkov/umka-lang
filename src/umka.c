@@ -13,7 +13,7 @@ enum
 };
 
 
-void help()
+static void help()
 {
     printf("Umka interpreter (C) Vasiliy Tereshkov, 2020-2021\n");
     printf("Usage: umka [<parameters>] <file.um> [<script-parameters>]\n");
@@ -22,6 +22,27 @@ void help()
     printf("    -stack <stack-size>     - Set stack size\n");
     printf("    -asm                    - Write assembly listing\n");
     printf("    -check                  - Compile only\n");
+}
+
+
+static char *loadFn(void *opaque, const char *importPath) {
+    (void)opaque;
+    FILE *f = fopen(importPath, "rb");
+    if (!f) { return NULL; }
+
+    fseek(f, 0, SEEK_END);
+    int fsize = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    char *buf = malloc(fsize + 1);
+    if (fsize != fread(buf, 1, fsize, f)) {
+        fclose(f);
+        return NULL;
+    }
+    buf[fsize] = 0;
+
+    fclose(f);
+    return buf;
 }
 
 
@@ -98,6 +119,7 @@ int main(int argc, char **argv)
     cfg.stackSize = stackSize;
     cfg.argc = argc - i;
     cfg.argv = argv + i;
+    cfg.loadFn = &loadFn;
 
     bool ok = umkaInit(umka, argv[i], NULL, cfg);
     if (ok)

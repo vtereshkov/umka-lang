@@ -31,12 +31,17 @@ extern "C" {
 #endif
 
 
+typedef char *(*UmkaLoadFunc)(void *loadFnData, const char *importPath);
+
+
 typedef struct
 {
     int storageSize;
     int stackSize;
     int argc;
     char **argv;
+    void *loadFnData;
+    UmkaLoadFunc loadFn;
 } UmkaConfig;
 
 

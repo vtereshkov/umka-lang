@@ -134,7 +134,7 @@ void compilerInit(Compiler *comp, const char *fileName, const char *sourceString
     constInit    (&comp->consts, &comp->error);
     genInit      (&comp->gen, &comp->debug, &comp->error);
     vmInit       (&comp->vm, cfg.stackSize, &comp->error);
-    lexInit      (&comp->lex, &comp->storage, &comp->debug, fileName, sourceString, &comp->error);
+    lexInit      (&comp->lex, &comp->cfg, &comp->storage, &comp->debug, fileName, sourceString, &comp->error);
 
     comp->blocks.module = moduleAdd(&comp->modules, "__universe");
 
