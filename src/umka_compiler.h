@@ -9,6 +9,7 @@
 #include "umka_ident.h"
 #include "umka_const.h"
 #include "umka_runtime.h"
+#include "umka_api.h"
 
 
 typedef struct
@@ -38,14 +39,11 @@ typedef struct
          *fiberType,
          *ptrVoidType, *ptrNullType, *ptrFiberType;
 
-    // Command-line arguments
-    int argc;
-    char **argv;
-
+    UmkaConfig cfg;
 } Compiler;
 
 
-void compilerInit   (Compiler *comp, const char *fileName, const char *sourceString, int storageSize, int stackSize, int argc, char **argv);
+void compilerInit   (Compiler *comp, const char *fileName, const char *sourceString, UmkaConfig cfg);
 void compilerFree   (Compiler *comp);
 void compilerCompile(Compiler *comp);
 void compilerRun    (Compiler *comp);

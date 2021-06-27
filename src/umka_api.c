@@ -64,7 +64,7 @@ bool UMKA_API umkaInit(void *umka, const char *fileName, const char *sourceStrin
 
     if (setjmp(comp->error.jumper) == 0)
     {
-        compilerInit(comp, fileName, sourceString, cfg.storageSize, cfg.stackSize, cfg.argc, cfg.argv);
+        compilerInit(comp, fileName, sourceString, cfg);
         return true;
     }
     return false;

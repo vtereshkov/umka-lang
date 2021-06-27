@@ -121,9 +121,11 @@ static void compilerDeclareExternalFuncs(Compiler *comp)
 }
 
 
-void compilerInit(Compiler *comp, const char *fileName, const char *sourceString, int storageSize, int stackSize, int argc, char **argv)
+void compilerInit(Compiler *comp, const char *fileName, const char *sourceString, UmkaConfig cfg)
 {
-    storageInit  (&comp->storage, storageSize);
+    comp->cfg = cfg;
+
+    storageInit  (&comp->storage, cfg.storageSize);
     moduleInit   (&comp->modules, &comp->error);
     blocksInit   (&comp->blocks, &comp->error);
     externalInit (&comp->externals);
@@ -131,11 +133,8 @@ void compilerInit(Compiler *comp, const char *fileName, const char *sourceString
     identInit    (&comp->idents, &comp->error);
     constInit    (&comp->consts, &comp->error);
     genInit      (&comp->gen, &comp->debug, &comp->error);
-    vmInit       (&comp->vm, stackSize, &comp->error);
+    vmInit       (&comp->vm, cfg.stackSize, &comp->error);
     lexInit      (&comp->lex, &comp->storage, &comp->debug, fileName, sourceString, &comp->error);
-
-    comp->argc  = argc;
-    comp->argv  = argv;
 
     comp->blocks.module = moduleAdd(&comp->modules, "__universe");
 
@@ -146,14 +145,14 @@ void compilerInit(Compiler *comp, const char *fileName, const char *sourceString
     // Command-line-arguments
     Type *argvType     = typeAdd(&comp->types, &comp->blocks, TYPE_ARRAY);
     argvType->base     = comp->strType;
-    argvType->numItems = comp->argc;
+    argvType->numItems = comp->cfg.argc;
     argvType           = typeAddPtrTo(&comp->types, &comp->blocks, argvType);
 
     Ident *rtlargc = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "rtlargc", comp->intType, true);
     Ident *rtlargv = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "rtlargv", argvType, true);
 
-    *(int64_t *)(rtlargc->ptr) = comp->argc;
-    *(void *  *)(rtlargv->ptr) = comp->argv;
+    *(int64_t *)(rtlargc->ptr) = comp->cfg.argc;
+    *(void *  *)(rtlargv->ptr) = comp->cfg.argv;
 }
 
 
