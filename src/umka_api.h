@@ -31,6 +31,15 @@ extern "C" {
 #endif
 
 
+typedef struct
+{
+    int storageSize;
+    int stackSize;
+    int argc;
+    char **argv;
+} UmkaConfig;
+
+
 typedef union
 {
     int64_t intVal;
@@ -58,7 +67,7 @@ typedef struct
 
 
 void UMKA_API *umkaAlloc     (void);
-bool UMKA_API umkaInit       (void *umka, const char *fileName, const char *sourceString, int storageSize, int stackSize, int argc, char **argv);
+bool UMKA_API umkaInit       (void *umka, const char *fileName, const char *sourceString, UmkaConfig config);
 bool UMKA_API umkaCompile    (void *umka);
 bool UMKA_API umkaRun        (void *umka);
 bool UMKA_API umkaCall       (void *umka, int entryOffset, int numParamSlots, UmkaStackSlot *params, UmkaStackSlot *result);

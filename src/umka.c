@@ -92,7 +92,14 @@ int main(int argc, char **argv)
     }
 
     void *umka = umkaAlloc();
-    bool ok = umkaInit(umka, argv[i], NULL, storageSize, stackSize, argc - i, argv + i);
+
+    UmkaConfig cfg = {0};
+    cfg.storageSize = storageSize;
+    cfg.stackSize = stackSize;
+    cfg.argc = argc - i;
+    cfg.argv = argv + i;
+
+    bool ok = umkaInit(umka, argv[i], NULL, cfg);
     if (ok)
         ok = umkaCompile(umka);
 
