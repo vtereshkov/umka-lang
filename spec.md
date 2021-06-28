@@ -1376,6 +1376,7 @@ typedef union
     uint64_t uintVal;
     int64_t ptrVal;
     double realVal;
+    float real32Val;
 } UmkaStackSlot;
 ```
 
