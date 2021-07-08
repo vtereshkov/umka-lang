@@ -2,6 +2,12 @@
 
 import time
 
+# Python3 has time.perf_counter instead time.clock
+try:
+    time.clock = time.perf_counter
+except:
+    pass
+
 size = 400
 
 # Fill matrices
