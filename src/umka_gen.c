@@ -900,15 +900,15 @@ char *genAsm(CodeGen *gen, char *buf, int size)
     do
     {
         if (ip == 0 || gen->code[ip].debug.fileName != gen->code[ip - 1].debug.fileName)
-            chars += snprintf(buf + chars, nonneg(size - chars), "\n\nModule: %s\n", gen->code[ip].debug.fileName);
+            chars += snprintf(buf + chars, nonneg(size - chars), "\nModule: %s\n\n", gen->code[ip].debug.fileName);
 
         if (gen->code[ip].opcode == OP_ENTER_FRAME)
-            chars += snprintf(buf + chars, nonneg(size - chars), "\n\n");
+            chars += snprintf(buf + chars, nonneg(size - chars), "\nFunction: %s\n\n", gen->code[ip].debug.fnName);
 
-        chars += vmAsm(ip, &gen->code[ip], buf + chars, nonneg(size - chars));
+        chars += vmAsm(ip, gen->code, buf + chars, nonneg(size - chars));
         chars += snprintf(buf + chars, nonneg(size - chars), "\n");
 
-        if (gen->code[ip].opcode == OP_GOTO || gen->code[ip].opcode == OP_GOTO_IF)
+        if (gen->code[ip].opcode == OP_GOTO || gen->code[ip].opcode == OP_GOTO_IF || gen->code[ip].opcode == OP_RETURN)
             chars += snprintf(buf + chars, nonneg(size - chars), "\n");
 
     } while (gen->code[ip++].opcode != OP_HALT);

@@ -1391,14 +1391,15 @@ Umka external function pointer. When an external C/C++ function is called from U
 ```
 enum
 {
-    UMKA_MSG_LEN = 512
+    UMKA_MSG_LEN = 255
 };
 
 typedef struct
 {
-    char fileName[UMKA_MSG_LEN];
+    char fileName[UMKA_MSG_LEN + 1];
+    char fnName[UMKA_MSG_LEN + 1];
     int line, pos;
-    char msg[UMKA_MSG_LEN];
+    char msg[UMKA_MSG_LEN + 1];
 } UmkaError;
 ```
 
@@ -1473,6 +1474,12 @@ int UMKA_API umkaGetFunc(void *umka, const char *moduleName, const char *funcNam
 ```
 
 Gets an Umka function that can be called from C/C++ using `umkaCall()`.  Here, `umka` is the interpreter instance handle, `moduleName` is the Umka module name, `funcName` is the Umka function name. Returns the function entry point offset.
+
+```
+bool UMKA_API umkaGetCallStack(void *umka, int depth, int *offset, char *name, int size);
+```
+
+Gets the Umka function `name` and entry point `offset` from the call stack at the specified call `depth`. If `depth` is zero, the current function information is retrieved. Here, `umka` is the interpreter instance handle and `size`  is the `name` buffer size, including the null character. Returns `true` on success.
 
 ## Appendix: Language grammar
 

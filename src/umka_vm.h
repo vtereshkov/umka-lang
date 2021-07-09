@@ -102,8 +102,8 @@ typedef enum
     BUILTIN_MAKE,
     BUILTIN_MAKEFROMARR,    // Array to dynamic array - implicit calls only
     BUILTIN_MAKEFROMSTR,    // String to dynamic array - implicit calls only
-    BUILTIN_MAKETOARR,      // Dynamic array to array - implicit calls only 
-    BUILTIN_MAKETOSTR,      // Dynamic array to string - implicit calls only   
+    BUILTIN_MAKETOARR,      // Dynamic array to array - implicit calls only
+    BUILTIN_MAKETOSTR,      // Dynamic array to string - implicit calls only
     BUILTIN_APPEND,
     BUILTIN_DELETE,
     BUILTIN_SLICE,
@@ -195,7 +195,8 @@ void vmInit(VM *vm, int stackSize /* slots */, Error *error);
 void vmFree(VM *vm);
 void vmReset(VM *vm, Instruction *code);
 void vmRun(VM *vm, int entryOffset, int numParamSlots, Slot *params, Slot *result);
-int vmAsm(int ip, Instruction *instr, char *buf, int size);
+int vmAsm(int ip, Instruction *code, char *buf, int size);
+bool vmUnwindCallStack(VM *vm, Slot **base, int *ip);
 const char *vmBuiltinSpelling(BuiltinFunc builtin);
 
 #endif // UMKA_VM_H_INCLUDED

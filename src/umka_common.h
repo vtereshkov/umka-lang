@@ -36,6 +36,7 @@ typedef struct
 
     // Error report
     char fileName[DEFAULT_STR_LEN + 1];
+    char fnName[DEFAULT_STR_LEN + 1];
     int line, pos;
     char msg[DEFAULT_STR_LEN + 1];
 } Error;
@@ -110,6 +111,7 @@ typedef struct
 typedef struct
 {
     char *fileName;
+    char *fnName;
     int line;
 } DebugInfo;
 

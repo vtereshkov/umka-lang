@@ -131,6 +131,7 @@ int lexInit(Lexer *lex, Storage *storage, DebugInfo *debug, const char *fileName
     lex->storage = storage;
     lex->debug = debug;
     lex->debug->fileName = lex->fileName;
+    lex->debug->fnName = "<unknown>";
     lex->debug->line = lex->line;
     lex->error = error;
 

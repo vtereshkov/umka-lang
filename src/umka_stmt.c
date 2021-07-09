@@ -836,6 +836,11 @@ void parseFnBlock(Compiler *comp, Ident *fn)
     lexEat(&comp->lex, TOK_LBRACE);
     blocksEnter(&comp->blocks, fn);
 
+    char *prevDebugFnName = comp->lex.debug->fnName;
+    comp->lex.debug->fnName = "<unknown>";
+    if (fn && fn->kind == IDENT_CONST && fn->type->kind == TYPE_FN && fn->block == 0)
+        comp->lex.debug->fnName = fn->name;
+
     if (fn->prototypeOffset >= 0)
     {
         genEntryPoint(&comp->gen, fn->prototypeOffset);
@@ -869,6 +874,8 @@ void parseFnBlock(Compiler *comp, Ident *fn)
 
     genLeaveFrameFixup(&comp->gen, localVarSlots, paramSlots);
     genReturn(&comp->gen, paramSlots);
+
+    comp->lex.debug->fnName = prevDebugFnName;
 
     blocksLeave(&comp->blocks);
     lexEat(&comp->lex, TOK_RBRACE);

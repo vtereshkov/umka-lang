@@ -1952,12 +1952,12 @@ static FORCE_INLINE void doEnterFrame(Fiber *fiber, HeapPages *pages, Error *err
         // Allocate heap frame
         Slot *heapFrame = chunkAlloc(pages, (localVarSlots + 2 + paramSlots) * sizeof(Slot), NULL, error);      // + 2 for old base pointer and return address
 
-        // Copy parameters to heap frame
-        memcpy(heapFrame + localVarSlots + 2, fiber->top + 1, paramSlots * sizeof(Slot));
-
         // Push old heap frame base pointer, set new one
         (--fiber->top)->ptrVal = (int64_t)fiber->base;
         fiber->base = heapFrame + localVarSlots;
+
+        // Copy old base pointer, return address and parameters to heap frame
+        memcpy(heapFrame + localVarSlots, fiber->top, (2 + paramSlots) * sizeof(Slot));
     }
     else            // Stack frame
     {
@@ -2117,8 +2117,10 @@ void vmRun(VM *vm, int entryOffset, int numParamSlots, Slot *params, Slot *resul
 }
 
 
-int vmAsm(int ip, Instruction *instr, char *buf, int size)
+int vmAsm(int ip, Instruction *code, char *buf, int size)
 {
+    Instruction *instr = &code[ip];
+
     char opcodeBuf[DEFAULT_STR_LEN + 1];
     snprintf(opcodeBuf, DEFAULT_STR_LEN + 1, "%s%s", instr->inlineOpcode == OP_SWAP ? "SWAP; " : "", opcodeSpelling[instr->opcode]);
     int chars = snprintf(buf, size, "%09d %6d %28s", ip, instr->debug.line, opcodeBuf);
@@ -2152,9 +2154,14 @@ int vmAsm(int ip, Instruction *instr, char *buf, int size)
         case OP_GET_FIELD_PTR:
         case OP_GOTO:
         case OP_GOTO_IF:
-        case OP_CALL:
         case OP_CALL_INDIRECT:
         case OP_RETURN:                 chars += snprintf(buf + chars, nonneg(size - chars), " %lld",  (long long int)instr->operand.intVal); break;
+        case OP_CALL:
+        {
+            const char *fnName = code[instr->operand.intVal].debug.fnName;
+            chars += snprintf(buf + chars, nonneg(size - chars), " %s (%lld)", fnName, (long long int)instr->operand.intVal);
+            break;
+        }
         case OP_ENTER_FRAME:
         case OP_GET_ARRAY_PTR:          chars += snprintf(buf + chars, nonneg(size - chars), " %d %d", (int)instr->operand.int32Val[0], (int)instr->operand.int32Val[1]); break;
         case OP_CALL_EXTERN:            chars += snprintf(buf + chars, nonneg(size - chars), " %p",    (void *)instr->operand.ptrVal); break;
@@ -2178,3 +2185,19 @@ int vmAsm(int ip, Instruction *instr, char *buf, int size)
 
     return chars;
 }
+
+
+bool vmUnwindCallStack(VM *vm, Slot **base, int *ip)
+{
+    if (*base == vm->fiber->stack + vm->fiber->stackSize - 1)
+        return false;
+
+    int returnOffset = (*base + 1)->intVal;
+    if (returnOffset == VM_FIBER_KILL_SIGNAL)
+        return false;
+
+    *base = (Slot *)((*base)->ptrVal);
+    *ip = returnOffset;
+    return true;
+}
+

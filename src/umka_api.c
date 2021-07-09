@@ -35,6 +35,7 @@ static void runtimeError(void *context, const char *format, ...)
     Instruction *instr = &comp->vm.fiber->code[comp->vm.fiber->ip];
 
     strcpy(comp->error.fileName, instr->debug.fileName);
+    strcpy(comp->error.fnName, instr->debug.fnName);
     comp->error.line = instr->debug.line;
     comp->error.pos = 1;
     vsnprintf(comp->error.msg, UMKA_MSG_LEN + 1, format, args);
@@ -122,6 +123,7 @@ void UMKA_API umkaGetError(void *umka, UmkaError *err)
 {
     Compiler *comp = umka;
     strcpy(err->fileName, comp->error.fileName);
+    strcpy(err->fnName, comp->error.fnName);
     err->line = comp->error.line;
     err->pos = comp->error.pos;
     strcpy(err->msg, comp->error.msg);
@@ -153,5 +155,25 @@ int UMKA_API umkaGetFunc(void *umka, const char *moduleName, const char *funcNam
 {
     Compiler *comp = umka;
     return compilerGetFunc(comp, moduleName, funcName);
+}
+
+
+bool UMKA_API umkaGetCallStack(void *umka, int depth, int *offset, char *name, int size)
+{
+    Compiler *comp = umka;
+    Slot *base = comp->vm.fiber->base;
+    int ip = comp->vm.fiber->ip;
+
+    while (depth-- > 0)
+        if (!vmUnwindCallStack(&comp->vm, &base, &ip))
+            return false;
+
+    if (offset)
+        *offset = ip;
+
+    if (name)
+        snprintf(name, size, "%s", comp->vm.fiber->code[ip].debug.fnName);
+
+    return true;
 }
 

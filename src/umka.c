@@ -9,7 +9,8 @@
 
 enum
 {
-    ASM_BUF_SIZE = 2 * 1024 * 1024
+    ASM_BUF_SIZE            = 2 * 1024 * 1024,
+    MAX_CALL_STACK_DEPTH    = 10
 };
 
 
@@ -130,6 +131,18 @@ int main(int argc, char **argv)
             UmkaError error;
             umkaGetError(umka, &error);
             printf("\nRuntime error %s (%d): %s\n", error.fileName, error.line, error.msg);
+            printf("Stack trace:\n");
+
+            for (int depth = 0; depth < MAX_CALL_STACK_DEPTH; depth++)
+            {
+                char fnName[UMKA_MSG_LEN + 1];
+                int fnOffset;
+
+                if (!umkaGetCallStack(umka, depth, &fnOffset, fnName, UMKA_MSG_LEN + 1))
+                    break;
+
+                printf("%08d: %s\n", fnOffset, fnName);
+            }
         }
     }
     else
