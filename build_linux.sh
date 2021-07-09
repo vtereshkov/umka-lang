@@ -19,7 +19,10 @@ rm -f *.o &&
 
 cd .. &&
 
+mkdir umka_linux/examples/3dcam -p &&
+mkdir umka_linux/examples/fractal -p &&
 mkdir umka_linux/examples/lisp -p &&
+mkdir umka_linux/examples/raytracer -p &&
 mkdir umka_linux/import &&
 
 mv src/libumka.* src/umka umka_linux/ &&
@@ -27,4 +30,5 @@ cp src/umka_api.h Umka.sublime-syntax spec.md LICENSE umka_linux/ &&
 
 cp examples/* umka_linux/examples -r &&
 cp import/*   umka_linux/import &&
+
 echo Build successful
