@@ -1,8 +1,8 @@
 // Raytracer demo in Umka
 
 import (
-    "../import/std.um"
-    "../import/mat.um"
+    "../../import/std.um"
+    "../../import/mat.um"
 )
 
 fn randn(): mat.Vec {
