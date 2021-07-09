@@ -33,8 +33,8 @@ endif
 
 # for all platforms same:
 STATIC_LIB = build/libumka.a
-STATIC_CFLAGS  = -fPIC -O3 -Wall -Wno-format-security -fno-strict-aliasing -DUMKA_STATIC -DUMKA_EXT_LIBS
-DYNAMIC_CFLAGS = -fPIC -O3 -Wall -Wno-format-security -fno-strict-aliasing -fvisibility=hidden -DUMKA_BUILD -DUMKA_EXT_LIBS
+STATIC_CFLAGS  = -s -fPIC -O3 -Wall -Wno-format-security -fno-strict-aliasing -DUMKA_STATIC -DUMKA_EXT_LIBS
+DYNAMIC_CFLAGS = -s -fPIC -O3 -Wall -Wno-format-security -fno-strict-aliasing -fvisibility=hidden -DUMKA_BUILD -DUMKA_EXT_LIBS
 
 ifndef LPATH
 $(warning Unrecognized kernel name ${platform} -- Unable to detect setting for LPATH)
