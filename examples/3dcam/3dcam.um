@@ -1,4 +1,4 @@
-import "../import/std.um"
+import "../../import/std.um"
 
 type (
     Vector2 = struct {x, y: real32}
