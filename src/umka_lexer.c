@@ -1,3 +1,4 @@
+#include <stdint.h>
 #define __USE_MINGW_ANSI_STDIO 1
 
 #include <stdio.h>
@@ -5,6 +6,7 @@
 #include <string.h>
 #include <math.h>
 #include <errno.h>
+#include <ctype.h>
 
 #include "umka_common.h"
 #include "umka_lexer.h"
@@ -640,6 +642,43 @@ static void lexOperator(Lexer *lex)
     } // switch
 }
 
+typedef struct Base {
+    size_t base;
+    size_t str_offset;
+} Base; 
+
+static Base findBase(const char *string)
+{
+    Base result;
+
+    // Check if we can parse prefixes
+    bool isAtLeast2 = string[0] != '\0' && string[1] != '\0';
+
+    if (isAtLeast2 && string[0] == '0')
+    {
+        if (tolower(string[1]) == 'b')
+        {
+            return (Base) { .base = 2, .str_offset = 2 };
+        }
+        else if (tolower(string[1]) == 'x')
+        {
+            return (Base) { .base = 16, .str_offset = 2 };
+        }
+        // Similar to Go, octal numbers can use 0o notaion: 0o123 --
+        else if (tolower(string[1]) == 'o')
+        {
+            return (Base) { .base = 8, .str_offset = 2 };
+        }
+        // -- as well as using leading zero notation: 0123
+        // Here we check if its just the zero or it's actually an octal number
+        else if (string[1] >= '0' && string[1] <= '7')
+        {
+            return (Base) { .base = 8, .str_offset = 1 };
+        }
+    }
+
+    return (Base) { .base = 10, .str_offset = 0 };
+}
 
 static void lexNumber(Lexer *lex)
 {
@@ -649,16 +688,22 @@ static void lexNumber(Lexer *lex)
 
     // Integer number
     lex->tok.kind = TOK_INTNUMBER;
-    lex->tok.uintVal = strtoull(lex->buf + lex->bufPos, &tail, 0);
+
+    Base base = findBase(lex->buf + lex->bufPos);
+
+    const char *contentsStart = lex->buf + lex->bufPos + base.str_offset;
+
+    lex->tok.uintVal = strtoull(contentsStart, &tail, base.base);
 
     if (errno == ERANGE)
         lex->error->handler(lex->error->context, "Number is too large");
 
-    if (tail == lex->buf + lex->bufPos && ch != '.')
-    {
-        lex->tok.kind = TOK_NONE;
-        return;
-    }
+    if (tail == contentsStart && ch != '.')
+        lex->error->handler(lex->error->context, "Invalid number");
+
+    if (tail[0] == '.' && base.base != 10)
+        lex->error->handler(lex->error->context, "Fractional part can only appear in a decimal number");
+
 
     // Real number
     if (tail[0] == '.' || tail[0] == 'E' || tail[0] == 'e')
@@ -843,8 +888,4 @@ TokenKind lexShortAssignment(TokenKind kind)
     }
 
 }
-
-
-
-
 
