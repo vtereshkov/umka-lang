@@ -186,8 +186,8 @@ int moduleAdd(Modules *modules, const char *path)
     module->hash = hash(name);
     module->pathHash = hash(path);
 
-    char libPath[2 * DEFAULT_STR_LEN + 4 + 1];
-    sprintf(libPath, "%s%s.umi", module->folder, module->name);
+    char libPath[2 + 2 * DEFAULT_STR_LEN + 4 + 1];
+    sprintf(libPath, "./%s%s.umi", module->folder, module->name);
 
     module->implLib = moduleLoadImplLib(libPath);
 
