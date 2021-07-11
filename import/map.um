@@ -1,5 +1,8 @@
 // Hash map
 
+import "std.um"
+
+
 type (
     Any = interface{}
 
@@ -101,31 +104,16 @@ fn (m: ^Map) rehash() {
 }
 
 
-fn trimTrailingSpaces(inp: str): str {
-	out := make([]char, len(inp))
-
-	for i, c in inp {
-		if c == ' ' {
-			break
-		}
-
-		out[i] = c
-	}
-
-	return str(out)
-}
-
-
 fn (m: ^Map) toStr(): str {
 	out := "{ "
 
-	for i, bucket in m^ {
+	for bucket in m^ {
 		if len(bucket) == 0 {
 			continue
 		}
 
-		for j, item in bucket {
-			out += item.key + ": " + trimTrailingSpaces(repr(item.val)) + ", "
+		for item in bucket {
+			out += item.key + ": " + std.rtrim(repr(item.val)) + ", "
 		}
 	}
 

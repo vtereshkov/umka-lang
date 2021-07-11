@@ -1287,6 +1287,18 @@ fn getchar*(): char
 
 Returns a character read from the console.
 
+### Strings
+
+#### Functions
+
+```
+fn ltrim*(s: str): str                  // Trim leading spaces and tabs
+fn rtrim*(s: str): str                  // Trim trailing spaces and tabs
+fn trim*(s: str): str                   // Trim leading and trailing spaces and tabs
+```
+
+Trim all leading and/or trailing spaces and tabs from string `s`. Return a new string. 
+
 ### Conversions
 
 #### Functions

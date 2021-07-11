@@ -84,6 +84,38 @@ fn getchar*(): char {
     return c
 }
 
+// Strings
+
+fn ltrim*(s: str): str {
+    start := -1
+    slen := len(s)
+    for i := 0; i < slen; i++ {
+        if s[i] != ' ' && s[i] != '\t' {
+            start = i
+            break
+        } 
+    }
+    if start == -1 {return ""}
+    return slice(s, start)
+}
+
+fn rtrim*(s: str): str {
+    stop := -1
+    slen := len(s)
+    for i := slen - 1; i >= 0; i-- {
+        if s[i] != ' ' && s[i] != '\t' {
+            stop = i
+            break
+        } 
+    }
+    if stop == -1 {return ""}
+    return slice(s, 0, stop + 1)
+}
+
+fn trim*(s: str): str {
+    return ltrim(rtrim(s))
+}
+
 // Conversions
 
 fn atoi*(s: str): int {
