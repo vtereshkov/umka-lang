@@ -99,3 +99,39 @@ fn (m: ^Map) rehash() {
   
     m^ = n
 }
+
+
+fn trimTrailingSpaces(inp: str): str {
+	out := make([]char, len(inp))
+
+	for i, c in inp {
+		if c == ' ' {
+			break
+		}
+
+		out[i] = c
+	}
+
+	return str(out)
+}
+
+
+fn (m: ^Map) toStr(): str {
+	out := "{ "
+
+	for i, bucket in m^ {
+		if len(bucket) == 0 {
+			continue
+		}
+
+		for j, item in bucket {
+			out += item.key + ": " + trimTrailingSpaces(repr(item.val)) + ", "
+		}
+	}
+
+	if len(out) > 2 {
+		out = slice(out, 0, len(out) - 2)
+	}
+
+	return out + " }"
+}

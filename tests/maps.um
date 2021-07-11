@@ -30,6 +30,8 @@ fn test*() {
         error("Test failed")
     }
 
+		printf("%s\n", populations.toStr())
+
     printf("Population of Russia was %.2f million. Now it is %.2f million\n", russia2019, russia2020)
 }
 
