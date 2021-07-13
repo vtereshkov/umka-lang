@@ -59,19 +59,19 @@ typedef struct
 } UmkaError;
 
 
-void UMKA_API *umkaAlloc            (void);
-bool UMKA_API umkaInit              (void *umka, const char *fileName, const char *sourceString, int storageSize, int stackSize, int argc, char **argv);
-bool UMKA_API umkaCompile           (void *umka);
-bool UMKA_API umkaRun               (void *umka);
-bool UMKA_API umkaCall              (void *umka, int entryOffset, int numParamSlots, UmkaStackSlot *params, UmkaStackSlot *result);
-void UMKA_API umkaFree              (void *umka);
-void UMKA_API umkaGetError          (void *umka, UmkaError *err);
-void UMKA_API umkaAsm               (void *umka, char *buf, int size);
-void UMKA_API umkaAddModule         (void *umka, const char *fileName, const char *sourceString);
-void UMKA_API umkaAddFunc           (void *umka, const char *name, UmkaExternFunc entry);
-int  UMKA_API umkaGetFunc           (void *umka, const char *moduleName, const char *funcName);
-bool UMKA_API umkaGetCallStack      (void *umka, int depth, int *offset, char *name, int size);
-const char * UMKA_API umkaGetVersion(void);
+UMKA_API void *umkaAlloc            (void);
+UMKA_API bool umkaInit              (void *umka, const char *fileName, const char *sourceString, int storageSize, int stackSize, int argc, char **argv);
+UMKA_API bool umkaCompile           (void *umka);
+UMKA_API bool umkaRun               (void *umka);
+UMKA_API bool umkaCall              (void *umka, int entryOffset, int numParamSlots, UmkaStackSlot *params, UmkaStackSlot *result);
+UMKA_API void umkaFree              (void *umka);
+UMKA_API void umkaGetError          (void *umka, UmkaError *err);
+UMKA_API void umkaAsm               (void *umka, char *buf, int size);
+UMKA_API void umkaAddModule         (void *umka, const char *fileName, const char *sourceString);
+UMKA_API void umkaAddFunc           (void *umka, const char *name, UmkaExternFunc entry);
+UMKA_API int  umkaGetFunc           (void *umka, const char *moduleName, const char *funcName);
+UMKA_API bool umkaGetCallStack      (void *umka, int depth, int *offset, char *name, int size);
+UMKA_API const char *umkaGetVersion (void);
 
 
 #if defined(__cplusplus)

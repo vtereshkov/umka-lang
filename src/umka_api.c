@@ -47,13 +47,13 @@ static void runtimeError(void *context, const char *format, ...)
 
 // API functions
 
-void UMKA_API *umkaAlloc(void)
+UMKA_API void *umkaAlloc(void)
 {
     return malloc(sizeof(Compiler));
 }
 
 
-bool UMKA_API umkaInit(void *umka, const char *fileName, const char *sourceString, int storageSize, int stackSize, int argc, char **argv)
+UMKA_API bool umkaInit(void *umka, const char *fileName, const char *sourceString, int storageSize, int stackSize, int argc, char **argv)
 {
     Compiler *comp = umka;
     memset(comp, 0, sizeof(Compiler));
@@ -72,7 +72,7 @@ bool UMKA_API umkaInit(void *umka, const char *fileName, const char *sourceStrin
 }
 
 
-bool UMKA_API umkaCompile(void *umka)
+UMKA_API bool umkaCompile(void *umka)
 {
     Compiler *comp = umka;
 
@@ -85,7 +85,7 @@ bool UMKA_API umkaCompile(void *umka)
 }
 
 
-bool UMKA_API umkaRun(void *umka)
+UMKA_API bool umkaRun(void *umka)
 {
     Compiler *comp = umka;
 
@@ -98,7 +98,7 @@ bool UMKA_API umkaRun(void *umka)
 }
 
 
-bool UMKA_API umkaCall(void *umka, int entryOffset, int numParamSlots, UmkaStackSlot *params, UmkaStackSlot *result)
+UMKA_API bool umkaCall(void *umka, int entryOffset, int numParamSlots, UmkaStackSlot *params, UmkaStackSlot *result)
 {
     Compiler *comp = umka;
 
@@ -111,7 +111,7 @@ bool UMKA_API umkaCall(void *umka, int entryOffset, int numParamSlots, UmkaStack
 }
 
 
-void UMKA_API umkaFree(void *umka)
+UMKA_API void umkaFree(void *umka)
 {
     Compiler *comp = umka;
     compilerFree(comp);
@@ -119,7 +119,7 @@ void UMKA_API umkaFree(void *umka)
 }
 
 
-void UMKA_API umkaGetError(void *umka, UmkaError *err)
+UMKA_API void umkaGetError(void *umka, UmkaError *err)
 {
     Compiler *comp = umka;
     strcpy(err->fileName, comp->error.fileName);
@@ -130,35 +130,35 @@ void UMKA_API umkaGetError(void *umka, UmkaError *err)
 }
 
 
-void UMKA_API umkaAsm(void *umka, char *buf, int size)
+UMKA_API void umkaAsm(void *umka, char *buf, int size)
 {
     Compiler *comp = umka;
     compilerAsm(comp, buf, size);
 }
 
 
-void UMKA_API umkaAddModule(void *umka, const char *fileName, const char *sourceString)
+UMKA_API void umkaAddModule(void *umka, const char *fileName, const char *sourceString)
 {
     Compiler *comp = umka;
     moduleAddSource(&comp->modules, fileName, sourceString);
 }
 
 
-void UMKA_API umkaAddFunc(void *umka, const char *name, UmkaExternFunc entry)
+UMKA_API void umkaAddFunc(void *umka, const char *name, UmkaExternFunc entry)
 {
     Compiler *comp = umka;
     externalAdd(&comp->externals, name, entry);
 }
 
 
-int UMKA_API umkaGetFunc(void *umka, const char *moduleName, const char *funcName)
+UMKA_API int umkaGetFunc(void *umka, const char *moduleName, const char *funcName)
 {
     Compiler *comp = umka;
     return compilerGetFunc(comp, moduleName, funcName);
 }
 
 
-bool UMKA_API umkaGetCallStack(void *umka, int depth, int *offset, char *name, int size)
+UMKA_API bool umkaGetCallStack(void *umka, int depth, int *offset, char *name, int size)
 {
     Compiler *comp = umka;
     Slot *base = comp->vm.fiber->base;
@@ -178,7 +178,7 @@ bool UMKA_API umkaGetCallStack(void *umka, int depth, int *offset, char *name, i
 }
 
 
-const char * UMKA_API umkaGetVersion(void)
+UMKA_API const char *umkaGetVersion(void)
 {
     return __DATE__;
 }
