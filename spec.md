@@ -1493,6 +1493,12 @@ bool UMKA_API umkaGetCallStack(void *umka, int depth, int *offset, char *name, i
 
 Gets the Umka function `name` and entry point `offset` from the call stack at the specified call `depth`. If `depth` is zero, the current function information is retrieved. Here, `umka` is the interpreter instance handle and `size`  is the `name` buffer size, including the null character. Returns `true` on success.
 
+```
+const char * UMKA_API umkaGetVersion(void);
+```
+
+Returns Umka interpreter version (build date) string.
+
 ## Appendix: Language grammar
 
 ```

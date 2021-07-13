@@ -177,3 +177,9 @@ bool UMKA_API umkaGetCallStack(void *umka, int depth, int *offset, char *name, i
     return true;
 }
 
+
+const char * UMKA_API umkaGetVersion(void)
+{
+    return __DATE__;
+}
+
