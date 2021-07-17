@@ -5,6 +5,7 @@
 #include <stdio.h>
 
 #include "umka_compiler.h"
+#include "umka_runtime_src.h"
 
 
 void parseProgram(Compiler *comp);
@@ -154,6 +155,8 @@ void compilerInit(Compiler *comp, const char *fileName, const char *sourceString
 
     *(int64_t *)(rtlargc->ptr) = comp->argc;
     *(void *  *)(rtlargv->ptr) = comp->argv;
+
+    moduleAddSource(&comp->modules, "std.um", rtlSrc);
 }
 
 
