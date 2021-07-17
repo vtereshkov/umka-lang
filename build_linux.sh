@@ -7,6 +7,8 @@ sourcefiles="umka_api.c umka_common.c umka_compiler.c umka_const.c   umka_decl.c
 
 rm umka_linux -rf && # remove previous build
 
+cp import_embed/umka_runtime_src.h src/ &&
+
 cd src &&
 
 gcc $gccflags -c $sourcefiles &&

@@ -1,0 +1,188 @@
+// Umka standard library
+
+// File I/O
+
+type File* = ^struct {}
+
+const (
+    seekBegin* = 0
+    seekCur*   = 1
+    seekEnd*   = 2
+)    
+
+fn rtlfopen  (name: str, mode: str): File;  
+fn fopen*    (name: str, mode: str): File {return rtlfopen(name, mode)}
+
+fn rtlfclose (f: File): int
+fn fclose*   (f: File): int {return rtlfclose(f)}
+
+fn rtlfread(buf: ^void, size, cnt: int, f: File): int
+
+fn fread*(f: File, buf: interface{}): int {
+    if f == null {
+        error("File is null")
+    }
+    if bytes := ^[]uint8(buf); bytes != null {
+        return rtlfread(&bytes[0], len(bytes^), 1, f)
+    }
+    if selfhasptr(buf) {
+        error("Cannot read reference types except ^[]uint8")
+    }
+    return rtlfread(buf.__self, sizeofself(buf), 1, f)
+}
+
+fn rtlfwrite(buf: ^void, size, cnt: int, f: File): int
+
+fn fwrite*(f: File, buf: interface{}): int {
+    if f == null {
+        error("File is null")
+    }
+    if bytes := ^[]uint8(buf); bytes != null {
+        return rtlfwrite(&bytes[0], len(bytes^), 1, f)
+    }    
+    if selfhasptr(buf) {
+        error("Cannot write reference types except ^[]uint8")
+    }
+    return rtlfwrite(buf.__self, sizeofself(buf), 1, f)
+}
+
+fn rtlfseek  (f: File, offset, origin: int): int
+fn fseek*    (f: File, offset, origin: int): int {
+    if f == null {
+        error("File is null")
+    }
+    return rtlfseek(f, offset, origin)
+}
+
+fn rtlftell (f: File): int
+fn ftell*   (f: File): int {
+    if f == null {
+        error("File is null")
+    }
+    return rtlftell(f)
+}
+
+fn rtlremove (name: str): int
+fn remove*   (name: str): int {return rtlremove(name)}
+
+fn rtlfeof  (f: File): int
+fn feof*    (f: File): bool {
+    if f == null {
+        error("File is null")
+    }                
+    return bool(rtlfeof(f))
+}
+
+// I/O utilities
+
+fn println*(s: str): int {return printf("%s\n", s)}
+fn fprintln*(f: File, s: str): int {return fprintf(f, "%s\n", s)}
+
+fn getchar*(): char {
+    var c: char
+    scanf("%c", &c)
+    return c
+}
+
+// Strings
+
+fn ltrim*(s: str): str {
+    start := -1
+    slen := len(s)
+    for i := 0; i < slen; i++ {
+        if s[i] != ' ' && s[i] != '\t' {
+            start = i
+            break
+        } 
+    }
+    if start == -1 {return ""}
+    return slice(s, start)
+}
+
+fn rtrim*(s: str): str {
+    stop := -1
+    slen := len(s)
+    for i := slen - 1; i >= 0; i-- {
+        if s[i] != ' ' && s[i] != '\t' {
+            stop = i
+            break
+        } 
+    }
+    if stop == -1 {return ""}
+    return slice(s, 0, stop + 1)
+}
+
+fn trim*(s: str): str {
+    return ltrim(rtrim(s))
+}
+
+// Conversions
+
+fn atoi*(s: str): int {
+    var x: int
+    sscanf(s, "%lld", &x)
+    return x
+}
+
+fn atof*(s: str): real {
+    var x: real
+    sscanf(s, "%lf", &x)
+    return x
+}
+
+fn itoa*(x: int): str {
+    s := str(make([]char, 256))
+    sprintf(s, "%lld", x)
+    return s
+}
+
+fn ftoa*(x: real, decimals: int): str {
+    fmt := str(make([]char, 256))
+    s := str(make([]char, 256))
+    sprintf(fmt, "%%.%dlf", decimals)
+    sprintf(s, fmt, x)
+    return s
+}
+
+// Math
+
+const pi* = 3.14159265358979323846
+
+// Random numbers
+
+const randMax* = 0x7FFFFFFF
+randSeed := 0
+
+fn srand*(seed: int) {randSeed = seed}
+
+fn rand*(): int {
+    randSeed = ((randSeed * 1103515245) + 12345) & 0x7FFFFFFF
+    return randSeed
+}
+
+fn frand*(): real {return real(rand()) / randMax}
+
+// Timer
+
+fn rtltime(): int
+fn time*(): int {return rtltime()}
+
+fn rtlclock(): real
+fn clock*(): real {return rtlclock()}
+
+// Command line and environment
+
+fn argc*(): int {return rtlargc}
+
+fn argv*(i: int): str {
+    if i < 0 || i >= rtlargc {
+        error("Command line parameter not found")
+    }
+    return rtlargv[i]
+}
+
+fn rtlgetenv(name: str): str
+fn getenv*(name: str): str {
+    return "" + rtlgetenv(name)
+}
+

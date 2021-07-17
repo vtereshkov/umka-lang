@@ -1,3 +1,5 @@
+copy import_embed\umka_runtime_src.h src
+
 cd src
 
 cl /nologo /O2 /MT /LD /Felibumka.dll /DUMKA_BUILD /DUMKA_EXT_LIBS umka_api.c umka_common.c umka_compiler.c umka_const.c umka_decl.c umka_expr.c umka_gen.c umka_ident.c umka_lexer.c umka_runtime.c umka_stmt.c umka_types.c umka_vm.c 
