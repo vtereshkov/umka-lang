@@ -34,7 +34,7 @@ fn main() {
 		}
 	}
 
-	fprintf(fout, ";\"\n\n#endif // UMKA_RUNTIME_SRC_H_INCLUDED\n")
+	fprintf(fout, "\";\n\n#endif // UMKA_RUNTIME_SRC_H_INCLUDED\n")
 
 	std.fclose(fin)
 	std.fclose(fout)

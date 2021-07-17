@@ -1,6 +1,6 @@
 // Matrix multiplication benchmark - Umka version
 
-import "../import/std.um"
+import "std.um"
 
 fn main() {
     const size = 400

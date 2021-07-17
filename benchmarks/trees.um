@@ -1,6 +1,6 @@
 // Binary trees benchmark - Umka version
 
-import "../import/std.um"
+import "std.um"
 
 type Node = struct {
     item: int

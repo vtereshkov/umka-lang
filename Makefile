@@ -55,6 +55,7 @@ clean:
 
 path:
 	mkdir $(buildpath) -p
+  cp import_embed/umka_runtime_src.h src/
 
 $(STATIC_LIB): $(STATIC_LIB_OBJ)
 	# Build static archive 

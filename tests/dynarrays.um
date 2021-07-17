@@ -1,4 +1,4 @@
-import "../import/std.um"
+import "std.um"
 
 fn f(b: [11][2]^int) {
     for x in b {

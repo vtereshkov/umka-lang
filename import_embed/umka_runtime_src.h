@@ -1,7 +1,7 @@
 #ifndef UMKA_RUNTIME_SRC_H_INCLUDED
 #define UMKA_RUNTIME_SRC_H_INCLUDED
 
-const char *rtlSrc = 
+static const char *rtlSrc = 
 
 "// Umka standard library\n"
 "\n"
@@ -192,4 +192,5 @@ const char *rtlSrc =
 "}\n"
 "\n"
 " ";
+
 #endif // UMKA_RUNTIME_SRC_H_INCLUDED

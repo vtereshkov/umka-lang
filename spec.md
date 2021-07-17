@@ -1192,7 +1192,7 @@ importItem = stringLiteral.
 Examples:
 
 ```
-import "../import/std.um"
+import "std.um"
 fn main() {
     std.println("Hello, World!")
 }
@@ -1200,7 +1200,7 @@ fn main() {
 
 ## Standard library
 
-The standard library is contained in the `std.um` module.
+The standard library is contained in the `std.um` module embedded into the Umka interpreter library.
 
 ### Input/output
 

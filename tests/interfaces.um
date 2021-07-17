@@ -1,4 +1,4 @@
-import "../import/std.um"
+import "std.um"
 
 type (
     vec = struct {

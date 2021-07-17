@@ -1,6 +1,6 @@
 // N body problem benchmark - Umka version
 
-import "../import/std.um"
+import "std.um"
 
 type Body = struct {
    x, y, z, vx, vy, vz, mass: real
