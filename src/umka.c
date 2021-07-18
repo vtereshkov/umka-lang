@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <locale.h>
 
 #include "umka_api.h"
 
@@ -22,6 +23,7 @@ void help(void)
     printf("Parameters:\n");
     printf("    -storage <storage-size> - Set static storage size\n");
     printf("    -stack <stack-size>     - Set stack size\n");
+    printf("    -locale <locale-string> - Set locale\n");
     printf("    -asm                    - Write assembly listing\n");
     printf("    -check                  - Compile only\n");
 }
@@ -67,6 +69,22 @@ int main(int argc, char **argv)
             if (stackSize <= 0)
             {
                 printf("Illegal stack size\n");
+                return 1;
+            }
+
+            i += 2;
+        }
+        else if (strcmp(argv[i], "-locale") == 0)
+        {
+            if (i + 1 == argc)
+            {
+                printf("No locale string\n");
+                return 1;
+            }
+
+            if (!setlocale(LC_CTYPE, argv[i + 1]))
+            {
+                printf("Illegal locale string\n");
                 return 1;
             }
 
