@@ -117,7 +117,7 @@ static void pageFree(HeapPages *pages)
         HeapPage *next = page->next;
         if (page->ptr)
         {
-            printf("Warning: Memory leak at %p (%d refs)\n", page->ptr, page->refCnt);
+            fprintf(stderr, "Warning: Memory leak at %p (%d refs)\n", page->ptr, page->refCnt);
             free(page->ptr);
         }
         free(page);
@@ -198,7 +198,7 @@ static FORCE_INLINE HeapPage *pageFind(HeapPages *pages, void *ptr)
             HeapChunkHeader *chunk = pageGetChunkHeader(page, ptr);
 
             if (chunk->refCnt == 0)
-                printf("Warning: Dangling pointer at %p\n", ptr);
+                fprintf(stderr, "Warning: Dangling pointer at %p\n", ptr);
 
             if (chunk->magic == VM_HEAP_CHUNK_MAGIC && chunk->refCnt > 0)
                 return page;
@@ -521,7 +521,7 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
 
     if (depth > VM_MAX_REF_CNT_DEPTH)
     {
-        printf("Warning: Data structure is too deep for garbage collection\n");
+        fprintf(stderr, "Warning: Data structure is too deep for garbage collection\n");
         return;
     }
 

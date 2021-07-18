@@ -19,7 +19,6 @@ copy LICENSE umka_windows_msvc
 copy spec.md umka_windows_msvc
 copy Umka.sublime-syntax umka_windows_msvc
 
-mkdir umka_windows_msvc\examples
 mkdir umka_windows_msvc\examples\3dcam
 mkdir umka_windows_msvc\examples\fractal
 mkdir umka_windows_msvc\examples\lisp

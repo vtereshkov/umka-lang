@@ -27,8 +27,7 @@ mkdir umka_windows_mingw\examples\fractal
 mkdir umka_windows_mingw\examples\lisp
 mkdir umka_windows_mingw\examples\raytracer
 mkdir umka_windows_mingw\import
- 
-copy examples\*.* umka_windows_mingw\examples
+
 copy examples\3dcam\*.* umka_windows_mingw\examples\3dcam
 copy examples\fractal\*.* umka_windows_mingw\examples\fractal
 copy examples\lisp\*.* umka_windows_mingw\examples\lisp
