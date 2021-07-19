@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <locale.h>
 
 #include "umka_api.h"
 
@@ -34,6 +33,7 @@ int main(int argc, char **argv)
     // Parse interpreter parameters
     int storageSize     = 1024 * 1024;  // Bytes
     int stackSize       = 1024 * 1024;  // Slots
+    const char *locale  = NULL;
     bool writeAsm       = false;
     bool compileOnly    = false;
 
@@ -82,11 +82,7 @@ int main(int argc, char **argv)
                 return 1;
             }
 
-            if (!setlocale(LC_CTYPE, argv[i + 1]))
-            {
-                fprintf(stderr, "Illegal locale string\n");
-                return 1;
-            }
+            locale = argv[i + 1];
 
             i += 2;
         }
@@ -112,7 +108,7 @@ int main(int argc, char **argv)
     }
 
     void *umka = umkaAlloc();
-    bool ok = umkaInit(umka, argv[i], NULL, storageSize, stackSize, argc - i, argv + i);
+    bool ok = umkaInit(umka, argv[i], NULL, storageSize, stackSize, locale, argc - i, argv + i);
     if (ok)
         ok = umkaCompile(umka);
 

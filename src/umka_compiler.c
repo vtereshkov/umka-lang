@@ -3,6 +3,7 @@
 #include <stddef.h>
 #include <string.h>
 #include <stdio.h>
+#include <locale.h>
 
 #include "umka_compiler.h"
 #include "umka_runtime_src.h"
@@ -122,7 +123,7 @@ static void compilerDeclareExternalFuncs(Compiler *comp)
 }
 
 
-void compilerInit(Compiler *comp, const char *fileName, const char *sourceString, int storageSize, int stackSize, int argc, char **argv)
+void compilerInit(Compiler *comp, const char *fileName, const char *sourceString, int storageSize, int stackSize, const char *locale, int argc, char **argv)
 {
     storageInit  (&comp->storage, storageSize);
     moduleInit   (&comp->modules, &comp->error);
@@ -134,6 +135,9 @@ void compilerInit(Compiler *comp, const char *fileName, const char *sourceString
     genInit      (&comp->gen, &comp->debug, &comp->error);
     vmInit       (&comp->vm, stackSize, &comp->error);
     lexInit      (&comp->lex, &comp->storage, &comp->debug, fileName, sourceString, &comp->error);
+
+    if (locale && !setlocale(LC_ALL, locale))
+        comp->error.handler(comp->error.context, "Cannot set locale");
 
     comp->argc  = argc;
     comp->argv  = argv;

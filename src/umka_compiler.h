@@ -45,7 +45,7 @@ typedef struct
 } Compiler;
 
 
-void compilerInit   (Compiler *comp, const char *fileName, const char *sourceString, int storageSize, int stackSize, int argc, char **argv);
+void compilerInit   (Compiler *comp, const char *fileName, const char *sourceString, int storageSize, int stackSize, const char *locale, int argc, char **argv);
 void compilerFree   (Compiler *comp);
 void compilerCompile(Compiler *comp);
 void compilerRun    (Compiler *comp);

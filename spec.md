@@ -1427,10 +1427,11 @@ Allocates memory for the interpreter and returns the interpreter instance handle
 
 ```
 UMKA_API bool umkaInit(void *umka, const char *fileName, const char *sourceString, 
-                       int storageSize, int stackSize, int argc, char **argv);
+                       int storageSize, int stackSize, const char *locale, 
+                       int argc, char **argv);
 ```
 
-Initializes the interpreter instance. Here, `umka` is the interpreter instance handle, `fileName` is the Umka source file name, `sourceString` is an optional string buffer that contains the program source, `storageSize` is the size, in bytes, of the static storage used for storing string literals and constant composite literals, `stackSize` is the fiber stack size, in slots, `argc` and `argv` represent the standard C/C++ command-line parameter data. If `sourceString` is not `NULL`, the program source is read from this string rather than from a file. A fictitious `fileName` should nevertheless be specified. Returns `true` if the source has been successfully loaded.
+Initializes the interpreter instance. Here, `umka` is the interpreter instance handle, `fileName` is the Umka source file name, `sourceString` is an optional string buffer that contains the program source, `storageSize` is the size, in bytes, of the static storage used for storing string literals and constant composite literals, `stackSize` is the fiber stack size, in slots, `argc` and `argv` represent the standard C/C++ command-line parameter data. If `sourceString` is not `NULL`, the program source is read from this string rather than from a file. A fictitious `fileName` should nevertheless be specified.  An optional `locale` string can be specified. Returns `true` if the source has been successfully loaded.
 
 ```
 UMKA_API bool umkaCompile(void *umka);

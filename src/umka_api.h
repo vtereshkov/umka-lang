@@ -60,7 +60,7 @@ typedef struct
 
 
 UMKA_API void *umkaAlloc            (void);
-UMKA_API bool umkaInit              (void *umka, const char *fileName, const char *sourceString, int storageSize, int stackSize, int argc, char **argv);
+UMKA_API bool umkaInit              (void *umka, const char *fileName, const char *sourceString, int storageSize, int stackSize, const char *locale, int argc, char **argv);
 UMKA_API bool umkaCompile           (void *umka);
 UMKA_API bool umkaRun               (void *umka);
 UMKA_API bool umkaCall              (void *umka, int entryOffset, int numParamSlots, UmkaStackSlot *params, UmkaStackSlot *result);
