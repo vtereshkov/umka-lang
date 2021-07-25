@@ -529,8 +529,11 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
     {
         case TYPE_PTR:
         {
+            if (type->weak)
+                break;
+
             HeapPage *page = pageFind(pages, ptr);
-            if (page && !type->weak)
+            if (page)
             {
                 if (tokKind == TOK_PLUSPLUS)
                     chunkChangeRefCnt(pages, page, ptr, 1);
