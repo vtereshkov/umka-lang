@@ -16,6 +16,7 @@ import (
     "itemptr.um"
     "safecast.um"
     "nonlocal.um"
+    "weakptr.um"
 )
 
 fn main() {
@@ -36,4 +37,5 @@ fn main() {
     printf("\n\n>>> Item pointers\n\n");        itemptr.test()
     printf("\n\n>>> Safe type casts\n\n");      safecast.test()
     printf("\n\n>>> Non-local scope\n\n");      nonlocal.test()
+    printf("\n\n>>> Weak pointers\n\n");        weakptr.test()
 }

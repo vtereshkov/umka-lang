@@ -190,14 +190,14 @@ static FORCE_INLINE HeapChunkHeader *pageGetChunkHeader(HeapPage *page, void *pt
 }
 
 
-static FORCE_INLINE HeapPage *pageFind(HeapPages *pages, void *ptr)
+static FORCE_INLINE HeapPage *pageFind(HeapPages *pages, void *ptr, bool warnDangling)
 {
     for (HeapPage *page = pages->first; page; page = page->next)
         if (ptr >= page->ptr && ptr < (void *)((char *)page->ptr + page->numChunks * page->chunkSize))
         {
             HeapChunkHeader *chunk = pageGetChunkHeader(page, ptr);
 
-            if (chunk->refCnt == 0)
+            if (warnDangling && chunk->refCnt == 0)
                 fprintf(stderr, "Warning: Dangling pointer at %p\n", ptr);
 
             if (chunk->magic == VM_HEAP_CHUNK_MAGIC && chunk->refCnt > 0)
@@ -532,7 +532,7 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
             if (type->weak)
                 break;
 
-            HeapPage *page = pageFind(pages, ptr);
+            HeapPage *page = pageFind(pages, ptr, true);
             if (page)
             {
                 if (tokKind == TOK_PLUSPLUS)
@@ -586,7 +586,7 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
 
         case TYPE_STR:
         {
-            HeapPage *page = pageFind(pages, ptr);
+            HeapPage *page = pageFind(pages, ptr, true);
             if (page)
                 chunkChangeRefCnt(pages, page, ptr, (tokKind == TOK_PLUSPLUS) ? 1 : -1);
             break;
@@ -601,7 +601,7 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
         case TYPE_DYNARRAY:
         {
             DynArray *array = (DynArray *)ptr;
-            HeapPage *page = pageFind(pages, array->data);
+            HeapPage *page = pageFind(pages, array->data, true);
             if (page)
             {
                 if (tokKind == TOK_PLUSPLUS)
@@ -638,7 +638,7 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
 
         case TYPE_FIBER:
         {
-            HeapPage *page = pageFind(pages, ptr);
+            HeapPage *page = pageFind(pages, ptr, true);
             if (page)
             {
                 // Don't use ref counting for the fiber stack, otherwise every local variable will also be ref-counted
@@ -1762,7 +1762,7 @@ static FORCE_INLINE void doAssertWeakPtr(Fiber *fiber, HeapPages *pages)
 {
     void *ptr = (void *)fiber->top->ptrVal;
 
-    HeapPage *page = pageFind(pages, ptr);
+    HeapPage *page = pageFind(pages, ptr, false);
     if (!page || pageGetChunkHeader(page, ptr)->refCnt == 0)
         ptr = NULL;
 
@@ -1998,7 +1998,7 @@ static FORCE_INLINE void doLeaveFrame(Fiber *fiber, HeapPages *pages, Error *err
     if (inHeap)     // Heap frame
     {
         // Decrease heap frame ref count
-        HeapPage *page = pageFind(pages, fiber->base);
+        HeapPage *page = pageFind(pages, fiber->base, true);
         int refCnt = chunkChangeRefCnt(pages, page, fiber->base, -1);
 
         if (refCnt > 0)

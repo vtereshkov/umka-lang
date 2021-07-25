@@ -307,3 +307,12 @@ HellHell
 >>> Non-local scope
 
 86 
+
+
+>>> Weak pointers
+
+Test 1
+42 
+it's null
+Test 2
+13 12 

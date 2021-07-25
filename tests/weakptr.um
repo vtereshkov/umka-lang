@@ -1,0 +1,49 @@
+fn printw(w: weak ^int) {
+    if q := ^int(w); q != null {
+        printf(repr(q^) + '\n')
+    } else {
+        printf("it's null\n")
+    }    
+}
+
+fn test1() {
+    printf("Test 1\n")
+
+    var w: weak ^int
+    {
+        p := new(int)
+        p^ = 42
+        w = p
+        printw(w)
+    }
+
+    printw(w)    
+}
+
+fn test2() {
+    printf("Test 2\n")
+
+    type (
+        S = struct {x: int; t: ^T}
+        T = struct {x: int; s: weak ^S}
+    )
+
+    p := new(S)
+    q := new(T)
+    p.t = q
+    p.x = 12
+    q.s = p
+    q.x = 13
+
+    printf(repr(p.t.x) + repr(^S(q.s).x) + '\n')
+}
+
+fn test*() {
+    test1()
+    test2()
+}
+
+fn main() {
+    test()
+}
+
