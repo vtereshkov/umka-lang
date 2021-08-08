@@ -28,6 +28,7 @@ typedef enum
     TYPE_REAL32,
     TYPE_REAL,
     TYPE_PTR,
+    TYPE_WEAKPTR,       // Actually a handle that stores the heap page ID and the offset within the page: (pageId << 32) | pageOffset
     TYPE_ARRAY,
     TYPE_DYNARRAY,
     TYPE_STR,           // Pointer of a special kind that admits assignment of string literals, concatenation and comparison by content
@@ -43,6 +44,7 @@ typedef union
     int64_t intVal;
     uint64_t uintVal;
     int64_t ptrVal;
+    uint64_t weakPtrVal;
     double realVal;
 } Const;
 
@@ -82,7 +84,6 @@ typedef struct tagType
     struct tagType *base;                   // For pointers and arrays
     int numItems;                           // For arrays, structures and interfaces
     bool isExprList;                        // For structures that represent expression lists
-    bool weak;                              // For pointers
     struct tagIdent *typeIdent;             // For types that have identifiers
     union
     {
@@ -170,7 +171,8 @@ static inline bool typeStructured(Type *type)
 
 static inline bool typeKindGarbageCollected(TypeKind typeKind)
 {
-    return typeKind == TYPE_PTR    || typeKind == TYPE_STR       || typeKind == TYPE_ARRAY  || typeKind == TYPE_DYNARRAY ||
+    return typeKind == TYPE_PTR    || typeKind == TYPE_WEAKPTR   ||
+           typeKind == TYPE_STR    || typeKind == TYPE_ARRAY     || typeKind == TYPE_DYNARRAY ||
            typeKind == TYPE_STRUCT || typeKind == TYPE_INTERFACE || typeKind == TYPE_FIBER;
 }
 
@@ -243,6 +245,7 @@ static inline bool typeOverflow(TypeKind typeKind, Const val)
         case TYPE_REAL32:   return val.realVal < -FLT_MAX        || val.realVal > FLT_MAX;
         case TYPE_REAL:     return val.realVal < -DBL_MAX        || val.realVal > DBL_MAX;
         case TYPE_PTR:
+        case TYPE_WEAKPTR:
         case TYPE_STR:
         case TYPE_ARRAY:
         case TYPE_DYNARRAY:

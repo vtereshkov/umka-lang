@@ -28,6 +28,7 @@ static const char *spelling [] =
     "real32",
     "real",
     "^",
+    "weak ^",
     "[...]",
     "[]",
     "str",
@@ -92,7 +93,6 @@ Type *typeAdd(Types *types, Blocks *blocks, TypeKind kind)
     type->base          = NULL;
     type->numItems      = 0;
     type->isExprList    = false;
-    type->weak          = false;
     type->typeIdent     = NULL;
     type->next          = NULL;
 
@@ -165,7 +165,8 @@ int typeSizeNoCheck(Type *type)
         case TYPE_CHAR:     return sizeof(char);
         case TYPE_REAL32:   return sizeof(float);
         case TYPE_REAL:     return sizeof(double);
-        case TYPE_PTR:
+        case TYPE_PTR:      return sizeof(void *);
+        case TYPE_WEAKPTR:  return sizeof(uint64_t);
         case TYPE_STR:      return sizeof(void *);
         case TYPE_ARRAY:    return type->numItems * typeSizeNoCheck(type->base);
         case TYPE_DYNARRAY: return sizeof(DynArray);
@@ -198,7 +199,8 @@ int typeSize(Types *types, Type *type)
 
 bool typeGarbageCollected(Type *type)
 {
-    if (type->kind == TYPE_PTR || type->kind == TYPE_STR || type->kind == TYPE_DYNARRAY || type->kind == TYPE_INTERFACE || type->kind == TYPE_FIBER)
+    if (type->kind == TYPE_PTR || type->kind == TYPE_WEAKPTR || type->kind == TYPE_STR ||
+        type->kind == TYPE_DYNARRAY || type->kind == TYPE_INTERFACE || type->kind == TYPE_FIBER)
         return true;
 
     if (type->kind == TYPE_ARRAY)
@@ -231,9 +233,9 @@ static bool typeEquivalentRecursive(Type *left, Type *right, VisitedTypePair *fi
 
     if (left->kind == right->kind)
     {
-        // Pointers
-        if (left->kind == TYPE_PTR)
-            return typeEquivalentRecursive(left->base, right->base, &newPair) && left->weak == right->weak;
+        // Pointers or weak pointers
+        if (left->kind == TYPE_PTR || left->kind == TYPE_WEAKPTR)
+            return typeEquivalentRecursive(left->base, right->base, &newPair);
 
         // Arrays
         else if (left->kind == TYPE_ARRAY)
@@ -365,14 +367,6 @@ bool typeCompatible(Type *left, Type *right, bool symmetric)
         // Null can be compared to any pointer
         if (left->base->kind == TYPE_NULL && symmetric)
             return true;
-
-        // Any pointer can be assigned to a weak pointer of the same base type
-        if (left->weak)
-            return typeEquivalent(left->base, right->base);
-
-        // Any pointer can be compared to a weak pointer of the same base type
-        if (right->weak && symmetric)
-            return typeEquivalent(left->base, right->base);
     }
     return false;
 }
@@ -416,12 +410,12 @@ bool typeValidOperator(Type *type, TokenKind op)
         case TOK_OROR:      return type->kind == TYPE_BOOL;
         case TOK_PLUSPLUS:
         case TOK_MINUSMINUS:return typeInteger(type);
-        case TOK_EQEQ:      return typeOrdinal(type) || typeReal(type) || type->kind == TYPE_PTR || type->kind == TYPE_STR;
+        case TOK_EQEQ:      return typeOrdinal(type) || typeReal(type) || type->kind == TYPE_PTR || type->kind == TYPE_WEAKPTR || type->kind == TYPE_STR;
         case TOK_LESS:
         case TOK_GREATER:   return typeOrdinal(type) || typeReal(type) || type->kind == TYPE_STR;
         case TOK_EQ:        return true;
         case TOK_NOT:       return type->kind == TYPE_BOOL;
-        case TOK_NOTEQ:     return typeOrdinal(type) || typeReal(type) || type->kind == TYPE_PTR || type->kind == TYPE_STR;
+        case TOK_NOTEQ:     return typeOrdinal(type) || typeReal(type) || type->kind == TYPE_PTR || type->kind == TYPE_WEAKPTR || type->kind == TYPE_STR;
         case TOK_LESSEQ:
         case TOK_GREATEREQ: return typeOrdinal(type) || typeReal(type) || type->kind == TYPE_STR;
         default:            return false;
@@ -574,9 +568,6 @@ static char *typeSpellingRecursive(Type *type, char *buf, int size, int depth)
     {
         int len = 0;
 
-        if (type->weak)
-            len += snprintf(buf + len, nonneg(size - len), "weak ");
-
         if (type->kind == TYPE_ARRAY)
             len += snprintf(buf + len, nonneg(size - len), "[%d]", type->numItems);
         else if (typeExprListStruct(type))
@@ -592,7 +583,7 @@ static char *typeSpellingRecursive(Type *type, char *buf, int size, int depth)
         else
             snprintf(buf + len, nonneg(size - len), "%s", spelling[type->kind]);
 
-        if (type->kind == TYPE_PTR || type->kind == TYPE_ARRAY || type->kind == TYPE_DYNARRAY)
+        if (type->kind == TYPE_PTR || type->kind == TYPE_WEAKPTR || type->kind == TYPE_ARRAY || type->kind == TYPE_DYNARRAY)
         {
             char baseBuf[DEFAULT_STR_LEN + 1];
             if (depth > 0)

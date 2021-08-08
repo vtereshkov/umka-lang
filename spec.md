@@ -348,7 +348,6 @@ Two types are *compatible* if
 * They are integer types
 * They are real types
 * They are pointer types and the left-hand side pointer type has the `void` base type or the right-hand side is `null` 
-* They are pointer types and have equivalent base types and the left-hand side pointer type is weak and the right-hand side pointer type is strong
 
 ### Type conversions
 
@@ -366,6 +365,7 @@ If a value `s` of type `S` is given where a value `t` of some other type `T` is 
 * `S` is an interface type and `T` is a type that implements all the methods of `S` 
 * `S` is a pointer type and `T` is an interface type
 * `S` is a weak pointer type and `T` is a strong pointer type and the base types of `S` and `T` are equivalent 
+* `S` is a strong pointer type and `T` is a weak pointer type and the base types of `S` and `T` are equivalent
 
 #### Explicit conversions
 
@@ -450,11 +450,11 @@ const (
     d = "Hello" + " World"
 )
 const (
-    a = 5
-    b       // 6
-    c       // 7
-    d = 19
-    e       // 20
+    e = 5
+    f       // 6
+    g       // 7
+    h = 19
+    i       // 20
 )
 ```
 

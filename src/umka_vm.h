@@ -57,8 +57,9 @@ typedef enum
     OP_GET_DYNARRAY_PTR,
     OP_GET_FIELD_PTR,
     OP_ASSERT_TYPE,
-    OP_ASSERT_WEAK_PTR,
     OP_ASSERT_RANGE,
+    OP_WEAKEN_PTR,
+    OP_STRENGTHEN_PTR,
     OP_GOTO,
     OP_GOTO_IF,
     OP_CALL,
@@ -129,6 +130,7 @@ typedef union
     uint64_t uintVal;
     int32_t int32Val[2];
     int64_t ptrVal;
+    uint64_t weakPtrVal;
     double realVal;
     BuiltinFunc builtinVal;
 } Slot;
@@ -158,6 +160,7 @@ typedef struct
 
 typedef struct tagHeapPage
 {
+    int id;
     void *ptr;
     int numChunks, numOccupiedChunks, chunkSize;
     int refCnt;
@@ -168,6 +171,7 @@ typedef struct tagHeapPage
 typedef struct
 {
     HeapPage *first, *last;
+    int freeId;
 } HeapPages;
 
 

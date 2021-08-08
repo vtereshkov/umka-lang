@@ -310,12 +310,22 @@ static void doInterfaceToPtrConv(Compiler *comp, Type *dest, Type **src, Const *
 }
 
 
+static void doPtrToWeakPtrConv(Compiler *comp, Type *dest, Type **src, Const *constant)
+{
+    if (constant)
+        comp->error.handler(comp->error.context, "Conversion to weak pointer is not allowed in constant expressions");
+
+    genWeakenPtr(&comp->gen);
+    *src = dest;
+}
+
+
 static void doWeakPtrToPtrConv(Compiler *comp, Type *dest, Type **src, Const *constant)
 {
     if (constant)
         comp->error.handler(comp->error.context, "Conversion from weak pointer is not allowed in constant expressions");
 
-    genAssertWeakPtr(&comp->gen);
+    genStrengthenPtr(&comp->gen);
     *src = dest;
 }
 
@@ -385,10 +395,14 @@ void doImplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant,
         doInterfaceToPtrConv(comp, dest, src, constant);
     }
 
-    // Weak pointer to pointer (weak pointer assertion)
-    else if (dest->kind == TYPE_PTR && !dest->weak &&
-            (*src)->kind == TYPE_PTR && (*src)->weak &&
-            typeEquivalent(dest->base, (*src)->base))
+    // Pointer to weak pointer
+    else if (dest->kind == TYPE_WEAKPTR && (*src)->kind == TYPE_PTR && typeEquivalent(dest->base, (*src)->base))
+    {
+        doPtrToWeakPtrConv(comp, dest, src, constant);
+    }
+
+    // Weak pointer to pointer
+    else if (dest->kind == TYPE_PTR && (*src)->kind == TYPE_WEAKPTR && typeEquivalent(dest->base, (*src)->base))
     {
         doWeakPtrToPtrConv(comp, dest, src, constant);
     }
@@ -1361,9 +1375,6 @@ static void parseDerefSelector(Compiler *comp, Type **type, Const *constant, boo
         // Accept type-cast lvalues like ^T(x)^ which are not variables and don't need to be dereferenced, so just skip the selector
     }
 
-    if ((*type)->weak)
-        comp->error.handler(comp->error.context, "Weak pointer cannot be dereferenced");
-
     lexNext(&comp->lex);
     *isVar = true;
     *isCall = false;
@@ -1376,9 +1387,6 @@ static void parseIndexSelector(Compiler *comp, Type **type, Const *constant, boo
     // Implicit dereferencing: a^[i] == a[i]
     if ((*type)->kind == TYPE_PTR && (*type)->base->kind == TYPE_PTR)
     {
-        if ((*type)->base->weak)
-            comp->error.handler(comp->error.context, "Weak pointer cannot be dereferenced");
-
         genDeref(&comp->gen, TYPE_PTR);
         *type = (*type)->base;
     }
@@ -1426,9 +1434,6 @@ static void parseFieldSelector(Compiler *comp, Type **type, Const *constant, boo
     // Implicit dereferencing: a^.x == a.x
     if ((*type)->kind == TYPE_PTR && (*type)->base->kind == TYPE_PTR)
     {
-        if ((*type)->base->weak)
-            comp->error.handler(comp->error.context, "Weak pointer cannot be dereferenced");
-
         genDeref(&comp->gen, TYPE_PTR);
         *type = (*type)->base;
     }
@@ -1497,9 +1502,6 @@ static void parseCallSelector(Compiler *comp, Type **type, Const *constant, bool
     // Implicit dereferencing
     if ((*type)->kind == TYPE_PTR && (*type)->base->kind == TYPE_FN)
     {
-        if ((*type)->weak)
-            comp->error.handler(comp->error.context, "Weak pointer cannot be dereferenced");
-
         genDeref(&comp->gen, TYPE_FN);
         *type = (*type)->base;
     }

@@ -577,9 +577,6 @@ static void parseForInHeader(Compiler *comp, TokenKind lookaheadTokKind)
     // Implicit dereferencing: x in a^ == x in a
     if (collectionType->kind == TYPE_PTR)
     {
-        if (collectionType->weak)
-            comp->error.handler(comp->error.context, "Weak pointer cannot be dereferenced");
-
         genDeref(&comp->gen, collectionType->base->kind);
         collectionType = collectionType->base;
     }

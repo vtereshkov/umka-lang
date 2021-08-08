@@ -221,7 +221,9 @@ static Type *parsePtrType(Compiler *comp)
         type = parseType(comp, NULL);
 
     type = typeAddPtrTo(&comp->types, &comp->blocks, type);
-    type->weak = weak;
+    if (weak)
+        type->kind = TYPE_WEAKPTR;
+
     return type;
 }
 

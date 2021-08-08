@@ -44,8 +44,9 @@ static const char *opcodeSpelling [] =
     "GET_DYNARRAY_PTR",
     "GET_FIELD_PTR",
     "ASSERT_TYPE",
-    "ASSERT_WEAK_PTR",
     "ASSERT_RANGE",
+    "WEAKEN_PTR",
+    "STRENGTHEN_PTR",
     "GOTO",
     "GOTO_IF",
     "CALL",
@@ -106,6 +107,7 @@ static const char *builtinSpelling [] =
 static void pageInit(HeapPages *pages)
 {
     pages->first = pages->last = NULL;
+    pages->freeId = 1;
 }
 
 
@@ -130,8 +132,9 @@ static FORCE_INLINE HeapPage *pageAdd(HeapPages *pages, int numChunks, int chunk
 {
     HeapPage *page = malloc(sizeof(HeapPage));
 
-    const int size = numChunks * chunkSize;
+    page->id = pages->freeId++;
 
+    const int size = numChunks * chunkSize;
     page->ptr = malloc(size);
     if (!page->ptr)
         return NULL;
@@ -220,6 +223,15 @@ static FORCE_INLINE HeapPage *pageFindForAlloc(HeapPages *pages, int size)
             bestSize = page->chunkSize;
         }
     return bestPage;
+}
+
+
+static FORCE_INLINE HeapPage *pageFindById(HeapPages *pages, int id)
+{
+    for (HeapPage *page = pages->first; page; page = page->next)
+        if (page->id == id)
+            return page;
+    return NULL;
 }
 
 
@@ -398,26 +410,27 @@ static FORCE_INLINE void doBasicDeref(Slot *slot, TypeKind typeKind, Error *erro
 
     switch (typeKind)
     {
-        case TYPE_INT8:         slot->intVal  = *(int8_t   *)slot->ptrVal; break;
-        case TYPE_INT16:        slot->intVal  = *(int16_t  *)slot->ptrVal; break;
-        case TYPE_INT32:        slot->intVal  = *(int32_t  *)slot->ptrVal; break;
-        case TYPE_INT:          slot->intVal  = *(int64_t  *)slot->ptrVal; break;
-        case TYPE_UINT8:        slot->intVal  = *(uint8_t  *)slot->ptrVal; break;
-        case TYPE_UINT16:       slot->intVal  = *(uint16_t *)slot->ptrVal; break;
-        case TYPE_UINT32:       slot->intVal  = *(uint32_t *)slot->ptrVal; break;
-        case TYPE_UINT:         slot->uintVal = *(uint64_t *)slot->ptrVal; break;
-        case TYPE_BOOL:         slot->intVal  = *(bool     *)slot->ptrVal; break;
-        case TYPE_CHAR:         slot->intVal  = *(char     *)slot->ptrVal; break;
-        case TYPE_REAL32:       slot->realVal = *(float    *)slot->ptrVal; break;
-        case TYPE_REAL:         slot->realVal = *(double   *)slot->ptrVal; break;
-        case TYPE_PTR:
-        case TYPE_STR:          slot->ptrVal  = (int64_t)(*(void *   *)slot->ptrVal); break;
+        case TYPE_INT8:         slot->intVal     = *(int8_t   *)slot->ptrVal; break;
+        case TYPE_INT16:        slot->intVal     = *(int16_t  *)slot->ptrVal; break;
+        case TYPE_INT32:        slot->intVal     = *(int32_t  *)slot->ptrVal; break;
+        case TYPE_INT:          slot->intVal     = *(int64_t  *)slot->ptrVal; break;
+        case TYPE_UINT8:        slot->intVal     = *(uint8_t  *)slot->ptrVal; break;
+        case TYPE_UINT16:       slot->intVal     = *(uint16_t *)slot->ptrVal; break;
+        case TYPE_UINT32:       slot->intVal     = *(uint32_t *)slot->ptrVal; break;
+        case TYPE_UINT:         slot->uintVal    = *(uint64_t *)slot->ptrVal; break;
+        case TYPE_BOOL:         slot->intVal     = *(bool     *)slot->ptrVal; break;
+        case TYPE_CHAR:         slot->intVal     = *(char     *)slot->ptrVal; break;
+        case TYPE_REAL32:       slot->realVal    = *(float    *)slot->ptrVal; break;
+        case TYPE_REAL:         slot->realVal    = *(double   *)slot->ptrVal; break;
+        case TYPE_PTR:          slot->ptrVal     = (int64_t)(*(void *   *)slot->ptrVal); break;
+        case TYPE_WEAKPTR:      slot->weakPtrVal = *(uint64_t *)slot->ptrVal; break;
+        case TYPE_STR:          slot->ptrVal     = (int64_t)(*(void *   *)slot->ptrVal); break;
         case TYPE_ARRAY:
         case TYPE_DYNARRAY:
         case TYPE_STRUCT:
         case TYPE_INTERFACE:
         case TYPE_FIBER:        break;  // Always represented by pointer, not dereferenced
-        case TYPE_FN:           slot->intVal  = *(int64_t  *)slot->ptrVal; break;
+        case TYPE_FN:           slot->intVal     = *(int64_t  *)slot->ptrVal; break;
 
         default:                error->handlerRuntime(error->context, "Illegal type"); return;
     }
@@ -447,7 +460,8 @@ static FORCE_INLINE void doBasicAssign(void *lhs, Slot rhs, TypeKind typeKind, i
         case TYPE_CHAR:         *(char     *)lhs = rhs.intVal;  break;
         case TYPE_REAL32:       *(float    *)lhs = rhs.realVal; break;
         case TYPE_REAL:         *(double   *)lhs = rhs.realVal; break;
-        case TYPE_PTR:
+        case TYPE_PTR:          *(void *   *)lhs = (void *)rhs.ptrVal; break;
+        case TYPE_WEAKPTR:      *(uint64_t *)lhs = rhs.weakPtrVal; break;
         case TYPE_STR:          *(void *   *)lhs = (void *)rhs.ptrVal; break;
         case TYPE_ARRAY:
         case TYPE_DYNARRAY:
@@ -529,9 +543,6 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
     {
         case TYPE_PTR:
         {
-            if (type->weak)
-                break;
-
             HeapPage *page = pageFind(pages, ptr, true);
             if (page)
             {
@@ -583,6 +594,9 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
             }
             break;
         }
+
+        case TYPE_WEAKPTR:
+            break;
 
         case TYPE_STR:
         {
@@ -673,6 +687,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, Error *e
         case TYPE_REAL32:
         case TYPE_REAL:     len = snprintf(buf, maxLen, "%lf ", slot->realVal);                                               break;
         case TYPE_PTR:      len = snprintf(buf, maxLen, "%p ", (void *)slot->ptrVal);                                         break;
+        case TYPE_WEAKPTR:  len = snprintf(buf, maxLen, "%llx ", (unsigned long long int)slot->weakPtrVal);                   break;
         case TYPE_STR:      len = snprintf(buf, maxLen, "\"%s\" ", (char *)slot->ptrVal);                                     break;
 
         case TYPE_ARRAY:
@@ -1516,7 +1531,6 @@ static FORCE_INLINE void doUnary(Fiber *fiber, Error *error)
                     case TYPE_UINT32: (*(uint32_t *)ptr)++; break;
                     case TYPE_UINT:   (*(uint64_t *)ptr)++; break;
                     case TYPE_CHAR:   (*(char     *)ptr)++; break;
-                    case TYPE_PTR:    (*(char *   *)ptr)++; break;
                     // Structured, boolean and real types are not incremented/decremented
                     default:          error->handlerRuntime(error->context, "Illegal type"); return;
                 }
@@ -1537,7 +1551,6 @@ static FORCE_INLINE void doUnary(Fiber *fiber, Error *error)
                     case TYPE_UINT32: (*(uint32_t *)ptr)--; break;
                     case TYPE_UINT:   (*(uint64_t *)ptr)--; break;
                     case TYPE_CHAR:   (*(char     *)ptr)--; break;
-                    case TYPE_PTR:    (*(char *   *)ptr)--; break;
                     // Structured, boolean and real types are not incremented/decremented
                     default:          error->handlerRuntime(error->context, "Illegal type"); return;
                 }
@@ -1758,19 +1771,6 @@ static FORCE_INLINE void doAssertType(Fiber *fiber)
 }
 
 
-static FORCE_INLINE void doAssertWeakPtr(Fiber *fiber, HeapPages *pages)
-{
-    void *ptr = (void *)fiber->top->ptrVal;
-
-    HeapPage *page = pageFind(pages, ptr, false);
-    if (!page || pageGetChunkHeader(page, ptr)->refCnt == 0)
-        ptr = NULL;
-
-    fiber->top->ptrVal = (int64_t)ptr;
-    fiber->ip++;
-}
-
-
 static FORCE_INLINE void doAssertRange(Fiber *fiber, Error *error)
 {
     TypeKind typeKind = fiber->code[fiber->ip].typeKind;
@@ -1779,6 +1779,45 @@ static FORCE_INLINE void doAssertRange(Fiber *fiber, Error *error)
     if (typeOverflow(typeKind, arg))
         error->handlerRuntime(error->context, "Overflow of %s", typeKindSpelling(typeKind));
 
+    fiber->ip++;
+}
+
+
+static FORCE_INLINE void doWeakenPtr(Fiber *fiber, HeapPages *pages)
+{
+    void *ptr = (void *)fiber->top->ptrVal;
+    uint64_t weakPtr = 0;
+
+    HeapPage *page = pageFind(pages, ptr, false);
+    if (page && pageGetChunkHeader(page, ptr)->refCnt > 0)
+    {
+        int pageId = page->id;
+        int pageOffset = (char *)ptr - (char *)page->ptr;
+        weakPtr = ((uint64_t)pageId << 32) | pageOffset;
+    }
+
+    fiber->top->weakPtrVal = weakPtr;
+    fiber->ip++;
+}
+
+
+static FORCE_INLINE void doStrengthenPtr(Fiber *fiber, HeapPages *pages)
+{
+    uint64_t weakPtr = fiber->top->weakPtrVal;
+    void *ptr = NULL;
+
+    int pageId = (weakPtr >> 32) & 0x7FFFFFFF;
+    HeapPage *page = pageFindById(pages, pageId);
+    if (page)
+    {
+        int pageOffset = weakPtr & 0x7FFFFFFF;
+        ptr = (char *)page->ptr + pageOffset;
+
+        if (pageGetChunkHeader(page, ptr)->refCnt == 0)
+            ptr = NULL;
+    }
+
+    fiber->top->ptrVal = (int64_t)ptr;
     fiber->ip++;
 }
 
@@ -2050,8 +2089,9 @@ static FORCE_INLINE void vmLoop(VM *vm)
             case OP_GET_DYNARRAY_PTR:               doGetDynArrayPtr(fiber, error);               break;
             case OP_GET_FIELD_PTR:                  doGetFieldPtr(fiber, error);                  break;
             case OP_ASSERT_TYPE:                    doAssertType(fiber);                          break;
-            case OP_ASSERT_WEAK_PTR:                doAssertWeakPtr(fiber, pages);                break;
             case OP_ASSERT_RANGE:                   doAssertRange(fiber, error);                  break;
+            case OP_WEAKEN_PTR:                     doWeakenPtr(fiber, pages);                    break;
+            case OP_STRENGTHEN_PTR:                 doStrengthenPtr(fiber, pages);                break;
             case OP_GOTO:                           doGoto(fiber);                                break;
             case OP_GOTO_IF:                        doGotoIf(fiber);                              break;
             case OP_CALL:                           doCall(fiber, error);                         break;

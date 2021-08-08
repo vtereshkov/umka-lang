@@ -36,6 +36,7 @@ fn test2() {
     q.x = 13
 
     printf(repr(p.t.x) + repr(^S(q.s).x) + '\n')
+    printf(repr(p.t.s == p) + repr(p == p.t.s) + '\n')
 }
 
 fn test*() {

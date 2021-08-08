@@ -64,8 +64,10 @@ void genGetDynArrayPtr(CodeGen *gen);
 void genGetFieldPtr   (CodeGen *gen, int fieldOffset);
 
 void genAssertType   (CodeGen *gen, Type *type);
-void genAssertWeakPtr(CodeGen *gen);
 void genAssertRange  (CodeGen *gen, TypeKind typeKind);
+
+void genWeakenPtr    (CodeGen *gen);
+void genStrengthenPtr(CodeGen *gen);
 
 void genGoto  (CodeGen *gen, int dest);
 void genGotoIf(CodeGen *gen, int dest);
