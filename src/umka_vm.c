@@ -278,18 +278,15 @@ static FORCE_INLINE int chunkChangeRefCnt(HeapPages *pages, HeapPage *page, void
 {
     HeapChunkHeader *chunk = pageGetChunkHeader(page, ptr);
 
-    if (chunk->refCnt > 0)
-    {
-        chunk->refCnt += delta;
-        page->refCnt += delta;
+    if (chunk->refCnt <= 0 || page->refCnt < chunk->refCnt)
+        fprintf(stderr, "Warning: Wrong reference count for pointer at %p\n", ptr);
 
-        if (chunk->refCnt == 0)
-            memset(chunk, 0, page->chunkSize);
+    chunk->refCnt += delta;
+    page->refCnt += delta;
 
 #ifdef DEBUG_REF_CNT
-        printf("%p: delta: %d  chunk: %d  page: %d\n", ptr, delta, chunk->refCnt, page->refCnt);
+    printf("%p: delta: %d  chunk: %d  page: %d\n", ptr, delta, chunk->refCnt, page->refCnt);
 #endif
-    }
 
     if (page->refCnt == 0)
     {
@@ -2038,8 +2035,10 @@ static FORCE_INLINE void doLeaveFrame(Fiber *fiber, HeapPages *pages, Error *err
     {
         // Decrease heap frame ref count
         HeapPage *page = pageFind(pages, fiber->base, true);
-        int refCnt = chunkChangeRefCnt(pages, page, fiber->base, -1);
+        if (!page)
+            error->handlerRuntime(error->context, "Heap frame is not found");
 
+        int refCnt = chunkChangeRefCnt(pages, page, fiber->base, -1);
         if (refCnt > 0)
             error->handlerRuntime(error->context, "Pointer to a local variable escapes the function");
     }
