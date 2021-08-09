@@ -562,7 +562,7 @@ const char *typeKindSpelling(TypeKind kind)
 
 static char *typeSpellingRecursive(Type *type, char *buf, int size, int depth)
 {
-    if (type->typeIdent)
+    if (type->block == 0 && type->typeIdent)
         snprintf(buf, size, "%s", type->typeIdent->name);
     else
     {
