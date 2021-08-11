@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 
 #include "umka_vm.h"
 #include "umka_types.h"
@@ -489,6 +490,9 @@ Field *typeAddField(Types *types, Type *structType, Type *fieldType, const char 
 
     if (structType->numItems > MAX_FIELDS)
         types->error->handler(types->error->context, "Too many fields");
+
+    if (typeSize(types, fieldType) > INT_MAX - typeSize(types, structType))
+        types->error->handler(types->error->context, "Structure is too large");
 
     field = malloc(sizeof(Field));
 

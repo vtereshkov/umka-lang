@@ -235,13 +235,13 @@ static FORCE_INLINE HeapPage *pageFindById(HeapPages *pages, int id)
 }
 
 
-static FORCE_INLINE void *chunkAlloc(HeapPages *pages, int size, Type *type, Error *error)
+static FORCE_INLINE void *chunkAlloc(HeapPages *pages, int64_t size, Type *type, Error *error)
 {
-    if (size < 0)
-        error->handlerRuntime(error->context, "Allocated memory block size cannot be negative");
-
     // Page layout: header, data, footer (char), padding, header, data, footer (char), padding...
-    int chunkSize = align(sizeof(HeapChunkHeader) + align(size + 1, sizeof(int64_t)), VM_MIN_HEAP_CHUNK);
+    int64_t chunkSize = align(sizeof(HeapChunkHeader) + align(size + 1, sizeof(int64_t)), VM_MIN_HEAP_CHUNK);
+
+    if (size < 0 || chunkSize > INT_MAX)
+        error->handlerRuntime(error->context, "Illegal block size");
 
     HeapPage *page = pageFindForAlloc(pages, chunkSize);
     if (!page)
@@ -1149,7 +1149,7 @@ static FORCE_INLINE void doBuiltinAppend(Fiber *fiber, HeapPages *pages, Error *
 static FORCE_INLINE void doBuiltinDelete(Fiber *fiber, HeapPages *pages, Error *error)
 {
     DynArray *result = (DynArray *)(fiber->top++)->ptrVal;
-    int index        =             (fiber->top++)->intVal;
+    int64_t index    =             (fiber->top++)->intVal;
     DynArray *array  = (DynArray *)(fiber->top++)->ptrVal;
 
     if (!array || !array->data)
@@ -1176,17 +1176,17 @@ static FORCE_INLINE void doBuiltinDelete(Fiber *fiber, HeapPages *pages, Error *
 // fn slice(array: [] type | str, startIndex [, endIndex]: int): [] type | str
 static FORCE_INLINE void doBuiltinSlice(Fiber *fiber, HeapPages *pages, Error *error)
 {
-    DynArray *result = (DynArray *)(fiber->top++)->ptrVal;
-    int endIndex     =             (fiber->top++)->intVal;
-    int startIndex   =             (fiber->top++)->intVal;
-    void *arg        =     (void *)(fiber->top++)->ptrVal;
+    DynArray *result   = (DynArray *)(fiber->top++)->ptrVal;
+    int64_t endIndex   =             (fiber->top++)->intVal;
+    int64_t startIndex =             (fiber->top++)->intVal;
+    void *arg          =     (void *)(fiber->top++)->ptrVal;
 
     if (!arg)
         error->handlerRuntime(error->context, "Dynamic array or string is null");
 
     DynArray *array = NULL;
     char *str = NULL;
-    int len = 0;
+    int64_t len = 0;
 
     if (result)
     {

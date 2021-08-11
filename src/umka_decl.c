@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <limits.h>
 
 #include "umka_expr.h"
 #include "umka_stmt.h"
@@ -250,13 +251,16 @@ static Type *parseArrayType(Compiler *comp)
         Type *indexType;
         parseExpr(comp, &indexType, &len);
         typeAssertCompatible(&comp->types, comp->intType, indexType, false);
-        if (len.intVal < 0)
-            comp->error.handler(comp->error.context, "Array length cannot be negative");
+        if (len.intVal < 0 || len.intVal > INT_MAX)
+            comp->error.handler(comp->error.context, "Illegal array length");
     }
 
     lexEat(&comp->lex, TOK_RBRACKET);
 
     Type *baseType = parseType(comp, NULL);
+
+    if (len.intVal > 0 && typeSize(&comp->types, baseType) > INT_MAX / len.intVal)
+        comp->error.handler(comp->error.context, "Array is too large");
 
     Type *type = typeAdd(&comp->types, &comp->blocks, typeKind);
     type->base = baseType;
