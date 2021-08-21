@@ -109,6 +109,8 @@ int lexInit(Lexer *lex, Storage *storage, DebugInfo *debug, const char *fileName
         keywordHash[i] = hash(spelling[TOK_BREAK + i]);
 
     // Initialize lexer
+    errno = 0;
+    
     if (storage->len + strlen(fileName) + 1 > storage->capacity)
     {
         lex->fileName = (char *)fileName;
