@@ -41,6 +41,10 @@ _C+Umka 3D camera example_
 
 ## Projects in Umka
 
+* [VDrift/Umka](https://github.com/vtereshkov/vdrift) - a racing simulator that lets you design, tune and test your own car autopilot
+
+![](vdrift.png)
+
 * [tophat](https://github.com/marekmaskarinec/tophat) - a 2D game engine focused on minimalism
 
 ![](tophat.png)
