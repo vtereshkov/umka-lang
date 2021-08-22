@@ -9,6 +9,7 @@ Umka is a statically typed embeddable scripting language. It combines the simpli
 * Clean syntax inspired by Go
 * Cross-platform bytecode compiler and virtual machine
 * Garbage collection
+* Arrays and structures compatible with C
 * Polymorphism via interfaces
 * Multitasking based on fibers
 * Type inference
