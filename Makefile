@@ -18,7 +18,7 @@ ifeq ($(PLATFORM), Darwin)
   EXECUTABLE_DEPS =
   RANLIB = libtool -static -o
 else
-ifeq ($(SHORTPLATform), MINGW64_NT)
+ifeq ($(SHORTPLATFORM), MINGW64_NT)
   STATIC_LDFLAGS = -rs
   DYNAMIC_LDFLAGS = -shared -lm
   DYNAMIC_LIB = $(BUILDPATH)/libumka.dll
@@ -57,7 +57,7 @@ path:
 
 $(STATIC_LIB): $(OBJS_STATIC)
 	@echo AR $@
-	@$(RANLIB) $(STATIC_LDFLAGS) $(STATIC_LIB) $^ &> /dev/null # ar doen't provide quiet mode for some reason
+	@$(RANLIB) $(STATIC_LDFLAGS) $(STATIC_LIB) $^
 
 $(DYNAMIC_LIB): $(OBJS_DYNAMIC)
 	@echo LD $@
