@@ -30,6 +30,7 @@ CFLAGS = -s -fPIC -O3 -Wall -Wno-format-security \
 
 SRCS = $(filter-out src/umka.c,$(wildcard src/*.c))
 OBJS = $(sort $(SRCS:src/%.c=obj/%.o))
+APIS = src/umka_api.h
 OBJS_EXE = obj/umka.o
 
 .PHONY: all path clean
@@ -40,12 +41,13 @@ clean:
 	$(RM) src/umka_runtime_src.h
 
 path:
-	@mkdir $(BUILD_PATH) obj -p
+	@mkdir -p -- obj $(BUILD_PATH)/include
 	@cp import_embed/umka_runtime_src.h src/
 
 $(UMKA_LIB): $(OBJS)
 	@echo AR $@
 	@$(RANLIB) $(LDFLAGS) $(UMKA_LIB) $^
+	@cp $(APIS) $(BUILD_PATH)/include/
 
 $(UMKA_EXE): $(OBJS_EXE) $(UMKA_LIB)
 	@echo LD $@
