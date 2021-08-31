@@ -1,76 +1,74 @@
-platform := $(shell uname -s)
-shortplatform := $(shell (X=`uname -s`; echo $${X:0:10}))
+PLATFORM      = $(shell uname -s)
+SHORTPLATFORM = $(shell (X=`uname -s`; echo $${X:0:10}))
 
-buildpath = build
+BUILD_PATH ?= build
 
 # platform specific settings:
-ifeq ($(platform), Linux)
-  LPATH = LD_LIBRARY_PATH
-  STATIC_LDFLAGS = -rs 
-  DYNAMIC_LDFLAGS = -shared -lm -ldl
-  DYNAMIC_LIB = $(buildpath)/libumka.so
-  EXECUTABLE_DEPS = -lm -ldl
-  RANLIB = ar
+ifeq ($(PLATFORM), Linux)
+	LDFLAGS = -lm -ldl
+	RANLIB = ar -crs
 else
-ifeq ($(platform), Darwin)
-  LPATH = DYLD_LIBRARY_PATH
-  STATIC_LDFLAGS = 
-  DYNAMIC_LDFLAGS = -shared
-  DYNAMIC_LIB = $(buildpath)/libumka.dylib
-  EXECUTABLE_DEPS = 
-  RANLIB = libtool -static -o  
+ifeq ($(PLATFORM), Darwin)
+	LDFLAGS =
+	RANLIB = libtool -static -o
 else
-ifeq ($(shortplatform), MINGW64_NT)
-  LPATH = PATH
-  STATIC_LDFLAGS = -rs 
-  DYNAMIC_LDFLAGS = -shared -lm
-  DYNAMIC_LIB = $(buildpath)/libumka.dll
-  EXECUTABLE_DEPS = -lm
-  RANLIB = ar
+ifeq ($(SHORTPLATFORM), MINGW64_NT)
+	LDFLAGS = -lm
+	RANLIB = ar -crs
 endif
 endif
 endif
 
-# for all platforms same:
-STATIC_LIB = build/libumka.a
-STATIC_CFLAGS  = -s -fPIC -O3 -Wall -Wno-format-security -fno-strict-aliasing -DUMKA_STATIC -DUMKA_EXT_LIBS
-DYNAMIC_CFLAGS = -s -fPIC -O3 -Wall -Wno-format-security -fno-strict-aliasing -fvisibility=hidden -DUMKA_BUILD -DUMKA_EXT_LIBS
+# identical for all platforms:
+UMKA_LIB_STATIC  = $(BUILD_PATH)/libumka.a
+UMKA_LIB_DYNAMIC = $(BUILD_PATH)/libumka.so
+UMKA_EXE = $(BUILD_PATH)/umka
 
-ifndef LPATH
-$(warning Unrecognized kernel name ${platform} -- Unable to detect setting for LPATH)
-endif
+CFLAGS = -s -fPIC -O3 -Wall -Wno-format-security -fno-strict-aliasing -DUMKA_EXT_LIBS
+STATIC_CFLAGS  = $(CFLAGS) -DUMKA_STATIC
+DYNAMIC_CFLAGS = $(CFLAGS) -DUMKA_BUILD  -shared -fvisibility=hidden
 
-STATIC_LIB_OBJ = src/umka_api_static.o src/umka_common_static.o src/umka_compiler_static.o src/umka_const_static.o src/umka_decl_static.o src/umka_expr_static.o src/umka_gen_static.o src/umka_ident_static.o src/umka_lexer_static.o src/umka_runtime_static.o src/umka_stmt_static.o src/umka_types_static.o src/umka_vm_static.o
-DYNAMIC_LIB_OBJ = src/umka_api_dynamic.o src/umka_common_dynamic.o src/umka_compiler_dynamic.o src/umka_const_dynamic.o src/umka_decl_dynamic.o src/umka_expr_dynamic.o src/umka_gen_dynamic.o src/umka_ident_dynamic.o src/umka_lexer_dynamic.o src/umka_runtime_dynamic.o src/umka_stmt_dynamic.o src/umka_types_dynamic.o src/umka_vm_dynamic.o
-EXECUTABLE_OBJ = src/umka_static.o
-EXECUTABLE = $(buildpath)/umka
+SRCS = $(filter-out src/umka.c,$(wildcard src/*.c))
+OBJS_STATIC    = $(sort $(SRCS:src/%.c=obj/%_static.o))
+OBJS_DYNAMIC   = $(sort $(SRCS:src/%.c=obj/%_dynamic.o))
 
-.PHONY: all clean
-all: path $(EXECUTABLE) $(STATIC_LIB) $(DYNAMIC_LIB)
+APIS = src/umka_api.h
+OBJS_EXE = obj/umka_static.o
+
+.PHONY: all path clean
+all: path $(UMKA_EXE) $(UMKA_LIB_STATIC) $(UMKA_LIB_DYNAMIC)
+
+static:  path $(UMKA_LIB_STATIC)
+dynamic: path $(UMKA_LIB_DYNAMIC)
+exe:     path $(UMKA_EXE)
 
 clean:
-	rm -f $(EXECUTABLE) $(STATIC_LIB) $(DYNAMIC_LIB) 
-	rm -f src/*.o
-	rm -rf $(buildpath)
+	$(RM) $(BUILD_PATH) obj -r
+	$(RM) src/umka_runtime_src.h
 
 path:
-	mkdir $(buildpath) -p
-	cp import_embed/umka_runtime_src.h src/
+	@mkdir -p -- obj $(BUILD_PATH)/include
+	@cp import_embed/umka_runtime_src.h src/
 
-$(STATIC_LIB): $(STATIC_LIB_OBJ)
-	# Build static archive 
-	$(RANLIB) $(STATIC_LDFLAGS) $(STATIC_LIB) $^
+$(UMKA_LIB_STATIC): $(OBJS_STATIC)
+	@echo AR $@
+	@$(RANLIB) $(UMKA_LIB_STATIC) $^
+	@cp $(APIS) $(BUILD_PATH)/include/
 
-$(DYNAMIC_LIB): $(DYNAMIC_LIB_OBJ)
-	# Build shared library
-	$(CC) $(DYNAMIC_LDFLAGS) -o $(DYNAMIC_LIB) $^
+$(UMKA_LIB_DYNAMIC): $(OBJS_DYNAMIC)
+	@echo LD $@
+	@$(CC) $(DYNAMIC_CFLAGS) -o $(UMKA_LIB_DYNAMIC) $^ $(LDFLAGS)
+	@cp $(APIS) $(BUILD_PATH)/include/
 
-$(EXECUTABLE): $(EXECUTABLE_OBJ) $(STATIC_LIB) 
-	# Build executable 
-	$(CC) $(STATIC_CFLAGS) -o $(EXECUTABLE) $^ $(EXECUTABLE_DEPS)
+$(UMKA_EXE): $(OBJS_EXE) $(UMKA_LIB_STATIC)
+	@echo LD $@
+	@$(CC) $(STATIC_CFLAGS) -o $(UMKA_EXE) $^ $(LDFLAGS)
 
-src/%_static.o: src/%.c
-	$(CC) $(STATIC_CFLAGS) -c -o $@ $^
+obj/%_static.o: src/%.c
+	@echo CC $@
+	@$(CC) $(STATIC_CFLAGS) -o $@ -c $^
 
-src/%_dynamic.o: src/%.c
-	$(CC) $(DYNAMIC_CFLAGS) -c -o $@ $^
+obj/%_dynamic.o: src/%.c
+	@echo CC $@
+	@$(CC) $(DYNAMIC_CFLAGS) -o $@ -c $^
+

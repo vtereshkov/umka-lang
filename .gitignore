@@ -1,2 +1,4 @@
 *.o
 build/
+obj/
+src/umka_runtime_src.h
