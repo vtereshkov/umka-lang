@@ -4,6 +4,7 @@
 #include "umka_vm.h"
 
 
+void rtlmemcpy (Slot *params, Slot *result);
 void rtlfopen  (Slot *params, Slot *result);
 void rtlfclose (Slot *params, Slot *result);
 void rtlfread  (Slot *params, Slot *result);

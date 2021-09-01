@@ -2,9 +2,20 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <time.h>
 
 #include "umka_runtime.h"
+
+
+void rtlmemcpy(Slot *params, Slot *result)
+{
+    void *dest   = (void *)params[2].ptrVal;
+    void *src    = (void *)params[1].ptrVal;
+    int   count  = params[0].intVal;
+
+    memcpy(dest, src, count);
+}
 
 
 void rtlfopen(Slot *params, Slot *result)

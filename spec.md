@@ -1202,6 +1202,22 @@ fn main() {
 
 The standard library is contained in the `std.um` module embedded into the Umka interpreter library.
 
+### Memory 
+
+#### Functions
+
+```
+fn tobytes*(buf: interface{}): []uint8
+```
+
+Copies the bytes of `buf` to a byte array. An error is triggered if some of the bytes represent a pointer.
+
+```
+fn frombytes*(buf: interface{}, bytes: []uint8)
+```
+
+Copies the `bytes` array to `buf`. An error is triggered if some of the bytes represent a pointer.
+
 ### Input/output
 
 #### Types

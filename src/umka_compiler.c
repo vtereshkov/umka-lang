@@ -109,6 +109,7 @@ static void compilerDeclareBuiltinIdents(Compiler *comp)
 
 static void compilerDeclareExternalFuncs(Compiler *comp)
 {
+    externalAdd(&comp->externals, "rtlmemcpy",  &rtlmemcpy);
     externalAdd(&comp->externals, "rtlfopen",   &rtlfopen);
     externalAdd(&comp->externals, "rtlfclose",  &rtlfclose);
     externalAdd(&comp->externals, "rtlfread",   &rtlfread);

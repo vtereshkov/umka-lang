@@ -17,6 +17,7 @@ import (
     "safecast.um"
     "nonlocal.um"
     "weakptr.um"
+    "byteconv.um"
 )
 
 fn main() {
@@ -38,4 +39,5 @@ fn main() {
     printf("\n\n>>> Safe type casts\n\n");      safecast.test()
     printf("\n\n>>> Non-local scope\n\n");      nonlocal.test()
     printf("\n\n>>> Weak pointers\n\n");        weakptr.test()
+    printf("\n\n>>> Byte conversions\n\n");     byteconv.test()
 }

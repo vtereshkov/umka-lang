@@ -317,3 +317,11 @@ it's null
 Test 2
 13 12 
 true true 
+
+
+>>> Byte conversions
+
+{ x: 23 y: -6 } 
+{ 23 0 250 255 } 
+{ 23 0 251 255 } 
+{ x: 23 y: -5 } 

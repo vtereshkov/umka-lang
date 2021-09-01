@@ -1,0 +1,20 @@
+import "std.um"
+
+fn test*() {
+	type Pt = struct {x, y: int16}
+	p := Pt{23, -6}
+	printf(repr(p) + '\n')
+
+	bytes := std.tobytes(&p)
+	printf(repr(bytes) + '\n')
+
+	bytes[2]++
+	printf(repr(bytes) + '\n')
+	
+	std.frombytes(&p, bytes)
+	printf(repr(p) + '\n')
+}
+
+fn main() {
+	test()
+}

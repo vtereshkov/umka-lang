@@ -1,5 +1,34 @@
 // Umka standard library
 
+// Memory
+
+fn rtlmemcpy(dest, src: ^void, count: int)
+
+fn tobytes*(buf: interface{}): []uint8 {
+    if buf.__self == null {
+        error("Buffer is null")
+    }
+    if selfhasptr(buf) {
+        error("Cannot access reference types")
+    }
+    bytes := make([]uint8, sizeofself(buf))
+    rtlmemcpy(&bytes[0], buf.__self, sizeofself(buf))
+    return bytes
+}
+
+fn frombytes*(buf: interface{}, bytes: []uint8) {
+    if buf.__self == null {
+        error("Buffer is null")
+    }    
+    if selfhasptr(buf) {
+        error("Cannot access reference types")
+    }
+    if sizeofself(buf) != len(bytes) {
+        error("Illegal buffer size")
+    }
+    rtlmemcpy(buf.__self, &bytes[0], sizeofself(buf))    
+}
+
 // File I/O
 
 type File* = ^struct {}
