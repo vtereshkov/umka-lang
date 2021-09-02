@@ -640,7 +640,13 @@ Returns the size in bytes of the variable that has been converted to the interfa
 fn selfhasptr(a: interface{...}): bool
 ```
 
-Checks whether the type of the variable that has been converted to the interface`a` is a pointer, string, dynamic array, interfaces or fibers, or has one of these types as its item type or field type.
+Checks whether the type of the variable that has been converted to the interface`a` is a pointer, string, dynamic array, interface or fiber, or has one of these types as its item type or field type.
+
+```
+fn selftypeeq(a, b: interface{...}): bool
+```
+
+Checks whether the types of the variables that have been converted to the interfaces `a`  and `b` are equivalent.
 
 ##### Multitasking functions
 

@@ -94,6 +94,7 @@ static const char *builtinSpelling [] =
     "sizeof",
     "sizeofself",
     "selfhasptr",
+    "selftypeeq",
     "fiberspawn",
     "fibercall",
     "fiberalive",
@@ -1289,6 +1290,21 @@ static FORCE_INLINE void doBuiltinSelfhasptr(Fiber *fiber, Error *error)
 }
 
 
+static FORCE_INLINE void doBuiltinSelftypeeq(Fiber *fiber, Error *error)
+{
+    bool typesEq = false;
+
+    // Interface layout: __self, __selftype, methods
+    Type *__selftypeRight = *(Type **)((fiber->top++)->ptrVal + sizeof(void *));
+    Type *__selftypeLeft  = *(Type **)((fiber->top++)->ptrVal + sizeof(void *));
+
+    if (__selftypeLeft && __selftypeRight)
+        typesEq = typeEquivalent(__selftypeLeft->base, __selftypeRight->base);
+
+    (--fiber->top)->intVal = typesEq;
+}
+
+
 // type FiberFunc = fn(parent: ^fiber, anyParam: ^type)
 // fn fiberspawn(childFunc: FiberFunc, anyParam: ^type): ^fiber
 static FORCE_INLINE void doBuiltinFiberspawn(Fiber *fiber, HeapPages *pages, Error *error)
@@ -1945,6 +1961,7 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         case BUILTIN_SIZEOF:        error->handlerRuntime(error->context, "Illegal instruction"); return;       // Done at compile time
         case BUILTIN_SIZEOFSELF:    doBuiltinSizeofself(fiber, error); break;
         case BUILTIN_SELFHASPTR:    doBuiltinSelfhasptr(fiber, error); break;
+        case BUILTIN_SELFTYPEEQ:    doBuiltinSelftypeeq(fiber, error); break;
 
         // Fibers
         case BUILTIN_FIBERSPAWN:    doBuiltinFiberspawn(fiber, pages, error); break;
