@@ -3,7 +3,9 @@ import (
     "../import/map.um"
 )
 
-fn test*() {
+fn test1() {
+    printf("\nTest 1\n")
+
     var populations: map.Map
     f := std.fopen("../tests/countries.dat", "r")
 
@@ -32,6 +34,33 @@ fn test*() {
 
     printf("Population of Russia was %.2f million. Now it is %.2f million\n\n", russia2019, russia2020)
     printf(populations.toStr() + '\n')
+}
+
+fn test2() {
+    printf("\nTest 2\n")
+
+    type Pair = [2]int 
+
+    var writers: map.Map
+    writers.set(Pair{1564, 1616}, "Shakespeare")
+    writers.set(Pair{1799, 1837}, "Pushkin")
+    writers.set(Pair{1828, 1910}, "Tolstoy")
+    writers.set(Pair{1749, 1832}, "Goethe")
+
+    pushkin := ^str(writers.get(Pair{1799, 1837}))^
+    printf(pushkin + "\n\n")
+
+    writers.del(Pair{1799, 1837})
+    if ^str(writers.get(Pair{1799, 1837})) != null {
+        error("Test failed")
+    }
+
+    printf(writers.toStr() + '\n')
+}
+
+fn test*() {
+    test1()
+    test2()
 }
 
 fn main() {

@@ -1,16 +1,12 @@
 // Hash map
+// A key may be either a string, or any non-reference type 
 
 import "std.um"
 
 
 type (
-    Any = interface{}
-
-    Item = struct {
-        key: str
-        val: Any
-    }
-
+    Any  = interface{}
+    Item = struct {key, val: Any}
     Map* = [][]Item
 )
 
@@ -21,10 +17,55 @@ const (
 )
 
 
-fn hash(s: str): uint32 {  // djb2 hash    
+fn serialize(key: Any): []uint8 {
+    // Treat a string key as a special case
+    if s := ^str(key); s != null {
+        bytes := make([]uint8, len(s^))
+        for i, ch in s^ {
+            bytes[i] = uint8(ch)
+        }
+        return bytes
+    }
+
+    return std.tobytes(key)    
+}
+
+
+fn equal(key1, key2: Any): bool {
+    if !selftypeeq(key1, key2) {
+        return false
+    }
+
+    // Treat a string key as a special case
+    if s1, s2 := ^str(key1), ^str(key2); s1 != null && s2 != null {
+        return s1^ == s2^
+    }
+
+    if selfhasptr(key1) {
+        error("Cannot use reference types for map keys")
+    }
+
+    bytes1, bytes2 := serialize(key1), serialize(key2)
+    
+    if len(bytes1) != len(bytes2) {
+        return false
+    }
+
+    for i, byte1 in bytes1 {
+        if byte1 != bytes2[i] {
+            return false
+        }
+    }
+
+    return true
+}
+
+
+fn hash(key: Any): uint32 {  // djb2 hash
+    bytes := serialize(key)
     var hash: uint32 = 5381;
-    for ch in s {
-        hash = (((hash << 5) + hash) + uint32(ch)) & 0xFFFFFFFF;
+    for byte in bytes {
+        hash = (((hash << 5) + hash) + uint32(byte)) & 0xFFFFFFFF;
     }
     return hash;
 }
@@ -33,13 +74,13 @@ fn hash(s: str): uint32 {  // djb2 hash
 fn (m: ^Map) rehash()
 
 
-fn (m: ^Map) get*(key: str): Any {
+fn (m: ^Map) get*(key: Any): Any {
     if len(m^) == 0 {return null}
 
     b := hash(key) % len(m^)
 
     for item in m[b] {
-        if item.key == key {
+        if equal(item.key, key) {
             return item.val
         } 
     }
@@ -48,7 +89,7 @@ fn (m: ^Map) get*(key: str): Any {
 }
 
 
-fn (m: ^Map) set*(key: str, val: Any) {
+fn (m: ^Map) set*(key, val: Any) {
     if len(m^) == 0 {
         m^ = make(Map, defLen)
     }
@@ -64,7 +105,7 @@ fn (m: ^Map) set*(key: str, val: Any) {
         } 
 
         for i := 0; i < len(m[b]); i++ {
-            if m[b][i].key == key {
+            if equal(m[b][i].key, key) {
                 m[b][i].val = val
                 return
             }
@@ -79,11 +120,11 @@ fn (m: ^Map) set*(key: str, val: Any) {
 }
 
 
-fn (m: ^Map) del*(key: str) {
+fn (m: ^Map) del*(key: Any) {
     b := hash(key) % len(m^)
 
     for i, item in m[b] {
-        if item.key == key {
+        if equal(item.key, key) {
             m[b] = delete(m[b], i)
             return
         } 
@@ -105,21 +146,21 @@ fn (m: ^Map) rehash() {
 
 
 fn (m: ^Map) toStr(): str {
-	out := "{ "
+    out := "{ "
 
-	for bucket in m^ {
-		if len(bucket) == 0 {
-			continue
-		}
+    for bucket in m^ {
+        if len(bucket) == 0 {
+            continue
+        }
 
-		for item in bucket {
-			out += item.key + ": " + std.rtrim(repr(item.val)) + ", "
-		}
-	}
+        for item in bucket {
+            out += std.rtrim(repr(item.key)) + ": " + std.rtrim(repr(item.val)) + ", "
+        }
+    }
 
-	if len(out) > 2 {
-		out = slice(out, 0, len(out) - 2)
-	}
+    if len(out) > 2 {
+        out = slice(out, 0, len(out) - 2)
+    }
 
-	return out + " }"
+    return out + " }"
 }
