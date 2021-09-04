@@ -1,0 +1,19 @@
+
+import (
+	"../import/utf8.um"
+)
+
+fn test*() {
+	s := "▀€$¢"
+	
+	printf("bytes: %d\ncharacters: %d\n", len(s), utf8.realLength(s))
+
+	runes := utf8.decode(s)
+	for r in runes {
+		printf("%s: U+%x\n", r.encode(), r)
+	}
+}
+
+fn main() {
+	test()
+}
