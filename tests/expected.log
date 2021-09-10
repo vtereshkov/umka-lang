@@ -334,9 +334,29 @@ true true
 { x: 23 y: -5 } 
 
 
->>> utf8.um
+>>> UTF-8
 
-bytes: 6
-characters: 2
+string: ▀€$¢
+bytes: 9
+characters: 4
 ▀: U+2580
 €: U+20ac
+$: U+24
+¢: U+a2
+
+string: Привет, мир!
+bytes: 21
+characters: 12
+П: U+41f
+р: U+440
+и: U+438
+в: U+432
+е: U+435
+т: U+442
+,: U+2c
+ : U+20
+м: U+43c
+и: U+438
+р: U+440
+!: U+21
+

@@ -5,30 +5,23 @@ type (
 )
 
 fn (r: ^Rune) size*(): int {
-    if r^ < 0x7f {
+    if r^ <= 0x7f {
         return 1
     }
 
-    if r^ < 0x7ff {
+    if r^ <= 0x7ff {
         return 2
     }
 
-    if r^ < 0xffff {
+    if r^ <= 0xffff {
         return 3
     }
 
-    if r^ < 0x10ffff {
+    if r^ <= 0x10ffff {
         return 4
     }
 
     return 0
-}
-
-fn printBin(n: int32, count: int) {
-    for i := 0; i < count; i++ {
-        printf("%d ", n & 1)
-        n = n >> 1
-    }
 }
 
 fn (r: ^Rune) encode*(): str {
@@ -42,18 +35,18 @@ fn (r: ^Rune) encode*(): str {
 
     // header is size amount of ones at the start
     header := 0
-    for i := 0; i < s + 1; i++ {
-        header |= 1 << (8 - i)
+    for i := 0; i < s; i++ {
+        header |= 1 << (7 - i)
     }
 
     shift := (s - 1) * 6
     out[0] = char(((r^ >> shift & 0xff) | header) & 0xff)
 
     // following headers are only 1
-    header = 1 << 8
+    header = 1 << 7
     for i := 1; i < s; i++ {
         shift -= 6
-        out[i] = char((r^ >> shift & 0xff | header) & 0xff)
+        out[i] = char(r^ >> shift & 0x3f | 0x80)
     }
 
     return str(out)
@@ -63,7 +56,7 @@ fn getNextRune*(a: str, pos: int): Rune {
     c := int32(a[pos])
 
     // exit early if ascii character is detected
-    if c & (1 << 8) == 0 {
+    if c & (1 << 7) == 0 {
         return Rune(c)
     }
 
@@ -75,26 +68,21 @@ fn getNextRune*(a: str, pos: int): Rune {
 
     // generate mask for the first byte
     mask := 0
-    for i := 0; i < size; i++ {
+    for i := 0; i < 8 - size - 1; i++ {
         mask |= 1 << i
     }
 
     sum := 0
     shift := (size - 1) * 6
     for i := 0; i < size && pos + i < len(a); i++ {
-        sum |= ((int32(a[pos + i]) & 0xff) << shift)
+        sum |= ((int32(a[pos + i]) & mask) << shift)
         if i == 0 {
-            mask = ~(1 << 7 | 1 << 6) // following bytes have 11000000 mask
+            mask = ~(1 << 7 | 1 << 6) & 0xff // following bytes have 11000000 mask
         }
         shift -= 6
     }
 
-    mask = 0
-    for i := 0; i < (size - 1) * 6 + (8 - size - 1); i++ {
-        mask |= 1 << i
-    }
-
-    return sum & mask
+    return sum
 }
 
 fn decode*(s: str): []Rune {
