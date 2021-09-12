@@ -29,7 +29,7 @@ contexts:
       scope: punctuation.separator.umka
 
     # Numeric literals
-    - match: '\b(0[Xx])?[0-9.]+([Ee][+-]?[0-9]*)?\b'
+    - match: '\b((0(X|x)[0-9|A-F|a-f]*))|[0-9.]+([Ee][+-]?[0-9]*)?\b'
       scope: constant.numeric.umka       
 
     # String literals
