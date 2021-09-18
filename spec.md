@@ -336,6 +336,7 @@ The `fiber` type represents a fiber context to use in multitasking.
 Two types are *equivalent* if
 
 * They are the same type
+* They are declared types that have the same identifier. Any other declared types are not equivalent 
 * They are pointer types and have equivalent base types and both are either strong or weak
 * They are array types and have equal length and equivalent item types
 * They are dynamic array types and have equivalent item types

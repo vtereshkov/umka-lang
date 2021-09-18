@@ -232,6 +232,10 @@ static bool typeEquivalentRecursive(Type *left, Type *right, VisitedTypePair *fi
     if (left == right)
         return true;
 
+    // Identically named types
+    if (left->typeIdent && right->typeIdent)
+        return left->typeIdent == right->typeIdent && left->block == right->block;
+
     if (left->kind == right->kind)
     {
         // Pointers or weak pointers

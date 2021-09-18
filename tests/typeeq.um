@@ -30,13 +30,25 @@ type (
 )
 
 fn test*() {
-    var p1 : P1
-    var p3 : P3
-    var p4 : P4
+    var (
+        s1: S1
+        s2: S2
+        s3: S3
+        s4: S4
 
-    p1 = new(S2)
-    p3 = p1
-    p4 = p1
+        p1: interface{} = s1
+        p2: interface{} = s2
+        p3: interface{} = s3
+        p4: interface{} = s4
+    )
+
+    if q1, q2 := P1(p1), P2(p1); q1 == null || q2 != null {
+        error("Test failed")
+    }
+
+    if q3, q4 := P3(p3), P4(p3); q3 == null || q4 != null {
+        error("Test failed")
+    }     
 
     printf("    ...passed\n");
 }
