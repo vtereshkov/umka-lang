@@ -309,12 +309,12 @@ static FORCE_INLINE int fsgetc(bool string, void *stream, int *len)
 }
 
 
-static int fsprintf(bool string, void *stream, const char *format, ...)
+static int fsnprintf(bool string, void *stream, int size, const char *format, ...)
 {
     va_list args;
     va_start(args, format);
 
-    int res = string ? vsprintf((char *)stream, format, args) : vfprintf((FILE *)stream, format, args);
+    int res = string ? vsnprintf((char *)stream, size, format, args) : vfprintf((FILE *)stream, format, args);
 
     va_end(args);
     return res;
@@ -881,7 +881,7 @@ static FORCE_INLINE void doCheckFormatString(const char *format, int *formatLen,
 }
 
 
-static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, bool console, bool string, Error *error)
+static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool console, bool string, Error *error)
 {
     void *stream       = console ? stdout : (void *)fiber->reg[VM_REG_IO_STREAM].ptrVal;
     const char *format = (const char *)fiber->reg[VM_REG_IO_FORMAT].ptrVal;
@@ -909,14 +909,28 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, bool console, bool string
     memcpy(curFormat, format, formatLen);
     curFormat[formatLen] = 0;
 
+    // Check available buffer length for sprintf()
+    int availableLen = INT_MAX;
+    if (string)
+    {
+        HeapPage *page = pageFind(pages, stream, true);
+        if (!page)
+            error->handlerRuntime(error->context, "sprintf() requires heap-allocated destination");
+
+        HeapChunkHeader *chunk = pageGetChunkHeader(page, stream);
+        availableLen = (char *)chunk + sizeof(HeapChunkHeader) + chunk->size - (char *)stream;
+        if (availableLen < 0)
+            availableLen = 0;
+    }
+
     int len = 0;
 
     if (typeKind == TYPE_VOID)
-        len = fsprintf(string, stream, curFormat);
+        len = fsnprintf(string, stream, availableLen, curFormat);
     else if (typeKind == TYPE_REAL || typeKind == TYPE_REAL32)
-        len = fsprintf(string, stream, curFormat, fiber->top->realVal);
+        len = fsnprintf(string, stream, availableLen, curFormat, fiber->top->realVal);
     else
-        len = fsprintf(string, stream, curFormat, fiber->top->intVal);
+        len = fsnprintf(string, stream, availableLen, curFormat, fiber->top->intVal);
 
     fiber->reg[VM_REG_IO_FORMAT].ptrVal += formatLen;
     fiber->reg[VM_REG_IO_COUNT].intVal += len;
@@ -1892,12 +1906,12 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
     switch (builtin)
     {
         // I/O
-        case BUILTIN_PRINTF:        doBuiltinPrintf(fiber, true, false, error); break;
-        case BUILTIN_FPRINTF:       doBuiltinPrintf(fiber, false, false, error); break;
-        case BUILTIN_SPRINTF:       doBuiltinPrintf(fiber, false, true, error); break;
-        case BUILTIN_SCANF:         doBuiltinScanf(fiber, pages, true, false, error); break;
-        case BUILTIN_FSCANF:        doBuiltinScanf(fiber, pages, false, false, error); break;
-        case BUILTIN_SSCANF:        doBuiltinScanf(fiber, pages, false, true, error); break;
+        case BUILTIN_PRINTF:        doBuiltinPrintf(fiber, pages, true,  false, error); break;
+        case BUILTIN_FPRINTF:       doBuiltinPrintf(fiber, pages, false, false, error); break;
+        case BUILTIN_SPRINTF:       doBuiltinPrintf(fiber, pages, false, true,  error); break;
+        case BUILTIN_SCANF:         doBuiltinScanf (fiber, pages, true,  false, error); break;
+        case BUILTIN_FSCANF:        doBuiltinScanf (fiber, pages, false, false, error); break;
+        case BUILTIN_SSCANF:        doBuiltinScanf (fiber, pages, false, true,  error); break;
 
         // Math
         case BUILTIN_REAL:
