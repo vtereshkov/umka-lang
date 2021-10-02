@@ -1214,19 +1214,22 @@ static void parseArrayOrStructLiteral(Compiler *comp, Type **type, Const *consta
                 comp->error.handler(comp->error.context, "Too many elements in literal");
 
             // [ident ":"]
+            Field *field = NULL;
             if (namedFields)
             {
-                Field *field = typeAssertFindField(&comp->types, *type, comp->lex.tok.name);
+                field = typeAssertFindField(&comp->types, *type, comp->lex.tok.name);
                 itemOffset = field->offset;
 
                 lexNext(&comp->lex);
                 lexEat(&comp->lex, TOK_COLON);
             }
+            else if ((*type)->kind == TYPE_STRUCT)
+                field = (*type)->field[numItems];
 
             if (!constant)
                 genPushLocalPtr(&comp->gen, bufOffset + itemOffset);
 
-            Type *expectedItemType = (*type)->kind == TYPE_ARRAY ? (*type)->base : (*type)->field[numItems]->type;
+            Type *expectedItemType = (*type)->kind == TYPE_ARRAY ? (*type)->base : field->type;
             Type *itemType;
             Const itemConstantBuf, *itemConstant = constant ? &itemConstantBuf : NULL;
             int itemSize = typeSize(&comp->types, expectedItemType);
