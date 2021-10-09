@@ -310,6 +310,18 @@ static void doInterfaceToPtrConv(Compiler *comp, Type *dest, Type **src, Const *
 }
 
 
+static void doInterfaceToValueConv(Compiler *comp, Type *dest, Type **src, Const *constant)
+{
+    if (constant)
+        comp->error.handler(comp->error.context, "Conversion from interface is not allowed in constant expressions");
+
+    Type *destPtrType = typeAddPtrTo(&comp->types, &comp->blocks, dest);
+    genAssertType(&comp->gen, destPtrType);
+    genDeref(&comp->gen, dest->kind);
+    *src = dest;
+}
+
+
 static void doPtrToWeakPtrConv(Compiler *comp, Type *dest, Type **src, Const *constant)
 {
     if (constant)
@@ -390,9 +402,18 @@ void doImplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant,
     }
 
     // Interface to concrete (type assertion)
-    else if (dest->kind == TYPE_PTR && (*src)->kind == TYPE_INTERFACE)
+    else if ((*src)->kind == TYPE_INTERFACE)
     {
-        doInterfaceToPtrConv(comp, dest, src, constant);
+        if (dest->kind == TYPE_PTR)
+        {
+            // Interface to pointer
+            doInterfaceToPtrConv(comp, dest, src, constant);
+        }
+        else
+        {
+            // Interface to value
+            doInterfaceToValueConv(comp, dest, src, constant);
+        }
     }
 
     // Pointer to weak pointer

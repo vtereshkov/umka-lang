@@ -22,10 +22,10 @@ fn test1() {
 
     std.fclose(f)
 
-    russia2019 := ^real(populations.get("Russia"))^
+    russia2019 := real(populations.get("Russia"))
     
     populations.set("Russia", 146.748)    
-    russia2020 := ^real(populations.get("Russia"))^
+    russia2020 := real(populations.get("Russia"))
 
     populations.del("Russia")
     if ^real(populations.get("Russia")) != null {
@@ -47,7 +47,7 @@ fn test2() {
     writers.set(Pair{1828, 1910}, "Tolstoy")
     writers.set(Pair{1749, 1832}, "Goethe")
 
-    pushkin := ^str(writers.get(Pair{1799, 1837}))^
+    pushkin := str(writers.get(Pair{1799, 1837}))
     printf(pushkin + "\n\n")
 
     writers.del(Pair{1799, 1837})
