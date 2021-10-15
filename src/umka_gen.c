@@ -154,7 +154,7 @@ static bool optimizeGetArrayPtr(CodeGen *gen, int itemSize, int len)
     Instruction *prev = getPrevInstr(gen, 1);
 
     // Optimization: PUSH + GET_ARRAY_PTR -> GET_FIELD_PTR
-    if (prev && prev->opcode == OP_PUSH && len >= 0)
+    if (prev && prev->opcode == OP_PUSH && prev->typeKind == TYPE_INT && prev->inlineOpcode == OP_NOP && len >= 0)
     {
         int index = prev->operand.intVal;
 
