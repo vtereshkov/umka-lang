@@ -865,7 +865,7 @@ void genEntryPoint(CodeGen *gen, int start)
 int genTryRemoveImmediateEntryPoint(CodeGen *gen)
 {
     Instruction *prev = getPrevInstr(gen, 1);
-    if (prev && prev->opcode == OP_PUSH)
+    if (prev && prev->opcode == OP_PUSH && prev->inlineOpcode == OP_NOP)
     {
         int entry = prev->operand.intVal;
         gen->ip -= 1;
