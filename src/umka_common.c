@@ -73,7 +73,8 @@ static void *moduleLoadImplLibFunc(void *lib, const char *name)
 
 void moduleInit(Modules *modules, Error *error)
 {
-    for (int i = 0; i < MAX_MODULES; i++)
+    short i;
+    for (i = 0; i < MAX_MODULES; i++)
     {
         modules->module[i] = NULL;
         modules->moduleSource[i] = NULL;
@@ -86,19 +87,21 @@ void moduleInit(Modules *modules, Error *error)
 
 void moduleFree(Modules *modules)
 {
-    for (int i = 0; i < MAX_MODULES; i++)
     {
-        if (modules->module[i])
-        {
-            if (modules->module[i]->implLib)
-                moduleFreeImplLib(modules->module[i]->implLib);
-            free(modules->module[i]);
-        }
+        short i;
+        for (i = 0; i < MAX_MODULES; i++) {
+            if (modules->module[i])
+            {
+                if (modules->module[i]->implLib)
+                    moduleFreeImplLib(modules->module[i]->implLib);
+                free(modules->module[i]);
+            }
 
-        if (modules->moduleSource[i])
-        {
-            free(modules->moduleSource[i]->source);
-            free(modules->moduleSource[i]);
+            if (modules->moduleSource[i])
+            {
+                free(modules->moduleSource[i]->source);
+                free(modules->moduleSource[i]);
+            }
         }
     }
 }
@@ -131,7 +134,8 @@ static void moduleNameFromPath(Modules *modules, const char *path, char *folder,
 int moduleFind(Modules *modules, const char *name)
 {
     unsigned int nameHash = hash(name);
-    for (int i = 0; i < modules->numModules; i++)
+    int i;
+    for (i = 0; i < modules->numModules; i++)
         if (modules->module[i]->hash == nameHash && strcmp(modules->module[i]->name, name) == 0)
             return i;
     return -1;
@@ -191,8 +195,11 @@ int moduleAdd(Modules *modules, const char *path)
 
     module->implLib = moduleLoadImplLib(libPath);
 
-    for (int i = 0; i < MAX_MODULES; i++)
-        module->imports[i] = false;
+    {
+        short i;
+        for (i = 0; i < MAX_MODULES; i++)
+            module->imports[i] = false;
+    }
 
     modules->module[modules->numModules] = module;
     return modules->numModules++;
@@ -202,7 +209,8 @@ int moduleAdd(Modules *modules, const char *path)
 char *moduleFindSource(Modules *modules, const char *name)
 {
     unsigned int nameHash = hash(name);
-    for (int i = 0; i < modules->numModuleSources; i++)
+    int i;
+    for (i = 0; i < modules->numModuleSources; i++)
         if (modules->moduleSource[i]->hash == nameHash && strcmp(modules->moduleSource[i]->name, name) == 0)
             return modules->moduleSource[i]->source;
     return NULL;
@@ -323,7 +331,8 @@ External *externalFind(Externals *externals, const char *name)
 {
     unsigned int nameHash = hash(name);
 
-    for (External *external = externals->first; external; external = external->next)
+    External *external;
+    for (external = externals->first; external; external = external->next)
         if (external->hash == nameHash && strcmp(external->name, name) == 0)
             return external;
 

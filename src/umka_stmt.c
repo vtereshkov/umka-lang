@@ -13,7 +13,8 @@ static void parseBlock(Compiler *comp);
 
 void doGarbageCollection(Compiler *comp, int block)
 {
-    for (Ident *ident = comp->idents.first; ident; ident = ident->next)
+    Ident *ident;
+    for (ident = comp->idents.first; ident; ident = ident->next)
         if (ident->kind == IDENT_VAR && ident->block == block && typeGarbageCollected(ident->type) && strcmp(ident->name, "__result") != 0)
         {
             doPushVarPtr(comp, ident);
@@ -27,7 +28,8 @@ void doGarbageCollection(Compiler *comp, int block)
 void doGarbageCollectionDownToBlock(Compiler *comp, int block)
 {
     // Collect garbage over all scopes down to the specified block (not inclusive)
-    for (int i = comp->blocks.top; i >= 1; i--)
+    int i;
+    for (i = comp->blocks.top; i >= 1; i--)
     {
         if (comp->blocks.item[i].block == block)
             break;
@@ -50,7 +52,8 @@ void doZeroVar(Compiler *comp, Ident *ident)
 
 void doResolveExtern(Compiler *comp)
 {
-    for (Ident *ident = comp->idents.first; ident; ident = ident->next)
+    Ident *ident;
+    for (ident = comp->idents.first; ident; ident = ident->next)
         if (ident->module == comp->blocks.module && ident->prototypeOffset >= 0)
         {
             External *external = externalFind(&comp->externals, ident->name);
@@ -66,8 +69,11 @@ void doResolveExtern(Compiler *comp)
             genEntryPoint(&comp->gen, ident->prototypeOffset);
             genEnterFrameStub(&comp->gen);
 
-            for (int i = 0; i < ident->type->sig.numParams; i++)
-                identAllocParam(&comp->idents, &comp->types, &comp->modules, &comp->blocks, &ident->type->sig, i);
+            {
+                int i;
+                for (i = 0; i < ident->type->sig.numParams; i++)
+                    identAllocParam(&comp->idents, &comp->types, &comp->modules, &comp->blocks, &ident->type->sig, i);
+            }
 
             genCallExtern(&comp->gen, fn);
 
@@ -139,40 +145,44 @@ static void parseListAssignmentStmt(Compiler *comp, Type *type, Const *varPtrCon
     if (numExpr < type->numItems) comp->error.handler(comp->error.context, "Too few expressions");
     if (numExpr > type->numItems) comp->error.handler(comp->error.context, "Too many expressions");
 
-    for (int i = type->numItems - 1; i >= 0; i--)
     {
-        Type *leftType = type->field[i]->type;
-        if (!typeStructured(leftType))
+        int i;
+        for (i = type->numItems - 1; i >= 0; i--)
         {
-            if (leftType->kind != TYPE_PTR || leftType->base->kind == TYPE_VOID)
-                comp->error.handler(comp->error.context, "Left side cannot be assigned to");
-            leftType = leftType->base;
-        }
+            Type * leftType = type->field[i]->type;
+            if (!typeStructured(leftType))
+            {
+                if (leftType->kind != TYPE_PTR || leftType->base->kind == TYPE_VOID)
+                    comp->error.handler(comp->error.context, "Left side cannot be assigned to");
+                leftType = leftType->base;
+            }
 
-        Type *rightType = rightListType->field[i]->type;
+            Type * rightType = rightListType->field[i]->type;
 
-        if (varPtrConstList)                                // Initialize global variables
-        {
-            Const rightConstantBuf = {.ptrVal = rightListConstant->ptrVal + rightListType->field[i]->offset};
-            constDeref(&comp->consts, &rightConstantBuf, rightType->kind);
+            if (varPtrConstList)                                // Initialize global variables
+            {
+                Const rightConstantBuf = {.ptrVal = rightListConstant->ptrVal + rightListType->field[i]->offset};
+                constDeref(&comp->consts, &rightConstantBuf, rightType->kind);
 
-            doImplicitTypeConv(comp, leftType, &rightType, &rightConstantBuf, false);
-            typeAssertCompatible(&comp->types, leftType, rightType, false);
+                doImplicitTypeConv(comp, leftType, &rightType, &rightConstantBuf, false);
+                typeAssertCompatible(&comp->types, leftType, rightType, false);
 
-            constAssign(&comp->consts, (void *)varPtrConstList[i].ptrVal, &rightConstantBuf, rightType->kind, typeSize(&comp->types, rightType));
-        }
-        else                                                // Assign to variable
-        {
-            genDup(&comp->gen);                                             // Duplicate expression list pointer
-            genPopReg(&comp->gen, VM_REG_COMMON_3);                         // Save expression list pointer
-            genGetFieldPtr(&comp->gen, rightListType->field[i]->offset);    // Get expression pointer
-            genDeref(&comp->gen, rightType->kind);                          // Get expression value
+                constAssign(&comp->consts, (void *) varPtrConstList[i].ptrVal, &rightConstantBuf, rightType->kind,
+                            typeSize(&comp->types, rightType));
+            }
+            else                                                // Assign to variable
+            {
+                genDup(&comp->gen);                                             // Duplicate expression list pointer
+                genPopReg(&comp->gen, VM_REG_COMMON_3);                         // Save expression list pointer
+                genGetFieldPtr(&comp->gen, rightListType->field[i]->offset);    // Get expression pointer
+                genDeref(&comp->gen, rightType->kind);                          // Get expression value
 
-            doImplicitTypeConv(comp, leftType, &rightType, NULL, false);
-            typeAssertCompatible(&comp->types, leftType, rightType, false);
+                doImplicitTypeConv(comp, leftType, &rightType, NULL, false);
+                typeAssertCompatible(&comp->types, leftType, rightType, false);
 
-            genChangeRefCntAssign(&comp->gen, leftType);                    // Assign expression to variable
-            genPushReg(&comp->gen, VM_REG_COMMON_3);                        // Restore expression list pointer
+                genChangeRefCntAssign(&comp->gen, leftType);                    // Assign expression to variable
+                genPushReg(&comp->gen, VM_REG_COMMON_3);                        // Restore expression list pointer
+            }
         }
     }
 
@@ -249,28 +259,31 @@ static void parseListDeclAssignmentStmt(Compiler *comp, IdentName *names, bool *
     if (rightListType->numItems < num) comp->error.handler(comp->error.context, "Too few expressions");
     if (rightListType->numItems > num) comp->error.handler(comp->error.context, "Too many expressions");
 
-    for (int i = 0; i < num; i++)
     {
-        Type *rightType = rightListType->field[i]->type;
-        Ident *ident = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, names[i], rightType, exported[i]);
-        doZeroVar(comp, ident);
-
-        if (constExpr)              // Initialize global variable
+        int i;
+        for (i = 0; i < num; i++)
         {
-            Const rightConstantBuf = {.ptrVal = rightListConstant->ptrVal + rightListType->field[i]->offset};
-            constDeref(&comp->consts, &rightConstantBuf, rightType->kind);
-            constAssign(&comp->consts, ident->ptr, &rightConstantBuf, rightType->kind, typeSize(&comp->types, rightType));
-        }
-        else                        // Assign to variable
-        {
-            genDup(&comp->gen);                                             // Duplicate expression list pointer
-            genGetFieldPtr(&comp->gen, rightListType->field[i]->offset);    // Get expression pointer
-            genDeref(&comp->gen, rightType->kind);                          // Get expression value
+            Type *rightType = rightListType->field[i]->type;
+            Ident *ident = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, names[i], rightType, exported[i]);
+            doZeroVar(comp, ident);
 
-            genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, rightType);           // Increase right-hand side reference count
+            if (constExpr)              // Initialize global variable
+            {
+                Const rightConstantBuf = {.ptrVal = rightListConstant->ptrVal + rightListType->field[i]->offset};
+                constDeref(&comp->consts, &rightConstantBuf, rightType->kind);
+                constAssign(&comp->consts, ident->ptr, &rightConstantBuf, rightType->kind, typeSize(&comp->types, rightType));
+            }
+            else                        // Assign to variable
+            {
+                genDup(&comp->gen);                                             // Duplicate expression list pointer
+                genGetFieldPtr(&comp->gen, rightListType->field[i]->offset);    // Get expression pointer
+                genDeref(&comp->gen, rightType->kind);                          // Get expression value
 
-            doPushVarPtr(comp, ident);
-            genSwapAssign(&comp->gen, rightType->kind, typeSize(&comp->types, rightType));
+                genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, rightType);           // Increase right-hand side reference count
+
+                doPushVarPtr(comp, ident);
+                genSwapAssign(&comp->gen, rightType->kind, typeSize(&comp->types, rightType));
+            }
         }
     }
 
@@ -726,12 +739,15 @@ static void parseReturnStmt(Compiler *comp)
 
     // Get function signature
     Signature *sig = NULL;
-    for (int i = comp->blocks.top; i >= 1; i--)
-        if (comp->blocks.item[i].fn)
-        {
-            sig = &comp->blocks.item[i].fn->type->sig;
-            break;
-        }
+    {
+        int i;
+        for (i = comp->blocks.top; i >= 1; i--)
+            if (comp->blocks.item[i].fn)
+            {
+                sig = &comp->blocks.item[i].fn->type->sig;
+                break;
+            }
+    }
 
     Type *type;
     if (comp->lex.tok.kind != TOK_SEMICOLON && comp->lex.tok.kind != TOK_RBRACE)
@@ -845,9 +861,11 @@ void parseFnBlock(Compiler *comp, Ident *fn)
     }
 
     genEnterFrameStub(&comp->gen);
-    for (int i = 0; i < fn->type->sig.numParams; i++)
-        identAllocParam(&comp->idents, &comp->types, &comp->modules, &comp->blocks, &fn->type->sig, i);
-
+    {
+        int i;
+        for (i = 0; i < fn->type->sig.numParams; i++)
+            identAllocParam(&comp->idents, &comp->types, &comp->modules, &comp->blocks, &fn->type->sig, i);
+    }
     // 'return' prolog
     Gotos returns, *outerReturns = comp->gen.returns;
     comp->gen.returns = &returns;

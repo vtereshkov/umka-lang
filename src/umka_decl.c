@@ -126,14 +126,16 @@ static void parseSignature(Compiler *comp, Signature *sig)
                     comp->error.handler(comp->error.context, "Parameters with default values should be the last ones");
             }
 
-            for (int i = 0; i < numParams; i++)
             {
-                if (paramExported[i])
-                    comp->error.handler(comp->error.context, "Parameter %s cannot be exported", paramNames[i]);
+                int i;
+                for (i = 0; i < numParams; i++) {
+                    if (paramExported[i])
+                        comp->error.handler(comp->error.context, "Parameter %s cannot be exported", paramNames[i]);
 
-                Param *param = typeAddParam(&comp->types, sig, paramType, paramNames[i]);
-                if (numDefaultParams > 0)
-                    param->defaultVal = defaultConstant;
+                    Param *param = typeAddParam(&comp->types, sig, paramType, paramNames[i]);
+                    if (numDefaultParams > 0)
+                        param->defaultVal = defaultConstant;
+                }
             }
 
             if (comp->lex.tok.kind != TOK_COMMA)
@@ -291,10 +293,10 @@ static Type *parseStructType(Compiler *comp)
         IdentName fieldNames[MAX_FIELDS];
         bool fieldExported[MAX_FIELDS];
         Type *fieldType;
-        int numFields = 0;
+        int numFields = 0, i;
         parseTypedIdentList(comp, fieldNames, fieldExported, MAX_FIELDS, &numFields, &fieldType);
 
-        for (int i = 0; i < numFields; i++)
+        for (i = 0; i < numFields; i++)
         {
             typeAddField(&comp->types, type, fieldType, fieldNames[i]);
             if (fieldExported[i])
@@ -351,14 +353,17 @@ static Type *parseInterfaceType(Compiler *comp)
             if (embeddedType->kind != TYPE_INTERFACE)
                 comp->error.handler(comp->error.context, "Interface type expected");
 
-            for (int i = 2; i < embeddedType->numItems; i++)    // Skip __self and __selftype in embedded interface
             {
-                Type *methodType = typeAdd(&comp->types, &comp->blocks, TYPE_FN);
-                typeDeepCopy(methodType, embeddedType->field[i]->type);
+                int i;
+                for (i = 2; i < embeddedType->numItems; i++)    // Skip __self and __selftype in embedded interface
+                {
+                    Type * methodType = typeAdd(&comp->types, &comp->blocks, TYPE_FN);
+                    typeDeepCopy(methodType, embeddedType->field[i]->type);
 
-                Field *method = typeAddField(&comp->types, type, methodType, embeddedType->field[i]->name);
-                methodType->sig.method = true;
-                methodType->sig.offsetFromSelf = method->offset;
+                    Field *method = typeAddField(&comp->types, type, methodType, embeddedType->field[i]->name);
+                    methodType->sig.method = true;
+                    methodType->sig.offsetFromSelf = method->offset;
+                }
             }
         }
 
@@ -502,10 +507,13 @@ static void parseVarDeclItem(Compiler *comp)
     parseTypedIdentList(comp, varNames, varExported, MAX_FIELDS, &numVars, &varType);
 
     Ident *var[MAX_FIELDS];
-    for (int i = 0; i < numVars; i++)
     {
-        var[i] = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, varNames[i], varType, varExported[i]);
-        doZeroVar(comp, var[i]);
+        int i;
+        for (i = 0; i < numVars; i++) {
+            var[i] = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, varNames[i], varType,
+                                   varExported[i]);
+            doZeroVar(comp, var[i]);
+        }
     }
 
     // Initializer
@@ -522,18 +530,24 @@ static void parseVarDeclItem(Compiler *comp)
             designatorListType = typeAdd(&comp->types, &comp->blocks, TYPE_STRUCT);
             designatorListType->isExprList = true;
 
-            for (int i = 0; i < numVars; i++)
-                typeAddField(&comp->types, designatorListType, designatorType, NULL);
+            {
+                int i;
+                for (i = 0; i < numVars; i++)
+                    typeAddField(&comp->types, designatorListType, designatorType, NULL);
+            }
         }
 
         Const varPtrConstList[MAX_FIELDS] = {0};
 
-        for (int i = 0; i < numVars; i++)
         {
-            if (comp->blocks.top == 0)          // Globals are initialized with constant expressions
-                varPtrConstList[i].ptrVal = (int64_t)var[i]->ptr;
-            else                                // Locals are assigned to
-                doPushVarPtr(comp, var[i]);
+            int i;
+            for (i = 0; i < numVars; i++)
+            {
+                if (comp->blocks.top == 0)          // Globals are initialized with constant expressions
+                    varPtrConstList[i].ptrVal = (int64_t) var[i]->ptr;
+                else                                // Locals are assigned to
+                    doPushVarPtr(comp, var[i]);
+            }
         }
 
         lexNext(&comp->lex);

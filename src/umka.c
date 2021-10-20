@@ -148,15 +148,18 @@ int main(int argc, char **argv)
             fprintf(stderr, "\nRuntime error %s (%d): %s\n", error.fileName, error.line, error.msg);
             fprintf(stderr, "Stack trace:\n");
 
-            for (int depth = 0; depth < MAX_CALL_STACK_DEPTH; depth++)
             {
-                char fnName[UMKA_MSG_LEN + 1];
-                int fnOffset;
+                short depth;
+                for (depth = 0; depth < MAX_CALL_STACK_DEPTH; depth++)
+                {
+                    char fnName[UMKA_MSG_LEN + 1];
+                    int fnOffset;
 
-                if (!umkaGetCallStack(umka, depth, &fnOffset, fnName, UMKA_MSG_LEN + 1))
-                    break;
+                    if (!umkaGetCallStack(umka, depth, &fnOffset, fnName, UMKA_MSG_LEN + 1))
+                        break;
 
-                fprintf(stderr, "%08d: %s\n", fnOffset, fnName);
+                    fprintf(stderr, "%08d: %s\n", fnOffset, fnName);
+                }
             }
         }
     }

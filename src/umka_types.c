@@ -50,12 +50,18 @@ void typeInit(Types *types, Error *error)
 void typeFreeFieldsAndParams(Type *type)
 {
     if (type->kind == TYPE_STRUCT || type->kind == TYPE_INTERFACE)
-        for (int i = 0; i < type->numItems; i++)
+    {
+        int i;
+        for (i = 0; i < type->numItems; i++)
             free(type->field[i]);
+    }
 
     else if (type->kind == TYPE_FN)
-        for (int i = 0; i < type->sig.numParams; i++)
+    {
+        int i;
+        for (i = 0; i < type->sig.numParams; i++)
             free(type->sig.param[i]);
+    }
 }
 
 
@@ -126,18 +132,24 @@ void typeDeepCopy(Type *dest, Type *src)
     dest->next = next;
 
     if (dest->kind == TYPE_STRUCT || dest->kind == TYPE_INTERFACE)
-        for (int i = 0; i < dest->numItems; i++)
+    {
+        int i;
+        for (i = 0; i < dest->numItems; i++)
         {
             dest->field[i] = malloc(sizeof(Field));
             *(dest->field[i]) = *(src->field[i]);
         }
+    }
 
     else if (dest->kind == TYPE_FN)
-        for (int i = 0; i < dest->sig.numParams; i++)
+    {
+        int i;
+        for (i = 0; i < dest->sig.numParams; i++)
         {
             dest->sig.param[i] = malloc(sizeof(Param));
             *(dest->sig.param[i]) = *(src->sig.param[i]);
         }
+    }
 }
 
 
@@ -174,8 +186,8 @@ int typeSizeNoCheck(Type *type)
         case TYPE_STRUCT:
         case TYPE_INTERFACE:
         {
-            int size = 0;
-            for (int i = 0; i < type->numItems; i++)
+            int size = 0, i;
+            for (i = 0; i < type->numItems; i++)
                 size += typeSizeNoCheck(type->field[i]->type);
             return size;
         }
@@ -208,9 +220,12 @@ bool typeGarbageCollected(Type *type)
         return typeGarbageCollected(type->base);
 
     if (type->kind == TYPE_STRUCT)
-        for (int i = 0; i < type->numItems; i++)
+    {
+        int i;
+        for (i = 0; i < type->numItems; i++)
             if (typeGarbageCollected(type->field[i]->type))
                 return true;
+    }
 
     return false;
 }
@@ -268,15 +283,19 @@ static bool typeEquivalentRecursive(Type *left, Type *right, VisitedTypePair *fi
                 return false;
 
             // Fields
-            for (int i = 0; i < left->numItems; i++)
             {
-                // Name
-                if (left->field[i]->hash != right->field[i]->hash || strcmp(left->field[i]->name, right->field[i]->name) != 0)
-                    return false;
+                int i;
+                for (i = 0; i < left->numItems; i++)
+                {
+                    // Name
+                    if (left->field[i]->hash != right->field[i]->hash ||
+                        strcmp(left->field[i]->name, right->field[i]->name) != 0)
+                        return false;
 
-                // Type
-                if (!typeEquivalentRecursive(left->field[i]->type, right->field[i]->type, &newPair))
-                    return false;
+                    // Type
+                    if (!typeEquivalentRecursive(left->field[i]->type, right->field[i]->type, &newPair))
+                        return false;
+                }
             }
             return true;
         }
@@ -293,8 +312,8 @@ static bool typeEquivalentRecursive(Type *left, Type *right, VisitedTypePair *fi
                 return false;
 
             // Parameters (skip interface method receiver)
-            int iStart = left->sig.offsetFromSelf == 0 ? 0 : 1;
-            for (int i = iStart; i < left->sig.numParams; i++)
+            int iStart = left->sig.offsetFromSelf == 0 ? 0 : 1, i;
+            for (i = iStart; i < left->sig.numParams; i++)
             {
                 // Name
                 if (left->sig.param[i]->hash != right->sig.param[i]->hash ||
@@ -440,7 +459,8 @@ void typeAssertValidOperator(Types *types, Type *type, TokenKind op)
 
 void typeAssertForwardResolved(Types *types)
 {
-    for (Type *type = types->first; type; type = type->next)
+    Type *type;
+    for (type = types->first; type; type = type->next)
         if (type->kind == TYPE_FORWARD)
             types->error->handler(types->error->context, "Unresolved forward declaration of %s", (Ident *)(type->typeIdent)->name);
 }
@@ -451,7 +471,8 @@ Field *typeFindField(Type *structType, const char *name)
     if (structType->kind == TYPE_STRUCT || structType->kind == TYPE_INTERFACE)
     {
         unsigned int nameHash = hash(name);
-        for (int i = 0; i < structType->numItems; i++)
+        int i;
+        for (i = 0; i < structType->numItems; i++)
             if (structType->field[i]->hash == nameHash && strcmp(structType->field[i]->name, name) == 0)
                 return structType->field[i];
     }
@@ -515,7 +536,8 @@ Field *typeAddField(Types *types, Type *structType, Type *fieldType, const char 
 Param *typeFindParam(Signature *sig, const char *name)
 {
     unsigned int nameHash = hash(name);
-    for (int i = 0; i < sig->numParams; i++)
+    int i;
+    for (i = 0; i < sig->numParams; i++)
         if (sig->param[i]->hash == nameHash && strcmp(sig->param[i]->name, name) == 0)
             return sig->param[i];
 
@@ -549,8 +571,8 @@ Param *typeAddParam(Types *types, Signature *sig, Type *type, const char *name)
 int typeParamSizeUpTo(Types *types, Signature *sig, int index)
 {
     // All parameters are slot-aligned
-    int size = 0;
-    for (int i = 0; i <= index; i++)
+    int size = 0, i;
+    for (i = 0; i <= index; i++)
         size += align(typeSize(types, sig->param[i]->type), sizeof(Slot));
     return size;
 }
@@ -581,10 +603,15 @@ static char *typeSpellingRecursive(Type *type, char *buf, int size, int depth)
         else if (typeExprListStruct(type))
         {
             len += snprintf(buf + len, nonneg(size - len), "{ ");
-            for (int i = 0; i < type->numItems; i++)
             {
-                char fieldBuf[DEFAULT_STR_LEN + 1];
-                len += snprintf(buf + len, nonneg(size - len), "%s ", typeSpellingRecursive(type->field[i]->type, fieldBuf, DEFAULT_STR_LEN + 1, depth - 1));
+                int i;
+                for (i = 0; i < type->numItems; i++)
+                {
+                    char fieldBuf[DEFAULT_STR_LEN + 1];
+                    len += snprintf(buf + len, nonneg(size - len), "%s ",
+                                    typeSpellingRecursive(type->field[i]->type, fieldBuf, DEFAULT_STR_LEN + 1,
+                                                          depth - 1));
+                }
             }
             len += snprintf(buf + len, nonneg(size - len), "}");
         }

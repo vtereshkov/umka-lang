@@ -105,8 +105,11 @@ static unsigned int keywordHash[NUM_KEYWORDS];
 int lexInit(Lexer *lex, Storage *storage, DebugInfo *debug, const char *fileName, const char *sourceString, Error *error)
 {
     // Fill keyword hashes
-    for (int i = 0; i < NUM_KEYWORDS; i++)
-        keywordHash[i] = hash(spelling[TOK_BREAK + i]);
+    {
+        int i;
+        for (i = 0; i < NUM_KEYWORDS; i++)
+            keywordHash[i] = hash(spelling[TOK_BREAK + i]);
+    }
 
     // Initialize lexer
     errno = 0;
@@ -333,12 +336,15 @@ static void lexKeywordOrIdent(Lexer *lex)
     lex->tok.hash = hash(lex->tok.name);
 
     // Search for a keyword
-    for (int i = 0; i < NUM_KEYWORDS; i++)
-        if (lex->tok.hash == keywordHash[i] && strcmp(lex->tok.name, spelling[TOK_BREAK + i]) == 0)
-        {
-            lex->tok.kind = TOK_BREAK + i;
-            break;
-        }
+    {
+        int i;
+        for (i = 0; i < NUM_KEYWORDS; i++)
+            if (lex->tok.hash == keywordHash[i] && strcmp(lex->tok.name, spelling[TOK_BREAK + i]) == 0)
+            {
+                lex->tok.kind = TOK_BREAK + i;
+                break;
+            }
+    }
 
     if (lex->tok.kind == TOK_NONE)
         lex->tok.kind = TOK_IDENT;

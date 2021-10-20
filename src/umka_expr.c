@@ -218,23 +218,25 @@ static void doPtrToInterfaceConv(Compiler *comp, Type *dest, Type **src, Const *
     genSwapAssign(&comp->gen, TYPE_PTR, 0);                                 // Assign to dest.__selftype
 
     // Assign to methods
-    for (int i = 2; i < dest->numItems; i++)
     {
-        const char *name = dest->field[i]->name;
+        int i;
+        for (i = 2; i < dest->numItems; i++) {
+            const char *name = dest->field[i]->name;
 
-        Type *rcvType = (*src)->base;
-        int rcvTypeModule = rcvType->typeIdent ? rcvType->typeIdent->module : -1;
+            Type * rcvType = (*src)->base;
+            int rcvTypeModule = rcvType->typeIdent ? rcvType->typeIdent->module : -1;
 
-        Ident *srcMethod = identFind(&comp->idents, &comp->modules, &comp->blocks, rcvTypeModule, name, *src);
-        if (!srcMethod)
-            comp->error.handler(comp->error.context, "Method %s is not implemented", name);
+            Ident *srcMethod = identFind(&comp->idents, &comp->modules, &comp->blocks, rcvTypeModule, name, *src);
+            if (!srcMethod)
+                comp->error.handler(comp->error.context, "Method %s is not implemented", name);
 
-        if (!typeCompatible(dest->field[i]->type, srcMethod->type, false))
-            comp->error.handler(comp->error.context, "Method %s has incompatible signature", name);
+            if (!typeCompatible(dest->field[i]->type, srcMethod->type, false))
+                comp->error.handler(comp->error.context, "Method %s has incompatible signature", name);
 
-        genPushIntConst(&comp->gen, srcMethod->offset);                     // Push src value
-        genPushLocalPtr(&comp->gen, destOffset + dest->field[i]->offset);   // Push dest.method pointer
-        genSwapAssign(&comp->gen, TYPE_FN, 0);                              // Assign to dest.method
+            genPushIntConst(&comp->gen, srcMethod->offset);                     // Push src value
+            genPushLocalPtr(&comp->gen, destOffset + dest->field[i]->offset);   // Push dest.method pointer
+            genSwapAssign(&comp->gen, TYPE_FN, 0);                              // Assign to dest.method
+        }
     }
 
     genPushLocalPtr(&comp->gen, destOffset);
@@ -266,21 +268,23 @@ static void doInterfaceToInterfaceConv(Compiler *comp, Type *dest, Type **src, C
     genSwapAssign(&comp->gen, TYPE_PTR, 0);                                 // Assign to dest.__selftype
 
     // Assign to methods
-    for (int i = 2; i < dest->numItems; i++)
     {
-        const char *name = dest->field[i]->name;
-        Field *srcMethod = typeFindField(*src, name);
-        if (!srcMethod)
-            comp->error.handler(comp->error.context, "Method %s is not implemented", name);
+        int i;
+        for (i = 2; i < dest->numItems; i++) {
+            const char *name = dest->field[i]->name;
+            Field *srcMethod = typeFindField(*src, name);
+            if (!srcMethod)
+                comp->error.handler(comp->error.context, "Method %s is not implemented", name);
 
-        if (!typeCompatible(dest->field[i]->type, srcMethod->type, false))
-            comp->error.handler(comp->error.context, "Method %s has incompatible signature", name);
+            if (!typeCompatible(dest->field[i]->type, srcMethod->type, false))
+                comp->error.handler(comp->error.context, "Method %s has incompatible signature", name);
 
-        genDup(&comp->gen);                                                 // Duplicate src pointer
-        genGetFieldPtr(&comp->gen, srcMethod->offset);                      // Get src.method pointer
-        genDeref(&comp->gen, TYPE_PTR);                                     // Get src.method value (entry point)
-        genPushLocalPtr(&comp->gen, destOffset + dest->field[i]->offset);   // Push dest.method pointer
-        genSwapAssign(&comp->gen, TYPE_FN, 0);                              // Assign to dest.method
+            genDup(&comp->gen);                                                 // Duplicate src pointer
+            genGetFieldPtr(&comp->gen, srcMethod->offset);                      // Get src.method pointer
+            genDeref(&comp->gen, TYPE_PTR);                                     // Get src.method value (entry point)
+            genPushLocalPtr(&comp->gen, destOffset + dest->field[i]->offset);   // Push dest.method pointer
+            genSwapAssign(&comp->gen, TYPE_FN, 0);                              // Assign to dest.method
+        }
     }
 
     genPop(&comp->gen);                                                     // Remove src pointer
@@ -1327,11 +1331,14 @@ static void parseDynArrayLiteral(Compiler *comp, Type **type, Const *constant)
     int bufOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, staticArrayType));
 
     // Assign items
-    for (int i = staticArrayType->numItems - 1; i >= 0; i--)
     {
-        // Assignment to an anonymous stack area does not require updating reference counts
-        genPushLocalPtr(&comp->gen, bufOffset + i * itemSize);
-        genSwapAssign(&comp->gen, staticArrayType->base->kind, itemSize);
+        int i;
+        for (i = staticArrayType->numItems - 1; i >= 0; i--)
+        {
+            // Assignment to an anonymous stack area does not require updating reference counts
+            genPushLocalPtr(&comp->gen, bufOffset + i * itemSize);
+            genSwapAssign(&comp->gen, staticArrayType->base->kind, itemSize);
+        }
     }
 
     // Convert to dynamic array
@@ -1988,18 +1995,22 @@ void parseExprList(Compiler *comp, Type **type, Type *destType, Const *constant)
             bufOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, *type));
 
         // Assign expressions
-        for (int i = (*type)->numItems - 1; i >= 0; i--)
         {
-            Field *field = (*type)->field[i];
-            int fieldSize = typeSize(&comp->types, field->type);
-
-            if (constant)
-                constAssign(&comp->consts, (void *)(constant->ptrVal + field->offset), &fieldConstantBuf[i], field->type->kind, fieldSize);
-            else
+            int i;
+            for (i = (*type)->numItems - 1; i >= 0; i--)
             {
-                // Assignment to an anonymous stack area does not require updating reference counts
-                genPushLocalPtr(&comp->gen, bufOffset + field->offset);
-                genSwapAssign(&comp->gen, field->type->kind, fieldSize);
+                Field *field = (*type)->field[i];
+                int fieldSize = typeSize(&comp->types, field->type);
+
+                if (constant)
+                    constAssign(&comp->consts, (void *) (constant->ptrVal + field->offset), &fieldConstantBuf[i],
+                                field->type->kind, fieldSize);
+                else
+                {
+                    // Assignment to an anonymous stack area does not require updating reference counts
+                    genPushLocalPtr(&comp->gen, bufOffset + field->offset);
+                    genSwapAssign(&comp->gen, field->type->kind, fieldSize);
+                }
             }
         }
 

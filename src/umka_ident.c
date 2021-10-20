@@ -49,9 +49,11 @@ Ident *identFind(Idents *idents, Modules *modules, Blocks *blocks, int module, c
 {
     unsigned int nameHash = hash(name);
 
-    for (int i = blocks->top; i >= 0; i--)
+    int i;
+    for (i = blocks->top; i >= 0; i--)
     {
-        for (Ident *ident = idents->first; ident; ident = ident->next)
+        Ident *ident;
+        for (ident = idents->first; ident; ident = ident->next)
             if (ident->hash == nameHash && strcmp(ident->name, name) == 0 && ident->block == blocks->item[i].block)
             {
                 // What we found has correct name and block scope, check module scope
@@ -98,7 +100,8 @@ bool identIsOuterLocalVar(Blocks *blocks, Ident *ident)
         return false;
 
     bool curFnBlockFound = false;
-    for (int i = blocks->top; i >= 0; i--)
+    int i;
+    for (i = blocks->top; i >= 0; i--)
     {
         if (blocks->item[i].block == ident->block && curFnBlockFound)
             return true;
@@ -227,8 +230,8 @@ Ident *identAddBuiltinFunc(Idents *idents, Modules *modules, Blocks *blocks, con
 
 int identAllocStack(Idents *idents, Blocks *blocks, int size)
 {
-    int *localVarSize = NULL;
-    for (int i = blocks->top; i >= 1; i--)
+    int *localVarSize = NULL, i;
+    for (i = blocks->top; i >= 1; i--)
         if (blocks->item[i].fn)
         {
             localVarSize = &blocks->item[i].localVarSize;

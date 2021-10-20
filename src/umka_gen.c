@@ -49,7 +49,8 @@ static void genAddInstr(CodeGen *gen, const Instruction *instr)
 static bool genNeedHeapFrame(CodeGen *gen, int ipBegin, int ipEnd)
 {
     // If any ref count is incremented within a function, it needs a heap frame instead of a stack frame
-    for (int ip = ipBegin; ip < ipEnd; ip++)
+    int ip;
+    for (ip = ipBegin; ip < ipEnd; ip++)
         if ((gen->code[ip].opcode == OP_CHANGE_REF_CNT && gen->code[ip].tokKind == TOK_PLUSPLUS) || gen->code[ip].opcode == OP_CHANGE_REF_CNT_ASSIGN)
             return true;
     return false;
@@ -752,7 +753,8 @@ void genCaseBlockEpilog(CodeGen *gen)
 
 void genSwitchEpilog(CodeGen *gen, int numCases)
 {
-    for (int i = 0; i < numCases; i++)
+    int i;
+    for (i = 0; i < numCases; i++)
         genGoFromTo(gen, genRestorePos(gen), gen->ip);   // Goto "switch" end (fixup)
 }
 
@@ -894,7 +896,8 @@ void genGotosAddStub(CodeGen *gen, Gotos *gotos)
 
 void genGotosEpilog(CodeGen *gen, Gotos *gotos)
 {
-    for (int i = 0; i < gotos->numGotos; i++)
+    int i;
+    for (i = 0; i < gotos->numGotos; i++)
         genGoFromTo(gen, gotos->start[i], gen->ip);     // Goto block/function end (fixup)
 }
 

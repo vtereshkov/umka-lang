@@ -196,7 +196,8 @@ static FORCE_INLINE HeapChunkHeader *pageGetChunkHeader(HeapPage *page, void *pt
 
 static FORCE_INLINE HeapPage *pageFind(HeapPages *pages, void *ptr, bool warnDangling)
 {
-    for (HeapPage *page = pages->first; page; page = page->next)
+    HeapPage *page;
+    for (page = pages->first; page; page = page->next)
         if (ptr >= page->ptr && ptr < (void *)((char *)page->ptr + page->numChunks * page->chunkSize))
         {
             HeapChunkHeader *chunk = pageGetChunkHeader(page, ptr);
@@ -214,10 +215,10 @@ static FORCE_INLINE HeapPage *pageFind(HeapPages *pages, void *ptr, bool warnDan
 
 static FORCE_INLINE HeapPage *pageFindForAlloc(HeapPages *pages, int size)
 {
-    HeapPage *bestPage = NULL;
+    HeapPage *bestPage = NULL, *page;
     int bestSize = 1 << 30;
 
-    for (HeapPage *page = pages->first; page; page = page->next)
+    for (page = pages->first; page; page = page->next)
         if (page->numOccupiedChunks < page->numChunks && page->chunkSize >= size && page->chunkSize < bestSize)
         {
             bestPage = page;
@@ -229,7 +230,8 @@ static FORCE_INLINE HeapPage *pageFindForAlloc(HeapPages *pages, int size)
 
 static FORCE_INLINE HeapPage *pageFindById(HeapPages *pages, int id)
 {
-    for (HeapPage *page = pages->first; page; page = page->next)
+    HeapPage *page;
+    for (page = pages->first; page; page = page->next)
         if (page->id == id)
             return page;
     return NULL;
@@ -494,9 +496,9 @@ static FORCE_INLINE void doChangeArrayItemsRefCnt(Fiber *fiber, HeapPages *pages
     if (typeKindGarbageCollected(type->base->kind))
     {
         char *itemPtr = ptr;
-        int itemSize = typeSizeNoCheck(type->base);
+        int itemSize = typeSizeNoCheck(type->base), i;
 
-        for (int i = 0; i < len; i++)
+        for (i = 0; i < len; i++)
         {
             void *item = itemPtr;
             if (type->base->kind == TYPE_PTR || type->base->kind == TYPE_STR)
@@ -511,7 +513,8 @@ static FORCE_INLINE void doChangeArrayItemsRefCnt(Fiber *fiber, HeapPages *pages
 
 static FORCE_INLINE void doChangeStructFieldsRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type *type, TokenKind tokKind, int depth, Error *error)
 {
-    for (int i = 0; i < type->numItems; i++)
+    int i;
+    for (i = 0; i < type->numItems; i++)
     {
         if (typeKindGarbageCollected(type->field[i]->type->kind))
         {
@@ -693,9 +696,9 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, Error *e
             len += snprintf(buf, maxLen, "{ ");
 
             char *itemPtr = (char *)slot->ptrVal;
-            int itemSize = typeSizeNoCheck(type->base);
+            int itemSize = typeSizeNoCheck(type->base), i;
 
-            for (int i = 0; i < type->numItems; i++)
+            for (i = 0; i < type->numItems; i++)
             {
                 Slot itemSlot = {.ptrVal = (int64_t)itemPtr};
                 doBasicDeref(&itemSlot, type->base->kind, error);
@@ -715,7 +718,8 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, Error *e
             if (array && array->data)
             {
                 char *itemPtr = array->data;
-                for (int i = 0; i < array->len; i++)
+                int i;
+                for (i = 0; i < array->len; i++)
                 {
                     Slot itemSlot = {.ptrVal = (int64_t)itemPtr};
                     doBasicDeref(&itemSlot, type->base->kind, error);
@@ -730,10 +734,11 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, Error *e
 
         case TYPE_STRUCT:
         {
-            len += snprintf(buf, maxLen, "{ ");
             bool skipNames = typeExprListStruct(type);
+            int i;
+            len += snprintf(buf, maxLen, "{ ");
 
-            for (int i = 0; i < type->numItems; i++)
+            for (i = 0; i < type->numItems; i++)
             {
                 Slot fieldSlot = {.ptrVal = slot->ptrVal + type->field[i]->offset};
                 doBasicDeref(&fieldSlot, type->field[i]->type->kind, error);
@@ -2173,8 +2178,11 @@ void vmRun(VM *vm, int entryOffset, int numParamSlots, Slot *params, Slot *resul
     {
         // Push parameters
         vm->fiber->top -= numParamSlots;
-        for (int i = 0; i < numParamSlots; i++)
-            vm->fiber->top[i] = params[i];
+        {
+            int i;
+            for (i = 0; i < numParamSlots; i++)
+                vm->fiber->top[i] = params[i];
+        }
 
         // Push null return address and go to the entry point
         (--vm->fiber->top)->intVal = 0;
