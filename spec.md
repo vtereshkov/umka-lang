@@ -626,10 +626,10 @@ fn len(a: ([...]T | []T | str)): int
 Returns the length of `a`, where `a` can be an array, a dynamic array or a string.
 
 ```
-fn sizeof(a: T): int
+fn sizeof(T | a: T): int
 ```
 
-Returns the size of `a` in bytes.
+Returns the size of type `T `  in bytes.
 
 ```
 fn sizeofself(a: interface{...}): int

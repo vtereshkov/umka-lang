@@ -811,9 +811,31 @@ static void parseBuiltinLenCall(Compiler *comp, Type **type, Const *constant)
 }
 
 
+// fn sizeof(T | a: T): int
 static void parseBuiltinSizeofCall(Compiler *comp, Type **type, Const *constant)
 {
-    parseExpr(comp, type, constant);
+    *type = NULL;
+
+    // sizeof(T)
+    if (comp->lex.tok.kind == TOK_IDENT)
+    {
+        Ident *ident = identFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, comp->lex.tok.name, NULL);
+        if (ident && ident->kind == IDENT_TYPE)
+        {
+            Lexer lookaheadLex = comp->lex;
+            lexNext(&lookaheadLex);
+            if (lookaheadLex.tok.kind == TOK_RPAR)
+            {
+                lexNext(&comp->lex);
+                *type = ident->type;
+            }
+        }
+    }
+
+    // sizeof(a: T)
+    if (!(*type))
+        parseExpr(comp, type, constant);
+
     int size = typeSize(&comp->types, *type);
 
     if (constant)
