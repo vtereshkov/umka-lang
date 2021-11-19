@@ -392,6 +392,9 @@ void doImplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant,
         else if ((*src)->kind == TYPE_PTR)
         {
             // Pointer to interface
+            if ((*src)->base->kind == TYPE_PTR)
+                comp->error.handler(comp->error.context, "Pointer base type cannot be a pointer");
+
             doPtrToInterfaceConv(comp, dest, src, constant);
         }
         else

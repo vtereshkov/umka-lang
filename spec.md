@@ -321,7 +321,7 @@ interface {
 
 The interface does not implement these methods itself. Instead, any type that implements all the methods declared in the interface can be converted to that interface. Since different types can be converted to the same interface, interfaces provide polymorphic behavior in Umka.
 
-If a pointer of type `^T` is converted to the interface, the interface stores that pointer. If a non-pointer variable of type `T`  is converted to the interface, the variable is first copied to a new memory location, and the interface stores the pointer to that location. In any case, the interface can be converted back to the type `T` or  `^T`. If a conversion of the interface to some non-pointer type `S` not equivalent to `T` is attempted, a runtime error is triggered. If a conversion of the interface to some pointer type `^S` not equivalent to `^T` is attempted, the result is `null`. 
+Let`T` be a non-pointer type. If a pointer of type `^T` is converted to the interface, the interface stores that pointer. If a variable of type `T`  is converted to the interface, the variable is first copied to a new memory location, and the interface stores the pointer to that location. In any case, the interface can be converted back to the type `T` or  `^T`. If a conversion of the interface to some non-pointer type `S` not equivalent to `T` is attempted, a runtime error is triggered. If a conversion of the interface to some pointer type `^S` not equivalent to `^T` is attempted, the result is `null`. 
 
 Any type can be converted to the empty interface `interface{}`.
 
@@ -629,7 +629,7 @@ Returns the length of `a`, where `a` can be an array, a dynamic array or a strin
 fn sizeof(T | a: T): int
 ```
 
-Returns the size of type `T `  in bytes.
+Returns the size of type `T ` in bytes.
 
 ```
 fn sizeofself(a: interface{...}): int

@@ -2071,7 +2071,7 @@ static FORCE_INLINE void doLeaveFrame(Fiber *fiber, HeapPages *pages, Error *err
 
         int refCnt = chunkChangeRefCnt(pages, page, fiber->base, -1);
         if (refCnt > 0)
-            error->handlerRuntime(error->context, "Pointer to a local variable escapes the function");
+            error->handlerRuntime(error->context, "Pointer to a local variable escapes from the function");
     }
     else            // Stack frame
     {
