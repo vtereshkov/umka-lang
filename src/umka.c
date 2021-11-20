@@ -20,7 +20,6 @@ void help(void)
     printf("(C) Vasiliy Tereshkov, 2020-2021\n");
     printf("Usage: umka [<parameters>] <file.um> [<script-parameters>]\n");
     printf("Parameters:\n");
-    printf("    -storage <storage-size> - Set static storage size\n");
     printf("    -stack <stack-size>     - Set stack size\n");
     printf("    -locale <locale-string> - Set locale\n");
     printf("    -asm                    - Write assembly listing\n");
@@ -31,7 +30,6 @@ void help(void)
 int main(int argc, char **argv)
 {
     // Parse interpreter parameters
-    int storageSize     = 1024 * 1024;  // Bytes
     int stackSize       = 1024 * 1024;  // Slots
     const char *locale  = NULL;
     bool writeAsm       = false;
@@ -40,24 +38,7 @@ int main(int argc, char **argv)
     int i = 1;
     while (i < argc && argv[i][0] == '-')
     {
-        if (strcmp(argv[i], "-storage") == 0)
-        {
-            if (i + 1 == argc)
-            {
-                fprintf(stderr, "No storage size\n");
-                return 1;
-            }
-
-            storageSize = strtol(argv[i + 1], NULL, 0);
-            if (storageSize <= 0)
-            {
-                fprintf(stderr, "Illegal storage size\n");
-                return 1;
-            }
-
-            i += 2;
-        }
-        else if (strcmp(argv[i], "-stack") == 0)
+        if (strcmp(argv[i], "-stack") == 0)
         {
             if (i + 1 == argc)
             {
@@ -108,7 +89,7 @@ int main(int argc, char **argv)
     }
 
     void *umka = umkaAlloc();
-    bool ok = umkaInit(umka, argv[i], NULL, storageSize, stackSize, locale, argc - i, argv + i);
+    bool ok = umkaInit(umka, argv[i], NULL, 0, stackSize, locale, argc - i, argv + i);
     if (ok)
         ok = umkaCompile(umka);
 

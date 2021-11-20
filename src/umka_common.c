@@ -17,17 +17,41 @@
 
 // Storage
 
-void storageInit(Storage *storage, int capacity)
+void storageInit(Storage *storage)
 {
-    storage->data = malloc(capacity);
-    storage->capacity = capacity;
-    storage->len = 0;
+    storage->first = storage->last = NULL;
 }
 
 
 void storageFree(Storage *storage)
 {
-    free(storage->data);
+    StorageChunk *chunk = storage->first;
+    while (chunk)
+    {
+        StorageChunk *next = chunk->next;
+        free(chunk->data);
+        free(chunk);
+        chunk = next;
+    }
+}
+
+
+char *storageAdd(Storage *storage, int size)
+{
+    StorageChunk *chunk = malloc(sizeof(StorageChunk));
+
+    chunk->data = malloc(size);
+    chunk->next = NULL;
+
+    // Add to list
+    if (!storage->first)
+        storage->first = storage->last = chunk;
+    else
+    {
+        storage->last->next = chunk;
+        storage->last = chunk;
+    }
+    return storage->last->data;
 }
 
 

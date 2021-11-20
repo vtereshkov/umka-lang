@@ -125,9 +125,9 @@ static void compilerDeclareExternalFuncs(Compiler *comp)
 }
 
 
-void compilerInit(Compiler *comp, const char *fileName, const char *sourceString, int storageSize, int stackSize, const char *locale, int argc, char **argv)
+void compilerInit(Compiler *comp, const char *fileName, const char *sourceString, int stackSize, const char *locale, int argc, char **argv)
 {
-    storageInit  (&comp->storage, storageSize);
+    storageInit  (&comp->storage);
     moduleInit   (&comp->modules, &comp->error);
     blocksInit   (&comp->blocks, &comp->error);
     externalInit (&comp->externals);

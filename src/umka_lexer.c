@@ -110,18 +110,9 @@ int lexInit(Lexer *lex, Storage *storage, DebugInfo *debug, const char *fileName
 
     // Initialize lexer
     errno = 0;
-    
-    if (storage->len + strlen(fileName) + 1 > storage->capacity)
-    {
-        lex->fileName = (char *)fileName;
-        lex->line = 1;
-        lex->pos = 1;
-        error->handler(error->context, "Storage overflow");
-    }
 
-    strcpy(&storage->data[storage->len], fileName);
-    lex->fileName = &storage->data[storage->len];
-    storage->len += strlen(fileName) + 1;
+    lex->fileName = storageAdd(storage, strlen(fileName) + 1);
+    strcpy(lex->fileName, fileName);
 
     lex->buf = NULL;
     lex->bufPos = 0;
@@ -699,34 +690,46 @@ static void lexCharLiteral(Lexer *lex)
 }
 
 
-static void lexStrLiteral(Lexer *lex)
+static int lexStrLiteralAndGetSize(Lexer *lex)
 {
     lex->tok.kind = TOK_STRLITERAL;
-    lex->tok.strVal = lex->storage->data + lex->storage->len;
 
+    int size = 0;
     bool escaped = false;
     char ch = lexEscChar(lex, &escaped);
+
     while (ch != '\"' || escaped)
     {
         if (ch == '\n' && !escaped)
         {
             lex->error->handler(lex->error->context, "Unterminated string");
             lex->tok.kind = TOK_NONE;
-            return;
+            return 0;
         }
 
-        lex->storage->data[lex->storage->len++] = ch;
-        if (lex->storage->len >= lex->storage->capacity)
-        {
-            lex->error->handler(lex->error->context, "String is too long");
-            lex->tok.kind = TOK_NONE;
-            return;
-        }
-
+        if (lex->tok.strVal)
+            lex->tok.strVal[size] = ch;
+        size++;
         ch = lexEscChar(lex, &escaped);
     }
-    lex->storage->data[lex->storage->len++] = 0;
+
+    if (lex->tok.strVal)
+        lex->tok.strVal[size] = 0;
+    size++;
     lexChar(lex);
+
+    return size;
+}
+
+
+static void lexStrLiteral(Lexer *lex)
+{
+    Lexer lookaheadLex = *lex;
+    lookaheadLex.tok.strVal = NULL;
+    const int size = lexStrLiteralAndGetSize(&lookaheadLex);
+
+    lex->tok.strVal = storageAdd(lex->storage, size);
+    lexStrLiteralAndGetSize(lex);
 }
 
 

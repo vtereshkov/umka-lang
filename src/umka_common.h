@@ -42,10 +42,16 @@ typedef struct
 } Error;
 
 
-typedef struct
+typedef struct tagStorageChunk
 {
     char *data;
-    int capacity, len;
+    struct tagStorageChunk *next;
+} StorageChunk;
+
+
+typedef struct
+{
+    StorageChunk *first, *last;
 } Storage;
 
 
@@ -116,8 +122,9 @@ typedef struct
 } DebugInfo;
 
 
-void storageInit(Storage *storage, int capacity);
-void storageFree(Storage *storage);
+void  storageInit(Storage *storage);
+void  storageFree(Storage *storage);
+char *storageAdd(Storage *storage, int size);
 
 void  moduleInit             (Modules *modules, Error *error);
 void  moduleFree             (Modules *modules);

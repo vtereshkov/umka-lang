@@ -81,12 +81,7 @@ static void doCharToStrConv(Compiler *comp, Type *dest, Type **src, Const *const
 {
     if (constant)
     {
-        char *buf = &comp->storage.data[comp->storage.len];
-        comp->storage.len += 2 * typeSize(&comp->types, *src);
-
-        if (comp->storage.len >= comp->storage.capacity)
-            comp->error.handler(comp->error.context, "String is too long");
-
+        char *buf = storageAdd(&comp->storage, 2 * typeSize(&comp->types, *src));
         buf[0] = constant->intVal;
         buf[1] = 0;
         constant->ptrVal = (int64_t)buf;
@@ -438,13 +433,9 @@ static void doApplyStrCat(Compiler *comp, Const *constant, Const *rightConstant)
     if (constant)
     {
         int bufLen = strlen((char *)constant->ptrVal) + strlen((char *)rightConstant->ptrVal) + 1;
-        char *buf = &comp->storage.data[comp->storage.len];
-        comp->storage.len += bufLen;
-
-        if (comp->storage.len >= comp->storage.capacity)
-            comp->error.handler(comp->error.context, "String is too long");
-
+        char *buf = storageAdd(&comp->storage, bufLen);
         strcpy(buf, (char *)constant->ptrVal);
+
         constant->ptrVal = (int64_t)buf;
         constBinary(&comp->consts, constant, rightConstant, TOK_PLUS, TYPE_STR);
     }
@@ -1231,12 +1222,7 @@ static void parseArrayOrStructLiteral(Compiler *comp, Type **type, Const *consta
 
     if (constant)
     {
-        constant->ptrVal = (int64_t)&comp->storage.data[comp->storage.len];
-        comp->storage.len += size;
-
-        if (comp->storage.len >= comp->storage.capacity)
-            comp->error.handler(comp->error.context, "Storage overflow");
-
+        constant->ptrVal = (int64_t)storageAdd(&comp->storage, size);
         if (namedFields)
             constZero((void *)constant->ptrVal, size);
     }
@@ -2002,13 +1988,7 @@ void parseExprList(Compiler *comp, Type **type, Type *destType, Const *constant)
         // Allocate structure
         int bufOffset = 0;
         if (constant)
-        {
-            constant->ptrVal = (int64_t)&comp->storage.data[comp->storage.len];
-            comp->storage.len += typeSize(&comp->types, *type);
-
-            if (comp->storage.len >= comp->storage.capacity)
-                comp->error.handler(comp->error.context, "Storage overflow");
-        }
+            constant->ptrVal = (int64_t)storageAdd(&comp->storage, typeSize(&comp->types, *type));
         else
             bufOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, *type));
 
