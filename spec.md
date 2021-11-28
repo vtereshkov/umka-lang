@@ -363,8 +363,9 @@ If a value `s` of type `S` is given where a value `t` of some other type `T` is 
 * `S` is `str` and `T` is `[]char` 
 * `S` is an array type and `T` is a dynamic array type and the item types of `S` and `T` are equivalent
 * `S` is a dynamic array type and `T` is an array type and the item types of `S` and `T` are equivalent and `len(s) <= len(t)` 
-* `S` is an interface type and `T` is a type that implements all the methods of `S` 
-* `S` is a pointer type and `T` is an interface type
+* `S` is a type (or a pointer to a type) that implements all the methods of `T` and `T` is an interface type
+* `S` is an interface type and `T` is a type (or a pointer to a type) that was actually converted to `S` 
+* `S` and `T` are interface types and `S` declares all the methods of `T`
 * `S` is a weak pointer type and `T` is a strong pointer type and the base types of `S` and `T` are equivalent 
 * `S` is a strong pointer type and `T` is a weak pointer type and the base types of `S` and `T` are equivalent
 
