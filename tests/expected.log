@@ -276,7 +276,7 @@ repr():
 'a' 
 fn 
 { 0.500000 0.700000 0.900000 } 
-0x55568346cf60 
+000000000062bb00 
 
 
 >>> Type equivalence
@@ -360,3 +360,12 @@ characters: 12
 р: U+440
 !: U+21
 
+
+
+>>> Simulated closures
+
+running by_name_eq with name : Foo
+running by_name_eq with name : "Foo"  and person : { name: "Foo" age: 24 sex: "M" } 
+running by_name_eq with name : "Foo"  and person : { name: "Bar" age: 23 sex: "M" } 
+running by_name_eq with name : "Foo"  and person : { name: "FooBar" age: 23 sex: "F" } 
+{ true false false } 

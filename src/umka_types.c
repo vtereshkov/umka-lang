@@ -296,11 +296,6 @@ static bool typeEquivalentRecursive(Type *left, Type *right, VisitedTypePair *fi
             int iStart = left->sig.offsetFromSelf == 0 ? 0 : 1;
             for (int i = iStart; i < left->sig.numParams; i++)
             {
-                // Name
-                if (left->sig.param[i]->hash != right->sig.param[i]->hash ||
-                    strcmp(left->sig.param[i]->name, right->sig.param[i]->name) != 0)
-                    return false;
-
                 // Type
                 if (!typeEquivalentRecursive(left->sig.param[i]->type, right->sig.param[i]->type, &newPair))
                     return false;
