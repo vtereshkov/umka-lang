@@ -906,19 +906,24 @@ static void parseBuiltinFiberCall(Compiler *comp, Type **type, Const *constant, 
     if (builtin == BUILTIN_FIBERSPAWN)
     {
         // Parent fiber pointer
-        parseExpr(comp, type, constant);
-        if (!typeFiberFunc(*type))
+        Type *fiberFuncType = NULL;
+
+        parseExpr(comp, &fiberFuncType, constant);
+        if (!typeFiberFunc(fiberFuncType))
             comp->error.handler(comp->error.context, "Incompatible function type in fiberspawn()");
 
         lexEat(&comp->lex, TOK_COMMA);
 
         // Arbitrary pointer parameter
-        parseExpr(comp, type, constant);
-        doImplicitTypeConv(comp, comp->ptrVoidType, type, constant, false);
-        typeAssertCompatible(&comp->types, comp->ptrVoidType, *type, false);
+        Type *anyParamType = NULL;
+        Type *expectedAnyParamType = fiberFuncType->sig.param[1]->type;
+
+        parseExpr(comp, &anyParamType, constant);
+        doImplicitTypeConv(comp, expectedAnyParamType, &anyParamType, constant, false);
+        typeAssertCompatible(&comp->types, expectedAnyParamType, anyParamType, false);
 
         // Increase parameter's reference count
-        genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, *type);
+        genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, expectedAnyParamType);
 
         *type = comp->ptrFiberType;
     }
