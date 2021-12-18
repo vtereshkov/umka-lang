@@ -826,17 +826,17 @@ static void parseBuiltinSizeofCall(Compiler *comp, Type **type, Const *constant)
 
     // sizeof(a: T)
     if (!(*type))
+    {
         parseExpr(comp, type, constant);
+        genPop(&comp->gen);
+    }
 
     int size = typeSize(&comp->types, *type);
 
     if (constant)
         constant->intVal = size;
     else
-    {
-        genPop(&comp->gen);
         genPushIntConst(&comp->gen, size);
-    }
 
     *type = comp->intType;
 }
