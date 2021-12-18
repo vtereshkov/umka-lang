@@ -181,6 +181,7 @@ int typeSizeNoCheck(Type *type)
                 const int fieldSize = typeSizeNoCheck(type->field[i]->type);
                 size = align(size + fieldSize, typeAlignmentNoCheck(type->field[i]->type));
             }
+            size = align(size, typeAlignmentNoCheck(type));
             return size;
         }
         case TYPE_FIBER:    return sizeof(Fiber);
