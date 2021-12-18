@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdalign.h>
 #include <string.h>
 #include <limits.h>
 
@@ -176,7 +177,10 @@ int typeSizeNoCheck(Type *type)
         {
             int size = 0;
             for (int i = 0; i < type->numItems; i++)
-                size += typeSizeNoCheck(type->field[i]->type);
+            {
+                const int fieldSize = typeSizeNoCheck(type->field[i]->type);
+                size = align(size + fieldSize, typeAlignmentNoCheck(type->field[i]->type));
+            }
             return size;
         }
         case TYPE_FIBER:    return sizeof(Fiber);
@@ -195,6 +199,59 @@ int typeSize(Types *types, Type *type)
         types->error->handler(types->error->context, "Illegal type %s", typeSpelling(type, buf));
     }
     return size;
+}
+
+
+int typeAlignmentNoCheck(Type *type)
+{
+    switch (type->kind)
+    {
+        case TYPE_VOID:     return 1;
+        case TYPE_INT8:     return alignof(int8_t);
+        case TYPE_INT16:    return alignof(int16_t);
+        case TYPE_INT32:    return alignof(int32_t);
+        case TYPE_INT:      return alignof(int64_t);
+        case TYPE_UINT8:    return alignof(uint8_t);
+        case TYPE_UINT16:   return alignof(uint16_t);
+        case TYPE_UINT32:   return alignof(uint32_t);
+        case TYPE_UINT:     return alignof(uint64_t);
+        case TYPE_BOOL:     return alignof(bool);
+        case TYPE_CHAR:     return alignof(char);
+        case TYPE_REAL32:   return alignof(float);
+        case TYPE_REAL:     return alignof(double);
+        case TYPE_PTR:      return alignof(void *);
+        case TYPE_WEAKPTR:  return alignof(uint64_t);
+        case TYPE_STR:      return alignof(void *);
+        case TYPE_ARRAY:    return typeAlignmentNoCheck(type->base);
+        case TYPE_DYNARRAY: return alignof(DynArray);
+        case TYPE_STRUCT:
+        case TYPE_INTERFACE:
+        {
+            int alignment = 1;
+            for (int i = 0; i < type->numItems; i++)
+            {
+                const int fieldAlignment = typeAlignmentNoCheck(type->field[i]->type);
+                if (fieldAlignment > alignment)
+                    alignment = fieldAlignment;
+            }
+            return alignment;
+        }
+        case TYPE_FIBER:    return alignof(Fiber);
+        case TYPE_FN:       return alignof(int64_t);
+        default:            return 0;
+    }
+}
+
+
+int typeAlignment(Types *types, Type *type)
+{
+    int alignment = typeAlignmentNoCheck(type);
+    if (alignment <= 0)
+    {
+        char buf[DEFAULT_STR_LEN + 1];
+        types->error->handler(types->error->context, "Illegal type %s", typeSpelling(type, buf));
+    }
+    return alignment;
 }
 
 
@@ -500,7 +557,7 @@ Field *typeAddField(Types *types, Type *structType, Type *fieldType, const char 
 
     field->hash = hash(name);
     field->type = fieldType;
-    field->offset = typeSize(types, structType);
+    field->offset = align(typeSize(types, structType), typeAlignment(types, fieldType));
 
     structType->field[structType->numItems++] = field;
     return field;

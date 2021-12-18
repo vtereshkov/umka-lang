@@ -118,6 +118,8 @@ Type *typeAddPtrTo  (Types *types, Blocks *blocks, Type *type);
 int typeSizeNoCheck (Type *type);
 int typeSize        (Types *types, Type *type);
 
+int typeAlignmentNoCheck(Type *type);
+int typeAlignment       (Types *types, Type *type);
 
 static inline bool typeKindInteger(TypeKind typeKind)
 {

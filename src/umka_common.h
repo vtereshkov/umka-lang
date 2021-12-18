@@ -14,7 +14,7 @@ enum
     MAX_FIELDS          = 100,
     MAX_PARAMS          = 16,
     MAX_BLOCK_NESTING   = 100,
-    MAX_GOTOS           = 100
+    MAX_GOTOS           = 100,
 };
 
 
@@ -162,7 +162,7 @@ static inline unsigned int hash(const char *str)
 }
 
 
-static inline int nonneg(int64_t size)
+static inline int64_t nonneg(int64_t size)
 {
     return (size > 0) ? size : 0;
 }

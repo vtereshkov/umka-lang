@@ -225,7 +225,7 @@ Ident *identAddBuiltinFunc(Idents *idents, Modules *modules, Blocks *blocks, con
 }
 
 
-int identAllocStack(Idents *idents, Blocks *blocks, int size)
+int identAllocStack(Idents *idents, Types *types, Blocks *blocks, Type *type)
 {
     int *localVarSize = NULL;
     for (int i = blocks->top; i >= 1; i--)
@@ -237,7 +237,7 @@ int identAllocStack(Idents *idents, Blocks *blocks, int size)
     if (!localVarSize)
         idents->error->handler(idents->error->context, "No heap frame");
 
-    (*localVarSize) += size;
+    *localVarSize = align(*localVarSize + typeSize(types, type), typeAlignment(types, type));
     return -(*localVarSize);
 }
 
@@ -253,7 +253,7 @@ Ident *identAllocVar(Idents *idents, Types *types, Modules *modules, Blocks *blo
     }
     else                        // Local
     {
-        int offset = identAllocStack(idents, blocks, typeSize(types, type));
+        int offset = identAllocStack(idents, types, blocks, type);
         ident = identAddLocalVar(idents, modules, blocks, name, type, exported, offset);
     }
     return ident;

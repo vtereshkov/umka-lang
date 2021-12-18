@@ -57,7 +57,7 @@ Ident *identAddLocalVar   (Idents *idents, Modules *modules, Blocks *blocks, con
 Ident *identAddType       (Idents *idents, Modules *modules, Blocks *blocks, const char *name, Type *type, bool exported);
 Ident *identAddBuiltinFunc(Idents *idents, Modules *modules, Blocks *blocks, const char *name, Type *type, BuiltinFunc builtin);
 
-int    identAllocStack    (Idents *idents, Blocks *blocks, int size);
+int    identAllocStack    (Idents *idents, Types *types, Blocks *blocks, Type *type);
 Ident *identAllocVar      (Idents *idents, Types *types, Modules *modules, Blocks *blocks, const char *name, Type *type, bool exported);
 Ident *identAllocParam    (Idents *idents, Types *types, Modules *modules, Blocks *blocks, Signature *sig, int index);
 

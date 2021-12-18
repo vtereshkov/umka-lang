@@ -138,7 +138,7 @@ static void doStrToDynArrayConv(Compiler *comp, Type *dest, Type **src, Const *c
 
     genPushGlobalPtr(&comp->gen, dest);                                 // Dynamic array type
 
-    int resultOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, dest));
+    int resultOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, dest);
     genPushLocalPtr(&comp->gen, resultOffset);                          // Pointer to result (hidden parameter)
 
     genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_MAKEFROMSTR);
@@ -159,7 +159,7 @@ static void doDynArrayToArrayConv(Compiler *comp, Type *dest, Type **src, Const 
 
     genPushGlobalPtr(&comp->gen, dest);                                 // Array type
 
-    int resultOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, dest));
+    int resultOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, dest);
     genPushLocalPtr(&comp->gen, resultOffset);                          // Pointer to result (hidden parameter)
 
     genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_MAKETOARR);
@@ -181,7 +181,7 @@ static void doArrayToDynArrayConv(Compiler *comp, Type *dest, Type **src, Const 
     genPushGlobalPtr(&comp->gen, dest);                                 // Dynamic array type
     genPushIntConst(&comp->gen, (*src)->numItems);                      // Dynamic array length
 
-    int resultOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, dest));
+    int resultOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, dest);
     genPushLocalPtr(&comp->gen, resultOffset);                          // Pointer to result (hidden parameter)
 
     genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_MAKEFROMARR);
@@ -198,8 +198,7 @@ static void doPtrToInterfaceConv(Compiler *comp, Type *dest, Type **src, Const *
     if (constant)
         comp->error.handler(comp->error.context, "Conversion to interface is not allowed in constant expressions");
 
-    int destSize   = typeSize(&comp->types, dest);
-    int destOffset = identAllocStack(&comp->idents, &comp->blocks, destSize);
+    int destOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, dest);
 
     // Assign to __self
     genPushLocalPtr(&comp->gen, destOffset);                                // Push dest.__self pointer
@@ -242,8 +241,7 @@ static void doInterfaceToInterfaceConv(Compiler *comp, Type *dest, Type **src, C
     if (constant)
         comp->error.handler(comp->error.context, "Conversion to interface is not allowed in constant expressions");
 
-    int destSize = typeSize(&comp->types, dest);
-    int destOffset = identAllocStack(&comp->idents, &comp->blocks, destSize);
+    int destOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, dest);
 
     // Assign to __self
     genDup(&comp->gen);                                                     // Duplicate src pointer
@@ -634,7 +632,7 @@ static void parseBuiltinMakeCall(Compiler *comp, Type **type, Const *constant)
     typeAssertCompatible(&comp->types, comp->intType, lenType, false);
 
     // Pointer to result (hidden parameter)
-    int resultOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, *type));
+    int resultOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, *type);
     genPushLocalPtr(&comp->gen, resultOffset);
 
     genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_MAKE);
@@ -675,7 +673,7 @@ static void parseBuiltinAppendCall(Compiler *comp, Type **type, Const *constant)
         if (!typeStructured(itemType))
         {
             // Assignment to an anonymous stack area does not require updating reference counts
-            int itemOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, itemType));
+            int itemOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, itemType);
             genPushLocalPtr(&comp->gen, itemOffset);
             genSwapAssign(&comp->gen, itemType->kind, 0);
 
@@ -687,7 +685,7 @@ static void parseBuiltinAppendCall(Compiler *comp, Type **type, Const *constant)
     genPushIntConst(&comp->gen, singleItem);
 
     // Pointer to result (hidden parameter)
-    int resultOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, *type));
+    int resultOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, *type);
     genPushLocalPtr(&comp->gen, resultOffset);
 
     genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_APPEND);
@@ -714,7 +712,7 @@ static void parseBuiltinDeleteCall(Compiler *comp, Type **type, Const *constant)
     typeAssertCompatible(&comp->types, comp->intType, indexType, false);
 
     // Pointer to result (hidden parameter)
-    int resultOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, *type));
+    int resultOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, *type);
     genPushLocalPtr(&comp->gen, resultOffset);
 
     genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_DELETE);
@@ -755,7 +753,7 @@ static void parseBuiltinSliceCall(Compiler *comp, Type **type, Const *constant)
     if ((*type)->kind == TYPE_DYNARRAY)
     {
         // Pointer to result (hidden parameter)
-        int resultOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, *type));
+        int resultOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, *type);
         genPushLocalPtr(&comp->gen, resultOffset);
     }
     else
@@ -1107,8 +1105,7 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
     // Push __result pointer
     if (typeStructured((*type)->sig.resultType))
     {
-        int size = typeSize(&comp->types, (*type)->sig.resultType);
-        int offset = identAllocStack(&comp->idents, &comp->blocks, size);
+        int offset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, (*type)->sig.resultType);
         genPushLocalPtr(&comp->gen, offset);
         i++;
     }
@@ -1233,7 +1230,7 @@ static void parseArrayOrStructLiteral(Compiler *comp, Type **type, Const *consta
     }
     else
     {
-        bufOffset = identAllocStack(&comp->idents, &comp->blocks, size);
+        bufOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, *type);
 
         if (namedFields)
         {
@@ -1261,7 +1258,10 @@ static void parseArrayOrStructLiteral(Compiler *comp, Type **type, Const *consta
                 lexEat(&comp->lex, TOK_COLON);
             }
             else if ((*type)->kind == TYPE_STRUCT)
+            {
                 field = (*type)->field[numItems];
+                itemOffset = field->offset;
+            }
 
             if (!constant)
                 genPushLocalPtr(&comp->gen, bufOffset + itemOffset);
@@ -1284,7 +1284,7 @@ static void parseArrayOrStructLiteral(Compiler *comp, Type **type, Const *consta
                 genAssign(&comp->gen, expectedItemType->kind, itemSize);
 
             numItems++;
-            if (!namedFields)
+            if ((*type)->kind == TYPE_ARRAY)
                 itemOffset += itemSize;
 
             if (comp->lex.tok.kind != TOK_COMMA)
@@ -1300,7 +1300,6 @@ static void parseArrayOrStructLiteral(Compiler *comp, Type **type, Const *consta
         genPushLocalPtr(&comp->gen, bufOffset);
         doEscapeToHeap(comp, typeAddPtrTo(&comp->types, &comp->blocks, *type), true);
     }
-
 
     lexEat(&comp->lex, TOK_RBRACE);
 }
@@ -1340,7 +1339,7 @@ static void parseDynArrayLiteral(Compiler *comp, Type **type, Const *constant)
     lexEat(&comp->lex, TOK_RBRACE);
 
     // Allocate array
-    int bufOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, staticArrayType));
+    int bufOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, staticArrayType);
 
     // Assign items
     for (int i = staticArrayType->numItems - 1; i >= 0; i--)
@@ -1995,7 +1994,7 @@ void parseExprList(Compiler *comp, Type **type, Type *destType, Const *constant)
         if (constant)
             constant->ptrVal = (int64_t)storageAdd(&comp->storage, typeSize(&comp->types, *type));
         else
-            bufOffset = identAllocStack(&comp->idents, &comp->blocks, typeSize(&comp->types, *type));
+            bufOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, *type);
 
         // Assign expressions
         for (int i = (*type)->numItems - 1; i >= 0; i--)

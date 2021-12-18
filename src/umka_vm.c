@@ -1462,12 +1462,7 @@ static FORCE_INLINE void doZero(Fiber *fiber)
 {
     void *ptr = (void *)(fiber->top++)->ptrVal;
     int size = fiber->code[fiber->ip].operand.intVal;
-
-    if (size == sizeof(int64_t))
-        *(int64_t *)ptr = 0;
-    else
-        memset(ptr, 0, size);
-
+    memset(ptr, 0, size);
     fiber->ip++;
 }
 
@@ -1485,7 +1480,7 @@ static FORCE_INLINE void doAssign(Fiber *fiber, Error *error)
         doBasicSwap(fiber->top);
 
     Slot rhs = *fiber->top++;
-    void *lhs = (void *)(fiber->top++)->ptrVal;;
+    void *lhs = (void *)(fiber->top++)->ptrVal;
 
     doBasicAssign(lhs, rhs, fiber->code[fiber->ip].typeKind, fiber->code[fiber->ip].operand.intVal, error);
     fiber->ip++;
