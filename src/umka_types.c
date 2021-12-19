@@ -548,7 +548,14 @@ Field *typeAddField(Types *types, Type *structType, Type *fieldType, const char 
     if (structType->numItems > MAX_FIELDS)
         types->error->handler(types->error->context, "Too many fields");
 
-    if (typeSize(types, fieldType) > INT_MAX - typeSize(types, structType))
+    int minNextFieldOffset = 0;
+    if (structType->numItems > 0)
+    {
+        Field *lastField = structType->field[structType->numItems - 1];
+        minNextFieldOffset = lastField->offset + typeSize(types, lastField->type);
+    }
+
+    if (typeSize(types, fieldType) > INT_MAX - minNextFieldOffset)
         types->error->handler(types->error->context, "Structure is too large");
 
     field = malloc(sizeof(Field));
@@ -558,7 +565,7 @@ Field *typeAddField(Types *types, Type *structType, Type *fieldType, const char 
 
     field->hash = hash(name);
     field->type = fieldType;
-    field->offset = align(typeSize(types, structType), typeAlignment(types, fieldType));
+    field->offset = align(minNextFieldOffset, typeAlignment(types, fieldType));
 
     structType->field[structType->numItems++] = field;
     return field;
