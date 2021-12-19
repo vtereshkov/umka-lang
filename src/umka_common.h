@@ -20,6 +20,7 @@ enum
 
 typedef struct
 {
+    // Must have 8 byte alignment
     struct tagType *type;
     int64_t len;
     int64_t itemSize;       // Duplicates information contained in type, but useful for better performance

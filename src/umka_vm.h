@@ -150,6 +150,7 @@ typedef struct
 
 typedef struct
 {
+    // Must have 8 byte alignment
     Instruction *code;
     int ip;
     Slot *stack, *top, *base;

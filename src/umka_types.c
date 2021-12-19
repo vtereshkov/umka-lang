@@ -2,7 +2,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdalign.h>
 #include <string.h>
 #include <limits.h>
 
@@ -208,23 +207,23 @@ int typeAlignmentNoCheck(Type *type)
     switch (type->kind)
     {
         case TYPE_VOID:     return 1;
-        case TYPE_INT8:     return alignof(int8_t);
-        case TYPE_INT16:    return alignof(int16_t);
-        case TYPE_INT32:    return alignof(int32_t);
-        case TYPE_INT:      return alignof(int64_t);
-        case TYPE_UINT8:    return alignof(uint8_t);
-        case TYPE_UINT16:   return alignof(uint16_t);
-        case TYPE_UINT32:   return alignof(uint32_t);
-        case TYPE_UINT:     return alignof(uint64_t);
-        case TYPE_BOOL:     return alignof(bool);
-        case TYPE_CHAR:     return alignof(char);
-        case TYPE_REAL32:   return alignof(float);
-        case TYPE_REAL:     return alignof(double);
-        case TYPE_PTR:      return alignof(void *);
-        case TYPE_WEAKPTR:  return alignof(uint64_t);
-        case TYPE_STR:      return alignof(void *);
+        case TYPE_INT8:
+        case TYPE_INT16:
+        case TYPE_INT32:
+        case TYPE_INT:
+        case TYPE_UINT8:
+        case TYPE_UINT16:
+        case TYPE_UINT32:
+        case TYPE_UINT:
+        case TYPE_BOOL:
+        case TYPE_CHAR:
+        case TYPE_REAL32:
+        case TYPE_REAL:
+        case TYPE_PTR:
+        case TYPE_WEAKPTR:
+        case TYPE_STR:      return typeSizeNoCheck(type);
         case TYPE_ARRAY:    return typeAlignmentNoCheck(type->base);
-        case TYPE_DYNARRAY: return alignof(DynArray);
+        case TYPE_DYNARRAY: return sizeof(int64_t);
         case TYPE_STRUCT:
         case TYPE_INTERFACE:
         {
@@ -237,8 +236,8 @@ int typeAlignmentNoCheck(Type *type)
             }
             return alignment;
         }
-        case TYPE_FIBER:    return alignof(Fiber);
-        case TYPE_FN:       return alignof(int64_t);
+        case TYPE_FIBER:    return sizeof(int64_t);
+        case TYPE_FN:       return sizeof(int64_t);
         default:            return 0;
     }
 }

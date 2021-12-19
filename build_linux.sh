@@ -1,7 +1,7 @@
 #!/bin/sh
 
 gccwflags="-Wall -Wno-format-security -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast"
-gccflags="-s -fPIC -O3 -fno-strict-aliasing -fvisibility=hidden -DUMKA_BUILD -DUMKA_EXT_LIBS $gccwflags"
+gccflags="-s -fPIC -O3 -malign-double -fno-strict-aliasing -fvisibility=hidden -DUMKA_BUILD -DUMKA_EXT_LIBS $gccwflags"
 sourcefiles="umka_api.c umka_common.c umka_compiler.c umka_const.c   umka_decl.c umka_expr.c
              umka_gen.c umka_ident.c  umka_lexer.c    umka_runtime.c umka_stmt.c umka_types.c umka_vm.c"
 
