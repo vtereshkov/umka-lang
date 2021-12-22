@@ -180,6 +180,11 @@ UMKA_API bool umkaGetCallStack(void *umka, int depth, int *offset, char *name, i
 
 UMKA_API const char *umkaGetVersion(void)
 {
-    return __DATE__" "__TIME__;
+    if (sizeof(void *) == 8)
+        return __DATE__" "__TIME__" 64 bit";
+    else if (sizeof(void *) == 4)
+        return __DATE__" "__TIME__" 32 bit";
+    else
+        return __DATE__" "__TIME__;
 }
 

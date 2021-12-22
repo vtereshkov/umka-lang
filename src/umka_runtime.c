@@ -10,8 +10,8 @@
 
 void rtlmemcpy(Slot *params, Slot *result)
 {
-    void *dest   = (void *)params[2].ptrVal;
-    void *src    = (void *)params[1].ptrVal;
+    void *dest   = params[2].ptrVal;
+    void *src    = params[1].ptrVal;
     int   count  = params[0].intVal;
 
     memcpy(dest, src, count);
@@ -24,7 +24,7 @@ void rtlfopen(Slot *params, Slot *result)
     const char *mode = (const char *)params[0].ptrVal;
 
     FILE *file = fopen(name, mode);
-    result->ptrVal = (int64_t)file;
+    result->ptrVal = file;
 }
 
 
@@ -37,7 +37,7 @@ void rtlfclose(Slot *params, Slot *result)
 
 void rtlfread(Slot *params, Slot *result)
 {
-    void *buf  = (void *)params[3].ptrVal;
+    void *buf  = params[3].ptrVal;
     int   size = params[2].intVal;
     int   cnt  = params[1].intVal;
     FILE *file = (FILE *)params[0].ptrVal;
@@ -48,7 +48,7 @@ void rtlfread(Slot *params, Slot *result)
 
 void rtlfwrite(Slot *params, Slot *result)
 {
-    void *buf  = (void *)params[3].ptrVal;
+    void *buf  = params[3].ptrVal;
     int   size = params[2].intVal;
     int   cnt  = params[1].intVal;
     FILE *file = (FILE *)params[0].ptrVal;
@@ -119,6 +119,6 @@ void rtlgetenv(Slot *params, Slot *result)
     char *val = getenv(name);
     if (!val)
         val = empty;
-    result->ptrVal = (int64_t)val;
+    result->ptrVal = val;
 }
 

@@ -42,9 +42,9 @@ void constDeref(Consts *consts, Const *constant, TypeKind typeKind)
         case TYPE_CHAR:         constant->intVal     = *(char     *)constant->ptrVal; break;
         case TYPE_REAL32:       constant->realVal    = *(float    *)constant->ptrVal; break;
         case TYPE_REAL:         constant->realVal    = *(double   *)constant->ptrVal; break;
-        case TYPE_PTR:          constant->ptrVal     = (int64_t)(*(void **)constant->ptrVal); break;
+        case TYPE_PTR:          constant->ptrVal     = *(void *   *)constant->ptrVal; break;
         case TYPE_WEAKPTR:      constant->weakPtrVal = *(uint64_t *)constant->ptrVal; break;
-        case TYPE_STR:          constant->ptrVal     = (int64_t)(*(void **)constant->ptrVal); break;
+        case TYPE_STR:          constant->ptrVal     = *(void *   *)constant->ptrVal; break;
         case TYPE_ARRAY:
         case TYPE_DYNARRAY:
         case TYPE_STRUCT:
@@ -76,12 +76,12 @@ void constAssign(Consts *consts, void *lhs, Const *rhs, TypeKind typeKind, int s
         case TYPE_CHAR:         *(char     *)lhs = rhs->intVal;         break;
         case TYPE_REAL32:       *(float    *)lhs = rhs->realVal;        break;
         case TYPE_REAL:         *(double   *)lhs = rhs->realVal;        break;
-        case TYPE_PTR:          *(void *   *)lhs = (void *)rhs->ptrVal; break;
+        case TYPE_PTR:          *(void *   *)lhs = rhs->ptrVal;         break;
         case TYPE_WEAKPTR:      *(uint64_t *)lhs = rhs->weakPtrVal;     break;
-        case TYPE_STR:          *(void *   *)lhs = (void *)rhs->ptrVal; break;
+        case TYPE_STR:          *(void *   *)lhs = rhs->ptrVal;         break;
         case TYPE_ARRAY:
         case TYPE_STRUCT:
-        case TYPE_INTERFACE:    memcpy(lhs, (void *)rhs->ptrVal, size); break;
+        case TYPE_INTERFACE:    memcpy(lhs, rhs->ptrVal, size);         break;
         case TYPE_FN:           *(int64_t  *)lhs = rhs->intVal;         break;
 
         default:          consts->error->handler(consts->error->context, "Illegal type"); return;
@@ -110,7 +110,15 @@ void constUnary(Consts *consts, Const *arg, TokenKind tokKind, TypeKind typeKind
 
 void constBinary(Consts *consts, Const *lhs, const Const *rhs, TokenKind tokKind, TypeKind typeKind)
 {
-    if (typeKind == TYPE_STR)
+    if (typeKind == TYPE_PTR)
+        switch (tokKind)
+        {
+            case TOK_EQEQ:      lhs->intVal = lhs->ptrVal == rhs->ptrVal; break;
+            case TOK_NOTEQ:     lhs->intVal = lhs->ptrVal != rhs->ptrVal; break;
+
+            default:            consts->error->handler(consts->error->context, "Illegal operator");
+        }
+    else if (typeKind == TYPE_STR)
         switch (tokKind)
         {
             case TOK_PLUS:      strcat((char *)lhs->ptrVal, (char *)rhs->ptrVal); break;

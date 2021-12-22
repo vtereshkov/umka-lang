@@ -531,7 +531,7 @@ static void parseVarDeclItem(Compiler *comp)
         for (int i = 0; i < numVars; i++)
         {
             if (comp->blocks.top == 0)          // Globals are initialized with constant expressions
-                varPtrConstList[i].ptrVal = (int64_t)var[i]->ptr;
+                varPtrConstList[i].ptrVal = var[i]->ptr;
             else                                // Locals are assigned to
                 doPushVarPtr(comp, var[i]);
         }

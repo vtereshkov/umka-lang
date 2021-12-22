@@ -121,7 +121,7 @@ static void parseSingleAssignmentStmt(Compiler *comp, Type *type, Const *varPtrC
     typeAssertCompatible(&comp->types, type, rightType, false);
 
     if (varPtrConst)                                // Initialize global variable
-        constAssign(&comp->consts, (void *)varPtrConst->ptrVal, rightConstant, type->kind, typeSize(&comp->types, type));
+        constAssign(&comp->consts, varPtrConst->ptrVal, rightConstant, type->kind, typeSize(&comp->types, type));
     else                                            // Assign to variable
         genChangeRefCntAssign(&comp->gen, type);
 }
@@ -153,13 +153,13 @@ static void parseListAssignmentStmt(Compiler *comp, Type *type, Const *varPtrCon
 
         if (varPtrConstList)                                // Initialize global variables
         {
-            Const rightConstantBuf = {.ptrVal = rightListConstant->ptrVal + rightListType->field[i]->offset};
+            Const rightConstantBuf = {.ptrVal = (char *)rightListConstant->ptrVal + rightListType->field[i]->offset};
             constDeref(&comp->consts, &rightConstantBuf, rightType->kind);
 
             doImplicitTypeConv(comp, leftType, &rightType, &rightConstantBuf, false);
             typeAssertCompatible(&comp->types, leftType, rightType, false);
 
-            constAssign(&comp->consts, (void *)varPtrConstList[i].ptrVal, &rightConstantBuf, rightType->kind, typeSize(&comp->types, rightType));
+            constAssign(&comp->consts, varPtrConstList[i].ptrVal, &rightConstantBuf, rightType->kind, typeSize(&comp->types, rightType));
         }
         else                                                // Assign to variable
         {
@@ -257,7 +257,7 @@ static void parseListDeclAssignmentStmt(Compiler *comp, IdentName *names, bool *
 
         if (constExpr)              // Initialize global variable
         {
-            Const rightConstantBuf = {.ptrVal = rightListConstant->ptrVal + rightListType->field[i]->offset};
+            Const rightConstantBuf = {.ptrVal = (char *)rightListConstant->ptrVal + rightListType->field[i]->offset};
             constDeref(&comp->consts, &rightConstantBuf, rightType->kind);
             constAssign(&comp->consts, ident->ptr, &rightConstantBuf, rightType->kind, typeSize(&comp->types, rightType));
         }

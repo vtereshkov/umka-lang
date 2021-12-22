@@ -43,7 +43,7 @@ typedef union
 {
     int64_t intVal;
     uint64_t uintVal;
-    int64_t ptrVal;
+    void *ptrVal;
     uint64_t weakPtrVal;
     double realVal;
 } Const;

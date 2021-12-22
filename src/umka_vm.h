@@ -130,7 +130,7 @@ typedef union
     int64_t intVal;
     uint64_t uintVal;
     int32_t int32Val[2];
-    int64_t ptrVal;
+    void *ptrVal;
     uint64_t weakPtrVal;
     double realVal;
     BuiltinFunc builtinVal;

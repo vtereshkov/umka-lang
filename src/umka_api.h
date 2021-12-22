@@ -35,7 +35,7 @@ typedef union
 {
     int64_t intVal;
     uint64_t uintVal;
-    int64_t ptrVal;
+    void *ptrVal;
     double realVal;
     float real32Val;
 } UmkaStackSlot;

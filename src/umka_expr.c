@@ -84,7 +84,7 @@ static void doCharToStrConv(Compiler *comp, Type *dest, Type **src, Const *const
         char *buf = storageAdd(&comp->storage, 2 * typeSize(&comp->types, *src));
         buf[0] = constant->intVal;
         buf[1] = 0;
-        constant->ptrVal = (int64_t)buf;
+        constant->ptrVal = buf;
     }
     else
     {
@@ -434,7 +434,7 @@ static void doApplyStrCat(Compiler *comp, Const *constant, Const *rightConstant)
         char *buf = storageAdd(&comp->storage, bufLen);
         strcpy(buf, (char *)constant->ptrVal);
 
-        constant->ptrVal = (int64_t)buf;
+        constant->ptrVal = buf;
         constBinary(&comp->consts, constant, rightConstant, TOK_PLUS, TYPE_STR);
     }
     else
@@ -1224,9 +1224,9 @@ static void parseArrayOrStructLiteral(Compiler *comp, Type **type, Const *consta
 
     if (constant)
     {
-        constant->ptrVal = (int64_t)storageAdd(&comp->storage, size);
+        constant->ptrVal = storageAdd(&comp->storage, size);
         if (namedFields)
-            constZero((void *)constant->ptrVal, size);
+            constZero(constant->ptrVal, size);
     }
     else
     {
@@ -1278,7 +1278,7 @@ static void parseArrayOrStructLiteral(Compiler *comp, Type **type, Const *consta
             typeAssertCompatible(&comp->types, expectedItemType, itemType, false);
 
             if (constant)
-                constAssign(&comp->consts, (void *)(constant->ptrVal + itemOffset), itemConstant, expectedItemType->kind, itemSize);
+                constAssign(&comp->consts, (char *)constant->ptrVal + itemOffset, itemConstant, expectedItemType->kind, itemSize);
             else
                 // Assignment to an anonymous stack area does not require updating reference counts
                 genAssign(&comp->gen, expectedItemType->kind, itemSize);
@@ -1738,7 +1738,7 @@ static void parseFactor(Compiler *comp, Type **type, Const *constant)
         case TOK_STRLITERAL:
         {
             if (constant)
-                constant->ptrVal = (int64_t)comp->lex.tok.strVal;
+                constant->ptrVal = comp->lex.tok.strVal;
             else
                 genPushGlobalPtr(&comp->gen, comp->lex.tok.strVal);
             lexNext(&comp->lex);
@@ -1992,7 +1992,7 @@ void parseExprList(Compiler *comp, Type **type, Type *destType, Const *constant)
         // Allocate structure
         int bufOffset = 0;
         if (constant)
-            constant->ptrVal = (int64_t)storageAdd(&comp->storage, typeSize(&comp->types, *type));
+            constant->ptrVal = storageAdd(&comp->storage, typeSize(&comp->types, *type));
         else
             bufOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, *type);
 
@@ -2003,7 +2003,7 @@ void parseExprList(Compiler *comp, Type **type, Type *destType, Const *constant)
             int fieldSize = typeSize(&comp->types, field->type);
 
             if (constant)
-                constAssign(&comp->consts, (void *)(constant->ptrVal + field->offset), &fieldConstantBuf[i], field->type->kind, fieldSize);
+                constAssign(&comp->consts, (char *)constant->ptrVal + field->offset, &fieldConstantBuf[i], field->type->kind, fieldSize);
             else
             {
                 // Assignment to an anonymous stack area does not require updating reference counts
