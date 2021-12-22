@@ -271,7 +271,7 @@ static void doInterfaceToInterfaceConv(Compiler *comp, Type *dest, Type **src, C
 
         genDup(&comp->gen);                                                 // Duplicate src pointer
         genGetFieldPtr(&comp->gen, srcMethod->offset);                      // Get src.method pointer
-        genDeref(&comp->gen, TYPE_PTR);                                     // Get src.method value (entry point)
+        genDeref(&comp->gen, TYPE_FN);                                      // Get src.method value (entry point)
         genPushLocalPtr(&comp->gen, destOffset + dest->field[i]->offset);   // Push dest.method pointer
         genSwapAssign(&comp->gen, TYPE_FN, 0);                              // Assign to dest.method
     }

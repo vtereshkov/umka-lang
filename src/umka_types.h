@@ -136,7 +136,7 @@ static inline bool typeInteger(Type *type)
 
 static inline bool typeKindOrdinal(TypeKind typeKind)
 {
-    return typeKindInteger(typeKind) || typeKind == TYPE_CHAR;
+    return typeKindInteger(typeKind) || typeKind == TYPE_CHAR || typeKind == TYPE_BOOL;
 }
 
 
@@ -148,7 +148,7 @@ static inline bool typeOrdinal(Type *type)
 
 static inline bool typeCastable(Type *type)
 {
-    return typeOrdinal(type) || type->kind == TYPE_BOOL;
+    return typeOrdinal(type);
 }
 
 
