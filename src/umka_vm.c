@@ -70,7 +70,7 @@ static const char *builtinSpelling [] =
     "sscanf",
     "real",
     "real_lhs",
-    "real32",
+    "narrow",
     "round",
     "trunc",
     "fabs",
@@ -1929,10 +1929,10 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
                 (fiber->top + depth)->realVal = (fiber->top + depth)->intVal;
             break;
         }
-        case BUILTIN_REAL32:
+        case BUILTIN_NARROW:
         {
-            float val = fiber->top->realVal;
-            fiber->top->uintVal = *(uint32_t *)&val;
+            Slot rhs = *fiber->top;
+            doBasicAssign(fiber->top, rhs, typeKind, 0, error);
             break;
         }
         case BUILTIN_ROUND:         fiber->top->intVal = (int64_t)round(fiber->top->realVal); break;

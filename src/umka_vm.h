@@ -86,7 +86,7 @@ typedef enum
     // Math
     BUILTIN_REAL,           // Integer to real at stack top (right operand)
     BUILTIN_REAL_LHS,       // Integer to real at stack top + 1 (left operand) - implicit calls only
-    BUILTIN_REAL32,         // 64-bit real to 32-bit real
+    BUILTIN_NARROW,         // 64-bit slot to narrower representation
     BUILTIN_ROUND,
     BUILTIN_TRUNC,
     BUILTIN_FABS,
