@@ -168,7 +168,7 @@ fn itoa*(x: int): str {
 fn ftoa*(x: real, decimals: int): str {
     fmt := str(make([]char, 256))
     s := str(make([]char, 256))
-    sprintf(fmt, "%%.%dlf", decimals)
+    sprintf(fmt, "%%.%lldlf", decimals)
     sprintf(s, fmt, x)
     return s
 }

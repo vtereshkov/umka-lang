@@ -173,7 +173,7 @@ static const char *rtlSrc =
 "fn ftoa*(x: real, decimals: int): str {\n"
 "    fmt := str(make([]char, 256))\n"
 "    s := str(make([]char, 256))\n"
-"    sprintf(fmt, \"%%.%dlf\", decimals)\n"
+"    sprintf(fmt, \"%%.%lldlf\", decimals)\n"
 "    sprintf(s, fmt, x)\n"
 "    return s\n"
 "}\n"

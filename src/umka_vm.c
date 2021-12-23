@@ -883,7 +883,7 @@ static FORCE_INLINE void doCheckFormatString(const char *format, int *formatLen,
 
 static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool console, bool string, Error *error)
 {
-    void *stream       = console ? stdout : (void *)fiber->reg[VM_REG_IO_STREAM].ptrVal;
+    void *stream       = console ? stdout : fiber->reg[VM_REG_IO_STREAM].ptrVal;
     const char *format = (const char *)fiber->reg[VM_REG_IO_FORMAT].ptrVal;
     TypeKind typeKind  = fiber->code[fiber->ip].typeKind;
 
@@ -924,13 +924,33 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
     }
 
     int len = 0;
-
+/*
     if (typeKind == TYPE_VOID)
         len = fsnprintf(string, stream, availableLen, curFormat);
     else if (typeKind == TYPE_REAL || typeKind == TYPE_REAL32)
         len = fsnprintf(string, stream, availableLen, curFormat, fiber->top->realVal);
     else
         len = fsnprintf(string, stream, availableLen, curFormat, fiber->top->intVal);
+*/
+    switch (typeKind)
+    {
+        case TYPE_VOID:         len = fsnprintf(string, stream, availableLen, curFormat);                                break;
+        case TYPE_INT8:         len = fsnprintf(string, stream, availableLen, curFormat, (int8_t  )fiber->top->intVal);  break;
+        case TYPE_INT16:        len = fsnprintf(string, stream, availableLen, curFormat, (int16_t )fiber->top->intVal);  break;
+        case TYPE_INT32:        len = fsnprintf(string, stream, availableLen, curFormat, (int32_t )fiber->top->intVal);  break;
+        case TYPE_INT:          len = fsnprintf(string, stream, availableLen, curFormat,           fiber->top->intVal);  break;
+        case TYPE_UINT8:        len = fsnprintf(string, stream, availableLen, curFormat, (uint8_t )fiber->top->intVal);  break;
+        case TYPE_UINT16:       len = fsnprintf(string, stream, availableLen, curFormat, (uint16_t)fiber->top->intVal);  break;
+        case TYPE_UINT32:       len = fsnprintf(string, stream, availableLen, curFormat, (uint32_t)fiber->top->intVal);  break;
+        case TYPE_UINT:         len = fsnprintf(string, stream, availableLen, curFormat,           fiber->top->uintVal); break;
+        case TYPE_BOOL:         len = fsnprintf(string, stream, availableLen, curFormat, (bool    )fiber->top->intVal);  break;
+        case TYPE_CHAR:         len = fsnprintf(string, stream, availableLen, curFormat, (char    )fiber->top->intVal);  break;
+        case TYPE_REAL32:       
+        case TYPE_REAL:         len = fsnprintf(string, stream, availableLen, curFormat,           fiber->top->realVal); break;
+        case TYPE_STR:          len = fsnprintf(string, stream, availableLen, curFormat, (char *  )fiber->top->ptrVal);  break;
+
+        default:                error->handlerRuntime(error->context, "Illegal type"); return;
+    }
 
     fiber->reg[VM_REG_IO_FORMAT].ptrVal = (char *)fiber->reg[VM_REG_IO_FORMAT].ptrVal + formatLen;
     fiber->reg[VM_REG_IO_COUNT].intVal += len;
