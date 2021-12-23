@@ -4,7 +4,7 @@ import (
 
 fn testStr(s: str) {
 	printf("string: %s\n", s)
-	printf("bytes: %d\ncharacters: %d\n", len(s), utf8.realLength(s))
+	printf("bytes: %lld\ncharacters: %lld\n", len(s), utf8.realLength(s))
 
 	runes := utf8.decode(s)
 	for r in runes {

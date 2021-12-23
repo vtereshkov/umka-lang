@@ -183,7 +183,7 @@ fn render(parent: ^fiber, buf: ^RenderData) {
             
             buf.pixels[i][j] = [3]uint8 {round(color[0]), round(color[1]), round(color[2])}
         }
-        printf("%3d/%3d\n", i + 1, height)
+        printf("%3lld/%3lld\n", i + 1, height)
         fibercall(parent)
     }
 }
@@ -282,7 +282,7 @@ fn main() {
     // Write output file
     const fileName = "scene.ppm"
     f := std.fopen(fileName, "wb")
-    fprintf(f, "P6\n%d %d\n255\n", width, height)
+    fprintf(f, "P6\n%lld %lld\n255\n", width, height)
     std.fwrite(f, &pixels)
     std.fclose(f)
     std.println("Done. See " + fileName)

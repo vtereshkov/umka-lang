@@ -34,7 +34,7 @@ fn main() {
 
     start := std.clock()
     stretch_tree := make_tree(0, stretch_depth)
-    printf("stretch tree of depth %d check: %d\n", stretch_depth, check_tree(stretch_tree))
+    printf("stretch tree of depth %lld check: %lld\n", stretch_depth, check_tree(stretch_tree))
 
     long_lived_tree := make_tree(0, max_depth)
 
@@ -45,10 +45,10 @@ fn main() {
             check += check_tree(make_tree(i, depth)) + check_tree(make_tree(-i, depth))
         }
 
-        printf("%d trees of depth %d check: %d\n", iterations * 2, depth, check)
+        printf("%lld trees of depth %lld check: %lld\n", iterations * 2, depth, check)
         iterations /= 4
     }
     
-    printf("long lived tree of depth %d check: %d\n", max_depth, check_tree(long_lived_tree))
+    printf("long lived tree of depth %lld check: %lld\n", max_depth, check_tree(long_lived_tree))
     printf("elapsed: %.3f\n", std.clock() - start)
 }

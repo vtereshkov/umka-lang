@@ -10,7 +10,7 @@ fn test*() {
     
     const max = 30     
     result := data.map(sqr, null).filter(less, max).reduce(sum, null)    
-    printf("Sum of all squares less than %d = %s\n", max, repr(result))       
+    printf("Sum of all squares less than %lld = %s\n", max, repr(result))       
 }
 
 fn main() {
