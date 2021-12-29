@@ -215,3 +215,5 @@ fn getenv*(name: str): str {
     return "" + rtlgetenv(name)
 }
 
+fn rtlsystem(command: str): int
+fn system*(command: str): int {return rtlsystem(command)}

@@ -122,6 +122,7 @@ static void compilerDeclareExternalFuncs(Compiler *comp)
     externalAdd(&comp->externals, "rtltime",    &rtltime);
     externalAdd(&comp->externals, "rtlclock",   &rtlclock);
     externalAdd(&comp->externals, "rtlgetenv",  &rtlgetenv);
+    externalAdd(&comp->externals, "rtlsystem",  &rtlsystem);
 }
 
 

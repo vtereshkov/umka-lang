@@ -220,6 +220,8 @@ static const char *rtlSrc =
 "    return \"\" + rtlgetenv(name)\n"
 "}\n"
 "\n"
+"fn rtlsystem(command: str): int\n"
+"fn system*(command: str): int {return rtlsystem(command)}\n"
 " ";
 
 #endif // UMKA_RUNTIME_SRC_H_INCLUDED

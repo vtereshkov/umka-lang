@@ -1381,6 +1381,8 @@ Returns the number of seconds since the start of the program.
 
 ### Command line and environment
 
+#### Functions
+
 ```
 fn argc*(): int
 ```
@@ -1398,6 +1400,12 @@ fn getenv*(name: str): str
 ```
 
 Returns the environment variable with the specified `name`.
+
+```
+fn system*(command: str): int
+```
+
+Invokes the command processor to execute a `command`. Returns a platform-specific result.
 
 ## Embedding API
 

@@ -122,3 +122,9 @@ void rtlgetenv(Slot *params, Slot *result)
     result->ptrVal = val;
 }
 
+
+void rtlsystem(Slot *params, Slot *result)
+{
+    const char *command = (const char *)params[0].ptrVal;
+    result->intVal = system(command);
+}

@@ -16,5 +16,6 @@ void rtlfeof   (Slot *params, Slot *result);
 void rtltime   (Slot *params, Slot *result);
 void rtlclock  (Slot *params, Slot *result);
 void rtlgetenv (Slot *params, Slot *result);
+void rtlsystem (Slot *params, Slot *result);
 
 #endif // UMKA_RUNTIME_H_INCLUDED
