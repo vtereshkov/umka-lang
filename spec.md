@@ -1433,6 +1433,18 @@ typedef void (*UmkaExternFunc)(UmkaStackSlot *params, UmkaStackSlot *result);
 Umka external function pointer. When an external C/C++ function is called from Umka, its parameters are stored in `params` in right-to-left order. 
 
 ```
+#define UmkaDynArray(T) struct \
+{ \
+    void *internal; \
+    int64_t len; \
+    int64_t itemSize; \
+    T *data; \
+}
+```
+
+Umka dynamic array containing `len` items of type `T`. Even though the array items pointed to by `data` can be both read and written, the structure itself is considered read-only. It cannot be used for returning a dynamic array from an external C/C++ function.
+
+```
 enum
 {
     UMKA_MSG_LEN = 255

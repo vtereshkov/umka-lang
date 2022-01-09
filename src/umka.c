@@ -17,7 +17,7 @@ enum
 void help(void)
 {
     printf("Umka interpreter (build %s)\n", umkaGetVersion());
-    printf("(C) Vasiliy Tereshkov, 2020-2021\n");
+    printf("(C) Vasiliy Tereshkov, 2020-2022\n");
     printf("Usage: umka [<parameters>] <file.um> [<script-parameters>]\n");
     printf("Parameters:\n");
     printf("    -stack <stack-size>     - Set stack size\n");

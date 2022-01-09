@@ -44,6 +44,15 @@ typedef union
 typedef void (*UmkaExternFunc)(UmkaStackSlot *params, UmkaStackSlot *result);
 
 
+#define UmkaDynArray(T) struct \
+{ \
+    void *internal; \
+    int64_t len; \
+    int64_t itemSize; \
+    T *data; \
+}
+
+
 enum
 {
     UMKA_MSG_LEN = 255
