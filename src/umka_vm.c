@@ -945,7 +945,7 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
         case TYPE_UINT:         len = fsnprintf(string, stream, availableLen, curFormat,           fiber->top->uintVal); break;
         case TYPE_BOOL:         len = fsnprintf(string, stream, availableLen, curFormat, (bool    )fiber->top->intVal);  break;
         case TYPE_CHAR:         len = fsnprintf(string, stream, availableLen, curFormat, (char    )fiber->top->intVal);  break;
-        case TYPE_REAL32:       
+        case TYPE_REAL32:
         case TYPE_REAL:         len = fsnprintf(string, stream, availableLen, curFormat,           fiber->top->realVal); break;
         case TYPE_STR:          len = fsnprintf(string, stream, availableLen, curFormat, (char *  )fiber->top->ptrVal);  break;
 
@@ -2111,80 +2111,119 @@ static FORCE_INLINE void doLeaveFrame(Fiber *fiber, HeapPages *pages, Error *err
 }
 
 
-static FORCE_INLINE void vmLoop(VM *vm)
+static void vmLoop(VM *vm)
 {
     Fiber *fiber = vm->fiber;
     HeapPages *pages = &vm->pages;
     Error *error = vm->error;
 
-    while (1)
-    {
-        if (fiber->top - fiber->stack < VM_MIN_FREE_STACK)
-            error->handlerRuntime(error->context, "Stack overflow");
+#define OVERFLOW_CHECK \
+    if (__builtin_expect((fiber->top - fiber->stack < VM_MIN_FREE_STACK),0)) \
+    { error->handlerRuntime(error->context, "Stack overflow"); }
 
-        switch (fiber->code[fiber->ip].opcode)
-        {
-            case OP_PUSH:                           doPush(fiber, error);                         break;
-            case OP_PUSH_LOCAL_PTR:                 doPushLocalPtr(fiber);                        break;
-            case OP_PUSH_LOCAL:                     doPushLocal(fiber, error);                    break;
-            case OP_PUSH_REG:                       doPushReg(fiber);                             break;
-            case OP_PUSH_STRUCT:                    doPushStruct(fiber, error);                   break;
-            case OP_POP:                            doPop(fiber);                                 break;
-            case OP_POP_REG:                        doPopReg(fiber);                              break;
-            case OP_DUP:                            doDup(fiber);                                 break;
-            case OP_SWAP:                           doSwap(fiber);                                break;
-            case OP_ZERO:                           doZero(fiber);                                break;
-            case OP_DEREF:                          doDeref(fiber, error);                        break;
-            case OP_ASSIGN:                         doAssign(fiber, error);                       break;
-            case OP_CHANGE_REF_CNT:                 doChangeRefCnt(fiber, pages, error);          break;
-            case OP_CHANGE_REF_CNT_ASSIGN:          doChangeRefCntAssign(fiber, pages, error);    break;
-            case OP_UNARY:                          doUnary(fiber, error);                        break;
-            case OP_BINARY:                         doBinary(fiber, pages, error);                break;
-            case OP_GET_ARRAY_PTR:                  doGetArrayPtr(fiber, error);                  break;
-            case OP_GET_DYNARRAY_PTR:               doGetDynArrayPtr(fiber, error);               break;
-            case OP_GET_FIELD_PTR:                  doGetFieldPtr(fiber, error);                  break;
-            case OP_ASSERT_TYPE:                    doAssertType(fiber);                          break;
-            case OP_ASSERT_RANGE:                   doAssertRange(fiber, error);                  break;
-            case OP_WEAKEN_PTR:                     doWeakenPtr(fiber, pages);                    break;
-            case OP_STRENGTHEN_PTR:                 doStrengthenPtr(fiber, pages);                break;
-            case OP_GOTO:                           doGoto(fiber);                                break;
-            case OP_GOTO_IF:                        doGotoIf(fiber);                              break;
-            case OP_CALL:                           doCall(fiber, error);                         break;
-            case OP_CALL_INDIRECT:                  doCallIndirect(fiber, error);                 break;
-            case OP_CALL_EXTERN:                    doCallExtern(fiber);                          break;
-            case OP_CALL_BUILTIN:
-            {
-                Fiber *newFiber = NULL;
-                doCallBuiltin(fiber, &newFiber, pages, error);
+#define JUMP \
+	do { \
+		OVERFLOW_CHECK \
+		goto* labels[fiber->code[fiber->ip].opcode]; \
+	} while (0)
 
-                if (newFiber)
-                    fiber = vm->fiber = newFiber;
+    void* labels[] = {
+	[OP_PUSH] = &&PUSH,
+	[OP_PUSH_LOCAL_PTR] = &&PUSH_LOCAL_PTR,
+	[OP_PUSH_LOCAL] = &&PUSH_LOCAL,
+	[OP_PUSH_REG] = &&PUSH_REG,
+	[OP_PUSH_STRUCT] = &&PUSH_STRUCT,
+	[OP_POP] = &&POP,
+	[OP_POP_REG] = &&POP_REG,
+	[OP_DUP] = &&DUP,
+	[OP_SWAP] = &&SWAP,
+	[OP_ZERO] = &&ZERO,
+	[OP_DEREF] = &&DEREF,
+	[OP_ASSIGN] = &&ASSIGN,
+	[OP_CHANGE_REF_CNT] = &&CHANGE_REF_CNT,
+	[OP_CHANGE_REF_CNT_ASSIGN] = &&CHANGE_REF_CNT_ASSIGN,
+	[OP_UNARY] = &&UNARY,
+	[OP_BINARY] = &&BINARY,
+	[OP_GET_ARRAY_PTR] = &&GET_ARRAY_PTR,
+	[OP_GET_DYNARRAY_PTR] = &&GET_DYNARRAY_PTR,
+	[OP_GET_FIELD_PTR] = &&GET_FIELD_PTR,
+	[OP_ASSERT_TYPE] = &&ASSERT_TYPE,
+	[OP_ASSERT_RANGE] = &&ASSERT_RANGE,
+	[OP_WEAKEN_PTR] = &&WEAKEN_PTR,
+	[OP_STRENGTHEN_PTR] = &&STRENGTHEN_PTR,
+	[OP_GOTO] = &&GOTO,
+	[OP_GOTO_IF] = &&GOTO_IF,
+	[OP_CALL] = &&CALL,
+	[OP_CALL_INDIRECT] = &&CALL_INDIRECT,
+	[OP_CALL_EXTERN] = &&CALL_EXTERN,
+	[OP_ENTER_FRAME] = &&ENTER_FRAME,
+	[OP_LEAVE_FRAME] = &&LEAVE_FRAME,
+	[OP_HALT] = &&HALT,
+	[OP_CALL_BUILTIN] = &&CALL_BUILTIN,
+	[OP_RETURN] = &&RETURN,
+    };
 
-                break;
-            }
-            case OP_RETURN:
-            {
-                if (fiber->top->intVal == 0)
-                    return;
+PUSH:                  doPush(fiber, error);                      JUMP;
+PUSH_LOCAL_PTR:        doPushLocalPtr(fiber);                     JUMP;
+PUSH_LOCAL:            doPushLocal(fiber, error);                 JUMP;
+PUSH_REG:              doPushReg(fiber);                          JUMP;
+PUSH_STRUCT:           doPushStruct(fiber, error);                JUMP;
+POP:                   doPop(fiber);                              JUMP;
+POP_REG:               doPopReg(fiber);                           JUMP;
+DUP:                   doDup(fiber);                              JUMP;
+SWAP:                  doSwap(fiber);                             JUMP;
+ZERO:                  doZero(fiber);                             JUMP;
+DEREF:                 doDeref(fiber, error);                     JUMP;
+ASSIGN:                doAssign(fiber, error);                    JUMP;
+CHANGE_REF_CNT:        doChangeRefCnt(fiber, pages, error);       JUMP;
+CHANGE_REF_CNT_ASSIGN: doChangeRefCntAssign(fiber, pages, error); JUMP;
+UNARY:                 doUnary(fiber, error);                     JUMP;
+BINARY:                doBinary(fiber, pages, error);             JUMP;
+GET_ARRAY_PTR:         doGetArrayPtr(fiber, error);               JUMP;
+GET_DYNARRAY_PTR:      doGetDynArrayPtr(fiber, error);            JUMP;
+GET_FIELD_PTR:         doGetFieldPtr(fiber, error);               JUMP;
+ASSERT_TYPE:           doAssertType(fiber);                       JUMP;
+ASSERT_RANGE:          doAssertRange(fiber, error);               JUMP;
+WEAKEN_PTR:            doWeakenPtr(fiber, pages);                 JUMP;
+STRENGTHEN_PTR:        doStrengthenPtr(fiber, pages);             JUMP;
+GOTO:                  doGoto(fiber);                             JUMP;
+GOTO_IF:               doGotoIf(fiber);                           JUMP;
+CALL:                  doCall(fiber, error);                      JUMP;
+CALL_INDIRECT:         doCallIndirect(fiber, error);              JUMP;
+CALL_EXTERN:           doCallExtern(fiber);                       JUMP;
+ENTER_FRAME:           doEnterFrame(fiber, pages, error);         JUMP;
+LEAVE_FRAME:           doLeaveFrame(fiber, pages, error);         JUMP;
+HALT:                  return;
+CALL_BUILTIN:
+		       {
+			       Fiber *newFiber = NULL;
+			       doCallBuiltin(fiber, &newFiber, pages, error);
 
-                Fiber *newFiber = NULL;
-                doReturn(fiber, &newFiber);
+			       if (newFiber)
+				       fiber = vm->fiber = newFiber;
 
-                if (newFiber)
-                    fiber = vm->fiber = newFiber;
+			       JUMP;
+		       }
+RETURN:
+		       {
+			       if (__builtin_expect((fiber->top->intVal == 0), 0))
+				       return;
 
-                if (!fiber->alive)
-                    return;
+			       Fiber *newFiber = NULL;
+			       doReturn(fiber, &newFiber);
 
-                break;
-            }
-            case OP_ENTER_FRAME:                    doEnterFrame(fiber, pages, error);            break;
-            case OP_LEAVE_FRAME:                    doLeaveFrame(fiber, pages, error);            break;
-            case OP_HALT:                           return;
+			       if (newFiber)
+				       fiber = vm->fiber = newFiber;
 
-            default: error->handlerRuntime(error->context, "Illegal instruction"); return;
-        } // switch
-    }
+			       if (__builtin_expect((!fiber->alive),0))
+				       return;
+
+			       JUMP;
+		       }
+
+#undef JUMP
+#undef OVERFLOW_CHECK
+
 }
 
 
