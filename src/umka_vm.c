@@ -2117,8 +2117,14 @@ static void vmLoop(VM *vm)
     HeapPages *pages = &vm->pages;
     Error *error = vm->error;
 
+#ifdef __GNUC__
+#  define unlikely(EXPR) __builtin_expect(EXPR, 0)
+#else
+#  define unlikely(EXPR) (EXPR)
+#endif
+
 #define OVERFLOW_CHECK \
-    if (__builtin_expect((fiber->top - fiber->stack < VM_MIN_FREE_STACK),0)) \
+    if (unlikely(fiber->top - fiber->stack < VM_MIN_FREE_STACK)) \
     { error->handlerRuntime(error->context, "Stack overflow"); }
 
 #define JUMP \
@@ -2206,7 +2212,7 @@ CALL_BUILTIN:
 		       }
 RETURN:
 		       {
-			       if (__builtin_expect((fiber->top->intVal == 0), 0))
+			       if (unlikely(fiber->top->intVal == 0))
 				       return;
 
 			       Fiber *newFiber = NULL;
@@ -2215,7 +2221,7 @@ RETURN:
 			       if (newFiber)
 				       fiber = vm->fiber = newFiber;
 
-			       if (__builtin_expect((!fiber->alive),0))
+			       if (unlikely(!fiber->alive))
 				       return;
 
 			       JUMP;
