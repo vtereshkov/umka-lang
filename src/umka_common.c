@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 #ifdef UMKA_EXT_LIBS
     #ifdef _WIN32
@@ -211,7 +212,7 @@ int moduleAdd(Modules *modules, const char *path)
     module->pathHash = hash(path);
 
     char libPath[2 + 2 * DEFAULT_STR_LEN + 4 + 1];
-    sprintf(libPath, "./%s%s.umi", module->folder, module->name);
+    sprintf(libPath, "%s%s%s.umi", modulePathIsAbsolute(module->path) ? "" : "./", module->folder, module->name);
 
     module->implLib = moduleLoadImplLib(libPath);
 
@@ -275,6 +276,22 @@ void *moduleGetImplLibFunc(Module *module, const char *name)
     if (module->implLib)
         return moduleLoadImplLibFunc(module->implLib, name);
     return NULL;
+}
+
+
+bool modulePathIsAbsolute(const char *path)
+{
+    while (path && (*path == ' ' || *path == '\t'))
+        path++;
+        
+    if (!path)
+        return false;
+        
+#ifdef _WIN32
+    return isalpha(path[0]) && path[1] == ':';
+#else
+    return path[0] == '/';
+#endif
 }
 
 

@@ -654,7 +654,7 @@ static void parseImportItem(Compiler *comp)
 
     char path[DEFAULT_STR_LEN + 1];
     char *folder = comp->modules.module[comp->blocks.module]->folder;
-    snprintf(path, DEFAULT_STR_LEN + 1, "%s%s", folder, comp->lex.tok.strVal);
+    snprintf(path, DEFAULT_STR_LEN + 1, "%s%s", modulePathIsAbsolute(comp->lex.tok.strVal) ? "" : folder, comp->lex.tok.strVal);
 
     int importedModule = moduleFindByPath(&comp->modules, path);
     if (importedModule < 0)

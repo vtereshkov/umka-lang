@@ -137,6 +137,7 @@ char *moduleFindSource       (Modules *modules, const char *name);
 char *moduleFindSourceByPath (Modules *modules, const char *path);
 void  moduleAddSource        (Modules *modules, const char *path, const char *source);
 void *moduleGetImplLibFunc   (Module  *module,  const char *name);
+bool  modulePathIsAbsolute   (const char *path);
 
 void blocksInit   (Blocks *blocks, Error *error);
 void blocksFree   (Blocks *blocks);
