@@ -276,7 +276,7 @@ repr():
 'a' 
 fn 
 { 0.500000 0.700000 0.900000 } 
-000000000062bb00 
+0000000000b99b50 
 
 
 >>> Type equivalence
@@ -369,3 +369,14 @@ running by_name_eq with name : "Foo"  and person : { name: "Foo" age: 24 sex: "M
 running by_name_eq with name : "Foo"  and person : { name: "Bar" age: 23 sex: "M" } 
 running by_name_eq with name : "Foo"  and person : { name: "FooBar" age: 23 sex: "F" } 
 { true false false } 
+
+
+>>> Null strings
+
+s2 = 
+"" "" "" "Hello " 
+{ 0x00 } 
+len = 0, 6
+Hello 
+true false true 
+false true false 

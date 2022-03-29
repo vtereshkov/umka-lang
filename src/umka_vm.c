@@ -686,7 +686,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, Error *e
         case TYPE_REAL:     len = snprintf(buf, maxLen, "%lf ", slot->realVal);                                               break;
         case TYPE_PTR:      len = snprintf(buf, maxLen, "%p ", slot->ptrVal);                                         break;
         case TYPE_WEAKPTR:  len = snprintf(buf, maxLen, "%llx ", (unsigned long long int)slot->weakPtrVal);                   break;
-        case TYPE_STR:      len = snprintf(buf, maxLen, "\"%s\" ", (char *)slot->ptrVal);                                     break;
+        case TYPE_STR:      len = snprintf(buf, maxLen, "\"%s\" ", slot->ptrVal ? (char *)slot->ptrVal : "");                 break;
 
         case TYPE_ARRAY:
         {
@@ -891,7 +891,7 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
         error->handlerRuntime(error->context, "printf() destination is null");
 
     if (!format)
-        error->handlerRuntime(error->context, "printf() format string is null");
+        format = "";
 
     int formatLen;
     TypeKind expectedTypeKind;
@@ -924,14 +924,7 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
     }
 
     int len = 0;
-/*
-    if (typeKind == TYPE_VOID)
-        len = fsnprintf(string, stream, availableLen, curFormat);
-    else if (typeKind == TYPE_REAL || typeKind == TYPE_REAL32)
-        len = fsnprintf(string, stream, availableLen, curFormat, fiber->top->realVal);
-    else
-        len = fsnprintf(string, stream, availableLen, curFormat, fiber->top->intVal);
-*/
+
     switch (typeKind)
     {
         case TYPE_VOID:         len = fsnprintf(string, stream, availableLen, curFormat);                                break;
@@ -945,9 +938,9 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
         case TYPE_UINT:         len = fsnprintf(string, stream, availableLen, curFormat,           fiber->top->uintVal); break;
         case TYPE_BOOL:         len = fsnprintf(string, stream, availableLen, curFormat, (bool    )fiber->top->intVal);  break;
         case TYPE_CHAR:         len = fsnprintf(string, stream, availableLen, curFormat, (char    )fiber->top->intVal);  break;
-        case TYPE_REAL32:       
+        case TYPE_REAL32:
         case TYPE_REAL:         len = fsnprintf(string, stream, availableLen, curFormat,           fiber->top->realVal); break;
-        case TYPE_STR:          len = fsnprintf(string, stream, availableLen, curFormat, (char *  )fiber->top->ptrVal);  break;
+        case TYPE_STR:          len = fsnprintf(string, stream, availableLen, curFormat,           fiber->top->ptrVal ? (char *)fiber->top->ptrVal : "");  break;
 
         default:                error->handlerRuntime(error->context, "Illegal type"); return;
     }
@@ -972,7 +965,7 @@ static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool con
         error->handlerRuntime(error->context, "scanf() source is null");
 
     if (!format)
-        error->handlerRuntime(error->context, "scanf() format string is null");
+        format = "";
 
     int formatLen;
     TypeKind expectedTypeKind;
@@ -1082,12 +1075,12 @@ static FORCE_INLINE void doBuiltinMakefromarr(Fiber *fiber, HeapPages *pages, Er
 // fn makefromstr(src: str, type: Type): []char
 static FORCE_INLINE void doBuiltinMakefromstr(Fiber *fiber, HeapPages *pages, Error *error)
 {
-    DynArray *dest   = (DynArray *)(fiber->top++)->ptrVal;
-    dest->type       = (Type     *)(fiber->top++)->ptrVal;
-    char *src        = (char     *)(fiber->top++)->ptrVal;
+    DynArray *dest   = (DynArray   *)(fiber->top++)->ptrVal;
+    dest->type       = (Type       *)(fiber->top++)->ptrVal;
+    const char *src  = (const char *)(fiber->top++)->ptrVal;
 
     if (!src)
-        error->handlerRuntime(error->context, "String is null");
+        src = "";
 
     dest->len      = strlen(src) + 1;
     dest->itemSize = 1;
@@ -1216,11 +1209,8 @@ static FORCE_INLINE void doBuiltinSlice(Fiber *fiber, HeapPages *pages, Error *e
     int64_t startIndex = (fiber->top++)->intVal;
     void *arg          = (fiber->top++)->ptrVal;
 
-    if (!arg)
-        error->handlerRuntime(error->context, "Dynamic array or string is null");
-
     DynArray *array = NULL;
-    char *str = NULL;
+    const char *str = NULL;
     int64_t len = 0;
 
     if (result)
@@ -1228,7 +1218,7 @@ static FORCE_INLINE void doBuiltinSlice(Fiber *fiber, HeapPages *pages, Error *e
         // Dynamic array
         array = (DynArray *)arg;
 
-        if (!array->data)
+        if (!array || !array->data)
             error->handlerRuntime(error->context, "Dynamic array is null");
 
         len = array->len;
@@ -1236,7 +1226,10 @@ static FORCE_INLINE void doBuiltinSlice(Fiber *fiber, HeapPages *pages, Error *e
     else
     {
         // String
-        str = (char *)arg;
+        str = (const char *)arg;
+        if (!str)
+            str = "";
+
         len = strlen(str);
     }
 
@@ -1285,15 +1278,26 @@ static FORCE_INLINE void doBuiltinSlice(Fiber *fiber, HeapPages *pages, Error *e
 
 static FORCE_INLINE void doBuiltinLen(Fiber *fiber, Error *error)
 {
-    if (!fiber->top->ptrVal)
-        error->handlerRuntime(error->context, "Dynamic array or string is null");
-
     switch (fiber->code[fiber->ip].typeKind)
     {
         // Done at compile time for arrays
-        case TYPE_DYNARRAY: fiber->top->intVal = ((DynArray *)(fiber->top->ptrVal))->len; break;
-        case TYPE_STR:      fiber->top->intVal = strlen((char *)fiber->top->ptrVal); break;
-        default:            error->handlerRuntime(error->context, "Illegal type"); return;
+        case TYPE_DYNARRAY:
+        {
+            const DynArray *array = (DynArray *)(fiber->top->ptrVal);
+            if (!array)
+                error->handlerRuntime(error->context, "Dynamic array is null");
+
+            fiber->top->intVal = array->len;
+            break;
+        }
+        case TYPE_STR:
+        {
+            const char *str = (const char *)fiber->top->ptrVal;
+            fiber->top->intVal = str ? strlen(str) : 0;
+            break;
+        }
+        default:
+            error->handlerRuntime(error->context, "Illegal type"); return;
     }
 }
 
@@ -1621,26 +1625,31 @@ static FORCE_INLINE void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
     }
     else if (fiber->code[fiber->ip].typeKind == TYPE_STR)
     {
-        if (!fiber->top->ptrVal || !rhs.ptrVal)
-            error->handlerRuntime(error->context, "String is null");
+        const char *lhsStr = (const char *)fiber->top->ptrVal;
+        if (!lhsStr)
+            lhsStr = "";
+
+        const char *rhsStr = (const char *)rhs.ptrVal;
+        if (!rhsStr)
+            rhsStr = "";
 
         switch (fiber->code[fiber->ip].tokKind)
         {
             case TOK_PLUS:
             {
-                char *buf = chunkAlloc(pages, strlen((char *)fiber->top->ptrVal) + strlen((char *)rhs.ptrVal) + 1, NULL, error);
-                strcpy(buf, (char *)fiber->top->ptrVal);
-                strcat(buf, (char *)rhs.ptrVal);
+                char *buf = chunkAlloc(pages, strlen(lhsStr) + strlen(rhsStr) + 1, NULL, error);
+                strcpy(buf, lhsStr);
+                strcat(buf, rhsStr);
                 fiber->top->ptrVal = buf;
                 break;
             }
 
-            case TOK_EQEQ:      fiber->top->intVal = strcmp((char *)fiber->top->ptrVal, (char *)rhs.ptrVal) == 0; break;
-            case TOK_NOTEQ:     fiber->top->intVal = strcmp((char *)fiber->top->ptrVal, (char *)rhs.ptrVal) != 0; break;
-            case TOK_GREATER:   fiber->top->intVal = strcmp((char *)fiber->top->ptrVal, (char *)rhs.ptrVal)  > 0; break;
-            case TOK_LESS:      fiber->top->intVal = strcmp((char *)fiber->top->ptrVal, (char *)rhs.ptrVal)  < 0; break;
-            case TOK_GREATEREQ: fiber->top->intVal = strcmp((char *)fiber->top->ptrVal, (char *)rhs.ptrVal) >= 0; break;
-            case TOK_LESSEQ:    fiber->top->intVal = strcmp((char *)fiber->top->ptrVal, (char *)rhs.ptrVal) <= 0; break;
+            case TOK_EQEQ:      fiber->top->intVal = strcmp(lhsStr, rhsStr) == 0; break;
+            case TOK_NOTEQ:     fiber->top->intVal = strcmp(lhsStr, rhsStr) != 0; break;
+            case TOK_GREATER:   fiber->top->intVal = strcmp(lhsStr, rhsStr)  > 0; break;
+            case TOK_LESS:      fiber->top->intVal = strcmp(lhsStr, rhsStr)  < 0; break;
+            case TOK_GREATEREQ: fiber->top->intVal = strcmp(lhsStr, rhsStr) >= 0; break;
+            case TOK_LESSEQ:    fiber->top->intVal = strcmp(lhsStr, rhsStr) <= 0; break;
 
             default:            error->handlerRuntime(error->context, "Illegal instruction"); return;
         }
@@ -1751,17 +1760,24 @@ static FORCE_INLINE void doGetArrayPtr(Fiber *fiber, Error *error)
     int len      = fiber->code[fiber->ip].operand.int32Val[1];
     int index    = (fiber->top++)->intVal;
 
-    if (!fiber->top->ptrVal)
-        error->handlerRuntime(error->context, "Array or string is null");
+    char *data = (char *)fiber->top->ptrVal;
 
-    // For strings, negative length means that the actual string length is to be used
-    if (len < 0)
-        len = strlen((char *)fiber->top->ptrVal);
+    if (len >= 0)   // For arrays, nonnegative length must be explicitly provided
+    {
+        if (!data)
+            error->handlerRuntime(error->context, "Array is null");
+    }
+    else            // For strings, negative length means that the actual string length is to be used
+    {
+        if (!data)
+            data = "";
+        len = strlen(data);
+    }
 
     if (index < 0 || index > len - 1)
         error->handlerRuntime(error->context, "Index %d is out of range 0...%d", index, len - 1);
 
-    fiber->top->ptrVal = (char *)fiber->top->ptrVal + itemSize * index;
+    fiber->top->ptrVal = data + itemSize * index;
 
     if (fiber->code[fiber->ip].inlineOpcode == OP_DEREF)
         doBasicDeref(fiber->top, fiber->code[fiber->ip].typeKind, error);

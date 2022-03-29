@@ -1,0 +1,25 @@
+fn test*() {
+	var s1, s2, s3: str
+	s4 := "Hello "
+
+	printf(s1)
+	scanf(s1)
+
+	printf("s2 = %s\n", s2)
+	printf(repr(s1) + repr(s2) + repr(s3) + repr(s4) + '\n')
+
+	chars := []char(s2)
+	printf(repr(chars) + '\n')
+
+	printf("len = %d, %d\n", len(s2), len(s4))
+
+	s5 := s1 + s2 + s4 + s3
+	printf(s5 + '\n')
+
+	printf(repr(s1 == s2) + repr(s1 < s2) + repr(s1 >= s2) + '\n')
+	printf(repr(s1 == s4) + repr(s1 < s4) + repr(s1 >= s4) + '\n')
+}
+
+fn main() {
+	test()
+}

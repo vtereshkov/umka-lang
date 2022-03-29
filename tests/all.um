@@ -20,6 +20,7 @@ import (
     "byteconv.um"
     "utf8test.um"
     "closures.um"
+    "nullstr.um"
 )
 
 fn main() {
@@ -44,4 +45,5 @@ fn main() {
     printf("\n\n>>> Byte conversions\n\n");     byteconv.test()
     printf("\n\n>>> UTF-8\n\n");                utf8test.test()
     printf("\n\n>>> Simulated closures\n\n");   closures.test()
+    printf("\n\n>>> Null strings\n\n");         nullstr.test()
 }
