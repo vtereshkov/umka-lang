@@ -1898,9 +1898,14 @@ static void parseLogicalTerm(Compiler *comp, Type **type, Const *constant)
         {
             genShortCircuitProlog(&comp->gen, op);
 
+            blocksEnter(&comp->blocks, NULL);
+
             Type *rightType;
             parseRelation(comp, &rightType, NULL);
             doApplyOperator(comp, type, &rightType, NULL, NULL, op, false, true);
+
+            doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+            blocksLeave(&comp->blocks);
 
             genShortCircuitEpilog(&comp->gen);
         }
@@ -1936,9 +1941,14 @@ void parseExpr(Compiler *comp, Type **type, Const *constant)
         {
             genShortCircuitProlog(&comp->gen, op);
 
+            blocksEnter(&comp->blocks, NULL);
+
             Type *rightType;
             parseLogicalTerm(comp, &rightType, NULL);
             doApplyOperator(comp, type, &rightType, NULL, NULL, op, false, true);
+
+            doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+            blocksLeave(&comp->blocks);
 
             genShortCircuitEpilog(&comp->gen);
         }
