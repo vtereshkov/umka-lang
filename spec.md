@@ -650,6 +650,12 @@ fn selftypeeq(a, b: interface{...}): bool
 
 Checks whether the types of the variables that have been converted to the interfaces `a`  and `b` are equivalent.
 
+```
+fn valid(a: ([]T | interface{...} | fn (...): T)): bool
+```
+
+Checks whether a dynamic array, interface or function variable has been initialized with some value.
+
 ##### Multitasking functions
 
 ```

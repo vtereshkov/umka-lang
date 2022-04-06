@@ -892,6 +892,20 @@ static void parseBuiltinSelftypeeqCall(Compiler *comp, Type **type, Const *const
 }
 
 
+static void parseBuiltinValidCall(Compiler *comp, Type **type, Const *constant)
+{
+    if (constant)
+        comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
+
+    parseExpr(comp, type, constant);
+    if ((*type)->kind != TYPE_DYNARRAY && (*type)->kind != TYPE_INTERFACE && (*type)->kind != TYPE_FN)
+        comp->error.handler(comp->error.context, "Incompatible type in valid()");
+
+    genCallBuiltin(&comp->gen, (*type)->kind, BUILTIN_VALID);
+    *type = comp->boolType;
+}
+
+
 // type FiberFunc = fn(parent: ^fiber, anyParam: ^type)
 // fn fiberspawn(childFunc: FiberFunc, anyParam: ^type): ^fiber
 // fn fibercall(child: ^fiber)
@@ -1006,6 +1020,7 @@ static void parseBuiltinCall(Compiler *comp, Type **type, Const *constant, Built
         case BUILTIN_SIZEOFSELF:    parseBuiltinSizeofselfCall(comp, type, constant);       break;
         case BUILTIN_SELFHASPTR:    parseBuiltinSelfhasptrCall(comp, type, constant);       break;
         case BUILTIN_SELFTYPEEQ:    parseBuiltinSelftypeeqCall(comp, type, constant);       break;
+        case BUILTIN_VALID:         parseBuiltinValidCall(comp, type, constant);            break;
 
         // Fibers
         case BUILTIN_FIBERSPAWN:

@@ -1271,8 +1271,6 @@ static FORCE_INLINE void doBuiltinSlice(Fiber *fiber, HeapPages *pages, Error *e
 
         (--fiber->top)->ptrVal = substr;
     }
-
-
 }
 
 
@@ -1340,6 +1338,39 @@ static FORCE_INLINE void doBuiltinSelftypeeq(Fiber *fiber, Error *error)
         typesEq = typeEquivalent(__selftypeLeft->base, __selftypeRight->base);
 
     (--fiber->top)->intVal = typesEq;
+}
+
+
+static FORCE_INLINE void doBuiltinValid(Fiber *fiber, Error *error)
+{
+    bool isValid = true;
+
+    switch (fiber->code[fiber->ip].typeKind)
+    {
+        case TYPE_DYNARRAY:
+        {
+            DynArray *array = (DynArray *)fiber->top->ptrVal;
+            isValid = array && array->data;
+            break;
+        }
+        case TYPE_INTERFACE:
+        {
+            // Interface layout: __self, __selftype, methods
+            Type *__selftype = *(Type **)((char *)fiber->top->ptrVal + sizeof(void *));
+            isValid = __selftype;
+            break;
+        }
+        case TYPE_FN:
+        {
+            int entryOffset = fiber->top->intVal;
+            isValid = entryOffset > 0;
+            break;
+        }
+        default:
+            error->handlerRuntime(error->context, "Illegal type"); return;
+    }
+
+    fiber->top->intVal = isValid;
 }
 
 
@@ -2017,6 +2048,7 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         case BUILTIN_SIZEOFSELF:    doBuiltinSizeofself(fiber, error); break;
         case BUILTIN_SELFHASPTR:    doBuiltinSelfhasptr(fiber, error); break;
         case BUILTIN_SELFTYPEEQ:    doBuiltinSelftypeeq(fiber, error); break;
+        case BUILTIN_VALID:         doBuiltinValid(fiber, error); break;
 
         // Fibers
         case BUILTIN_FIBERSPAWN:    doBuiltinFiberspawn(fiber, pages, error); break;
