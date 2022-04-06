@@ -1,6 +1,6 @@
-![](stopwar.png)
+![](resources/stopwar.png)
 
-![](logo.png)
+![](resources/logo.png)
 
 [![CI](https://github.com/vtereshkov/umka-lang/workflows/CI/badge.svg)](https://github.com/vtereshkov/umka-lang/actions)
 
@@ -22,7 +22,7 @@ Umka is a statically typed embeddable scripting language. It combines the simpli
 Due to the efficient `for` loop implementation and support for static data structures, Umka demonstrates high performance in multidimensional array operations and similar tasks.
 
 _400 x 400 matrix multiplication (AMD A4-3300M @ 1.9 GHz, Windows 7)_
-![](perf.png)
+![](resources/perf.png)
 
 ## Getting Started
 * Download the [latest release](https://github.com/vtereshkov/umka-lang/releases) for Windows and Linux
@@ -46,15 +46,15 @@ _C+Umka 3D camera example_
 
 * [VDrift/Umka](https://github.com/vtereshkov/vdrift) - a racing simulator that lets you design, tune and test your own car autopilot
 
-![](vdrift.png)
+![](resources/vdrift.png)
 
 * [tophat](https://github.com/marekmaskarinec/tophat) - a 2D game engine focused on minimalism
 
-![](tophat.png)
+![](resources/tophat.png)
 
 * TractorSim3D - a 6 DOF tractor dynamics simulator with a scriptable steering controller and [raylib](https://www.raylib.com)-based graphics
 
-![](tractor.png)
+![](resources/tractor.png)
 
 ## A Tour of Umka
 ### Hello
