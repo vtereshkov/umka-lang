@@ -651,28 +651,28 @@ fn selftypeeq(a, b: interface{...}): bool
 Checks whether the types of the variables that have been converted to the interfaces `a`  and `b` are equivalent.
 
 ```
-fn valid(a: ([]T | interface{...} | fn (...): T)): bool
+fn valid(a: ([]T | interface{...} | fn (...): T | fiber)): bool
 ```
 
-Checks whether a dynamic array, interface or function variable has been initialized with some value.
+Checks whether a dynamic array, interface, function variable or fiber has been initialized with some value.
 
 ##### Multitasking functions
 
 ```
-type FiberFunc = fn(parent: ^fiber, anyParam: ^T)
-fn fiberspawn(childFunc: FiberFunc, anyParam: ^T): ^fiber
+type FiberFunc = fn(parent: fiber, anyParam: ^T)
+fn fiberspawn(childFunc: FiberFunc, anyParam: ^T): fiber
 ```
 
 Creates a new fiber and assigns `childFunc` as the fiber function. `anyParam` is a pointer to any data buffer that will be passed to `childFunc` .
 
 ```
-fn fibercall(child: ^fiber)
+fn fibercall(child: fiber)
 ```
 
 Resumes the execution of the `child` fiber. 
 
 ```
-fn fiberalive(child: ^fiber)
+fn fiberalive(child: fiber)
 ```
 
 Checks whether the `child` fiber function has not yet returned.  

@@ -426,8 +426,8 @@ static FORCE_INLINE void doBasicDeref(Slot *slot, TypeKind typeKind, Error *erro
         case TYPE_ARRAY:
         case TYPE_DYNARRAY:
         case TYPE_STRUCT:
-        case TYPE_INTERFACE:
-        case TYPE_FIBER:        break;  // Always represented by pointer, not dereferenced
+        case TYPE_INTERFACE:    break;  // Always represented by pointer, not dereferenced
+        case TYPE_FIBER:        slot->ptrVal     = *(void *   *)slot->ptrVal; break;
         case TYPE_FN:           slot->intVal     = *(int64_t  *)slot->ptrVal; break;
 
         default:                error->handlerRuntime(error->context, "Illegal type"); return;
@@ -464,9 +464,9 @@ static FORCE_INLINE void doBasicAssign(void *lhs, Slot rhs, TypeKind typeKind, i
         case TYPE_ARRAY:
         case TYPE_DYNARRAY:
         case TYPE_STRUCT:
-        case TYPE_INTERFACE:
-        case TYPE_FIBER:        memcpy(lhs, rhs.ptrVal, structSize); break;
-        case TYPE_FN:           *(int64_t  *)lhs = rhs.intVal; break;
+        case TYPE_INTERFACE:    memcpy(lhs, rhs.ptrVal, structSize); break;
+        case TYPE_FIBER:        *(void *   *)lhs = rhs.ptrVal;  break;
+        case TYPE_FN:           *(int64_t  *)lhs = rhs.intVal;  break;
 
         default:                error->handlerRuntime(error->context, "Illegal type"); return;
     }
@@ -481,7 +481,7 @@ static FORCE_INLINE void doChangePtrBaseRefCnt(Fiber *fiber, HeapPages *pages, v
     if (typeKindGarbageCollected(type->base->kind))
     {
         void *data = ptr;
-        if (type->base->kind == TYPE_PTR || type->base->kind == TYPE_STR)
+        if (type->base->kind == TYPE_PTR || type->base->kind == TYPE_STR || type->base->kind == TYPE_FIBER)
             data = *(void **)data;
 
         doBasicChangeRefCnt(fiber, pages, data, type->base, tokKind, depth + 1, error);
@@ -499,7 +499,7 @@ static FORCE_INLINE void doChangeArrayItemsRefCnt(Fiber *fiber, HeapPages *pages
         for (int i = 0; i < len; i++)
         {
             void *item = itemPtr;
-            if (type->base->kind == TYPE_PTR || type->base->kind == TYPE_STR)
+            if (type->base->kind == TYPE_PTR || type->base->kind == TYPE_STR || type->base->kind == TYPE_FIBER)
                 item = *(void **)item;
 
             doBasicChangeRefCnt(fiber, pages, item, type->base, tokKind, depth + 1, error);
@@ -516,7 +516,7 @@ static FORCE_INLINE void doChangeStructFieldsRefCnt(Fiber *fiber, HeapPages *pag
         if (typeKindGarbageCollected(type->field[i]->type->kind))
         {
             void *field = (char *)ptr + type->field[i]->offset;
-            if (type->field[i]->type->kind == TYPE_PTR || type->field[i]->type->kind == TYPE_STR)
+            if (type->field[i]->type->kind == TYPE_PTR || type->field[i]->type->kind == TYPE_STR || type->field[i]->type->kind == TYPE_FIBER)
                 field = *(void **)field;
 
             doBasicChangeRefCnt(fiber, pages, field, type->field[i]->type, tokKind, depth + 1, error);
@@ -528,7 +528,7 @@ static FORCE_INLINE void doChangeStructFieldsRefCnt(Fiber *fiber, HeapPages *pag
 static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type *type, TokenKind tokKind, int depth, Error *error)
 {
     // Update ref counts for pointers (including static/dynamic array items and structure/interface fields) if allocated dynamically
-    // Among garbage collected types, all types except the pointer and string types are represented by pointers by default
+    // Among garbage collected types, all types except the pointer, string and fiber types are represented by pointers by default
     // RTTI is required for lists, trees, etc., since the propagation depth for the root ref count is unknown at compile time
 
     if (depth > VM_MAX_REF_CNT_DEPTH)
@@ -657,6 +657,8 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
                 HeapChunkHeader *chunk = pageGetChunkHeader(page, ptr);
                 if (chunk->refCnt == 1 && tokKind == TOK_MINUSMINUS)
                     free(((Fiber *)ptr)->stack);
+
+                chunkChangeRefCnt(pages, page, ptr, (tokKind == TOK_PLUSPLUS) ? 1 : -1);
             }
             break;
         }
@@ -1366,6 +1368,12 @@ static FORCE_INLINE void doBuiltinValid(Fiber *fiber, Error *error)
             isValid = entryOffset > 0;
             break;
         }
+        case TYPE_FIBER:
+        {
+            Fiber *child = (Fiber *)fiber->top->ptrVal;
+            isValid = child;
+            break;
+        }
         default:
             error->handlerRuntime(error->context, "Illegal type"); return;
     }
@@ -1374,8 +1382,8 @@ static FORCE_INLINE void doBuiltinValid(Fiber *fiber, Error *error)
 }
 
 
-// type FiberFunc = fn(parent: ^fiber, anyParam: ^type)
-// fn fiberspawn(childFunc: FiberFunc, anyParam: ^type): ^fiber
+// type FiberFunc = fn(parent: fiber, anyParam: ^type)
+// fn fiberspawn(childFunc: FiberFunc, anyParam: ^type): fiber
 static FORCE_INLINE void doBuiltinFiberspawn(Fiber *fiber, HeapPages *pages, Error *error)
 {
     void *anyParam = (fiber->top++)->ptrVal;
@@ -1399,7 +1407,7 @@ static FORCE_INLINE void doBuiltinFiberspawn(Fiber *fiber, HeapPages *pages, Err
 }
 
 
-// fn fibercall(child: ^fiber)
+// fn fibercall(child: fiber)
 static FORCE_INLINE void doBuiltinFibercall(Fiber *fiber, Fiber **newFiber, HeapPages *pages, Error *error)
 {
     *newFiber = (Fiber *)(fiber->top++)->ptrVal;
@@ -1408,7 +1416,7 @@ static FORCE_INLINE void doBuiltinFibercall(Fiber *fiber, Fiber **newFiber, Heap
 }
 
 
-// fn fiberalive(child: ^fiber)
+// fn fiberalive(child: fiber)
 static FORCE_INLINE void doBuiltinFiberalive(Fiber *fiber, HeapPages *pages, Error *error)
 {
     Fiber *child = (Fiber *)fiber->top->ptrVal;

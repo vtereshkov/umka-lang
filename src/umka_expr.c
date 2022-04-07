@@ -898,7 +898,7 @@ static void parseBuiltinValidCall(Compiler *comp, Type **type, Const *constant)
         comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
 
     parseExpr(comp, type, constant);
-    if ((*type)->kind != TYPE_DYNARRAY && (*type)->kind != TYPE_INTERFACE && (*type)->kind != TYPE_FN)
+    if ((*type)->kind != TYPE_DYNARRAY && (*type)->kind != TYPE_INTERFACE && (*type)->kind != TYPE_FN && (*type)->kind != TYPE_FIBER)
         comp->error.handler(comp->error.context, "Incompatible type in valid()");
 
     genCallBuiltin(&comp->gen, (*type)->kind, BUILTIN_VALID);
@@ -906,10 +906,10 @@ static void parseBuiltinValidCall(Compiler *comp, Type **type, Const *constant)
 }
 
 
-// type FiberFunc = fn(parent: ^fiber, anyParam: ^type)
-// fn fiberspawn(childFunc: FiberFunc, anyParam: ^type): ^fiber
-// fn fibercall(child: ^fiber)
-// fn fiberalive(child: ^fiber)
+// type FiberFunc = fn(parent: fiber, anyParam: ^type)
+// fn fiberspawn(childFunc: FiberFunc, anyParam: ^type): fiber
+// fn fibercall(child: fiber)
+// fn fiberalive(child: fiber)
 static void parseBuiltinFiberCall(Compiler *comp, Type **type, Const *constant, BuiltinFunc builtin)
 {
     if (constant)
@@ -937,13 +937,13 @@ static void parseBuiltinFiberCall(Compiler *comp, Type **type, Const *constant, 
         // Increase parameter's reference count
         genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, expectedAnyParamType);
 
-        *type = comp->ptrFiberType;
+        *type = comp->fiberType;
     }
     else    // BUILTIN_FIBERCALL, BUILTIN_FIBERALIVE
     {
         parseExpr(comp, type, constant);
-        doImplicitTypeConv(comp, comp->ptrFiberType, type, constant, false);
-        typeAssertCompatible(&comp->types, comp->ptrFiberType, *type, false);
+        doImplicitTypeConv(comp, comp->fiberType, type, constant, false);
+        typeAssertCompatible(&comp->types, comp->fiberType, *type, false);
 
         if (builtin == BUILTIN_FIBERALIVE)
             *type = comp->boolType;

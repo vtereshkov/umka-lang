@@ -33,7 +33,6 @@ static void compilerDeclareBuiltinTypes(Compiler *comp)
 
     comp->ptrVoidType       = typeAddPtrTo(&comp->types, &comp->blocks, comp->voidType);
     comp->ptrNullType       = typeAddPtrTo(&comp->types, &comp->blocks, comp->nullType);
-    comp->ptrFiberType      = typeAddPtrTo(&comp->types, &comp->blocks, comp->fiberType);
 }
 
 

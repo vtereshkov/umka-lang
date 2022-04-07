@@ -48,8 +48,8 @@ void constDeref(Consts *consts, Const *constant, TypeKind typeKind)
         case TYPE_ARRAY:
         case TYPE_DYNARRAY:
         case TYPE_STRUCT:
-        case TYPE_INTERFACE:
-        case TYPE_FIBER:        break;  // Always represented by pointer, not dereferenced
+        case TYPE_INTERFACE:    break;  // Always represented by pointer, not dereferenced
+        case TYPE_FIBER:        constant->ptrVal     = *(void *   *)constant->ptrVal; break;
         case TYPE_FN:           constant->intVal     = *(int64_t  *)constant->ptrVal; break;
 
         default:                consts->error->handler(consts->error->context, "Illegal type"); return;
@@ -82,6 +82,7 @@ void constAssign(Consts *consts, void *lhs, Const *rhs, TypeKind typeKind, int s
         case TYPE_ARRAY:
         case TYPE_STRUCT:
         case TYPE_INTERFACE:    memcpy(lhs, rhs->ptrVal, size);         break;
+        case TYPE_FIBER:        *(void *   *)lhs = rhs->ptrVal;         break;
         case TYPE_FN:           *(int64_t  *)lhs = rhs->intVal;         break;
 
         default:          consts->error->handler(consts->error->context, "Illegal type"); return;

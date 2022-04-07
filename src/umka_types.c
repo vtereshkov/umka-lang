@@ -183,7 +183,7 @@ int typeSizeNoCheck(Type *type)
             size = align(size, typeAlignmentNoCheck(type));
             return size;
         }
-        case TYPE_FIBER:    return sizeof(Fiber);
+        case TYPE_FIBER:    return sizeof(void *);
         case TYPE_FN:       return sizeof(int64_t);
         default:            return -1;
     }
@@ -236,7 +236,7 @@ int typeAlignmentNoCheck(Type *type)
             }
             return alignment;
         }
-        case TYPE_FIBER:    return sizeof(int64_t);
+        case TYPE_FIBER:    return typeSizeNoCheck(type);
         case TYPE_FN:       return sizeof(int64_t);
         default:            return 0;
     }

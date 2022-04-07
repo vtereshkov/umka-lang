@@ -34,7 +34,7 @@ typedef enum
     TYPE_STR,           // Pointer of a special kind that admits assignment of string literals, concatenation and comparison by content
     TYPE_STRUCT,
     TYPE_INTERFACE,
-    TYPE_FIBER,
+    TYPE_FIBER,         // Pointer of a special kind
     TYPE_FN
 } TypeKind;
 
@@ -167,7 +167,7 @@ static inline bool typeReal(Type *type)
 static inline bool typeStructured(Type *type)
 {
     return type->kind == TYPE_ARRAY  || type->kind == TYPE_DYNARRAY  ||
-           type->kind == TYPE_STRUCT || type->kind == TYPE_INTERFACE || type->kind == TYPE_FIBER;
+           type->kind == TYPE_STRUCT || type->kind == TYPE_INTERFACE;
 }
 
 
@@ -193,8 +193,7 @@ static inline bool typeFiberFunc(Type *type)
     return type->kind                            == TYPE_FN    &&
            type->sig.numParams                   == 2          &&
            type->sig.numDefaultParams            == 0          &&
-           type->sig.param[0]->type->kind        == TYPE_PTR   &&
-           type->sig.param[0]->type->base->kind  == TYPE_FIBER &&
+           type->sig.param[0]->type->kind        == TYPE_FIBER &&
            type->sig.param[1]->type->kind        == TYPE_PTR   &&
            type->sig.param[1]->type->base->kind  != TYPE_VOID  &&
            type->sig.resultType->kind            == TYPE_VOID  &&

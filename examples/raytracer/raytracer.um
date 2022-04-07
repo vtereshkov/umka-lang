@@ -160,7 +160,7 @@ type RenderData = struct {
     pixels:       ^[height][width][3] uint8
 }
 
-fn render(parent: ^fiber, buf: ^RenderData) {
+fn render(parent: fiber, buf: ^RenderData) {
     sinAz, cosAz := sin(buf.azimuth), cos(buf.azimuth)
     
     for i := buf.startHeight; i < buf.stopHeight; i++ {
@@ -242,7 +242,7 @@ fn main() {
     printf("Threads (recommended 1, 2, 4, 8, 16): ");  scanf("%lld", &fibers)
     
     // Define fibers
-    renderer := make([]^fiber, fibers)
+    renderer := make([]fiber, fibers)
     renderData := make([]RenderData, fibers)
 
     for i := 0; i < len(renderer); i++ {

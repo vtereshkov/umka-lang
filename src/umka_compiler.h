@@ -36,7 +36,7 @@ typedef struct
          *real32Type, *realType,
          *strType,
          *fiberType,
-         *ptrVoidType, *ptrNullType, *ptrFiberType;
+         *ptrVoidType, *ptrNullType;
 
     // Command-line arguments
     int argc;
