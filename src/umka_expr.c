@@ -397,8 +397,26 @@ void doImplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant,
         }
     }
 
+    // Pointer to weak pointer
+    else if (dest->kind == TYPE_WEAKPTR && (*src)->kind == TYPE_PTR && typeEquivalent(dest->base, (*src)->base))
+    {
+        doPtrToWeakPtrConv(comp, dest, src, constant);
+    }
+
+    // Weak pointer to pointer
+    else if (dest->kind == TYPE_PTR && (*src)->kind == TYPE_WEAKPTR && typeEquivalent(dest->base, (*src)->base))
+    {
+        doWeakPtrToPtrConv(comp, dest, src, constant);
+    }
+}
+
+
+void doExplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant, bool lhs)
+{
+    doImplicitTypeConv(comp, dest, src, constant, lhs);
+
     // Interface to concrete (type assertion)
-    else if ((*src)->kind == TYPE_INTERFACE)
+    if ((*src)->kind == TYPE_INTERFACE && dest->kind != TYPE_INTERFACE)
     {
         if (dest->kind == TYPE_PTR)
         {
@@ -410,18 +428,6 @@ void doImplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant,
             // Interface to value
             doInterfaceToValueConv(comp, dest, src, constant);
         }
-    }
-
-    // Pointer to weak pointer
-    else if (dest->kind == TYPE_WEAKPTR && (*src)->kind == TYPE_PTR && typeEquivalent(dest->base, (*src)->base))
-    {
-        doPtrToWeakPtrConv(comp, dest, src, constant);
-    }
-
-    // Weak pointer to pointer
-    else if (dest->kind == TYPE_PTR && (*src)->kind == TYPE_WEAKPTR && typeEquivalent(dest->base, (*src)->base))
-    {
-        doWeakPtrToPtrConv(comp, dest, src, constant);
     }
 }
 
@@ -1203,7 +1209,7 @@ static void parseTypeCast(Compiler *comp, Type **type, Const *constant)
 
     Type *originalType;
     parseExpr(comp, &originalType, constant);
-    doImplicitTypeConv(comp, *type, &originalType, constant, false);
+    doExplicitTypeConv(comp, *type, &originalType, constant, false);
 
     if (!typeEquivalent(*type, originalType)                 &&
         !(typeCastable(*type) && typeCastable(originalType)) &&
