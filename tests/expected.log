@@ -166,10 +166,14 @@ Array = { 3 7 1 -4 2 5 }
 Sum of all squares less than 30 = 55 
 
 
->>> Garbage collection
+>>> Garbage collection - 1
 
 See any memory leak warnings?
 
+
+>>> Garbage collection - 2
+
+Ok
 
 >>> Interfaces - 1
 
@@ -276,7 +280,7 @@ repr():
 'a' 
 fn 
 { 0.500000 0.700000 0.900000 } 
-0000000000b99b50 
+0000000000d84f60 
 
 
 >>> Type equivalence

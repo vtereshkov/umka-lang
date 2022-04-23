@@ -1,0 +1,24 @@
+type list = struct {
+  value: int
+  next: ^list
+}
+
+fn test1() {
+  var p: ^list
+
+  for i := 0; i < 1000000; i++ {
+    n := new(list)
+    n.value = i
+    n.next = p
+    p = n
+  }
+}
+
+fn test*() {
+  test1()
+  printf("Ok")
+}
+
+fn main() {
+	test()
+}

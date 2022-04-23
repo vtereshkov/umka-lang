@@ -26,7 +26,6 @@ enum
     VM_MIN_FREE_STACK    = 1024,                    // Slots
     VM_MIN_HEAP_CHUNK    = 64,                      // Bytes
     VM_MIN_HEAP_PAGE     = 1024 * 1024,             // Bytes
-    VM_MAX_REF_CNT_DEPTH = 5000,
 
     VM_HEAP_CHUNK_MAGIC  = 0x1234567887654321LL,
 
@@ -149,18 +148,6 @@ typedef struct
 } Instruction;
 
 
-typedef struct
-{
-    // Must have 8 byte alignment
-    Instruction *code;
-    int ip;
-    Slot *stack, *top, *base;
-    int stackSize;
-    Slot reg[VM_NUM_REGS];
-    bool alive;
-} Fiber;
-
-
 typedef struct tagHeapPage
 {
     int id;
@@ -183,8 +170,23 @@ typedef struct
     int64_t magic;
     int refCnt;
     int size;
-    struct tagType *type;   // Optional type for garbage collection
+    struct tagType *type;       // Optional type for garbage collection
 } HeapChunkHeader;
+
+
+typedef struct
+{
+    void *ptr;
+    Type *type;
+    HeapPage *pageForDeferred;   // Mandatory for deferred ref count updates, NULL otherwise
+} RefCntChangeCandidate;
+
+
+typedef struct
+{
+    RefCntChangeCandidate *stack;
+    int top, capacity;
+} RefCntChangeCandidates;
 
 
 typedef void (*ExternFunc)(Slot *params, Slot *result);
@@ -192,8 +194,22 @@ typedef void (*ExternFunc)(Slot *params, Slot *result);
 
 typedef struct
 {
+    // Must have 8 byte alignment
+    Instruction *code;
+    int ip;
+    Slot *stack, *top, *base;
+    int stackSize;
+    Slot reg[VM_NUM_REGS];
+    RefCntChangeCandidates *refCntChangeCandidates;
+    bool alive;
+} Fiber;
+
+
+typedef struct
+{
     Fiber *fiber, *mainFiber;
     HeapPages pages;
+    RefCntChangeCandidates refCntChangeCandidates;
     Error *error;
 } VM;
 

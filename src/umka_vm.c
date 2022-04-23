@@ -299,6 +299,57 @@ static FORCE_INLINE int chunkChangeRefCnt(HeapPages *pages, HeapPage *page, void
 }
 
 
+static FORCE_INLINE void candidateInit(RefCntChangeCandidates *candidates)
+{
+    candidates->capacity = 100;
+    candidates->stack = malloc(candidates->capacity * sizeof(RefCntChangeCandidate));
+    candidates->top = -1;
+}
+
+
+static FORCE_INLINE void candidateFree(RefCntChangeCandidates *candidates)
+{
+    free(candidates->stack);
+}
+
+
+static FORCE_INLINE void candidateReset(RefCntChangeCandidates *candidates)
+{
+    candidates->top = -1;
+}
+
+
+static FORCE_INLINE void candidatePush(RefCntChangeCandidates *candidates, void *ptr, Type *type)
+{
+    if (candidates->top >= candidates->capacity - 1)
+    {
+        candidates->capacity *= 2;
+        candidates->stack = realloc(candidates->stack, candidates->capacity * sizeof(RefCntChangeCandidate));
+    }
+
+    RefCntChangeCandidate *candidate = &candidates->stack[++candidates->top];
+    candidate->ptr = ptr;
+    candidate->type = type;
+    candidate->pageForDeferred = NULL;
+}
+
+
+static FORCE_INLINE void candidatePushDeferred(RefCntChangeCandidates *candidates, void *ptr, Type *type, HeapPage *page)
+{
+    candidatePush(candidates, ptr, type);
+    candidates->stack[candidates->top].pageForDeferred = page;
+}
+
+
+static FORCE_INLINE void candidatePop(RefCntChangeCandidates *candidates, void **ptr, Type **type, HeapPage **page)
+{
+    RefCntChangeCandidate *candidate = &candidates->stack[candidates->top--];
+    *ptr = candidate->ptr;
+    *type = candidate->type;
+    *page = candidate->pageForDeferred;
+}
+
+
 // I/O functions
 
 static FORCE_INLINE int fsgetc(bool string, void *stream, int *len)
@@ -370,14 +421,18 @@ void vmInit(VM *vm, int stackSize, Error *error)
     vm->fiber = vm->mainFiber = malloc(sizeof(Fiber));
     vm->fiber->stack = malloc(stackSize * sizeof(Slot));
     vm->fiber->stackSize = stackSize;
+    vm->fiber->refCntChangeCandidates = &vm->refCntChangeCandidates;
     vm->fiber->alive = true;
     pageInit(&vm->pages);
+    candidateInit(&vm->refCntChangeCandidates);
+
     vm->error = error;
 }
 
 
 void vmFree(VM *vm)
 {
+    candidateFree(&vm->refCntChangeCandidates);
     pageFree(&vm->pages);
     free(vm->mainFiber->stack);
     free(vm->mainFiber);
@@ -473,10 +528,7 @@ static FORCE_INLINE void doBasicAssign(void *lhs, Slot rhs, TypeKind typeKind, i
 }
 
 
-static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type *type, TokenKind tokKind, int depth, Error *error);
-
-
-static FORCE_INLINE void doChangePtrBaseRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type *type, TokenKind tokKind, int depth, Error *error)
+static FORCE_INLINE void doAddPtrBaseRefCntCandidate(RefCntChangeCandidates *candidates, void *ptr, Type *type)
 {
     if (typeKindGarbageCollected(type->base->kind))
     {
@@ -484,12 +536,12 @@ static FORCE_INLINE void doChangePtrBaseRefCnt(Fiber *fiber, HeapPages *pages, v
         if (type->base->kind == TYPE_PTR || type->base->kind == TYPE_STR || type->base->kind == TYPE_FIBER)
             data = *(void **)data;
 
-        doBasicChangeRefCnt(fiber, pages, data, type->base, tokKind, depth + 1, error);
+        candidatePush(candidates, data, type->base);
     }
 }
 
 
-static FORCE_INLINE void doChangeArrayItemsRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type *type, int len, TokenKind tokKind, int depth, Error *error)
+static FORCE_INLINE void doAddArrayItemsRefCntCandidates(RefCntChangeCandidates *candidates, void *ptr, Type *type, int len)
 {
     if (typeKindGarbageCollected(type->base->kind))
     {
@@ -502,14 +554,14 @@ static FORCE_INLINE void doChangeArrayItemsRefCnt(Fiber *fiber, HeapPages *pages
             if (type->base->kind == TYPE_PTR || type->base->kind == TYPE_STR || type->base->kind == TYPE_FIBER)
                 item = *(void **)item;
 
-            doBasicChangeRefCnt(fiber, pages, item, type->base, tokKind, depth + 1, error);
+            candidatePush(candidates, item, type->base);
             itemPtr += itemSize;
         }
     }
 }
 
 
-static FORCE_INLINE void doChangeStructFieldsRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type *type, TokenKind tokKind, int depth, Error *error)
+static FORCE_INLINE void doAddStructFieldsRefCntCandidates(RefCntChangeCandidates *candidates, void *ptr, Type *type)
 {
     for (int i = 0; i < type->numItems; i++)
     {
@@ -519,151 +571,172 @@ static FORCE_INLINE void doChangeStructFieldsRefCnt(Fiber *fiber, HeapPages *pag
             if (type->field[i]->type->kind == TYPE_PTR || type->field[i]->type->kind == TYPE_STR || type->field[i]->type->kind == TYPE_FIBER)
                 field = *(void **)field;
 
-            doBasicChangeRefCnt(fiber, pages, field, type->field[i]->type, tokKind, depth + 1, error);
+            candidatePush(candidates, field, type->field[i]->type);
         }
     }
 }
 
 
-static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type *type, TokenKind tokKind, int depth, Error *error)
+static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type *type, TokenKind tokKind)
 {
     // Update ref counts for pointers (including static/dynamic array items and structure/interface fields) if allocated dynamically
-    // Among garbage collected types, all types except the pointer, string and fiber types are represented by pointers by default
+    // All garbage collected composite types are represented by pointers by default
     // RTTI is required for lists, trees, etc., since the propagation depth for the root ref count is unknown at compile time
 
-    if (depth > VM_MAX_REF_CNT_DEPTH)
-    {
-        fprintf(stderr, "Warning: Data structure is too deep for garbage collection\n");
-        return;
-    }
+    RefCntChangeCandidates *candidates = fiber->refCntChangeCandidates;
+    candidateReset(candidates);
+    candidatePush(candidates, ptr, type);
 
-    switch (type->kind)
+    while (candidates->top >= 0)
     {
-        case TYPE_PTR:
+        HeapPage *pageForDeferred = NULL;
+        candidatePop(candidates, &ptr, &type, &pageForDeferred);
+
+        // Process deferred ref count updates first (the heap page should have been memoized for them)
+        if (pageForDeferred)
         {
-            HeapPage *page = pageFind(pages, ptr, true);
-            if (page)
+            chunkChangeRefCnt(pages, pageForDeferred, ptr, (tokKind == TOK_PLUSPLUS) ? 1 : -1);
+            continue;
+        }
+
+        // Process all other updates
+        switch (type->kind)
+        {
+            case TYPE_PTR:
             {
+                HeapPage *page = pageFind(pages, ptr, true);
+                if (!page)
+                    break;
+
                 if (tokKind == TOK_PLUSPLUS)
                     chunkChangeRefCnt(pages, page, ptr, 1);
                 else
                 {
-                    // Traverse children only before removing the last remaining ref
                     HeapChunkHeader *chunk = pageGetChunkHeader(page, ptr);
-                    if (chunk->refCnt == 1)
+                    if (chunk->refCnt > 1)
                     {
-                        // Sometimes the last remaining ref to chunk data is a pointer to a single item
-                        // In this case, we should traverse children as for the actual composite type, rather than for a pointer
-                        if (chunk->type)
-                        {
-                            void *chunkDataPtr = (char *)chunk + sizeof(HeapChunkHeader);
-
-                            switch (chunk->type->kind)
-                            {
-                                case TYPE_ARRAY:
-                                {
-                                    doChangeArrayItemsRefCnt(fiber, pages, chunkDataPtr, chunk->type, chunk->type->numItems, tokKind, depth, error);
-                                    break;
-                                }
-                                case TYPE_DYNARRAY:
-                                {
-                                    int len = chunk->size / typeSizeNoCheck(chunk->type->base);
-                                    doChangeArrayItemsRefCnt(fiber, pages, chunkDataPtr, chunk->type, len, tokKind, depth, error);
-                                    break;
-                                }
-                                case TYPE_STRUCT:
-                                {
-                                    doChangeStructFieldsRefCnt(fiber, pages, chunkDataPtr, chunk->type, tokKind, depth, error);
-                                    break;
-                                }
-                                default:
-                                {
-                                    doChangePtrBaseRefCnt(fiber, pages, ptr, type, tokKind, depth, error);
-                                    break;
-                                }
-                            }
-                        }
-                        else
-                            doChangePtrBaseRefCnt(fiber, pages, ptr, type, tokKind, depth, error);
+                        chunkChangeRefCnt(pages, page, ptr, -1);
+                        break;
                     }
 
-                    chunkChangeRefCnt(pages, page, ptr, -1);
+                    // Only one ref is left. Defer processing the parent and traverse the children before removing the ref
+                    candidatePushDeferred(candidates, ptr, type, page);
+
+                    // Sometimes the last remaining ref to chunk data is a pointer to a single item of a composite type (interior pointer)
+                    // In this case, we should traverse children as for the actual composite type, rather than for the pointer
+                    if (chunk->type)
+                    {
+                        void *chunkDataPtr = (char *)chunk + sizeof(HeapChunkHeader);
+
+                        switch (chunk->type->kind)
+                        {
+                            case TYPE_ARRAY:
+                            {
+                                doAddArrayItemsRefCntCandidates(candidates, chunkDataPtr, chunk->type, chunk->type->numItems);
+                                break;
+                            }
+                            case TYPE_DYNARRAY:
+                            {
+                                int len = chunk->size / typeSizeNoCheck(chunk->type->base);
+                                doAddArrayItemsRefCntCandidates(candidates, chunkDataPtr, chunk->type, len);
+                                break;
+                            }
+                            case TYPE_STRUCT:
+                            {
+                                doAddStructFieldsRefCntCandidates(candidates, chunkDataPtr, chunk->type);
+                                break;
+                            }
+                            default:
+                            {
+                                doAddPtrBaseRefCntCandidate(candidates, ptr, type);
+                                break;
+                            }
+                        }
+                    }
+                    else
+                        doAddPtrBaseRefCntCandidate(candidates, ptr, type);
                 }
+                break;
             }
-            break;
-        }
 
-        case TYPE_WEAKPTR:
-            break;
+            case TYPE_WEAKPTR:
+                break;
 
-        case TYPE_STR:
-        {
-            HeapPage *page = pageFind(pages, ptr, true);
-            if (page)
-                chunkChangeRefCnt(pages, page, ptr, (tokKind == TOK_PLUSPLUS) ? 1 : -1);
-            break;
-        }
-
-        case TYPE_ARRAY:
-        {
-            doChangeArrayItemsRefCnt(fiber, pages, ptr, type, type->numItems, tokKind, depth, error);
-            break;
-        }
-
-        case TYPE_DYNARRAY:
-        {
-            DynArray *array = (DynArray *)ptr;
-            HeapPage *page = pageFind(pages, array->data, true);
-            if (page)
+            case TYPE_STR:
             {
+                HeapPage *page = pageFind(pages, ptr, true);
+                if (!page)
+                    break;
+
+                chunkChangeRefCnt(pages, page, ptr, (tokKind == TOK_PLUSPLUS) ? 1 : -1);
+                break;
+            }
+
+            case TYPE_ARRAY:
+            {
+                doAddArrayItemsRefCntCandidates(candidates, ptr, type, type->numItems);
+                break;
+            }
+
+            case TYPE_DYNARRAY:
+            {
+                DynArray *array = (DynArray *)ptr;
+                HeapPage *page = pageFind(pages, array->data, true);
+                if (!page)
+                    break;
+
                 if (tokKind == TOK_PLUSPLUS)
                     chunkChangeRefCnt(pages, page, array->data, 1);
                 else
                 {
-                    // Traverse children only before removing the last remaining ref
                     HeapChunkHeader *chunk = pageGetChunkHeader(page, array->data);
-                    if (chunk->refCnt == 1)
-                        doChangeArrayItemsRefCnt(fiber, pages, array->data, type, array->len, tokKind, depth, error);
+                    if (chunk->refCnt > 1)
+                    {
+                        chunkChangeRefCnt(pages, page, array->data, -1);
+                        break;
+                    }
 
-                    chunkChangeRefCnt(pages, page, array->data, -1);
+                    // Only one ref is left. Defer processing the parent and traverse the children before removing the ref
+                    candidatePushDeferred(candidates, array->data, type, page);
+                    doAddArrayItemsRefCntCandidates(candidates, array->data, type, array->len);
                 }
+                break;
             }
-            break;
-        }
 
-        case TYPE_STRUCT:
-        {
-            doChangeStructFieldsRefCnt(fiber, pages, ptr, type, tokKind, depth, error);
-            break;
-        }
-
-        case TYPE_INTERFACE:
-        {
-            // Interface layout: __self, __selftype, methods
-            void *__self = *(void **)ptr;
-            Type *__selftype = *(Type **)((char *)ptr + type->field[1]->offset);
-
-            if (__self)
-                doBasicChangeRefCnt(fiber, pages, __self, __selftype, tokKind, depth + 1, error);
-            break;
-        }
-
-        case TYPE_FIBER:
-        {
-            HeapPage *page = pageFind(pages, ptr, true);
-            if (page)
+            case TYPE_STRUCT:
             {
+                doAddStructFieldsRefCntCandidates(candidates, ptr, type);
+                break;
+            }
+
+            case TYPE_INTERFACE:
+            {
+                // Interface layout: __self, __selftype, methods
+                void *__self = *(void **)ptr;
+                Type *__selftype = *(Type **)((char *)ptr + type->field[1]->offset);
+
+                if (__self)
+                    candidatePush(candidates, __self, __selftype);
+                break;
+            }
+
+            case TYPE_FIBER:
+            {
+                HeapPage *page = pageFind(pages, ptr, true);
+                if (!page)
+                    break;
+
                 // Don't use ref counting for the fiber stack, otherwise every local variable will also be ref-counted
                 HeapChunkHeader *chunk = pageGetChunkHeader(page, ptr);
                 if (chunk->refCnt == 1 && tokKind == TOK_MINUSMINUS)
                     free(((Fiber *)ptr)->stack);
 
                 chunkChangeRefCnt(pages, page, ptr, (tokKind == TOK_PLUSPLUS) ? 1 : -1);
+                break;
             }
-            break;
-        }
 
-        default: break;
+            default: break;
+        }
     }
 }
 
@@ -1003,7 +1076,7 @@ static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool con
 
             // Decrease old string ref count
             Type destType = {.kind = TYPE_STR};
-            doBasicChangeRefCnt(fiber, pages, *dest, &destType, TOK_MINUSMINUS, 0, error);
+            doBasicChangeRefCnt(fiber, pages, *dest, &destType, TOK_MINUSMINUS);
 
             // Allocate new string
             *dest = chunkAlloc(pages, strlen(src) + 1, NULL, error);
@@ -1068,7 +1141,8 @@ static FORCE_INLINE void doBuiltinMakefromarr(Fiber *fiber, HeapPages *pages, Er
     memcpy(dest->data, src, dest->len * dest->itemSize);
 
     // Increase result items' ref counts, as if they have been assigned one by one
-    doChangeArrayItemsRefCnt(fiber, pages, dest->data, dest->type, dest->len, TOK_PLUSPLUS, 0, error);
+    Type staticArrayType = {.kind = TYPE_ARRAY, .base = dest->type->base, .numItems = dest->len, .next = NULL};
+    doBasicChangeRefCnt(fiber, pages, dest->data, &staticArrayType, TOK_PLUSPLUS);
 
     (--fiber->top)->ptrVal = dest;
 }
@@ -1111,7 +1185,7 @@ static FORCE_INLINE void doBuiltinMaketoarr(Fiber *fiber, HeapPages *pages, Erro
     memcpy(dest, src->data, src->len * src->itemSize);
 
     // Increase result items' ref counts, as if they have been assigned one by one
-    doChangeArrayItemsRefCnt(fiber, pages, dest, destType, destType->numItems, TOK_PLUSPLUS, 0, error);
+    doBasicChangeRefCnt(fiber, pages, dest, destType, TOK_PLUSPLUS);
 
     (--fiber->top)->ptrVal = dest;
 }
@@ -1169,7 +1243,8 @@ static FORCE_INLINE void doBuiltinAppend(Fiber *fiber, HeapPages *pages, Error *
     memcpy((char *)result->data + array->len * array->itemSize, (char *)rhs, rhsLen * array->itemSize);
 
     // Increase result items' ref counts, as if they have been assigned one by one
-    doChangeArrayItemsRefCnt(fiber, pages, result->data, result->type, result->len, TOK_PLUSPLUS, 0, error);
+    Type staticArrayType = {.kind = TYPE_ARRAY, .base = result->type->base, .numItems = result->len, .next = NULL};
+    doBasicChangeRefCnt(fiber, pages, result->data, &staticArrayType, TOK_PLUSPLUS);
 
     (--fiber->top)->ptrVal = result;
 }
@@ -1197,7 +1272,8 @@ static FORCE_INLINE void doBuiltinDelete(Fiber *fiber, HeapPages *pages, Error *
     memcpy((char *)result->data + index * result->itemSize, (char *)array->data + (index + 1) * result->itemSize, (result->len - index) * result->itemSize);
 
     // Increase result items' ref counts, as if they have been assigned one by one
-    doChangeArrayItemsRefCnt(fiber, pages, result->data, result->type, result->len, TOK_PLUSPLUS, 0, error);
+    Type staticArrayType = {.kind = TYPE_ARRAY, .base = result->type->base, .numItems = result->len, .next = NULL};
+    doBasicChangeRefCnt(fiber, pages, result->data, &staticArrayType, TOK_PLUSPLUS);
 
     (--fiber->top)->ptrVal = result;
 }
@@ -1260,7 +1336,8 @@ static FORCE_INLINE void doBuiltinSlice(Fiber *fiber, HeapPages *pages, Error *e
         memcpy((char *)result->data, (char *)array->data + startIndex * result->itemSize, result->len * result->itemSize);
 
         // Increase result items' ref counts, as if they have been assigned one by one
-        doChangeArrayItemsRefCnt(fiber, pages, result->data, result->type, result->len, TOK_PLUSPLUS, 0, error);
+        Type staticArrayType = {.kind = TYPE_ARRAY, .base = result->type->base, .numItems = result->len, .next = NULL};
+        doBasicChangeRefCnt(fiber, pages, result->data, &staticArrayType, TOK_PLUSPLUS);
 
         (--fiber->top)->ptrVal = result;
     }
@@ -1550,13 +1627,13 @@ static FORCE_INLINE void doAssign(Fiber *fiber, Error *error)
 }
 
 
-static FORCE_INLINE void doChangeRefCnt(Fiber *fiber, HeapPages *pages, Error *error)
+static FORCE_INLINE void doChangeRefCnt(Fiber *fiber, HeapPages *pages)
 {
     void *ptr         = fiber->top->ptrVal;
     TokenKind tokKind = fiber->code[fiber->ip].tokKind;
     Type *type        = (Type *)fiber->code[fiber->ip].operand.ptrVal;
 
-    doBasicChangeRefCnt(fiber, pages, ptr, type, tokKind, 0, error);
+    doBasicChangeRefCnt(fiber, pages, ptr, type, tokKind);
 
     if (fiber->code[fiber->ip].inlineOpcode == OP_POP)
         fiber->top++;
@@ -1575,12 +1652,12 @@ static FORCE_INLINE void doChangeRefCntAssign(Fiber *fiber, HeapPages *pages, Er
     Type *type = (Type *)fiber->code[fiber->ip].operand.ptrVal;
 
     // Increase right-hand side ref count
-    doBasicChangeRefCnt(fiber, pages, rhs.ptrVal, type, TOK_PLUSPLUS, 0, error);
+    doBasicChangeRefCnt(fiber, pages, rhs.ptrVal, type, TOK_PLUSPLUS);
 
     // Decrease left-hand side ref count
     Slot lhsDeref = {.ptrVal = lhs};
     doBasicDeref(&lhsDeref, type->kind, error);
-    doBasicChangeRefCnt(fiber, pages, lhsDeref.ptrVal, type, TOK_MINUSMINUS, 0, error);
+    doBasicChangeRefCnt(fiber, pages, lhsDeref.ptrVal, type, TOK_MINUSMINUS);
 
     doBasicAssign(lhs, rhs, type->kind, typeSizeNoCheck(type), error);
     fiber->ip++;
@@ -2192,7 +2269,7 @@ static FORCE_INLINE void vmLoop(VM *vm)
             case OP_ZERO:                           doZero(fiber);                                break;
             case OP_DEREF:                          doDeref(fiber, error);                        break;
             case OP_ASSIGN:                         doAssign(fiber, error);                       break;
-            case OP_CHANGE_REF_CNT:                 doChangeRefCnt(fiber, pages, error);          break;
+            case OP_CHANGE_REF_CNT:                 doChangeRefCnt(fiber, pages);                 break;
             case OP_CHANGE_REF_CNT_ASSIGN:          doChangeRefCntAssign(fiber, pages, error);    break;
             case OP_UNARY:                          doUnary(fiber, error);                        break;
             case OP_BINARY:                         doBinary(fiber, pages, error);                break;
