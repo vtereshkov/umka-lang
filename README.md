@@ -159,7 +159,7 @@ switch a {
 ```
 ### Multitasking
 ```
-fn childFunc(parent: ^fiber, buf: ^int) {
+fn childFunc(parent: fiber, buf: ^int) {
     for i := 0; i < 5; i++ {
         std.println("Child : i=" + std.itoa(i) + " buf=" + std.itoa(buf^))
         buf^ = i * 3
@@ -187,13 +187,13 @@ fn main() {
     var data: fnc.AnyArray = [6]fnc.Any{3, 7, 1, -4, 2, 5}
     printf("Array = %s\n", repr(data))
      
-    sqr  := fn (x, ctx: fnc.Any): fnc.Any    {p := ^int(x); return p^ * p^}
-    less := fn (x, ctx: fnc.Any): bool       {p := ^int(x); q := ^int(ctx); return p^ < q^} 
-    sum  := fn (x, y, ctx: fnc.Any): fnc.Any {p := ^int(x); q := ^int(y); return p^ + q^}     
+    sqr  := fn (x, ctx: fnc.Any): fnc.Any    {p := int(x); return p * p}
+    less := fn (x, ctx: fnc.Any): bool       {return int(x) < int(ctx)} 
+    sum  := fn (x, y, ctx: fnc.Any): fnc.Any {return int(x) + int(y)}     
     
     const max = 30     
     result := data.map(sqr, null).filter(less, max).reduce(sum, null)    
-    printf("Sum of all squares less than %d = %s\n", max, repr(result))       
+    printf("Sum of all squares less than %lld = %s\n", max, repr(result))       
 }
 ```
 ## Umka vs Go
