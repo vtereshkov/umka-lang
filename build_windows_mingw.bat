@@ -1,4 +1,4 @@
-copy import_embed\umka_runtime_src.h src
+copy import\embed\umka_runtime_src.h src
 
 cd src
 
