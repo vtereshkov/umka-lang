@@ -105,6 +105,7 @@ typedef struct tagExternal
     char name[DEFAULT_STR_LEN + 1];
     unsigned int hash;
     void *entry;
+    bool resolved;
     struct tagExternal *next;
 } External;
 

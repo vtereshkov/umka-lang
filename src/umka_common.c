@@ -377,6 +377,7 @@ External *externalAdd(Externals *externals, const char *name, void *entry)
     External *external = malloc(sizeof(External));
 
     external->entry = entry;
+    external->resolved = false;
 
     strncpy(external->name, name, DEFAULT_STR_LEN);
     external->name[DEFAULT_STR_LEN] = 0;

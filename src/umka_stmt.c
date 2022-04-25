@@ -56,7 +56,17 @@ void doResolveExtern(Compiler *comp)
             External *external = externalFind(&comp->externals, ident->name);
 
             // Try to find the function in the external function list or in an external implementation library
-            void *fn = external ? external->entry : moduleGetImplLibFunc(comp->modules.module[comp->blocks.module], ident->name);
+            void *fn = NULL;
+            if (external)
+            {
+                if (external->resolved)
+                    comp->error.handler(comp->error.context, "External %s is already resolved", ident->name);
+
+                fn = external->entry;
+                external->resolved = true;
+            }
+            else
+                fn = moduleGetImplLibFunc(comp->modules.module[comp->blocks.module], ident->name);
 
             if (!fn)
                 comp->error.handler(comp->error.context, "Unresolved prototype of %s", ident->name);
