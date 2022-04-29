@@ -84,6 +84,7 @@ typedef struct tagType
     struct tagType *base;                   // For pointers and arrays
     int numItems;                           // For arrays, structures and interfaces
     bool isExprList;                        // For structures that represent expression lists
+    bool isVariadicParamList;               // For dynamic arrays of interfaces that represent variadic parameter lists
     struct tagIdent *typeIdent;             // For types that have identifiers
     union
     {

@@ -47,12 +47,26 @@ static void parseIdentList(Compiler *comp, IdentName *names, bool *exported, int
 }
 
 
-// typedIdentList = identList ":" type.
-static void parseTypedIdentList(Compiler *comp, IdentName *names, bool *exported, int capacity, int *num, Type **type)
+// typedIdentList = identList ":" [".."] type.
+static void parseTypedIdentList(Compiler *comp, IdentName *names, bool *exported, int capacity, int *num, Type **type, bool allowVariadicParamList)
 {
     parseIdentList(comp, names, exported, capacity, num);
     lexEat(&comp->lex, TOK_COLON);
-    *type = parseType(comp, NULL);
+
+    if (allowVariadicParamList && comp->lex.tok.kind == TOK_ELLIPSIS)
+    {
+        if (*num != 1)
+            comp->error.handler(comp->error.context, "Only one variadic parameter list is allowed");
+
+        lexNext(&comp->lex);
+        Type *itemType = parseType(comp, NULL);
+
+        *type = typeAdd(&comp->types, &comp->blocks, TYPE_DYNARRAY);
+        (*type)->base = itemType;
+        (*type)->isVariadicParamList = true;
+    }
+    else
+        *type = parseType(comp, NULL);
 }
 
 
@@ -90,16 +104,22 @@ static void parseSignature(Compiler *comp, Signature *sig)
     // Formal parameter list
     lexEat(&comp->lex, TOK_LPAR);
     int numDefaultParams = 0;
+    bool variadicParamListFound = false;
 
     if (comp->lex.tok.kind == TOK_IDENT)
     {
         while (1)
         {
+            if (variadicParamListFound)
+                comp->error.handler(comp->error.context, "Variadic parameter list should be the last parameter");
+
             IdentName paramNames[MAX_PARAMS];
             bool paramExported[MAX_PARAMS];
             Type *paramType;
             int numParams = 0;
-            parseTypedIdentList(comp, paramNames, paramExported, MAX_PARAMS, &numParams, &paramType);
+            parseTypedIdentList(comp, paramNames, paramExported, MAX_PARAMS, &numParams, &paramType, true);
+
+            variadicParamListFound = paramType->isVariadicParamList;
 
             // ["=" expr]
             Const defaultConstant;
@@ -107,6 +127,9 @@ static void parseSignature(Compiler *comp, Signature *sig)
             {
                 if (numParams != 1)
                     comp->error.handler(comp->error.context, "Parameter list cannot have common default value");
+
+                if (paramType->isVariadicParamList)
+                    comp->error.handler(comp->error.context, "Variadic parameter list cannot have default value");
 
                 lexNext(&comp->lex);
 
@@ -292,7 +315,7 @@ static Type *parseStructType(Compiler *comp)
         bool fieldExported[MAX_FIELDS];
         Type *fieldType;
         int numFields = 0;
-        parseTypedIdentList(comp, fieldNames, fieldExported, MAX_FIELDS, &numFields, &fieldType);
+        parseTypedIdentList(comp, fieldNames, fieldExported, MAX_FIELDS, &numFields, &fieldType, false);
 
         for (int i = 0; i < numFields; i++)
         {
@@ -499,7 +522,7 @@ static void parseVarDeclItem(Compiler *comp)
     bool varExported[MAX_FIELDS];
     int numVars = 0;
     Type *varType;
-    parseTypedIdentList(comp, varNames, varExported, MAX_FIELDS, &numVars, &varType);
+    parseTypedIdentList(comp, varNames, varExported, MAX_FIELDS, &numVars, &varType, false);
 
     Ident *var[MAX_FIELDS];
     for (int i = 0; i < numVars; i++)

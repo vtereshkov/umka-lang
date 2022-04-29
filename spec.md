@@ -114,7 +114,7 @@ Umka has a set of arithmetical, bitwise, logical, relation operators, as well as
 &&   ||   !    ++   --
 ==   <    >    !=   <=   >=
 =    :=   (    )    [    ]    {    }    
-^    ;    :    .
+^    ;    :    .    ..
 ```
 
 #### Implicit semicolons
@@ -219,7 +219,10 @@ Examples:
 ```
 fn (code: int)
 fn (p: int, x, y: real): (bool, real)
+fn (msg: char, values: ..real)
 ```
+
+The type of the last parameter in the function signature may be prefixed with `..`. The type `..T` is equivalent to `[]T` within the function. Such a function is called *variadic*. 
 
 ### Structured types
 
@@ -484,7 +487,7 @@ Syntax:
 ```
 fullVarDecl    = "var" (varDeclItem | "(" {varDeclItem ";"} ")").
 varDeclItem    = typedIdentList ["=" exprList].
-typedIdentList = identList ":" type.
+typedIdentList = identList ":" [".."] type.
 identList      = ident exportMark {"," ident exportMark}.
 ```
 
@@ -820,7 +823,7 @@ data.print
 
 #### Call selector
 
-The call selector `(...)` calls a function and accesses its returned value. It can be applied to a value of a function type, including methods. All actual parameters are passed by value. If the number and the types of the actual parameters are not compatible with the function signature, an error is triggered. 
+The call selector `(...)` calls a function and accesses its returned value. It can be applied to a value of a function type, including methods. All actual parameters are passed by value. If the number and the types of the actual parameters are not compatible with the function signature, an error is triggered. A variadic function, whose signature has the last parameter of type `..T`, can receive any number of actual parameters of types compatible with `T` in place of this parameter.
 
 Syntax:
 
@@ -1573,7 +1576,7 @@ signature           = "(" [typedIdentList ["=" expr] {"," typedIdentList ["=" ex
                       [":" (type | "(" type {"," type} ")")].
 exportMark          = ["*"].
 identList           = ident exportMark {"," ident exportMark}.
-typedIdentList      = identList ":" type.
+typedIdentList      = identList ":" [".."] type.
 type                = qualIdent | ptrType | arrayType | dynArrayType | strType |
                       structType | interfaceType | fnType.
 ptrType             = ["weak"] "^" type.

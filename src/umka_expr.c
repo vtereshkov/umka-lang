@@ -11,6 +11,9 @@
 #include "umka_stmt.h"
 
 
+static void parseDynArrayLiteral(Compiler *comp, Type **type, Const *constant);
+
+
 void doPushConst(Compiler *comp, Type *type, Const *constant)
 {
     if (typeReal(type))
@@ -1084,16 +1087,26 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
             Type *formalParamType = (*type)->sig.param[i]->type;
             Type *actualParamType;
 
-            parseExpr(comp, &actualParamType, constant);
-
-            doImplicitTypeConv(comp, formalParamType, &actualParamType, constant, false);
-            typeAssertCompatible(&comp->types, formalParamType, actualParamType, false);
-
-            // Process non-64-bit ordinal and real types
-            if ((typeOrdinal(formalParamType) || typeReal(formalParamType)) && typeSizeNoCheck(formalParamType) < typeSizeNoCheck(comp->intType))
+            if (formalParamType->isVariadicParamList)
             {
-                genAssertRange(&comp->gen, formalParamType->kind);                      // Check overflow
-                genCallBuiltin(&comp->gen, formalParamType->kind, BUILTIN_NARROW);      // Convert 64-bit slot to narrower representation
+                // Variadic parameter list
+                parseDynArrayLiteral(comp, &formalParamType, constant);
+                actualParamType = formalParamType;
+            }
+            else
+            {
+                // Regular parameter
+                parseExpr(comp, &actualParamType, constant);
+
+                doImplicitTypeConv(comp, formalParamType, &actualParamType, constant, false);
+                typeAssertCompatible(&comp->types, formalParamType, actualParamType, false);
+
+                // Process non-64-bit ordinal and real types
+                if ((typeOrdinal(formalParamType) || typeReal(formalParamType)) && typeSizeNoCheck(formalParamType) < typeSizeNoCheck(comp->intType))
+                {
+                    genAssertRange(&comp->gen, formalParamType->kind);                      // Check overflow
+                    genCallBuiltin(&comp->gen, formalParamType->kind, BUILTIN_NARROW);      // Convert 64-bit slot to narrower representation
+                }
             }
 
             // Increase parameter's reference count
@@ -1112,14 +1125,38 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
         }
     }
 
-    if (numPreHiddenParams + numExplicitParams + numPostHiddenParams + (*type)->sig.numDefaultParams < (*type)->sig.numParams)
+    int sigNumVariadicParams = 0;
+    if ((*type)->sig.numParams > 0 && (*type)->sig.param[(*type)->sig.numParams - 1]->type->isVariadicParamList)
+        sigNumVariadicParams = 1;
+
+    if (numPreHiddenParams + numExplicitParams + numPostHiddenParams < (*type)->sig.numParams - (*type)->sig.numDefaultParams - sigNumVariadicParams)
         comp->error.handler(comp->error.context, "Too few actual parameters");
 
-    // Push default parameters, if not specified explicitly
+    // Push default or variadic parameters, if not specified explicitly
     while (i < (*type)->sig.numParams - numPostHiddenParams)
     {
-        doPushConst(comp, (*type)->sig.param[i]->type, &((*type)->sig.param[i]->defaultVal));
-        i++;
+        if (sigNumVariadicParams == 1)
+        {
+            // Variadic parameter
+            Type *formalParamType = (*type)->sig.param[i]->type;
+            parseDynArrayLiteral(comp, &formalParamType, constant);     // Empty dynamic array
+
+            // Increase parameter's reference count
+            genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, formalParamType);
+
+            // Copy structured parameter if passed by value
+            if (typeStructured(formalParamType))
+                genPushStruct(&comp->gen, typeSize(&comp->types, formalParamType));
+
+            i++;
+            break;
+        }
+        else
+        {
+            // Default parameter
+            doPushConst(comp, (*type)->sig.param[i]->type, &((*type)->sig.param[i]->defaultVal));
+            i++;
+        }
     }
 
     // Push __result pointer
@@ -1328,7 +1365,8 @@ static void parseArrayOrStructLiteral(Compiler *comp, Type **type, Const *consta
 // dynArrayLiteral = arrayLiteral.
 static void parseDynArrayLiteral(Compiler *comp, Type **type, Const *constant)
 {
-    lexEat(&comp->lex, TOK_LBRACE);
+    if (!(*type)->isVariadicParamList)
+        lexEat(&comp->lex, TOK_LBRACE);
 
     if (constant)
         comp->error.handler(comp->error.context, "Dynamic array literals are not allowed for constants");
@@ -1339,12 +1377,18 @@ static void parseDynArrayLiteral(Compiler *comp, Type **type, Const *constant)
     int itemSize = typeSize(&comp->types, staticArrayType->base);
 
     // Parse array
-    if (comp->lex.tok.kind != TOK_RBRACE)
+    const TokenKind rightEndTok = (*type)->isVariadicParamList ? TOK_RPAR : TOK_RBRACE;
+    if (comp->lex.tok.kind != rightEndTok)
     {
         while (1)
         {
             Type *itemType;
             parseExpr(comp, &itemType, NULL);
+
+            // Special case: variadic parameter list's first item is already a dynamic array compatible with the variadic parameter list
+            if ((*type)->isVariadicParamList && typeCompatible(*type, itemType, false) && staticArrayType->numItems == 0)
+                return;
+
             doImplicitTypeConv(comp, staticArrayType->base, &itemType, NULL, false);
             typeAssertCompatible(&comp->types, staticArrayType->base, itemType, false);
 
@@ -1356,7 +1400,8 @@ static void parseDynArrayLiteral(Compiler *comp, Type **type, Const *constant)
         }
     }
 
-    lexEat(&comp->lex, TOK_RBRACE);
+    if (!(*type)->isVariadicParamList)
+        lexEat(&comp->lex, TOK_RBRACE);
 
     // Allocate array
     int bufOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, staticArrayType);

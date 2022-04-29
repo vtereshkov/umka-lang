@@ -74,6 +74,7 @@ typedef enum
     TOK_SEMICOLON,
     TOK_COLON,
     TOK_PERIOD,
+    TOK_ELLIPSIS,
 
     // Other tokens
     TOK_IDENT,

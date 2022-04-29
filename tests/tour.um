@@ -126,7 +126,6 @@ fn test*() {
     printf("%s\n", repr('a'))
     printf("%s\n", repr(parentFunc))
     printf("%s\n", repr(printable))
-    printf("%s\n", repr(&q))
     
 }
 

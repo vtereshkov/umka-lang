@@ -22,6 +22,7 @@ import (
     "utf8test.um"
     "closures.um"
     "nullstr.um"
+    "vararg.um"
 )
 
 fn main() {
@@ -48,4 +49,5 @@ fn main() {
     printf("\n\n>>> UTF-8\n\n");                    utf8test.test()
     printf("\n\n>>> Simulated closures\n\n");       closures.test()
     printf("\n\n>>> Null strings\n\n");             nullstr.test()
+    printf("\n\n>>> Variadic functions\n\n");       vararg.test()
 }

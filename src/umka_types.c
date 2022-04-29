@@ -89,13 +89,14 @@ Type *typeAdd(Types *types, Blocks *blocks, TypeKind kind)
 {
     Type *type = malloc(sizeof(Type));
 
-    type->kind          = kind;
-    type->block         = blocks->item[blocks->top].block;
-    type->base          = NULL;
-    type->numItems      = 0;
-    type->isExprList    = false;
-    type->typeIdent     = NULL;
-    type->next          = NULL;
+    type->kind                  = kind;
+    type->block                 = blocks->item[blocks->top].block;
+    type->base                  = NULL;
+    type->numItems              = 0;
+    type->isExprList            = false;
+    type->isVariadicParamList   = false;
+    type->typeIdent             = NULL;
+    type->next                  = NULL;
 
     if (kind == TYPE_FN)
     {

@@ -1,0 +1,48 @@
+fn printMsg(msg: str, values: ..interface{}) {
+	valStr := ""
+	for value in values {
+		valStr += repr(value)
+	}
+    printf(msg + " " + valStr + '\n')
+}
+
+fn printPrompt(msg: str, values: ..interface{}) {
+    printMsg(">> " + msg, values)
+}
+
+fn sum(xs: []real): real {
+	s := 0.0
+	for x in xs {s += x}
+	return s	
+}
+
+fn mean(xs: ..real): real {
+	n := len(xs)
+	if n == 0 {return 0.0}
+	return sum(xs) / n
+}
+
+type T = struct {
+	data: str
+}
+
+fn (t: ^T) join(strs: ..str): T {
+	for s in strs {
+		t.data += s
+	}
+	return t^
+}
+
+fn test*() {
+    printPrompt("expected ", 12, "Hello World", []bool{true, false, true, true})
+    printPrompt("should work with no values")
+
+    printMsg("Four averages:", mean(5.8, 2.4, 7.5), mean(3.14), mean(), mean(-17, 15))
+
+    var t: T 
+    printMsg("Greeting", t.join(" Hello", " World"), t.join(" Salut le Monde"))
+}
+
+fn main() {
+	test()
+}

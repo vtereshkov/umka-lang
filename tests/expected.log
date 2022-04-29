@@ -280,7 +280,6 @@ repr():
 'a' 
 fn 
 { 0.500000 0.700000 0.900000 } 
-0000000000d84f60 
 
 
 >>> Type equivalence
@@ -384,3 +383,11 @@ len = 0, 6
 Hello 
 true false true 
 false true false 
+
+
+>>> Variadic functions
+
+>> expected  12 "Hello World" { true false true true } 
+>> should work with no values 
+Four averages: 5.233333 3.140000 0.000000 -1.000000 
+Greeting { data: " Hello World" } { data: " Hello World Salut le Monde" } 

@@ -80,6 +80,7 @@ static const char *spelling [] =
     ";",
     ":",
     ".",
+    "..",
 
     // Other tokens
     "identifier",
@@ -619,8 +620,14 @@ static void lexOperator(Lexer *lex)
 
         case '.':
         {
-            lex->tok.kind = TOK_PERIOD;
             ch = lexChar(lex);
+            if (ch == '.')
+            {
+                lex->tok.kind = TOK_ELLIPSIS;
+                ch = lexChar(lex);
+            }
+            else
+                lex->tok.kind = TOK_PERIOD;
             break;
         }
 
