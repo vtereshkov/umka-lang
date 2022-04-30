@@ -1125,38 +1125,34 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
         }
     }
 
-    int sigNumVariadicParams = 0;
-    if ((*type)->sig.numParams > 0 && (*type)->sig.param[(*type)->sig.numParams - 1]->type->isVariadicParamList)
-        sigNumVariadicParams = 1;
+    int numDefaultOrVariadicFormalParams = 0;
 
-    if (numPreHiddenParams + numExplicitParams + numPostHiddenParams < (*type)->sig.numParams - (*type)->sig.numDefaultParams - sigNumVariadicParams)
+    if ((*type)->sig.numDefaultParams > 0)
+        numDefaultOrVariadicFormalParams = (*type)->sig.numDefaultParams;
+    else if ((*type)->sig.numParams > 0 && (*type)->sig.param[(*type)->sig.numParams - 1]->type->isVariadicParamList)
+        numDefaultOrVariadicFormalParams = 1;
+
+    if (numPreHiddenParams + numExplicitParams + numPostHiddenParams < (*type)->sig.numParams - numDefaultOrVariadicFormalParams)
         comp->error.handler(comp->error.context, "Too few actual parameters");
 
     // Push default or variadic parameters, if not specified explicitly
-    while (i < (*type)->sig.numParams - numPostHiddenParams)
+    while (i + numPostHiddenParams < (*type)->sig.numParams)
     {
-        if (sigNumVariadicParams == 1)
-        {
-            // Variadic parameter
-            Type *formalParamType = (*type)->sig.param[i]->type;
-            parseDynArrayLiteral(comp, &formalParamType, constant);     // Empty dynamic array
+        Type *formalParamType = (*type)->sig.param[i]->type;
 
-            // Increase parameter's reference count
-            genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, formalParamType);
-
-            // Copy structured parameter if passed by value
-            if (typeStructured(formalParamType))
-                genPushStruct(&comp->gen, typeSize(&comp->types, formalParamType));
-
-            i++;
-            break;
-        }
+        if ((*type)->sig.numDefaultParams > 0)
+            doPushConst(comp, formalParamType, &((*type)->sig.param[i]->defaultVal));   // Default parameter
         else
-        {
-            // Default parameter
-            doPushConst(comp, (*type)->sig.param[i]->type, &((*type)->sig.param[i]->defaultVal));
-            i++;
-        }
+            parseDynArrayLiteral(comp, &formalParamType, constant);                     // Variadic parameter (empty dynamic array)
+
+        // Increase parameter's reference count
+        genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, formalParamType);
+
+        // Copy structured parameter if passed by value
+        if (typeStructured(formalParamType))
+            genPushStruct(&comp->gen, typeSize(&comp->types, formalParamType));
+
+        i++;
     }
 
     // Push __result pointer

@@ -136,11 +136,9 @@ static void parseSignature(Compiler *comp, Signature *sig)
                 Type *defaultType;
                 parseExpr(comp, &defaultType, &defaultConstant);
 
-                if (typeStructured(defaultType))
-                    comp->error.handler(comp->error.context, "Structured default values are not allowed");
-
                 doImplicitTypeConv(comp, paramType, &defaultType, &defaultConstant, false);
                 typeAssertCompatible(&comp->types, paramType, defaultType, false);
+
                 numDefaultParams++;
             }
             else
