@@ -26,9 +26,9 @@ type T = struct {
 	data: str
 }
 
-fn (t: ^T) join(strs: ..str): T {
-	for s in strs {
-		t.data += s
+fn (t: ^T) join(strings: ..str): T {
+	for string in strings {
+		t.data += string
 	}
 	return t^
 }
