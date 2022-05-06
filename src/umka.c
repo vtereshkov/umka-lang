@@ -58,10 +58,10 @@ void printRuntimeError(void *umka)
 
 #ifdef __EMSCRIPTEN__
 
-int runPlayground(char *source)
+int runPlayground(const char *fileName, const char *sourceString)
 {
     void *umka = umkaAlloc();
-    bool ok = umkaInit(umka, "playground.um", source, 0, DEFAULT_STACK_SIZE, NULL, 0, NULL);
+    bool ok = umkaInit(umka, fileName, sourceString, 0, DEFAULT_STACK_SIZE, NULL, 0, NULL);
     if (ok)
         ok = umkaCompile(umka);
 

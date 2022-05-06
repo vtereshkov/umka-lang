@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+    <body>
+        <p style="font-family:arial; font-size:24px">The Umka playground</p>
+        <button id="runButton">Run</button>
+        <br><br>
+        <textarea id="sourceTextArea" rows="20" cols="80"></textarea>
+        <br><br>
+        <textarea id="outputTextArea" rows="10" cols="80"></textarea>
+
+        <script>
+            var runButton = document.getElementById("runButton")
+            var sourceTextArea = document.getElementById("sourceTextArea")
+            var outputTextArea = document.getElementById("outputTextArea")
+
+            sourceTextArea.value = 
+
+`fn main() {
+    printf("Hello World\\n")
+}`
+            
+            sourceTextArea.onkeydown = onTab            
+            runButton.onclick = onRun
+
+            var Module = {'print': onPrint, 'printErr': onPrint}            
+
+            function onTab(e) 
+            {
+                if (e.key == 'Tab') 
+                {
+                    e.preventDefault()
+                    var start = this.selectionStart
+                    var end = this.selectionEnd
+
+                    this.value = this.value.substring(0, start) + "    " + this.value.substring(end)
+                    this.selectionStart = this.selectionEnd = start + 4
+                }
+            }
+
+            function onPrint(text)
+            {
+                outputTextArea.value = text
+            }
+
+            function onRun()
+            {
+                runPlayground = Module.cwrap('runPlayground', 'number', ['string', 'string'])
+                source = sourceTextArea.value
+                runPlayground("playground.um", source)
+            }
+        </script>
+
+        <script src="playground/umka.js"></script>
+    </body>
+</html>
