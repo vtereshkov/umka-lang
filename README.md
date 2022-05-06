@@ -27,6 +27,7 @@ _400 x 400 matrix multiplication (AMD A4-3300M @ 1.9 GHz, Windows 7)_
 ![](resources/perf.png)
 
 ## Getting Started
+* Try Umka in the [playground](https://vtereshkov.github.io/umka-lang)
 * Download the [latest release](https://github.com/vtereshkov/umka-lang/releases) for Windows and Linux
 * Take a [tour of Umka](https://github.com/vtereshkov/umka-lang/blob/master/README.md#a-tour-of-umka)
 * Read the [language specification](https://github.com/vtereshkov/umka-lang/blob/master/spec.md)
