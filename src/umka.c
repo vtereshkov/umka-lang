@@ -9,6 +9,7 @@
 
 enum
 {
+    DEFAULT_STACK_SIZE      = 1 * 1024 * 1024,  // Slots
     ASM_BUF_SIZE            = 2 * 1024 * 1024,
     MAX_CALL_STACK_DEPTH    = 10
 };
@@ -27,10 +28,63 @@ void help(void)
 }
 
 
+void printCompileError(void *umka)
+{
+    UmkaError error;
+    umkaGetError(umka, &error);
+    fprintf(stderr, "Error %s (%d, %d): %s\n", error.fileName, error.line, error.pos, error.msg);
+}
+
+
+void printRuntimeError(void *umka)
+{
+    UmkaError error;
+    umkaGetError(umka, &error);
+    fprintf(stderr, "\nRuntime error %s (%d): %s\n", error.fileName, error.line, error.msg);
+    fprintf(stderr, "Stack trace:\n");
+
+    for (int depth = 0; depth < MAX_CALL_STACK_DEPTH; depth++)
+    {
+        char fnName[UMKA_MSG_LEN + 1];
+        int fnOffset;
+
+        if (!umkaGetCallStack(umka, depth, &fnOffset, fnName, UMKA_MSG_LEN + 1))
+            break;
+
+        fprintf(stderr, "%08d: %s\n", fnOffset, fnName);
+    }
+}
+
+
+#ifdef __EMSCRIPTEN__
+
+int runPlayground(char *source)
+{
+    void *umka = umkaAlloc();
+    bool ok = umkaInit(umka, "playground.um", source, 0, DEFAULT_STACK_SIZE, NULL, 0, NULL);
+    if (ok)
+        ok = umkaCompile(umka);
+
+    if (ok)
+    {
+        ok = umkaRun(umka);
+        if (!ok)
+            printRuntimeError(umka);
+    }
+    else
+        printCompileError(umka);
+
+    umkaFree(umka);
+    return !ok;
+}
+
+#else
+
+
 int main(int argc, char **argv)
 {
     // Parse interpreter parameters
-    int stackSize       = 1024 * 1024;  // Slots
+    int stackSize       = DEFAULT_STACK_SIZE;
     const char *locale  = NULL;
     bool writeAsm       = false;
     bool compileOnly    = false;
@@ -123,32 +177,13 @@ int main(int argc, char **argv)
             ok = umkaRun(umka);
 
         if (!ok)
-        {
-            UmkaError error;
-            umkaGetError(umka, &error);
-            fprintf(stderr, "\nRuntime error %s (%d): %s\n", error.fileName, error.line, error.msg);
-            fprintf(stderr, "Stack trace:\n");
-
-            for (int depth = 0; depth < MAX_CALL_STACK_DEPTH; depth++)
-            {
-                char fnName[UMKA_MSG_LEN + 1];
-                int fnOffset;
-
-                if (!umkaGetCallStack(umka, depth, &fnOffset, fnName, UMKA_MSG_LEN + 1))
-                    break;
-
-                fprintf(stderr, "%08d: %s\n", fnOffset, fnName);
-            }
-        }
+            printRuntimeError(umka);
     }
     else
-    {
-        UmkaError error;
-        umkaGetError(umka, &error);
-        fprintf(stderr, "Error %s (%d, %d): %s\n", error.fileName, error.line, error.pos, error.msg);
-    }
+        printCompileError(umka);
 
     umkaFree(umka);
     return !ok;
 }
 
+#endif // EMSCRIPTEN

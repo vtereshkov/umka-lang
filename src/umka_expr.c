@@ -1564,6 +1564,8 @@ static void parseFieldSelector(Compiler *comp, Type **type, Const *constant, boo
     // Search for a method
     if ((*type)->kind == TYPE_PTR)
         *type = (*type)->base;
+    else if (!typeStructured(*type))
+        comp->error.handler(comp->error.context, "Addressable value expected");
 
     lexNext(&comp->lex);
     lexCheck(&comp->lex, TOK_IDENT);
@@ -1573,8 +1575,7 @@ static void parseFieldSelector(Compiler *comp, Type **type, Const *constant, boo
 
     rcvType = typeAddPtrTo(&comp->types, &comp->blocks, rcvType);
 
-    Ident *method = identFind(&comp->idents, &comp->modules, &comp->blocks,
-                               rcvTypeModule, comp->lex.tok.name, rcvType);
+    Ident *method = identFind(&comp->idents, &comp->modules, &comp->blocks, rcvTypeModule, comp->lex.tok.name, rcvType);
     if (method)
     {
         // Method
