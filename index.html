@@ -19,10 +19,10 @@
     printf("Hello World\\n")
 }`
             
-            sourceTextArea.onkeydown = onTab            
+            sourceTextArea.onkeydown = onTab  
             runButton.onclick = onRun
 
-            var Module = {'print': onPrint, 'printErr': onPrint}            
+            var Module = {'print': onPrint, 'printErr': onPrintErr}            
 
             function onTab(e) 
             {
@@ -39,15 +39,55 @@
 
             function onPrint(text)
             {
-                outputTextArea.value = text
+                outputTextArea.value += text + '\n'
             }
+
+            function onPrintErr(text)
+            {
+                onPrint(text)
+                
+                var words = text.split(' ')
+                if (words[0] != "Error" || typeof(words[2]) == "undefined")
+                    return
+
+                var lineNum = words[2].replace(',', '').replace('(', '')
+                selectLine(lineNum)
+            }            
 
             function onRun()
             {
                 runPlayground = Module.cwrap('runPlayground', 'number', ['string', 'string'])
                 source = sourceTextArea.value
+                outputTextArea.value = ""
                 runPlayground("playground.um", source)
             }
+
+            function selectLine(lineNum) 
+            {
+                lineNum--
+                var lines = sourceTextArea.value.split("\n")
+
+                var startPos = 0, endPos = sourceTextArea.value.length
+                for (var x = 0; x < lines.length; x++) 
+                {
+                    if (x == lineNum)
+                        break;
+                    startPos += lines[x].length + 1
+                }
+
+                var endPos = lines[lineNum].length + startPos
+
+  
+                if (typeof(sourceTextArea.selectionStart) != "undefined") 
+                {
+                    sourceTextArea.focus()
+                    sourceTextArea.selectionStart = startPos
+                    sourceTextArea.selectionEnd = endPos
+                    return true
+                }
+
+                return false
+            }            
         </script>
 
         <script src="playground/umka.js"></script>
