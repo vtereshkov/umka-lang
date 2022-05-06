@@ -7,6 +7,8 @@
 # Welcome to Umka!
 Umka is a statically typed embeddable scripting language. It combines the simplicity and flexibility needed for scripting with a compile-time protection against type errors. Its aim is to follow the Python Zen principle _Explicit is better than implicit_ more consistently than dynamically typed languages generally do.
 
+[Go to Playground](https://vtereshkov.github.io/umka-lang)
+
 ## Features
 * Clean syntax inspired by Go
 * Cross-platform bytecode compiler and virtual machine
