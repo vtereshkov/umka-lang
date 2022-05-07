@@ -6,9 +6,11 @@
         <br><br>
         <textarea id="sourceTextArea" rows="20" style="width:100%; resize:vertical"></textarea>
         <br><br>
-        <textarea id="outputTextArea" rows="10" style="width:100%; resize:vertical"></textarea>
+        <textarea id="outputTextArea" rows="10" style="width:100%; resize:vertical" readonly></textarea>
 
         <script>
+            const tabWidth = 8
+
             var runButton = document.getElementById("runButton")
             var sourceTextArea = document.getElementById("sourceTextArea")
             var outputTextArea = document.getElementById("outputTextArea")
@@ -16,25 +18,50 @@
             sourceTextArea.value = 
 
 `fn main() {
-    printf("Hello World!\\n")
+        printf("Hello World!\\n")
 }`
             
-            sourceTextArea.onkeydown = onTab  
+            sourceTextArea.onkeydown = onKey  
             runButton.onclick = onRun
 
             var Module = {'print': onPrint, 'printErr': onPrintErr}            
 
-            function onTab(e) 
+            function onKey(e) 
             {
+                var start = this.selectionStart
+                var end = this.selectionEnd                
+
                 if (e.key == 'Tab') 
                 {
                     e.preventDefault()
-                    var start = this.selectionStart
-                    var end = this.selectionEnd
-
-                    this.value = this.value.substring(0, start) + "    " + this.value.substring(end)
-                    this.selectionStart = this.selectionEnd = start + 4
+                    this.value = this.value.substring(0, start) + ' '.repeat(tabWidth) + this.value.substring(end)
+                    this.selectionStart = this.selectionEnd = start + tabWidth
                 }
+                else if (e.key == 'Enter')
+                {
+                    e.preventDefault()
+                    var indent = getLineIndent(start)              
+                    this.value = this.value.substring(0, start) + '\n' + ' '.repeat(indent) + this.value.substring(end)
+                    this.selectionStart = this.selectionEnd = start + 1 + indent
+                }
+                else if (e.key == '(')
+                {
+                    e.preventDefault()
+                    this.value = this.value.substring(0, start) + '()' + this.value.substring(end)
+                    this.selectionStart = this.selectionEnd = start + 1                    
+                }
+                else if (e.key == '[')
+                {
+                    e.preventDefault()
+                    this.value = this.value.substring(0, start) + '[]' + this.value.substring(end)
+                    this.selectionStart = this.selectionEnd = start + 1                    
+                }
+                else if (e.key == '{')
+                {
+                    e.preventDefault()
+                    this.value = this.value.substring(0, start) + '{}' + this.value.substring(end)
+                    this.selectionStart = this.selectionEnd = start + 1                    
+                }                                 
             }
 
             function onPrint(text)
@@ -68,16 +95,15 @@
                 var lines = sourceTextArea.value.split("\n")
 
                 var startPos = 0, endPos = sourceTextArea.value.length
-                for (var x = 0; x < lines.length; x++) 
+                for (var i = 0; i < lines.length; i++) 
                 {
-                    if (x == lineNum)
+                    if (i == lineNum)
                         break;
-                    startPos += lines[x].length + 1
+                    startPos += lines[i].length + 1
                 }
 
                 var endPos = lines[lineNum].length + startPos
 
-  
                 if (typeof(sourceTextArea.selectionStart) != "undefined") 
                 {
                     sourceTextArea.focus()
@@ -87,7 +113,25 @@
                 }
 
                 return false
-            }            
+            }
+
+            function getLineIndent(curPos)
+            {
+                var lineStart = sourceTextArea.value.substring(0, curPos).lastIndexOf('\n') + 1
+                var indent = 0
+
+                for (var i = lineStart; i < curPos; i++)
+                {
+                    if (sourceTextArea.value[i] == ' ')
+                        indent++
+                    else if (sourceTextArea.value[i] == '\t')
+                        indent += tabWidth
+                    else 
+                        break
+                }
+
+                return indent
+            }          
         </script>
 
         <script src="playground/umka.js"></script>
