@@ -4,9 +4,9 @@
         <p style="font-family:arial; font-size:24px">The Umka playground</p>
         <button id="runButton">Run</button>
         <br><br>
-        <textarea id="sourceTextArea" rows="20" cols="80"></textarea>
+        <textarea id="sourceTextArea" rows="20" style="width:100%; resize:vertical"></textarea>
         <br><br>
-        <textarea id="outputTextArea" rows="10" cols="80"></textarea>
+        <textarea id="outputTextArea" rows="10" style="width:100%; resize:vertical"></textarea>
 
         <script>
             var runButton = document.getElementById("runButton")
@@ -16,7 +16,7 @@
             sourceTextArea.value = 
 
 `fn main() {
-    printf("Hello World\\n")
+    printf("Hello World!\\n")
 }`
             
             sourceTextArea.onkeydown = onTab  
