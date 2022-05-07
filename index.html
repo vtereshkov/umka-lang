@@ -1,12 +1,14 @@
 <!DOCTYPE html>
 <html>
     <body>
-        <p style="font-family:arial; font-size:24px">The Umka playground</p>
+        <h2 style="font-family:arial">The Umka playground</h2>
+        <a href="https://github.com/vtereshkov/umka-lang" style="text-decoration: none; font-family:arial">Umka on GitHub</a>
+        <br><br>
         <button id="runButton">Run</button>
         <br><br>
-        <textarea id="sourceTextArea" rows="20" style="width:100%; resize:vertical"></textarea>
+        <textarea id="sourceTextArea" rows="20" style="width:100%; resize:vertical; background-color:LightYellow"></textarea>
         <br><br>
-        <textarea id="outputTextArea" rows="10" style="width:100%; resize:vertical" readonly></textarea>
+        <textarea id="outputTextArea" rows="10" style="width:100%; resize:vertical; background-color:WhiteSmoke" readonly></textarea>
 
         <script>
             const tabWidth = 8
@@ -61,7 +63,19 @@
                     e.preventDefault()
                     this.value = this.value.substring(0, start) + '{}' + this.value.substring(end)
                     this.selectionStart = this.selectionEnd = start + 1                    
-                }                                 
+                }
+                else if (e.key == '"')
+                {
+                    e.preventDefault()
+                    this.value = this.value.substring(0, start) + '""' + this.value.substring(end)
+                    this.selectionStart = this.selectionEnd = start + 1                    
+                }
+                else if (e.key == "'")
+                {
+                    e.preventDefault()
+                    this.value = this.value.substring(0, start) + "''" + this.value.substring(end)
+                    this.selectionStart = this.selectionEnd = start + 1                    
+                }
             }
 
             function onPrint(text)
