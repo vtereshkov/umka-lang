@@ -32,6 +32,24 @@ void doPushVarPtr(Compiler *comp, Ident *ident)
 }
 
 
+static void doPassParam(Compiler *comp, Type *formalParamType)
+{
+    // Process non-64-bit ordinal and real types
+    if ((typeOrdinal(formalParamType) || typeReal(formalParamType)) && typeSizeNoCheck(formalParamType) < typeSizeNoCheck(comp->intType))
+    {
+        genAssertRange(&comp->gen, formalParamType->kind);                      // Check overflow
+        genCallBuiltin(&comp->gen, formalParamType->kind, BUILTIN_NARROW);      // Convert 64-bit slot to narrower representation
+    }
+
+    // Increase parameter's reference count
+    genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, formalParamType);
+
+    // Copy structured parameter if passed by value
+    if (typeStructured(formalParamType))
+        genPushStruct(&comp->gen, typeSize(&comp->types, formalParamType));
+}
+
+
 static void doCopyResultToTempVar(Compiler *comp, Type *type)
 {
     IdentName tempName;
@@ -1100,22 +1118,9 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
 
                 doImplicitTypeConv(comp, formalParamType, &actualParamType, constant, false);
                 typeAssertCompatible(&comp->types, formalParamType, actualParamType, false);
-
-                // Process non-64-bit ordinal and real types
-                if ((typeOrdinal(formalParamType) || typeReal(formalParamType)) && typeSizeNoCheck(formalParamType) < typeSizeNoCheck(comp->intType))
-                {
-                    genAssertRange(&comp->gen, formalParamType->kind);                      // Check overflow
-                    genCallBuiltin(&comp->gen, formalParamType->kind, BUILTIN_NARROW);      // Convert 64-bit slot to narrower representation
-                }
             }
 
-            // Increase parameter's reference count
-            genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, formalParamType);
-
-            // Copy structured parameter if passed by value
-            if (typeStructured(formalParamType))
-                genPushStruct(&comp->gen, typeSize(&comp->types, formalParamType));
-
+            doPassParam(comp, formalParamType);
             numExplicitParams++;
             i++;
 
@@ -1145,13 +1150,7 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
         else
             parseDynArrayLiteral(comp, &formalParamType, constant);                     // Variadic parameter (empty dynamic array)
 
-        // Increase parameter's reference count
-        genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, formalParamType);
-
-        // Copy structured parameter if passed by value
-        if (typeStructured(formalParamType))
-            genPushStruct(&comp->gen, typeSize(&comp->types, formalParamType));
-
+        doPassParam(comp, formalParamType);
         i++;
     }
 
