@@ -84,10 +84,13 @@ fn getNextRune*(a: str, pos: int): Rune {
 }
 
 fn decode*(s: str): []Rune {
-    runes := make([]Rune, len(s))
-    runeCount := 0
-
     l := len(s)
+    runes := make([]Rune, l)
+    if l == 0 {
+        return runes
+    }
+    
+    runeCount := 0
     for i := 0; i < l; runeCount++ {
         runes[runeCount] = getNextRune(s, i)
         i += runes[runeCount].size()
