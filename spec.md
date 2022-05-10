@@ -1439,7 +1439,23 @@ Umka fiber stack slot.
 typedef void (*UmkaExternFunc)(UmkaStackSlot *params, UmkaStackSlot *result);
 ```
 
-Umka external function pointer. When an external C/C++ function is called from Umka, its parameters are stored in `params` in right-to-left order. 
+Umka external function pointer. When an external C/C++ function is called from Umka, its parameters are stored in `params` in right-to-left order.
+
+```
+typedef enum
+{
+    UMKA_HOOK_CALL,
+    UMKA_HOOK_RETURN,
+} UmkaHookEvent;
+```
+
+Umka debug hook event kind. A `UMKA_HOOK_CALL` hook is called after calling any Umka function, `UMKA_HOOK_RETURN` before returning from any Umka function.
+
+```
+typedef void (*UmkaHookFunc)(const char *fileName, const char *funcName, int line);
+```
+
+Umka debug hook function.
 
 ```
 #define UmkaDynArray(T) struct \
@@ -1546,6 +1562,12 @@ UMKA_API bool umkaGetCallStack(void *umka, int depth, int *offset, char *name, i
 ```
 
 Gets the Umka function `name` and entry point `offset` from the call stack at the specified call `depth`. If `depth` is zero, the current function information is retrieved. Here, `umka` is the interpreter instance handle and `size`  is the `name` buffer size, including the null character. Returns `true` on success.
+
+```
+UMKA_API void umkaSetHook(void *umka, UmkaHookEvent event, UmkaHookFunc hook);
+```
+
+Sets a debug hook function `hook` that will be called by the Umka virtual machine each time the `event` occurs.
 
 ```
 UMKA_API const char *umkaGetVersion(void);

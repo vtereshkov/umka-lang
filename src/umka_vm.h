@@ -192,6 +192,18 @@ typedef struct
 typedef void (*ExternFunc)(Slot *params, Slot *result);
 
 
+typedef enum
+{
+    HOOK_CALL,
+    HOOK_RETURN,
+
+    NUM_HOOKS
+} HookEvent;
+
+
+typedef void (*HookFunc)(const char *fileName, const char *funcName, int line);
+
+
 typedef struct
 {
     // Must have 8 byte alignment
@@ -210,6 +222,7 @@ typedef struct
     Fiber *fiber, *mainFiber;
     HeapPages pages;
     RefCntChangeCandidates refCntChangeCandidates;
+    HookFunc hooks[NUM_HOOKS];
     Error *error;
 } VM;
 
@@ -220,6 +233,7 @@ void vmReset(VM *vm, Instruction *code);
 void vmRun(VM *vm, int entryOffset, int numParamSlots, Slot *params, Slot *result);
 int vmAsm(int ip, Instruction *code, char *buf, int size);
 bool vmUnwindCallStack(VM *vm, Slot **base, int *ip);
+void vmSetHook(VM *vm, HookEvent event, HookFunc hook);
 const char *vmBuiltinSpelling(BuiltinFunc builtin);
 
 #endif // UMKA_VM_H_INCLUDED

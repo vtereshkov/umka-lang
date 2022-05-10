@@ -44,6 +44,16 @@ typedef union
 typedef void (*UmkaExternFunc)(UmkaStackSlot *params, UmkaStackSlot *result);
 
 
+typedef enum
+{
+    UMKA_HOOK_CALL,
+    UMKA_HOOK_RETURN,
+} UmkaHookEvent;
+
+
+typedef void (*UmkaHookFunc)(const char *fileName, const char *funcName, int line);
+
+
 #define UmkaDynArray(T) struct \
 { \
     void *internal; \
@@ -80,6 +90,7 @@ UMKA_API void umkaAddModule         (void *umka, const char *fileName, const cha
 UMKA_API void umkaAddFunc           (void *umka, const char *name, UmkaExternFunc entry);
 UMKA_API int  umkaGetFunc           (void *umka, const char *moduleName, const char *funcName);
 UMKA_API bool umkaGetCallStack      (void *umka, int depth, int *offset, char *name, int size);
+UMKA_API void umkaSetHook           (void *umka, UmkaHookEvent event, UmkaHookFunc hook);
 UMKA_API const char *umkaGetVersion (void);
 
 

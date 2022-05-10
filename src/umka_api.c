@@ -178,6 +178,13 @@ UMKA_API bool umkaGetCallStack(void *umka, int depth, int *offset, char *name, i
 }
 
 
+UMKA_API void umkaSetHook(void *umka, UmkaHookEvent event, UmkaHookFunc hook)
+{
+    Compiler *comp = umka;
+    vmSetHook(&comp->vm, event, hook);
+}
+
+
 UMKA_API const char *umkaGetVersion(void)
 {
     if (sizeof(void *) == 8)

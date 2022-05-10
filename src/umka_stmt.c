@@ -1,5 +1,6 @@
 #define __USE_MINGW_ANSI_STDIO 1
 
+#include <stdio.h>
 #include <string.h>
 
 #include "umka_stmt.h"
@@ -844,9 +845,24 @@ void parseFnBlock(Compiler *comp, Ident *fn)
     blocksEnter(&comp->blocks, fn);
 
     char *prevDebugFnName = comp->lex.debug->fnName;
-    comp->lex.debug->fnName = "<unknown>";
+
     if (fn && fn->kind == IDENT_CONST && fn->type->kind == TYPE_FN && fn->block == 0)
-        comp->lex.debug->fnName = fn->name;
+    {
+        if (fn->type->sig.method)
+        {
+            char typeBuf[DEFAULT_STR_LEN + 1];
+            typeSpelling(fn->type->sig.param[0]->type, typeBuf);
+
+            char *buf = storageAdd(&comp->storage, DEFAULT_STR_LEN + 1);
+            snprintf(buf, DEFAULT_STR_LEN + 1, "%s.%s", typeBuf, fn->name);
+            
+            comp->lex.debug->fnName = buf;
+        }
+        else
+            comp->lex.debug->fnName = fn->name;
+    }
+    else
+        comp->lex.debug->fnName = "<unknown>";
 
     if (fn->prototypeOffset >= 0)
     {

@@ -95,6 +95,7 @@ static const char *builtinSpelling [] =
     "sizeofself",
     "selfhasptr",
     "selftypeeq",
+    "valid",
     "fiberspawn",
     "fibercall",
     "fiberalive",
@@ -423,9 +424,11 @@ void vmInit(VM *vm, int stackSize, Error *error)
     vm->fiber->stackSize = stackSize;
     vm->fiber->refCntChangeCandidates = &vm->refCntChangeCandidates;
     vm->fiber->alive = true;
+
     pageInit(&vm->pages);
     candidateInit(&vm->refCntChangeCandidates);
 
+    memset(&vm->hooks, 0, sizeof(vm->hooks));
     vm->error = error;
 }
 
@@ -445,6 +448,16 @@ void vmReset(VM *vm, Instruction *code)
     vm->fiber->code = code;
     vm->fiber->ip = 0;
     vm->fiber->top = vm->fiber->base = vm->fiber->stack + vm->fiber->stackSize - 1;
+}
+
+
+static FORCE_INLINE void doHook(Fiber *fiber, HookFunc *hooks, HookEvent event)
+{
+    if (!hooks || !hooks[event])
+        return;
+
+    const DebugInfo *debug = &fiber->code[fiber->ip].debug;
+    hooks[event](debug->fileName, debug->fnName, debug->line);
 }
 
 
@@ -2168,7 +2181,7 @@ static FORCE_INLINE void doReturn(Fiber *fiber, Fiber **newFiber)
 }
 
 
-static FORCE_INLINE void doEnterFrame(Fiber *fiber, HeapPages *pages, Error *error)
+static FORCE_INLINE void doEnterFrame(Fiber *fiber, HeapPages *pages, HookFunc *hooks, Error *error)
 {
     int localVarSlots = fiber->code[fiber->ip].operand.int32Val[0];
     int paramSlots    = fiber->code[fiber->ip].operand.int32Val[1];
@@ -2207,12 +2220,18 @@ static FORCE_INLINE void doEnterFrame(Fiber *fiber, HeapPages *pages, Error *err
     *(--fiber->top) = fiber->reg[VM_REG_IO_FORMAT];
     *(--fiber->top) = fiber->reg[VM_REG_IO_COUNT];
 
+    // Call 'call' hook, if any
+    doHook(fiber, hooks, HOOK_CALL);
+
     fiber->ip++;
 }
 
 
-static FORCE_INLINE void doLeaveFrame(Fiber *fiber, HeapPages *pages, Error *error)
+static FORCE_INLINE void doLeaveFrame(Fiber *fiber, HeapPages *pages, HookFunc *hooks, Error *error)
 {
+    // Call 'return' hook, if any
+    doHook(fiber, hooks, HOOK_RETURN);
+
     // Pop I/O registers
     fiber->reg[VM_REG_IO_COUNT]  = *(fiber->top++);
     fiber->reg[VM_REG_IO_FORMAT] = *(fiber->top++);
@@ -2248,6 +2267,7 @@ static FORCE_INLINE void vmLoop(VM *vm)
 {
     Fiber *fiber = vm->fiber;
     HeapPages *pages = &vm->pages;
+    HookFunc *hooks = vm->hooks;
     Error *error = vm->error;
 
     while (1)
@@ -2311,8 +2331,8 @@ static FORCE_INLINE void vmLoop(VM *vm)
 
                 break;
             }
-            case OP_ENTER_FRAME:                    doEnterFrame(fiber, pages, error);            break;
-            case OP_LEAVE_FRAME:                    doLeaveFrame(fiber, pages, error);            break;
+            case OP_ENTER_FRAME:                    doEnterFrame(fiber, pages, hooks, error);     break;
+            case OP_LEAVE_FRAME:                    doLeaveFrame(fiber, pages, hooks, error);     break;
             case OP_HALT:                           return;
 
             default: error->handlerRuntime(error->context, "Illegal instruction"); return;
@@ -2430,5 +2450,11 @@ bool vmUnwindCallStack(VM *vm, Slot **base, int *ip)
     *base = (Slot *)((*base)->ptrVal);
     *ip = returnOffset;
     return true;
+}
+
+
+void vmSetHook(VM *vm, HookEvent event, HookFunc hook)
+{
+    vm->hooks[event] = hook;
 }
 
