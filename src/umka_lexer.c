@@ -707,7 +707,7 @@ static int lexStrLiteralAndGetSize(Lexer *lex)
 
     while (ch != '\"' || escaped)
     {
-        if (ch == '\n' && !escaped)
+        if (ch == 0 || (ch == '\n' && !escaped))
         {
             lex->error->handler(lex->error->context, "Unterminated string");
             lex->tok.kind = TOK_NONE;
