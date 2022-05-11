@@ -61,6 +61,7 @@ int    identAllocStack    (Idents *idents, Types *types, Blocks *blocks, Type *t
 Ident *identAllocVar      (Idents *idents, Types *types, Modules *modules, Blocks *blocks, const char *name, Type *type, bool exported);
 Ident *identAllocParam    (Idents *idents, Types *types, Modules *modules, Blocks *blocks, Signature *sig, int index);
 
-char *identTempVarName    (Idents *idents, char *buf);
+char *identTempVarName      (Idents *idents, char *buf);
+char *identMethodNameWithRcv(Ident *method, char *buf, int size);
 
 #endif // UMKA_IDENT_H_INCLUDED

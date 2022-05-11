@@ -276,3 +276,13 @@ char *identTempVarName(Idents *idents, char *buf)
     return buf;
 }
 
+
+char *identMethodNameWithRcv(Ident *method, char *buf, int size)
+{
+    char typeBuf[DEFAULT_STR_LEN + 1];
+    typeSpelling(method->type->sig.param[0]->type, typeBuf);
+    snprintf(buf, size, "%s.%s", typeBuf, method->name);
+    return buf;
+}
+
+

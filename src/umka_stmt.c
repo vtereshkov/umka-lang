@@ -850,13 +850,8 @@ void parseFnBlock(Compiler *comp, Ident *fn)
     {
         if (fn->type->sig.method)
         {
-            char typeBuf[DEFAULT_STR_LEN + 1];
-            typeSpelling(fn->type->sig.param[0]->type, typeBuf);
-
-            char *buf = storageAdd(&comp->storage, DEFAULT_STR_LEN + 1);
-            snprintf(buf, DEFAULT_STR_LEN + 1, "%s.%s", typeBuf, fn->name);
-            
-            comp->lex.debug->fnName = buf;
+            comp->lex.debug->fnName = storageAdd(&comp->storage, DEFAULT_STR_LEN + 1);
+            identMethodNameWithRcv(fn, comp->lex.debug->fnName, DEFAULT_STR_LEN + 1);
         }
         else
             comp->lex.debug->fnName = fn->name;
