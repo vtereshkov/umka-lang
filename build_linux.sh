@@ -31,6 +31,6 @@ mv src/libumka.* src/umka umka_linux/ &&
 cp src/umka_api.h Umka.sublime-syntax spec.md LICENSE umka_linux/ &&
 
 cp examples/* umka_linux/examples -r &&
-cp import/[!embed]* umka_linux/import &&
+cp import/*.um umka_linux/import &&
 
 echo Build successful
