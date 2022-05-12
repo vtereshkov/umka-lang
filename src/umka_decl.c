@@ -661,9 +661,9 @@ static void parseDecls(Compiler *comp)
     while (1)
     {
         parseDecl(comp);
-        if (comp->lex.tok.kind != TOK_SEMICOLON)
+        if (comp->lex.tok.kind == TOK_EOF)
             break;
-        lexNext(&comp->lex);
+        lexEat(&comp->lex, TOK_SEMICOLON);
     }
 }
 
