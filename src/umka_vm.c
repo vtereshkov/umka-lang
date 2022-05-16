@@ -1274,7 +1274,7 @@ static FORCE_INLINE void doBuiltinDelete(Fiber *fiber, HeapPages *pages, Error *
         error->handlerRuntime(error->context, "Dynamic array is null");
 
     if (index < 0 || index > array->len - 1)
-        error->handlerRuntime(error->context, "Index %d is out of range 0...%d", index, array->len - 1);
+        error->handlerRuntime(error->context, "Index %lld is out of range 0...%lld", index, array->len - 1);
 
     result->type     = array->type;
     result->len      = array->len - 1;
@@ -1332,11 +1332,11 @@ static FORCE_INLINE void doBuiltinSlice(Fiber *fiber, HeapPages *pages, Error *e
     if (endIndex < 0)
         endIndex += len;
 
-    if (startIndex < 0 || startIndex > len - 1)
-        error->handlerRuntime(error->context, "Index %d is out of range 0...%d", startIndex, len - 1);
+    if (startIndex < 0)
+        error->handlerRuntime(error->context, "Index %lld is out of range 0...%lld", startIndex, len);
 
     if (endIndex < startIndex || endIndex > len)
-        error->handlerRuntime(error->context, "Index %d is out of range %d...%d", endIndex, startIndex, len);
+        error->handlerRuntime(error->context, "Index %lld is out of range %lld...%lld", endIndex, startIndex, len);
 
     if (result)
     {

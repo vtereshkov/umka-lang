@@ -88,6 +88,7 @@ Slicing...
 { "Hallo Welt" "Salut le Monde" "Privet Mir" } 
 { "Salut le Monde" "Privet Mir" } 
 { "Privet Mir" } 
+{ } 
 
 { "Hallo Welt" } 
 { "Hallo Welt" "Salut le Monde" } 
@@ -104,6 +105,7 @@ Slicing...
 { "Hallo Welt" "Salut le Monde" "Privet Mir" } 
 { "Salut le Monde" "Privet Mir" } 
 { "Privet Mir" } 
+{ } 
 
 { } 
 
