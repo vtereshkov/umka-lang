@@ -678,7 +678,12 @@ static void parseImportItem(Compiler *comp)
     snprintf(path, DEFAULT_STR_LEN + 1, "%s%s", modulePathIsAbsolute(comp->lex.tok.strVal) ? "" : folder, comp->lex.tok.strVal);
 
     int importedModule = moduleFindByPath(&comp->modules, path);
-    if (importedModule < 0)
+    if (importedModule >= 0)
+    {
+        if (comp->blocks.module == importedModule || comp->modules.module[comp->blocks.module]->imports[importedModule])
+            comp->error.handler(comp->error.context, "Duplicate import of %s", comp->modules.module[importedModule]->name);
+    }
+    else
     {
         // Module source strings, if any, have precedence over files
         char *sourceString = moduleFindSourceByPath(&comp->modules, path);
