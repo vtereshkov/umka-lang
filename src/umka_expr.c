@@ -855,7 +855,8 @@ static void parseBuiltinSizeofCall(Compiler *comp, Type **type, Const *constant)
     if (!(*type))
     {
         parseExpr(comp, type, constant);
-        genPop(&comp->gen);
+        if ((*type)->kind != TYPE_VOID)
+            genPop(&comp->gen);
     }
 
     int size = typeSize(&comp->types, *type);
@@ -989,6 +990,9 @@ static void parseBuiltinReprCall(Compiler *comp, Type **type, Const *constant)
         comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
 
     parseExpr(comp, type, constant);
+    if ((*type)->kind == TYPE_VOID)
+        comp->error.handler(comp->error.context, "Incompatible type in repr()");
+
     genPushGlobalPtr(&comp->gen, *type);
 
     genCallBuiltin(&comp->gen, TYPE_STR, BUILTIN_REPR);
