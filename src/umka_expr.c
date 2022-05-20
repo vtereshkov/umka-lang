@@ -86,6 +86,20 @@ static void doEscapeToHeap(Compiler *comp, Type *ptrType, bool useRefCnt)
 }
 
 
+static void doOrdinalToOrdinalConv(Compiler *comp, Type *dest, Type **src, Const *constant)
+{
+    if (constant)
+    {
+        if (typeOverflow(dest->kind, *constant))
+            comp->error.handler(comp->error.context, "Overflow of %s", typeKindSpelling(dest->kind));
+    }
+    else
+        genAssertRange(&comp->gen, dest->kind);
+
+    *src = dest;
+}
+
+
 static void doIntToRealConv(Compiler *comp, Type *dest, Type **src, Const *constant, bool lhs)
 {
     BuiltinFunc builtin = lhs ? BUILTIN_REAL_LHS : BUILTIN_REAL;
@@ -440,6 +454,12 @@ static void doExplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *co
     if (typeEquivalentExceptIdent(dest, *src))
     {
         *src = dest;
+    }
+
+    // Ordinal to ordinal
+    else if (typeOrdinal(*src) && typeOrdinal(dest))
+    {
+        doOrdinalToOrdinalConv(comp, dest, src, constant);
     }
 
     // Interface to concrete (type assertion)
