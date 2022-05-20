@@ -375,7 +375,7 @@ If a value `s` of type `S` is given where a value `t` of some other type `T` is 
 
 If a value `s` of type `S` is given where a value `t` of some other type `T` is expected, the `s` can be explicitly converted (cast) to `t` if
 
-* `S` can be implicitly converted to `T`
+* `S` can be implicitly converted to `T`, possibly except the type name
 * `S` and `T` are ordinal types
 * `S` and `T` are pointer types and either `T` is `^void` or  `sizeof(s^) >= sizeof(t^)` and both `S` and `T` don't contain pointers
 * `S` is an interface type and `T` is a type (or a pointer to a type) that was actually converted to `S`

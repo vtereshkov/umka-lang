@@ -274,7 +274,7 @@ bool typeGarbageCollected(Type *type)
 }
 
 
-static bool typeEquivalentRecursive(Type *left, Type *right, VisitedTypePair *firstPair)
+static bool typeEquivalentRecursive(Type *left, Type *right, bool checkTypeIdents, VisitedTypePair *firstPair)
 {
     // Recursively defined types visited before (need to check first in order to break a possible circular definition)
     VisitedTypePair *pair = firstPair;
@@ -291,14 +291,14 @@ static bool typeEquivalentRecursive(Type *left, Type *right, VisitedTypePair *fi
         return true;
 
     // Identically named types
-    if (left->typeIdent && right->typeIdent)
+    if (checkTypeIdents && left->typeIdent && right->typeIdent)
         return left->typeIdent == right->typeIdent && left->block == right->block;
 
     if (left->kind == right->kind)
     {
         // Pointers or weak pointers
         if (left->kind == TYPE_PTR || left->kind == TYPE_WEAKPTR)
-            return typeEquivalentRecursive(left->base, right->base, &newPair);
+            return typeEquivalentRecursive(left->base, right->base, checkTypeIdents, &newPair);
 
         // Arrays
         else if (left->kind == TYPE_ARRAY)
@@ -307,12 +307,12 @@ static bool typeEquivalentRecursive(Type *left, Type *right, VisitedTypePair *fi
             if (left->numItems != right->numItems)
                 return false;
 
-            return typeEquivalentRecursive(left->base, right->base, &newPair);
+            return typeEquivalentRecursive(left->base, right->base, checkTypeIdents, &newPair);
         }
 
         // Dynamic arrays
         else if (left->kind == TYPE_DYNARRAY)
-            return typeEquivalentRecursive(left->base, right->base, &newPair);
+            return typeEquivalentRecursive(left->base, right->base, checkTypeIdents, &newPair);
 
         // Strings
         else if (left->kind == TYPE_STR)
@@ -333,7 +333,7 @@ static bool typeEquivalentRecursive(Type *left, Type *right, VisitedTypePair *fi
                     return false;
 
                 // Type
-                if (!typeEquivalentRecursive(left->field[i]->type, right->field[i]->type, &newPair))
+                if (!typeEquivalentRecursive(left->field[i]->type, right->field[i]->type, checkTypeIdents, &newPair))
                     return false;
             }
             return true;
@@ -355,7 +355,7 @@ static bool typeEquivalentRecursive(Type *left, Type *right, VisitedTypePair *fi
             for (int i = iStart; i < left->sig.numParams; i++)
             {
                 // Type
-                if (!typeEquivalentRecursive(left->sig.param[i]->type, right->sig.param[i]->type, &newPair))
+                if (!typeEquivalentRecursive(left->sig.param[i]->type, right->sig.param[i]->type, checkTypeIdents, &newPair))
                     return false;
 
                 // Default value
@@ -364,7 +364,7 @@ static bool typeEquivalentRecursive(Type *left, Type *right, VisitedTypePair *fi
             }
 
             // Result type
-            if (!typeEquivalentRecursive(left->sig.resultType, right->sig.resultType, &newPair))
+            if (!typeEquivalentRecursive(left->sig.resultType, right->sig.resultType, checkTypeIdents, &newPair))
                 return false;
 
             return true;
@@ -380,7 +380,13 @@ static bool typeEquivalentRecursive(Type *left, Type *right, VisitedTypePair *fi
 
 bool typeEquivalent(Type *left, Type *right)
 {
-    return typeEquivalentRecursive(left, right, NULL);
+    return typeEquivalentRecursive(left, right, true, NULL);
+}
+
+
+bool typeEquivalentExceptIdent(Type *left, Type *right)
+{
+    return typeEquivalentRecursive(left, right, false, NULL);
 }
 
 

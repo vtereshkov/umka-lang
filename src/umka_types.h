@@ -147,12 +147,6 @@ static inline bool typeOrdinal(Type *type)
 }
 
 
-static inline bool typeCastable(Type *type)
-{
-    return typeOrdinal(type);
-}
-
-
 static inline bool typeKindReal(TypeKind typeKind)
 {
     return typeKind == TYPE_REAL32 || typeKind == TYPE_REAL;
@@ -202,10 +196,11 @@ static inline bool typeFiberFunc(Type *type)
 }
 
 
-bool typeEquivalent         (Type *left, Type *right);
-void typeAssertEquivalent   (Types *types, Type *left, Type *right);
-bool typeCompatible         (Type *left, Type *right, bool symmetric);
-void typeAssertCompatible   (Types *types, Type *left, Type *right, bool symmetric);
+bool typeEquivalent           (Type *left, Type *right);
+bool typeEquivalentExceptIdent(Type *left, Type *right);
+void typeAssertEquivalent     (Types *types, Type *left, Type *right);
+bool typeCompatible           (Type *left, Type *right, bool symmetric);
+void typeAssertCompatible     (Types *types, Type *left, Type *right, bool symmetric);
 
 
 static inline bool typeCompatibleRcv(Type *left, Type *right)

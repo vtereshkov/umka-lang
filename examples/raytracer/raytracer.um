@@ -9,13 +9,15 @@ fn randn(): mat.Vec {
     return mat.Vec{std.frand() - 0.5, std.frand() - 0.5, std.frand() - 0.5}
 }
 
+type Color = mat.Vec
+
 type Ray = struct {
     origin, dir: mat.Vec
 }
 
 type GenericBody = struct {
     center:      mat.Vec
-    color:       mat.Vec
+    color:       Color
     diffuseness: real
     isLamp:      bool
 }
@@ -94,11 +96,11 @@ fn (s: ^Sphere) intersect(ray: ^Ray, point, normal: ^mat.Vec): bool {
 }
 
 type Scene = struct {
-    ambientColor: mat.Vec
+    ambientColor: Color
     body:         []Body
 }
 
-fn (sc: ^Scene) trace(ray: ^Ray, depth: int): mat.Vec {
+fn (sc: ^Scene) trace(ray: ^Ray, depth: int): Color {
     if depth > 3 {
         return sc.ambientColor
     }
@@ -140,7 +142,7 @@ fn (sc: ^Scene) trace(ray: ^Ray, depth: int): mat.Vec {
 
         diffuseRay := Ray{bestPoint, diffuseDir}
 
-        return sc.trace(&diffuseRay, depth + 1).mul(bestBody.lambertFactor(lambert)).elementwise(bestBody.color)
+        return Color(mat.Vec(sc.trace(&diffuseRay, depth + 1)).mul(bestBody.lambertFactor(lambert)).elementwise(mat.Vec(bestBody.color)))
     }
 
     return sc.ambientColor
@@ -172,14 +174,14 @@ fn render(parent: fiber, buf: ^RenderData) {
                  dir[1],
                 -dir[0]*sinAz + dir[2]*cosAz}
 
-            color := mat.Vec{0, 0, 0}
+            color := Color{0, 0, 0}
 
             for r := 0; r < buf.rays; r++ {
                 randomDir := rotDir.add(randn().mul(buf.antialiasing))
                 ray := Ray{buf.pos, randomDir.normalize()}
-                color = color.add(buf.scene.trace(&ray, 0))
+                color = Color(mat.Vec(color).add(mat.Vec(buf.scene.trace(&ray, 0))))
             }
-            color = color.mul(255.0 / buf.rays)
+            color = Color(mat.Vec(color).mul(255.0 / buf.rays))
             
             buf.pixels[i][j] = [3]uint8 {round(color[0]), round(color[1]), round(color[2])}
         }
@@ -194,7 +196,7 @@ fn main() {
         Box {
             body: GenericBody {
                 center: mat.Vec{500, -100, 1200},
-                color: mat.Vec{0.4, 0.7, 1.0},
+                color: Color{0.4, 0.7, 1.0},
                 diffuseness: 0.1,
                 isLamp: false},
             halfsize: mat.Vec{400 / 2.0, 600 / 2.0, 300 / 2.0}},
@@ -202,7 +204,7 @@ fn main() {
         Box {
             body: GenericBody {
                 center: mat.Vec{550, 210, 1100},
-                color: mat.Vec{0.9, 1.0, 0.6},
+                color: Color{0.9, 1.0, 0.6},
                 diffuseness: 0.3,
                 isLamp: false},
             halfsize: mat.Vec{1000 / 2.0, 20 / 2.0, 1000 / 2.0}},            
@@ -210,7 +212,7 @@ fn main() {
         Sphere {
             body: GenericBody{
                 center: mat.Vec{600, 0, 700},
-                color: mat.Vec{1.0, 0.4, 0.6},
+                color: Color{1.0, 0.4, 0.6},
                 diffuseness: 0.2,
                 isLamp: false},
             radius: 200},
@@ -218,7 +220,7 @@ fn main() {
         Sphere {
             body: GenericBody{
                 center: mat.Vec{330, 150, 700},
-                color: mat.Vec{1.0, 1.0, 0.3},
+                color: Color{1.0, 1.0, 0.3},
                 diffuseness: 0.15,
                 isLamp: false},
             radius: 50},
@@ -227,12 +229,12 @@ fn main() {
         Sphere {
             body: GenericBody{
                 center: mat.Vec{500, -1000, -700},
-                color: mat.Vec{1.0, 1.0, 1.0},
+                color: Color{1.0, 1.0, 1.0},
                 diffuseness: 1.0,
                 isLamp: true},
             radius: 800}}
             
-    scene := Scene{mat.Vec{0.2, 0.2, 0.2}, body}
+    scene := Scene{Color{0.2, 0.2, 0.2}, body}
     
     var pixels: [height][width][3]uint8            
 

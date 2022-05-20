@@ -432,12 +432,18 @@ void doImplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant,
 }
 
 
-void doExplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant, bool lhs)
+static void doExplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant, bool lhs)
 {
     doImplicitTypeConv(comp, dest, src, constant, lhs);
 
+    // Type to equivalent type (up to the type identifier)
+    if (typeEquivalentExceptIdent(dest, *src))
+    {
+        *src = dest;
+    }
+
     // Interface to concrete (type assertion)
-    if ((*src)->kind == TYPE_INTERFACE && dest->kind != TYPE_INTERFACE)
+    else if ((*src)->kind == TYPE_INTERFACE && dest->kind != TYPE_INTERFACE)
     {
         if (dest->kind == TYPE_PTR)
         {
@@ -1247,10 +1253,12 @@ static void parseTypeCast(Compiler *comp, Type **type, Const *constant)
     parseExpr(comp, &originalType, constant);
     doExplicitTypeConv(comp, *type, &originalType, constant, false);
 
-    if (!typeEquivalent(*type, originalType)                 &&
-        !(typeCastable(*type) && typeCastable(originalType)) &&
-        !typeCastablePtrs(&comp->types, *type, originalType))
-            comp->error.handler(comp->error.context, "Invalid type cast");
+    const bool ok = typeEquivalent(*type, originalType)              ||
+                   (typeOrdinal(*type) && typeOrdinal(originalType)) ||
+                    typeCastablePtrs(&comp->types, *type, originalType);
+
+    if (!ok)
+        comp->error.handler(comp->error.context, "Invalid type cast");
 
     lexEat(&comp->lex, TOK_RPAR);
 }
