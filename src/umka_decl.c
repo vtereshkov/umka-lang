@@ -172,21 +172,26 @@ static void parseSignature(Compiler *comp, Signature *sig)
         if (comp->lex.tok.kind == TOK_LPAR)
         {
             // Result type list (syntactic sugar - actually a structure type)
-            sig->resultType = typeAdd(&comp->types, &comp->blocks, TYPE_STRUCT);
-            sig->resultType->isExprList = true;
+            Type *listType = typeAdd(&comp->types, &comp->blocks, TYPE_STRUCT);
+            listType->isExprList = true;
 
             lexNext(&comp->lex);
 
             while (1)
             {
                 Type *fieldType = parseType(comp, NULL);
-                typeAddField(&comp->types, sig->resultType, fieldType, NULL);
+                typeAddField(&comp->types, listType, fieldType, NULL);
 
                 if (comp->lex.tok.kind != TOK_COMMA)
                     break;
                 lexNext(&comp->lex);
             }
             lexEat(&comp->lex, TOK_RPAR);
+
+            if (listType->numItems == 1)
+                sig->resultType = listType->field[0]->type;
+            else
+                sig->resultType = listType;
         }
         else
             // Single result type
