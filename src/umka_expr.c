@@ -462,6 +462,12 @@ static void doExplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *co
         doOrdinalToOrdinalConv(comp, dest, src, constant);
     }
 
+    // Pointer to pointer
+    else if (typeCastablePtrs(&comp->types, dest, *src))
+    {
+        *src = dest;
+    }
+
     // Interface to concrete (type assertion)
     else if ((*src)->kind == TYPE_INTERFACE && dest->kind != TYPE_INTERFACE)
     {
@@ -1273,11 +1279,7 @@ static void parseTypeCast(Compiler *comp, Type **type, Const *constant)
     parseExpr(comp, &originalType, constant);
     doExplicitTypeConv(comp, *type, &originalType, constant, false);
 
-    const bool ok = typeEquivalent(*type, originalType)              ||
-                   (typeOrdinal(*type) && typeOrdinal(originalType)) ||
-                    typeCastablePtrs(&comp->types, *type, originalType);
-
-    if (!ok)
+    if (!typeEquivalent(*type, originalType))
         comp->error.handler(comp->error.context, "Invalid type cast");
 
     lexEat(&comp->lex, TOK_RPAR);
