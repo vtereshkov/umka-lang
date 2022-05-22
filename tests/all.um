@@ -20,6 +20,7 @@ import (
     "weakptr.um"
     "byteconv.um"
     "utf8test.um"
+    "imports.um"
     "closures.um"
     "nullstr.um"
     "vararg.um"
@@ -47,6 +48,7 @@ fn main() {
     printf("\n\n>>> Weak pointers\n\n");            weakptr.test()
     printf("\n\n>>> Byte conversions\n\n");         byteconv.test()
     printf("\n\n>>> UTF-8\n\n");                    utf8test.test()
+    printf("\n\n>>> Import disambiguation\n\n");    imports.test()
     printf("\n\n>>> Simulated closures\n\n");       closures.test()
     printf("\n\n>>> Null strings\n\n");             nullstr.test()
     printf("\n\n>>> Variadic functions\n\n");       vararg.test()

@@ -223,7 +223,7 @@ static Type *parsePtrType(Compiler *comp)
     bool forward = false;
     if (comp->lex.tok.kind == TOK_IDENT)
     {
-        int module = moduleFind(&comp->modules, comp->lex.tok.name);
+        int module = moduleFindImported(&comp->modules, &comp->blocks, comp->lex.tok.name);
         if (module < 0)
         {
             Ident *ident = identFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, comp->lex.tok.name, NULL);
@@ -678,21 +678,27 @@ static void parseImportItem(Compiler *comp)
 {
     lexCheck(&comp->lex, TOK_STRLITERAL);
 
-    char path[DEFAULT_STR_LEN + 1];
-    char *folder = comp->modules.module[comp->blocks.module]->folder;
-    snprintf(path, DEFAULT_STR_LEN + 1, "%s%s", modulePathIsAbsolute(comp->lex.tok.strVal) ? "" : folder, comp->lex.tok.strVal);
+    char filePath[DEFAULT_STR_LEN + 1] = "";
+    moduleAssertRegularizePath(&comp->modules, comp->lex.tok.strVal, comp->modules.module[comp->blocks.module]->folder, filePath, DEFAULT_STR_LEN + 1);
 
-    int importedModule = moduleFindByPath(&comp->modules, path);
-    if (importedModule >= 0)
-    {
-        if (comp->blocks.module == importedModule || comp->modules.module[comp->blocks.module]->imports[importedModule])
-            comp->error.handler(comp->error.context, "Duplicate import of %s", comp->modules.module[importedModule]->name);
-    }
-    else
-    {
-        // Module source strings, if any, have precedence over files
-        char *sourceString = moduleFindSourceByPath(&comp->modules, path);
+    char sourcePath[DEFAULT_STR_LEN + 1] = "";
+    moduleAssertRegularizePath(&comp->modules, comp->lex.tok.strVal, comp->modules.curFolder, sourcePath, DEFAULT_STR_LEN + 1);
 
+    // Module source strings, if any, have precedence over files
+    char *sourceString = moduleFindSource(&comp->modules, sourcePath);
+    char *path = sourceString ? sourcePath : filePath;
+
+    char folder[DEFAULT_STR_LEN + 1] = "";
+    char name  [DEFAULT_STR_LEN + 1] = "";
+
+    moduleNameFromPath(&comp->modules, path, folder, name, DEFAULT_STR_LEN + 1);
+
+    if (moduleFindImported(&comp->modules, &comp->blocks, name) >= 0)
+        comp->modules.error->handler(comp->modules.error->context, "Ambiguous module name %s", name);
+
+    int importedModule = moduleFind(&comp->modules, path);
+    if (importedModule < 0)
+    {
         // Save context
         int currentModule       = comp->blocks.module;
         DebugInfo currentDebug  = comp->debug;

@@ -535,8 +535,8 @@ void doApplyOperator(Compiler *comp, Type **type, Type **rightType, Const *const
 Ident *parseQualIdent(Compiler *comp)
 {
     lexCheck(&comp->lex, TOK_IDENT);
-    int module = moduleFind(&comp->modules, comp->lex.tok.name);
-    if (module >= 0 && (comp->blocks.module == module || comp->modules.module[comp->blocks.module]->imports[module]))
+    int module = moduleFindImported(&comp->modules, &comp->blocks, comp->lex.tok.name);
+    if (module >= 0)
     {
         if (identFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, comp->lex.tok.name, NULL))
             comp->error.handler(comp->error.context, "Conflict between module %s and identifier %s", comp->lex.tok.name, comp->lex.tok.name);

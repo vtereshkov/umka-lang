@@ -137,7 +137,10 @@ void compilerInit(Compiler *comp, const char *fileName, const char *sourceString
     constInit    (&comp->consts, &comp->error);
     genInit      (&comp->gen, &comp->debug, &comp->error);
     vmInit       (&comp->vm, stackSize, &comp->error);
-    lexInit      (&comp->lex, &comp->storage, &comp->debug, fileName, sourceString, &comp->error);
+
+    char filePath[DEFAULT_STR_LEN + 1] = "";
+    moduleAssertRegularizePath(&comp->modules, fileName, comp->modules.curFolder, filePath, DEFAULT_STR_LEN + 1);
+    lexInit(&comp->lex, &comp->storage, &comp->debug, filePath, sourceString, &comp->error);
 
     if (locale && !setlocale(LC_ALL, locale))
         comp->error.handler(comp->error.context, "Cannot set locale");
@@ -163,7 +166,9 @@ void compilerInit(Compiler *comp, const char *fileName, const char *sourceString
     *(int64_t *)(rtlargc->ptr) = comp->argc;
     *(void *  *)(rtlargv->ptr) = comp->argv;
 
-    moduleAddSource(&comp->modules, "std.um", rtlSrc);
+    char rtlPath[DEFAULT_STR_LEN + 1] = "";
+    moduleAssertRegularizePath(&comp->modules, "std.um", comp->modules.curFolder, rtlPath, DEFAULT_STR_LEN + 1);
+    moduleAddSource(&comp->modules, rtlPath, rtlSrc);
 }
 
 
@@ -212,7 +217,11 @@ int compilerGetFunc(Compiler *comp, const char *moduleName, const char *funcName
 {
     int module = 1;
     if (moduleName)
-        module = moduleFindByPath(&comp->modules, moduleName);
+    {
+        char modulePath[DEFAULT_STR_LEN + 1] = "";
+        moduleAssertRegularizePath(&comp->modules, moduleName, comp->modules.curFolder, modulePath, DEFAULT_STR_LEN + 1);
+        module = moduleFind(&comp->modules, modulePath);
+    }
 
     Ident *fn = identFind(&comp->idents, &comp->modules, &comp->blocks, module, funcName, NULL);
     if (fn && fn->kind == IDENT_CONST && fn->type->kind == TYPE_FN)

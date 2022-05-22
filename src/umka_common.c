@@ -5,12 +5,11 @@
 #include <string.h>
 #include <ctype.h>
 
-#ifdef UMKA_EXT_LIBS
-    #ifdef _WIN32
-        #include <windows.h>
-    #else
-        #include <dlfcn.h>
-    #endif
+#ifdef _WIN32
+    #include <windows.h>
+#else
+    #include <dlfcn.h>
+    #include <unistd.h>
 #endif
 
 #include "umka_common.h"
@@ -106,6 +105,9 @@ void moduleInit(Modules *modules, Error *error)
     modules->numModules = 0;
     modules->numModuleSources = 0;
     modules->error = error;
+
+    if (!moduleCurFolder(modules->curFolder, DEFAULT_STR_LEN + 1))
+        modules->error->handler(modules->error->context, "Cannot get current folder");
 }
 
 
@@ -129,7 +131,7 @@ void moduleFree(Modules *modules)
 }
 
 
-static void moduleNameFromPath(Modules *modules, const char *path, char *folder, char *name, int size)
+void moduleNameFromPath(Modules *modules, const char *path, char *folder, char *name, int size)
 {
     const char *slash = strrchr(path, '/');
     const char *backslash = strrchr(path, '\\');
@@ -153,33 +155,24 @@ static void moduleNameFromPath(Modules *modules, const char *path, char *folder,
 }
 
 
-int moduleFind(Modules *modules, const char *name)
+int moduleFind(Modules *modules, const char *path)
 {
-    unsigned int nameHash = hash(name);
+    unsigned int pathHash = hash(path);
     for (int i = 0; i < modules->numModules; i++)
-        if (modules->module[i]->hash == nameHash && strcmp(modules->module[i]->name, name) == 0)
+        if (modules->module[i]->pathHash == pathHash && strcmp(modules->module[i]->path, path) == 0)
             return i;
     return -1;
 }
 
 
-int moduleAssertFind(Modules *modules, const char *name)
+int moduleFindImported(Modules *modules, Blocks *blocks, const char *name)
 {
-    int res = moduleFind(modules, name);
-    if (res < 0)
-        modules->error->handler(modules->error->context, "Unknown module %s", name);
-    return res;
-}
-
-
-int moduleFindByPath(Modules *modules, const char *path)
-{
-    char folder[DEFAULT_STR_LEN + 1] = "";
-    char name  [DEFAULT_STR_LEN + 1] = "";
-
-    moduleNameFromPath(modules, path, folder, name, DEFAULT_STR_LEN + 1);
-
-    return moduleFind(modules, name);
+    unsigned int nameHash = hash(name);
+    for (int i = 0; i < modules->numModules; i++)
+        if (modules->module[i]->hash == nameHash && strcmp(modules->module[i]->name, name) == 0)
+            if (blocks->module == i || modules->module[blocks->module]->imports[i])
+                return i;
+    return -1;
 }
 
 
@@ -193,9 +186,9 @@ int moduleAdd(Modules *modules, const char *path)
 
     moduleNameFromPath(modules, path, folder, name, DEFAULT_STR_LEN + 1);
 
-    int res = moduleFind(modules, name);
+    int res = moduleFind(modules, path);
     if (res >= 0)
-        modules->error->handler(modules->error->context, "Duplicate module %s", name);
+        modules->error->handler(modules->error->context, "Duplicate module %s", path);
 
     Module *module = malloc(sizeof(Module));
 
@@ -224,24 +217,13 @@ int moduleAdd(Modules *modules, const char *path)
 }
 
 
-char *moduleFindSource(Modules *modules, const char *name)
+char *moduleFindSource(Modules *modules, const char *path)
 {
-    unsigned int nameHash = hash(name);
+    unsigned int pathHash = hash(path);
     for (int i = 0; i < modules->numModuleSources; i++)
-        if (modules->moduleSource[i]->hash == nameHash && strcmp(modules->moduleSource[i]->name, name) == 0)
+        if (modules->moduleSource[i]->pathHash == pathHash && strcmp(modules->moduleSource[i]->path, path) == 0)
             return modules->moduleSource[i]->source;
     return NULL;
-}
-
-
-char *moduleFindSourceByPath(Modules *modules, const char *path)
-{
-    char folder[DEFAULT_STR_LEN + 1] = "";
-    char name  [DEFAULT_STR_LEN + 1] = "";
-
-    moduleNameFromPath(modules, path, folder, name, DEFAULT_STR_LEN + 1);
-
-    return moduleFindSource(modules, name);
 }
 
 
@@ -257,6 +239,12 @@ void moduleAddSource(Modules *modules, const char *path, const char *source)
 
     ModuleSource *moduleSource = malloc(sizeof(ModuleSource));
 
+    strncpy(moduleSource->path, path, DEFAULT_STR_LEN);
+    moduleSource->path[DEFAULT_STR_LEN] = 0;
+
+    strncpy(moduleSource->folder, folder, DEFAULT_STR_LEN);
+    moduleSource->folder[DEFAULT_STR_LEN] = 0;
+
     strncpy(moduleSource->name, name, DEFAULT_STR_LEN);
     moduleSource->name[DEFAULT_STR_LEN] = 0;
 
@@ -266,6 +254,7 @@ void moduleAddSource(Modules *modules, const char *path, const char *source)
     moduleSource->source[sourceLen] = 0;
 
     moduleSource->hash = hash(name);
+    moduleSource->pathHash = hash(path);
 
     modules->moduleSource[modules->numModuleSources++] = moduleSource;
 }
@@ -279,19 +268,129 @@ void *moduleGetImplLibFunc(Module *module, const char *name)
 }
 
 
+char *moduleCurFolder(char *buf, int size)
+{
+#ifdef _WIN32
+    if (GetCurrentDirectory(size, buf) == 0)
+        return NULL;
+#else
+    if (!getcwd(buf, size))
+        return NULL;
+#endif
+
+    const int len = strlen(buf);
+    if (len > size - 2)
+        return NULL;
+
+    buf[len] = '/';
+    buf[len + 1] = 0;
+    return buf;
+}
+
+
 bool modulePathIsAbsolute(const char *path)
 {
     while (path && (*path == ' ' || *path == '\t'))
         path++;
-        
+
     if (!path)
         return false;
-        
+
 #ifdef _WIN32
     return isalpha(path[0]) && path[1] == ':';
 #else
     return path[0] == '/';
 #endif
+}
+
+
+bool moduleRegularizePath(const char *path, const char *curFolder, char *regularizedPath, int size)
+{
+    char *absolutePath = malloc(size);
+    snprintf(absolutePath, size, "%s%s", modulePathIsAbsolute(path) ? "" : curFolder, path);
+
+    char **separators = malloc(size * sizeof(char *));
+    int numSeparators = 0;
+
+    char *readCh = absolutePath, *writeCh = regularizedPath;
+    int numDots = 0;
+
+    while (*readCh)
+    {
+        switch (*readCh)
+        {
+            case ' ':
+            case '\t':
+            {
+                numDots = 0;
+                break;
+            }
+
+            case '/':
+            case '\\':
+            {
+                if (numDots == 1)   // "./" or ".\"
+                {
+                    numDots = 0;
+                    break;
+                }
+
+                if (numDots == 2)   // "../" or "..\"
+                {
+                    if (numSeparators < 2)
+                        return false;
+
+                    numSeparators--;
+                    writeCh = separators[numSeparators - 1] + 1;
+
+                    numDots = 0;
+                    break;
+                }
+
+                separators[numSeparators++] = writeCh;
+                *(writeCh++) = '/';
+
+                numDots = 0;
+                break;
+            }
+
+            case '.':
+            {
+                numDots++;
+                break;
+            }
+
+            default:
+            {
+                while (numDots > 0)
+                {
+                    *(writeCh++) = '.';
+                    numDots--;
+                }
+
+                *(writeCh++) = *readCh;
+                break;
+            }
+        }
+
+        readCh++;
+    }
+
+    if (numDots > 0)
+        return false;
+
+    *writeCh = 0;
+
+    free(separators);
+    free(absolutePath);
+    return true;
+}
+
+
+void moduleAssertRegularizePath(Modules *modules, const char *path, const char *curFolder, char *regularizedPath, int size)
+{
+    if (!moduleRegularizePath(path, curFolder, regularizedPath, size))
+        modules->error->handler(modules->error->context, "Invalid module path %s", path);
 }
 
 

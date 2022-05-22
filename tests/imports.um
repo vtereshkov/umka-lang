@@ -1,0 +1,13 @@
+import (
+        "lib1/lib1.um"
+        "lib2/lib2.um"
+)
+
+fn test*() {
+        lib1.f()
+        lib2.f()
+}
+
+fn main() {
+        test()
+}

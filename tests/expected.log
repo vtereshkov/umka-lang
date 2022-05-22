@@ -367,6 +367,12 @@ characters: 12
 
 
 
+>>> Import disambiguation
+
+Utils from lib 1
+Utils from lib 2
+
+
 >>> Simulated closures
 
 running by_name_eq with name : Foo
