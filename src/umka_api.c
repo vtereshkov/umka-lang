@@ -142,7 +142,7 @@ UMKA_API void umkaAddModule(void *umka, const char *fileName, const char *source
     Compiler *comp = umka;
     char modulePath[DEFAULT_STR_LEN + 1] = "";
     moduleAssertRegularizePath(&comp->modules, fileName, comp->modules.curFolder, modulePath, DEFAULT_STR_LEN + 1);
-    moduleAddSource(&comp->modules, fileName, sourceString);
+    moduleAddSource(&comp->modules, modulePath, sourceString);
 }
 
 
