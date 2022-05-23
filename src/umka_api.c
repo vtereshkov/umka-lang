@@ -192,7 +192,7 @@ UMKA_API const char *umkaGetVersion(void)
     if (sizeof(void *) == 8)
         return UMKA_VERSION" ("__DATE__" "__TIME__" 64 bit)";
     else if (sizeof(void *) == 4)
-        return UMKA_VERSION" ("__DATE__" "__TIME__" 32 bit";
+        return UMKA_VERSION" ("__DATE__" "__TIME__" 32 bit)";
     else
         return UMKA_VERSION" ("__DATE__" "__TIME__")";
 }
