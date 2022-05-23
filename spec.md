@@ -1540,16 +1540,16 @@ UMKA_API void umkaAsm(void *umka, char *buf, int size);
 Generates the Umka assembly listing for the Umka program previously compiled to bytecode. Here, `umka` is the interpreter instance handle, `buf` is the pointer to the string buffer to be filled, `size` is the buffer size.
 
 ```
-UMKA_API void umkaAddModule(void *umka, const char *fileName, const char *sourceString);
+UMKA_API bool umkaAddModule(void *umka, const char *fileName, const char *sourceString);
 ```
 
-Adds an Umka module contained in the `sourceString`. A fictitious `fileName` should be specified.
+Adds an Umka module contained in the `sourceString`. A fictitious `fileName` should be specified. Returns `true` if the module has been successfully added.
 
 ```
-UMKA_API void umkaAddFunc(void *umka, const char *name, UmkaExternFunc entry);
+UMKA_API bool umkaAddFunc(void *umka, const char *name, UmkaExternFunc func);
 ```
 
-Adds a C/C++ function to the list of external functions that can be called from Umka. Here, `umka` is the interpreter instance handle, `name` is the function name, `entry` is the function pointer. 
+Adds a C/C++ function to the list of external functions that can be called from Umka. Here, `umka` is the interpreter instance handle, `name` is the function name, `func` is the function pointer. Returns `true` if the function has been successfully added.
 
 ```
 UMKA_API int umkaGetFunc(void *umka, const char *moduleName, const char *funcName);

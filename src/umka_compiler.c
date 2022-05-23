@@ -213,6 +213,29 @@ void compilerAsm(Compiler *comp, char *buf, int size)
 }
 
 
+bool compilerAddModule(Compiler *comp, const char *fileName, const char *sourceString)
+{
+    char modulePath[DEFAULT_STR_LEN + 1] = "";
+    moduleAssertRegularizePath(&comp->modules, fileName, comp->modules.curFolder, modulePath, DEFAULT_STR_LEN + 1);
+
+    if (moduleFindSource(&comp->modules, modulePath))
+        return false;
+
+    moduleAddSource(&comp->modules, modulePath, sourceString);
+    return true;
+}
+
+
+bool compilerAddFunc(Compiler *comp, const char *name, ExternFunc func)
+{
+    if (externalFind(&comp->externals, name))
+        return false;
+
+    externalAdd(&comp->externals, name, func);
+    return true;
+}
+
+
 int compilerGetFunc(Compiler *comp, const char *moduleName, const char *funcName)
 {
     int module = 1;

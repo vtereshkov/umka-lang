@@ -86,8 +86,8 @@ UMKA_API bool umkaCall              (void *umka, int entryOffset, int numParamSl
 UMKA_API void umkaFree              (void *umka);
 UMKA_API void umkaGetError          (void *umka, UmkaError *err);
 UMKA_API void umkaAsm               (void *umka, char *buf, int size);
-UMKA_API void umkaAddModule         (void *umka, const char *fileName, const char *sourceString);
-UMKA_API void umkaAddFunc           (void *umka, const char *name, UmkaExternFunc entry);
+UMKA_API bool umkaAddModule         (void *umka, const char *fileName, const char *sourceString);
+UMKA_API bool umkaAddFunc           (void *umka, const char *name, UmkaExternFunc func);
 UMKA_API int  umkaGetFunc           (void *umka, const char *moduleName, const char *funcName);
 UMKA_API bool umkaGetCallStack      (void *umka, int depth, int *offset, char *name, int size);
 UMKA_API void umkaSetHook           (void *umka, UmkaHookEvent event, UmkaHookFunc hook);

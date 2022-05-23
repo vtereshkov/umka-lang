@@ -8,6 +8,8 @@
 #include "umka_compiler.h"
 #include "umka_api.h"
 
+#define UMKA_VERSION    "0.8"
+
 
 static void compileError(void *context, const char *format, ...)
 {
@@ -137,19 +139,17 @@ UMKA_API void umkaAsm(void *umka, char *buf, int size)
 }
 
 
-UMKA_API void umkaAddModule(void *umka, const char *fileName, const char *sourceString)
+UMKA_API bool umkaAddModule(void *umka, const char *fileName, const char *sourceString)
 {
     Compiler *comp = umka;
-    char modulePath[DEFAULT_STR_LEN + 1] = "";
-    moduleAssertRegularizePath(&comp->modules, fileName, comp->modules.curFolder, modulePath, DEFAULT_STR_LEN + 1);
-    moduleAddSource(&comp->modules, modulePath, sourceString);
+    return compilerAddModule(comp, fileName, sourceString);
 }
 
 
-UMKA_API void umkaAddFunc(void *umka, const char *name, UmkaExternFunc entry)
+UMKA_API bool umkaAddFunc(void *umka, const char *name, UmkaExternFunc func)
 {
     Compiler *comp = umka;
-    externalAdd(&comp->externals, name, entry);
+    return compilerAddFunc(comp, name, (ExternFunc)func);
 }
 
 
@@ -190,10 +190,10 @@ UMKA_API void umkaSetHook(void *umka, UmkaHookEvent event, UmkaHookFunc hook)
 UMKA_API const char *umkaGetVersion(void)
 {
     if (sizeof(void *) == 8)
-        return __DATE__" "__TIME__" 64 bit";
+        return UMKA_VERSION" ("__DATE__" "__TIME__" 64 bit)";
     else if (sizeof(void *) == 4)
-        return __DATE__" "__TIME__" 32 bit";
+        return UMKA_VERSION" ("__DATE__" "__TIME__" 32 bit";
     else
-        return __DATE__" "__TIME__;
+        return UMKA_VERSION" ("__DATE__" "__TIME__")";
 }
 
