@@ -278,7 +278,11 @@ char *moduleCurFolder(char *buf, int size)
         return NULL;
 #endif
 
-    const int len = strlen(buf);
+    int len = strlen(buf);
+
+    if (len > 0 && (buf[len - 1] == '/' || buf[len - 1] == '\\'))
+        return buf;
+
     if (len > size - 2)
         return NULL;
 
