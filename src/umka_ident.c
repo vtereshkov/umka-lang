@@ -47,7 +47,7 @@ void identFree(Idents *idents, int startBlock)
 
 Ident *identFind(Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, Type *rcvType)
 {
-    unsigned int nameHash = hash(name);
+    const unsigned int nameHash = hash(name);
 
     for (int i = blocks->top; i >= 0; i--)
     {
@@ -55,18 +55,13 @@ Ident *identFind(Idents *idents, Modules *modules, Blocks *blocks, int module, c
             if (ident->hash == nameHash && strcmp(ident->name, name) == 0 && ident->block == blocks->item[i].block)
             {
                 // What we found has correct name and block scope, check module scope
-
-                bool identModuleValid;
-                if (rcvType)
-                    identModuleValid = ident->module == module;                                                       // Module where the method receiver type identifier is declared
-                else
-                    identModuleValid = ident->module == 0 ||                                                          // Universe module
-                                      (ident->module == module && (blocks->module == module ||                        // Current module
-                                      (ident->exported && modules->module[blocks->module]->imports[ident->module]))); // Imported module
+                const bool identModuleValid = ident->module == 0 ||                                                                         // Universe module
+                                             (ident->module == module && (blocks->module == module ||                                       // Current module
+                                             (ident->exported && (rcvType || modules->module[blocks->module]->imports[ident->module]))));   // Imported module
 
                 if (identModuleValid)
                 {
-                    bool method = ident->type->kind == TYPE_FN && ident->type->sig.method;
+                    const bool method = ident->type->kind == TYPE_FN && ident->type->sig.method;
 
                     // We don't need a method and what we found is not a method
                     if (!rcvType && !method)

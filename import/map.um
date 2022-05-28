@@ -145,7 +145,7 @@ fn (m: ^Map) rehash() {
 }
 
 
-fn (m: ^Map) toStr(): str {
+fn (m: ^Map) toStr*(): str {
     out := "{ "
 
     for bucket in m^ {
