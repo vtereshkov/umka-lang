@@ -8,9 +8,6 @@ fn tobytes*(buf: interface{}): []uint8 {
     if buf.__self == null {
         error("Buffer is null")
     }
-    if selfhasptr(buf) {
-        error("Cannot access reference types")
-    }
     bytes := make([]uint8, sizeofself(buf))
     rtlmemcpy(&bytes[0], buf.__self, sizeofself(buf))
     return bytes
@@ -45,9 +42,8 @@ fn fopen*    (name: str, mode: str): File {return rtlfopen(name, mode)}
 fn rtlfclose (f: File): int
 fn fclose*   (f: File): int {return rtlfclose(f)}
 
-fn rtlfread(buf: ^void, size, cnt: int, f: File): int
-
-fn fread*(f: File, buf: interface{}): int {
+fn rtlfread  (buf: ^void, size, cnt: int, f: File): int
+fn fread*    (f: File, buf: interface{}): int {
     if f == null {
         error("File is null")
     }
@@ -60,9 +56,8 @@ fn fread*(f: File, buf: interface{}): int {
     return rtlfread(buf.__self, sizeofself(buf), 1, f)
 }
 
-fn rtlfwrite(buf: ^void, size, cnt: int, f: File): int
-
-fn fwrite*(f: File, buf: interface{}): int {
+fn rtlfwrite (buf: ^void, size, cnt: int, f: File): int
+fn fwrite*   (f: File, buf: interface{}): int {
     if f == null {
         error("File is null")
     }

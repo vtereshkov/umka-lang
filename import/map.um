@@ -1,5 +1,4 @@
 // Hash map
-// A key may be either a string, or any non-reference type 
 
 import "std.um"
 
@@ -39,10 +38,6 @@ fn equal(key1, key2: Any): bool {
     // Treat a string key as a special case
     if s1, s2 := ^str(key1), ^str(key2); s1 != null && s2 != null {
         return s1^ == s2^
-    }
-
-    if selfhasptr(key1) {
-        error("Cannot use reference types for map keys")
     }
 
     bytes1, bytes2 := serialize(key1), serialize(key2)

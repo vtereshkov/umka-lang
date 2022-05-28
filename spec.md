@@ -1227,7 +1227,7 @@ The standard library is contained in the `std.um` module embedded into the Umka 
 fn tobytes*(buf: interface{}): []uint8
 ```
 
-Copies the bytes of `buf` to a byte array. An error is triggered if some of the bytes represent a pointer.
+Copies the bytes of `buf` to a byte array.
 
 ```
 fn frombytes*(buf: interface{}, bytes: []uint8)

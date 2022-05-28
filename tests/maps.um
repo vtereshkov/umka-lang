@@ -58,9 +58,32 @@ fn test2() {
     printf(writers.toStr() + '\n')
 }
 
+fn test3() {
+    printf("\nTest 3\n")
+
+    a := 42
+    b := 43
+
+    type Ptr = struct {p: ^int} 
+
+    var pointers: map.Map
+    pointers.set(Ptr{&a}, a)
+    pointers.set(Ptr{&b}, b)
+
+    a1 := int(pointers.get(Ptr{&a}))
+    b1 := int(pointers.get(Ptr{&b}))
+
+    if a1 != a || b1 != b {
+        error("Test failed")
+    }
+
+    printf("Test passed\n")
+}
+
 fn test*() {
     test1()
     test2()
+    test3()
 }
 
 fn main() {
