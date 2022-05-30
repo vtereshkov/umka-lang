@@ -113,7 +113,7 @@ static void pageInit(HeapPages *pages)
 }
 
 
-static void pageFree(HeapPages *pages)
+static void pageFree(HeapPages *pages, bool warnLeak)
 {
     HeapPage *page = pages->first;
     while (page)
@@ -121,7 +121,8 @@ static void pageFree(HeapPages *pages)
         HeapPage *next = page->next;
         if (page->ptr)
         {
-            fprintf(stderr, "Warning: Memory leak at %p (%d refs)\n", page->ptr, page->refCnt);
+            if (warnLeak)
+                fprintf(stderr, "Warning: Memory leak at %p (%d refs)\n", page->ptr, page->refCnt);
             free(page->ptr);
         }
         free(page);
@@ -436,7 +437,7 @@ void vmInit(VM *vm, int stackSize, Error *error)
 void vmFree(VM *vm)
 {
     candidateFree(&vm->refCntChangeCandidates);
-    pageFree(&vm->pages);
+    pageFree(&vm->pages, vm->error->pos == 0);  // Suppress memory leak warnings if halted on a runtime error
     free(vm->mainFiber->stack);
     free(vm->mainFiber);
 }
