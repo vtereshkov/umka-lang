@@ -79,6 +79,7 @@ typedef struct
     ModuleSource *moduleSource[MAX_MODULES];
     int numModules, numModuleSources;
     char curFolder[DEFAULT_STR_LEN + 1];
+    bool implLibsEnabled;
     Error *error;
 } Modules;
 

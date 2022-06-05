@@ -160,6 +160,13 @@ UMKA_API int umkaGetFunc(void *umka, const char *moduleName, const char *funcNam
 }
 
 
+UMKA_API void umkaEnableImplLibs(void *umka, bool enable)
+{
+    Compiler *comp = umka;
+    comp->modules.implLibsEnabled = enable;
+}
+
+
 UMKA_API bool umkaGetCallStack(void *umka, int depth, int *offset, char *name, int size)
 {
     Compiler *comp = umka;

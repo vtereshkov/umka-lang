@@ -89,6 +89,7 @@ UMKA_API void umkaAsm               (void *umka, char *buf, int size);
 UMKA_API bool umkaAddModule         (void *umka, const char *fileName, const char *sourceString);
 UMKA_API bool umkaAddFunc           (void *umka, const char *name, UmkaExternFunc func);
 UMKA_API int  umkaGetFunc           (void *umka, const char *moduleName, const char *funcName);
+UMKA_API void umkaEnableImplLibs    (void *umka, bool enable);
 UMKA_API bool umkaGetCallStack      (void *umka, int depth, int *offset, char *name, int size);
 UMKA_API void umkaSetHook           (void *umka, UmkaHookEvent event, UmkaHookFunc hook);
 UMKA_API const char *umkaGetVersion (void);

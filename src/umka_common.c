@@ -104,6 +104,7 @@ void moduleInit(Modules *modules, Error *error)
     }
     modules->numModules = 0;
     modules->numModuleSources = 0;
+    modules->implLibsEnabled = true;
     modules->error = error;
 
     if (!moduleCurFolder(modules->curFolder, DEFAULT_STR_LEN + 1))
@@ -207,7 +208,7 @@ int moduleAdd(Modules *modules, const char *path)
     char libPath[2 + 2 * DEFAULT_STR_LEN + 4 + 1];
     sprintf(libPath, "%s%s%s.umi", modulePathIsAbsolute(module->path) ? "" : "./", module->folder, module->name);
 
-    module->implLib = moduleLoadImplLib(libPath);
+    module->implLib = modules->implLibsEnabled ? moduleLoadImplLib(libPath) : NULL;
 
     for (int i = 0; i < MAX_MODULES; i++)
         module->imports[i] = false;

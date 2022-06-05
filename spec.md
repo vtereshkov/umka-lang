@@ -524,7 +524,7 @@ s, val := "Hello", sin(0.1 * a)
 
 ### Function and method declarations
 
-A function or method declaration can be either a complete definition that includes the function block, or a *prototype* declaration if the function block is omitted. A prototype should be resolved somewhere below in the same module by duplicating the declaration, now with the function block. If a prototype is not resolved, it is considered an external C/C++ function. If such a function has not been registered via the Umka API, it is searched in the shared library (Umka implementation file) `mod.umi`, where `mod` is the current module name. If the library does not exist or contains no such function, an error is triggered. 
+A function or method declaration can be either a complete definition that includes the function block, or a *prototype* declaration if the function block is omitted. A prototype should be resolved somewhere below in the same module by duplicating the declaration, now with the function block. If a prototype is not resolved, it is considered an external C/C++ function. If such a function has not been registered via the Umka API, it is searched in the shared library (Umka module implementation library, UMI) `mod.umi`, where `mod` is the current module name. If the UMI does not exist or contains no such function, an error is triggered. 
 
 Function and method declarations are only allowed in the module scope. In the block scope, functions should be declared as constants or variables of a function type. Methods cannot be declared in the block scope. 
 
@@ -1556,6 +1556,12 @@ UMKA_API int umkaGetFunc(void *umka, const char *moduleName, const char *funcNam
 ```
 
 Gets an Umka function that can be called from C/C++ using `umkaCall()`.  Here, `umka` is the interpreter instance handle, `moduleName` is the Umka module name, `funcName` is the Umka function name. Returns the function entry point offset.
+
+```
+UMKA_API void umkaEnableImplLibs(void *umka, bool enable);
+```
+
+Enables or disables using UMIs depending on the `enable` flag. Enabled by default.
 
 ```
 UMKA_API bool umkaGetCallStack(void *umka, int depth, int *offset, char *name, int size);
