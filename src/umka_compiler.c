@@ -108,35 +108,35 @@ static void compilerDeclareBuiltinIdents(Compiler *comp)
 }
 
 
-static void compilerDeclareExternalFuncs(Compiler *comp)
+static void compilerDeclareExternalFuncs(Compiler *comp, bool fileSystemEnabled)
 {
     externalAdd(&comp->externals, "rtlmemcpy",  &rtlmemcpy);
-    externalAdd(&comp->externals, "rtlfopen",   &rtlfopen);
-    externalAdd(&comp->externals, "rtlfclose",  &rtlfclose);
-    externalAdd(&comp->externals, "rtlfread",   &rtlfread);
-    externalAdd(&comp->externals, "rtlfwrite",  &rtlfwrite);
-    externalAdd(&comp->externals, "rtlfseek",   &rtlfseek);
-    externalAdd(&comp->externals, "rtlftell",   &rtlftell);
-    externalAdd(&comp->externals, "rtlremove",  &rtlremove);
-    externalAdd(&comp->externals, "rtlfeof",    &rtlfeof);
+    externalAdd(&comp->externals, "rtlfopen",   fileSystemEnabled ? &rtlfopen  : &rtlfopenSandbox);
+    externalAdd(&comp->externals, "rtlfclose",  fileSystemEnabled ? &rtlfclose : &rtlfcloseSandbox);
+    externalAdd(&comp->externals, "rtlfread",   fileSystemEnabled ? &rtlfread  : &rtlfreadSandbox);
+    externalAdd(&comp->externals, "rtlfwrite",  fileSystemEnabled ? &rtlfwrite : &rtlfwriteSandbox);
+    externalAdd(&comp->externals, "rtlfseek",   fileSystemEnabled ? &rtlfseek  : &rtlfseekSandbox);
+    externalAdd(&comp->externals, "rtlftell",   fileSystemEnabled ? &rtlftell  : &rtlftellSandbox);
+    externalAdd(&comp->externals, "rtlremove",  fileSystemEnabled ? &rtlremove : &rtlremoveSandbox);
+    externalAdd(&comp->externals, "rtlfeof",    fileSystemEnabled ? &rtlfeof   : &rtlfeofSandbox);
     externalAdd(&comp->externals, "rtltime",    &rtltime);
     externalAdd(&comp->externals, "rtlclock",   &rtlclock);
-    externalAdd(&comp->externals, "rtlgetenv",  &rtlgetenv);
-    externalAdd(&comp->externals, "rtlsystem",  &rtlsystem);
+    externalAdd(&comp->externals, "rtlgetenv",  fileSystemEnabled ? &rtlgetenv : &rtlgetenvSandbox);
+    externalAdd(&comp->externals, "rtlsystem",  fileSystemEnabled ? &rtlsystem : &rtlsystemSandbox);
 }
 
 
-void compilerInit(Compiler *comp, const char *fileName, const char *sourceString, int stackSize, const char *locale, int argc, char **argv)
+void compilerInit(Compiler *comp, const char *fileName, const char *sourceString, int stackSize, const char *locale, int argc, char **argv, bool fileSystemEnabled, bool implLibsEnabled)
 {
     storageInit  (&comp->storage);
-    moduleInit   (&comp->modules, &comp->error);
+    moduleInit   (&comp->modules, implLibsEnabled, &comp->error);
     blocksInit   (&comp->blocks, &comp->error);
     externalInit (&comp->externals);
     typeInit     (&comp->types, &comp->error);
     identInit    (&comp->idents, &comp->error);
     constInit    (&comp->consts, &comp->error);
     genInit      (&comp->gen, &comp->debug, &comp->error);
-    vmInit       (&comp->vm, stackSize, &comp->error);
+    vmInit       (&comp->vm, stackSize, fileSystemEnabled, &comp->error);
 
     char filePath[DEFAULT_STR_LEN + 1] = "";
     moduleAssertRegularizePath(&comp->modules, fileName, comp->modules.curFolder, filePath, DEFAULT_STR_LEN + 1);
@@ -152,7 +152,7 @@ void compilerInit(Compiler *comp, const char *fileName, const char *sourceString
 
     compilerDeclareBuiltinTypes (comp);
     compilerDeclareBuiltinIdents(comp);
-    compilerDeclareExternalFuncs(comp);
+    compilerDeclareExternalFuncs(comp, fileSystemEnabled);
 
     // Command-line-arguments
     Type *argvType     = typeAdd(&comp->types, &comp->blocks, TYPE_ARRAY);

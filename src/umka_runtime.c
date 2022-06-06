@@ -28,10 +28,22 @@ void rtlfopen(Slot *params, Slot *result)
 }
 
 
+void rtlfopenSandbox(Slot *params, Slot *result)
+{
+    result->ptrVal = NULL;
+}
+
+
 void rtlfclose(Slot *params, Slot *result)
 {
     FILE *file = (FILE *)params[0].ptrVal;
     result->intVal = fclose(file);
+}
+
+
+void rtlfcloseSandbox(Slot *params, Slot *result)
+{
+    result->intVal = EOF;
 }
 
 
@@ -46,6 +58,12 @@ void rtlfread(Slot *params, Slot *result)
 }
 
 
+void rtlfreadSandbox(Slot *params, Slot *result)
+{
+    result->intVal = 0;
+}
+
+
 void rtlfwrite(Slot *params, Slot *result)
 {
     void *buf  = params[3].ptrVal;
@@ -54,6 +72,12 @@ void rtlfwrite(Slot *params, Slot *result)
     FILE *file = (FILE *)params[0].ptrVal;
 
     result->intVal = fwrite(buf, size, cnt, file);
+}
+
+
+void rtlfwriteSandbox(Slot *params, Slot *result)
+{
+    result->intVal = 0;
 }
 
 
@@ -71,10 +95,23 @@ void rtlfseek(Slot *params, Slot *result)
     result->intVal = fseek(file, offset, originC);
 }
 
+
+void rtlfseekSandbox(Slot *params, Slot *result)
+{
+    result->intVal = -1;
+}
+
+
 void rtlftell(Slot *params, Slot *result)
 {
     FILE *file = (FILE *)params[0].ptrVal;
     result->intVal = ftell(file);
+}
+
+
+void rtlftellSandbox(Slot *params, Slot *result)
+{
+    result->intVal = -1;
 }
 
 
@@ -85,10 +122,22 @@ void rtlremove(Slot *params, Slot *result)
 }
 
 
+void rtlremoveSandbox(Slot *params, Slot *result)
+{
+    result->intVal = -1;
+}
+
+
 void rtlfeof(Slot *params, Slot *result)
 {
     FILE *file = (FILE *)params[0].ptrVal;
     result->intVal = feof(file);
+}
+
+
+void rtlfeofSandbox(Slot *params, Slot *result)
+{
+    result->intVal = -1;
 }
 
 
@@ -123,8 +172,21 @@ void rtlgetenv(Slot *params, Slot *result)
 }
 
 
+void rtlgetenvSandbox(Slot *params, Slot *result)
+{
+    result->ptrVal = "";
+}
+
+
 void rtlsystem(Slot *params, Slot *result)
 {
     const char *command = (const char *)params[0].ptrVal;
     result->intVal = system(command);
 }
+
+
+void rtlsystemSandbox(Slot *params, Slot *result)
+{
+    result->intVal = -1;
+}
+

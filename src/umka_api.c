@@ -55,7 +55,7 @@ UMKA_API void *umkaAlloc(void)
 }
 
 
-UMKA_API bool umkaInit(void *umka, const char *fileName, const char *sourceString, int reserved, int stackSize, const char *locale, int argc, char **argv)
+UMKA_API bool umkaInit(void *umka, const char *fileName, const char *sourceString, int stackSize, const char *locale, int argc, char **argv, bool fileSystemEnabled, bool implLibsEnabled)
 {
     Compiler *comp = umka;
     memset(comp, 0, sizeof(Compiler));
@@ -67,7 +67,7 @@ UMKA_API bool umkaInit(void *umka, const char *fileName, const char *sourceStrin
 
     if (setjmp(comp->error.jumper) == 0)
     {
-        compilerInit(comp, fileName, sourceString, stackSize, locale, argc, argv);
+        compilerInit(comp, fileName, sourceString, stackSize, locale, argc, argv, fileSystemEnabled, implLibsEnabled);
         return true;
     }
     return false;
@@ -157,13 +157,6 @@ UMKA_API int umkaGetFunc(void *umka, const char *moduleName, const char *funcNam
 {
     Compiler *comp = umka;
     return compilerGetFunc(comp, moduleName, funcName);
-}
-
-
-UMKA_API void umkaEnableImplLibs(void *umka, bool enable)
-{
-    Compiler *comp = umka;
-    comp->modules.implLibsEnabled = enable;
 }
 
 

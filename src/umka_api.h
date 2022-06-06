@@ -79,7 +79,7 @@ typedef struct
 
 
 UMKA_API void *umkaAlloc            (void);
-UMKA_API bool umkaInit              (void *umka, const char *fileName, const char *sourceString, int reserved, int stackSize, const char *locale, int argc, char **argv);
+UMKA_API bool umkaInit              (void *umka, const char *fileName, const char *sourceString, int stackSize, const char *locale, int argc, char **argv, bool fileSystemEnabled, bool implLibsEnabled);
 UMKA_API bool umkaCompile           (void *umka);
 UMKA_API bool umkaRun               (void *umka);
 UMKA_API bool umkaCall              (void *umka, int entryOffset, int numParamSlots, UmkaStackSlot *params, UmkaStackSlot *result);
@@ -89,7 +89,6 @@ UMKA_API void umkaAsm               (void *umka, char *buf, int size);
 UMKA_API bool umkaAddModule         (void *umka, const char *fileName, const char *sourceString);
 UMKA_API bool umkaAddFunc           (void *umka, const char *name, UmkaExternFunc func);
 UMKA_API int  umkaGetFunc           (void *umka, const char *moduleName, const char *funcName);
-UMKA_API void umkaEnableImplLibs    (void *umka, bool enable);
 UMKA_API bool umkaGetCallStack      (void *umka, int depth, int *offset, char *name, int size);
 UMKA_API void umkaSetHook           (void *umka, UmkaHookEvent event, UmkaHookFunc hook);
 UMKA_API const char *umkaGetVersion (void);

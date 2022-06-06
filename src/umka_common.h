@@ -130,7 +130,7 @@ void  storageInit(Storage *storage);
 void  storageFree(Storage *storage);
 char *storageAdd (Storage *storage, int size);
 
-void  moduleInit                (Modules *modules, Error *error);
+void  moduleInit                (Modules *modules, bool implLibsEnabled, Error *error);
 void  moduleFree                (Modules *modules);
 void  moduleNameFromPath        (Modules *modules, const char *path, char *folder, char *name, int size);
 int   moduleFind                (Modules *modules, const char *path);

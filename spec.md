@@ -1496,11 +1496,12 @@ Allocates memory for the interpreter and returns the interpreter instance handle
 
 ```
 UMKA_API bool umkaInit(void *umka, const char *fileName, const char *sourceString, 
-                       int reserved, int stackSize, const char *locale, 
-                       int argc, char **argv);
+                       int stackSize, const char *locale, 
+                       int argc, char **argv, 
+                       bool fileSystemEnabled, bool implLibsEnabled);
 ```
 
-Initializes the interpreter instance. Here, `umka` is the interpreter instance handle, `fileName` is the Umka source file name, `sourceString` is an optional string buffer that contains the program source, `stackSize` is the fiber stack size, in slots, `argc` and `argv` represent the standard C/C++ command-line parameter data. If `sourceString` is not `NULL`, the program source is read from this string rather than from a file. A fictitious `fileName` should nevertheless be specified.  An optional `locale` string can be specified. Returns `true` if the source has been successfully loaded.
+Initializes the interpreter instance. Here, `umka` is the interpreter instance handle, `fileName` is the Umka source file name, `sourceString` is an optional string buffer that contains the program source, `stackSize` is the fiber stack size, in slots, `argc` and `argv` represent the standard C/C++ command-line parameter data. If `sourceString` is not `NULL`, the program source is read from this string rather than from a file. A fictitious `fileName` should nevertheless be specified.  An optional `locale` string can be specified. The `fileSystemEnabled` flag allows the Umka program to access the file system, and the `implLibsEnabled`  flag allows it to use UMIs. Returns `true` if the source has been successfully loaded.
 
 ```
 UMKA_API bool umkaCompile(void *umka);
@@ -1556,12 +1557,6 @@ UMKA_API int umkaGetFunc(void *umka, const char *moduleName, const char *funcNam
 ```
 
 Gets an Umka function that can be called from C/C++ using `umkaCall()`.  Here, `umka` is the interpreter instance handle, `moduleName` is the Umka module name, `funcName` is the Umka function name. Returns the function entry point offset.
-
-```
-UMKA_API void umkaEnableImplLibs(void *umka, bool enable);
-```
-
-Enables or disables using UMIs depending on the `enable` flag. Enabled by default.
 
 ```
 UMKA_API bool umkaGetCallStack(void *umka, int depth, int *offset, char *name, int size);

@@ -95,7 +95,7 @@ static void *moduleLoadImplLibFunc(void *lib, const char *name)
 }
 
 
-void moduleInit(Modules *modules, Error *error)
+void moduleInit(Modules *modules, bool implLibsEnabled, Error *error)
 {
     for (int i = 0; i < MAX_MODULES; i++)
     {
@@ -104,7 +104,7 @@ void moduleInit(Modules *modules, Error *error)
     }
     modules->numModules = 0;
     modules->numModuleSources = 0;
-    modules->implLibsEnabled = true;
+    modules->implLibsEnabled = implLibsEnabled;
     modules->error = error;
 
     if (!moduleCurFolder(modules->curFolder, DEFAULT_STR_LEN + 1))

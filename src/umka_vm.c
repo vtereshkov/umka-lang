@@ -418,13 +418,14 @@ static FORCE_INLINE char *fsscanfString(bool string, void *stream, int *len)
 
 // Virtual machine
 
-void vmInit(VM *vm, int stackSize, Error *error)
+void vmInit(VM *vm, int stackSize, bool fileSystemEnabled, Error *error)
 {
     vm->fiber = vm->mainFiber = malloc(sizeof(Fiber));
     vm->fiber->stack = malloc(stackSize * sizeof(Slot));
     vm->fiber->stackSize = stackSize;
     vm->fiber->refCntChangeCandidates = &vm->refCntChangeCandidates;
     vm->fiber->alive = true;
+    vm->fiber->fileSystemEnabled = fileSystemEnabled;
 
     pageInit(&vm->pages);
     candidateInit(&vm->refCntChangeCandidates);
@@ -976,7 +977,7 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
     const char *format = (const char *)fiber->reg[VM_REG_IO_FORMAT].ptrVal;
     TypeKind typeKind  = fiber->code[fiber->ip].typeKind;
 
-    if (!stream)
+    if (!stream || (!fiber->fileSystemEnabled && !console && !string))
         error->handlerRuntime(error->context, "printf() destination is null");
 
     if (!format)
@@ -1050,7 +1051,7 @@ static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool con
     const char *format = (const char *)fiber->reg[VM_REG_IO_FORMAT].ptrVal;
     TypeKind typeKind  = fiber->code[fiber->ip].typeKind;
 
-    if (!stream)
+    if (!stream || (!fiber->fileSystemEnabled && !console && !string))
         error->handlerRuntime(error->context, "scanf() source is null");
 
     if (!format)

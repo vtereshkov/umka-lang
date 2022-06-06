@@ -214,6 +214,7 @@ typedef struct
     Slot reg[VM_NUM_REGS];
     RefCntChangeCandidates *refCntChangeCandidates;
     bool alive;
+    bool fileSystemEnabled;
 } Fiber;
 
 
@@ -227,7 +228,7 @@ typedef struct
 } VM;
 
 
-void vmInit(VM *vm, int stackSize /* slots */, Error *error);
+void vmInit(VM *vm, int stackSize /* slots */, bool fileSystemEnabled, Error *error);
 void vmFree(VM *vm);
 void vmReset(VM *vm, Instruction *code);
 void vmRun(VM *vm, int entryOffset, int numParamSlots, Slot *params, Slot *result);
