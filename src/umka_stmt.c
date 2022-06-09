@@ -202,7 +202,7 @@ void parseAssignmentStmt(Compiler *comp, Type *type, Const *varPtrConstList)
 }
 
 
-// shortAssignmentStmt = designator ("+=" | "-=" | "*=" | "/=" | "%=" | "&=" | "|=" | "~=") expr.
+// shortAssignmentStmt = designator ("+=" | "-=" | "*=" | "/=" | "%=" | "&=" | "|=" | "~=" | "<<=" | ">>=") expr.
 static void parseShortAssignmentStmt(Compiler *comp, Type *type, TokenKind op)
 {
     if (!typeStructured(type))

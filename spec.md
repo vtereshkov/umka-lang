@@ -976,7 +976,8 @@ Syntax:
 
 ```
 shortAssignmentStmt = designator 
-                      ("+=" | "-=" | "*=" | "/=" | "%=" | "&=" | "|=" | "~=") expr.
+                      ("+=" | "-=" | "*=" | "/="  | "%=" |
+                       "&=" | "|=" | "~=" | "<<=" | ">>=") expr.
 ```
 
 Examples:
@@ -1620,7 +1621,8 @@ singleAssgnStmt     = designator "=" expr.
 listAssgnStmt       = designatorList "=" exprList.
 assignmentStmt      = singleAssgnStmt | listAssgnStmt.
 shortAssignmentStmt = designator 
-                      ("+=" | "-=" | "*=" | "/=" | "%=" | "&=" | "|=" | "~=") expr.
+                      ("+=" | "-=" | "*=" | "/="  | "%=" |
+                       "&=" | "|=" | "~=" | "<<=" | ">>=") expr.
 singleDeclAssgnStmt = ident ":=" expr.
 listDeclAssgnStmt   = identList ":=" exprList.
 declAssignmentStmt  = singleDeclAssgnStmt | listDeclAssgnStmt.

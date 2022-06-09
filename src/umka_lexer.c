@@ -851,6 +851,8 @@ TokenKind lexShortAssignment(TokenKind kind)
         case TOK_ANDEQ:   return TOK_AND;
         case TOK_OREQ:    return TOK_OR;
         case TOK_XOREQ:   return TOK_XOR;
+        case TOK_SHLEQ:   return TOK_SHL;
+        case TOK_SHREQ:   return TOK_SHR;
         default:          return TOK_NONE;
     }
 
