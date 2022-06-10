@@ -478,27 +478,27 @@ static FORCE_INLINE void doBasicDeref(Slot *slot, TypeKind typeKind, Error *erro
 
     switch (typeKind)
     {
-        case TYPE_INT8:         slot->intVal     = *(int8_t   *)slot->ptrVal; break;
-        case TYPE_INT16:        slot->intVal     = *(int16_t  *)slot->ptrVal; break;
-        case TYPE_INT32:        slot->intVal     = *(int32_t  *)slot->ptrVal; break;
-        case TYPE_INT:          slot->intVal     = *(int64_t  *)slot->ptrVal; break;
-        case TYPE_UINT8:        slot->intVal     = *(uint8_t  *)slot->ptrVal; break;
-        case TYPE_UINT16:       slot->intVal     = *(uint16_t *)slot->ptrVal; break;
-        case TYPE_UINT32:       slot->intVal     = *(uint32_t *)slot->ptrVal; break;
-        case TYPE_UINT:         slot->uintVal    = *(uint64_t *)slot->ptrVal; break;
-        case TYPE_BOOL:         slot->intVal     = *(bool     *)slot->ptrVal; break;
-        case TYPE_CHAR:         slot->intVal     = *(char     *)slot->ptrVal; break;
-        case TYPE_REAL32:       slot->realVal    = *(float    *)slot->ptrVal; break;
-        case TYPE_REAL:         slot->realVal    = *(double   *)slot->ptrVal; break;
-        case TYPE_PTR:          slot->ptrVal     = *(void *   *)slot->ptrVal; break;
-        case TYPE_WEAKPTR:      slot->weakPtrVal = *(uint64_t *)slot->ptrVal; break;
-        case TYPE_STR:          slot->ptrVal     = *(void *   *)slot->ptrVal; break;
+        case TYPE_INT8:         slot->intVal     = *(int8_t         *)slot->ptrVal; break;
+        case TYPE_INT16:        slot->intVal     = *(int16_t        *)slot->ptrVal; break;
+        case TYPE_INT32:        slot->intVal     = *(int32_t        *)slot->ptrVal; break;
+        case TYPE_INT:          slot->intVal     = *(int64_t        *)slot->ptrVal; break;
+        case TYPE_UINT8:        slot->intVal     = *(uint8_t        *)slot->ptrVal; break;
+        case TYPE_UINT16:       slot->intVal     = *(uint16_t       *)slot->ptrVal; break;
+        case TYPE_UINT32:       slot->intVal     = *(uint32_t       *)slot->ptrVal; break;
+        case TYPE_UINT:         slot->uintVal    = *(uint64_t       *)slot->ptrVal; break;
+        case TYPE_BOOL:         slot->intVal     = *(bool           *)slot->ptrVal; break;
+        case TYPE_CHAR:         slot->intVal     = *(unsigned char  *)slot->ptrVal; break;
+        case TYPE_REAL32:       slot->realVal    = *(float          *)slot->ptrVal; break;
+        case TYPE_REAL:         slot->realVal    = *(double         *)slot->ptrVal; break;
+        case TYPE_PTR:          slot->ptrVal     = *(void *         *)slot->ptrVal; break;
+        case TYPE_WEAKPTR:      slot->weakPtrVal = *(uint64_t       *)slot->ptrVal; break;
+        case TYPE_STR:          slot->ptrVal     = *(void *         *)slot->ptrVal; break;
         case TYPE_ARRAY:
         case TYPE_DYNARRAY:
         case TYPE_STRUCT:
         case TYPE_INTERFACE:    break;  // Always represented by pointer, not dereferenced
-        case TYPE_FIBER:        slot->ptrVal     = *(void *   *)slot->ptrVal; break;
-        case TYPE_FN:           slot->intVal     = *(int64_t  *)slot->ptrVal; break;
+        case TYPE_FIBER:        slot->ptrVal     = *(void *         *)slot->ptrVal; break;
+        case TYPE_FN:           slot->intVal     = *(int64_t        *)slot->ptrVal; break;
 
         default:                error->handlerRuntime(error->context, "Illegal type"); return;
     }
@@ -516,27 +516,27 @@ static FORCE_INLINE void doBasicAssign(void *lhs, Slot rhs, TypeKind typeKind, i
 
     switch (typeKind)
     {
-        case TYPE_INT8:         *(int8_t   *)lhs = rhs.intVal;  break;
-        case TYPE_INT16:        *(int16_t  *)lhs = rhs.intVal;  break;
-        case TYPE_INT32:        *(int32_t  *)lhs = rhs.intVal;  break;
-        case TYPE_INT:          *(int64_t  *)lhs = rhs.intVal;  break;
-        case TYPE_UINT8:        *(uint8_t  *)lhs = rhs.intVal;  break;
-        case TYPE_UINT16:       *(uint16_t *)lhs = rhs.intVal;  break;
-        case TYPE_UINT32:       *(uint32_t *)lhs = rhs.intVal;  break;
-        case TYPE_UINT:         *(uint64_t *)lhs = rhs.uintVal; break;
-        case TYPE_BOOL:         *(bool     *)lhs = rhs.intVal;  break;
-        case TYPE_CHAR:         *(char     *)lhs = rhs.intVal;  break;
-        case TYPE_REAL32:       *(float    *)lhs = rhs.realVal; break;
-        case TYPE_REAL:         *(double   *)lhs = rhs.realVal; break;
-        case TYPE_PTR:          *(void *   *)lhs = rhs.ptrVal;  break;
-        case TYPE_WEAKPTR:      *(uint64_t *)lhs = rhs.weakPtrVal; break;
-        case TYPE_STR:          *(void *   *)lhs = rhs.ptrVal;  break;
+        case TYPE_INT8:         *(int8_t        *)lhs = rhs.intVal;  break;
+        case TYPE_INT16:        *(int16_t       *)lhs = rhs.intVal;  break;
+        case TYPE_INT32:        *(int32_t       *)lhs = rhs.intVal;  break;
+        case TYPE_INT:          *(int64_t       *)lhs = rhs.intVal;  break;
+        case TYPE_UINT8:        *(uint8_t       *)lhs = rhs.intVal;  break;
+        case TYPE_UINT16:       *(uint16_t      *)lhs = rhs.intVal;  break;
+        case TYPE_UINT32:       *(uint32_t      *)lhs = rhs.intVal;  break;
+        case TYPE_UINT:         *(uint64_t      *)lhs = rhs.uintVal; break;
+        case TYPE_BOOL:         *(bool          *)lhs = rhs.intVal;  break;
+        case TYPE_CHAR:         *(unsigned char *)lhs = rhs.intVal;  break;
+        case TYPE_REAL32:       *(float         *)lhs = rhs.realVal; break;
+        case TYPE_REAL:         *(double        *)lhs = rhs.realVal; break;
+        case TYPE_PTR:          *(void *        *)lhs = rhs.ptrVal;  break;
+        case TYPE_WEAKPTR:      *(uint64_t      *)lhs = rhs.weakPtrVal; break;
+        case TYPE_STR:          *(void *        *)lhs = rhs.ptrVal;  break;
         case TYPE_ARRAY:
         case TYPE_DYNARRAY:
         case TYPE_STRUCT:
         case TYPE_INTERFACE:    memcpy(lhs, rhs.ptrVal, structSize); break;
-        case TYPE_FIBER:        *(void *   *)lhs = rhs.ptrVal;  break;
-        case TYPE_FN:           *(int64_t  *)lhs = rhs.intVal;  break;
+        case TYPE_FIBER:        *(void *        *)lhs = rhs.ptrVal;  break;
+        case TYPE_FN:           *(int64_t       *)lhs = rhs.intVal;  break;
 
         default:                error->handlerRuntime(error->context, "Illegal type"); return;
     }
@@ -768,13 +768,18 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, Error *e
         case TYPE_INT:
         case TYPE_UINT8:
         case TYPE_UINT16:
-        case TYPE_UINT32:   len = snprintf(buf, maxLen, "%lld ",  (long long int)slot->intVal);                               break;
+        case TYPE_UINT32:   len = snprintf(buf, maxLen, "%lld ", (long long int)slot->intVal);                                break;
         case TYPE_UINT:     len = snprintf(buf, maxLen, "%llu ", (unsigned long long int)slot->uintVal);                      break;
         case TYPE_BOOL:     len = snprintf(buf, maxLen, slot->intVal ? "true " : "false ");                                   break;
-        case TYPE_CHAR:     len = snprintf(buf, maxLen, (char)slot->intVal >= ' ' ? "'%c' " : "0x%02X ", (char)slot->intVal); break;
+        case TYPE_CHAR:
+        {
+            const char *format = (unsigned char)slot->intVal >= ' ' ? "'%c' " : "0x%02X ";
+            len = snprintf(buf, maxLen, format, (unsigned char)slot->intVal);
+            break;
+        }
         case TYPE_REAL32:
         case TYPE_REAL:     len = snprintf(buf, maxLen, "%lf ", slot->realVal);                                               break;
-        case TYPE_PTR:      len = snprintf(buf, maxLen, "%p ", slot->ptrVal);                                         break;
+        case TYPE_PTR:      len = snprintf(buf, maxLen, "%p ", slot->ptrVal);                                                 break;
         case TYPE_WEAKPTR:  len = snprintf(buf, maxLen, "%llx ", (unsigned long long int)slot->weakPtrVal);                   break;
         case TYPE_STR:      len = snprintf(buf, maxLen, "\"%s\" ", slot->ptrVal ? (char *)slot->ptrVal : "");                 break;
 
@@ -1017,20 +1022,20 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
 
     switch (typeKind)
     {
-        case TYPE_VOID:         len = fsnprintf(string, stream, availableLen, curFormat);                                break;
-        case TYPE_INT8:         len = fsnprintf(string, stream, availableLen, curFormat, (int8_t  )fiber->top->intVal);  break;
-        case TYPE_INT16:        len = fsnprintf(string, stream, availableLen, curFormat, (int16_t )fiber->top->intVal);  break;
-        case TYPE_INT32:        len = fsnprintf(string, stream, availableLen, curFormat, (int32_t )fiber->top->intVal);  break;
-        case TYPE_INT:          len = fsnprintf(string, stream, availableLen, curFormat,           fiber->top->intVal);  break;
-        case TYPE_UINT8:        len = fsnprintf(string, stream, availableLen, curFormat, (uint8_t )fiber->top->intVal);  break;
-        case TYPE_UINT16:       len = fsnprintf(string, stream, availableLen, curFormat, (uint16_t)fiber->top->intVal);  break;
-        case TYPE_UINT32:       len = fsnprintf(string, stream, availableLen, curFormat, (uint32_t)fiber->top->intVal);  break;
-        case TYPE_UINT:         len = fsnprintf(string, stream, availableLen, curFormat,           fiber->top->uintVal); break;
-        case TYPE_BOOL:         len = fsnprintf(string, stream, availableLen, curFormat, (bool    )fiber->top->intVal);  break;
-        case TYPE_CHAR:         len = fsnprintf(string, stream, availableLen, curFormat, (char    )fiber->top->intVal);  break;
+        case TYPE_VOID:         len = fsnprintf(string, stream, availableLen, curFormat);                                      break;
+        case TYPE_INT8:         len = fsnprintf(string, stream, availableLen, curFormat, (int8_t        )fiber->top->intVal);  break;
+        case TYPE_INT16:        len = fsnprintf(string, stream, availableLen, curFormat, (int16_t       )fiber->top->intVal);  break;
+        case TYPE_INT32:        len = fsnprintf(string, stream, availableLen, curFormat, (int32_t       )fiber->top->intVal);  break;
+        case TYPE_INT:          len = fsnprintf(string, stream, availableLen, curFormat,                 fiber->top->intVal);  break;
+        case TYPE_UINT8:        len = fsnprintf(string, stream, availableLen, curFormat, (uint8_t       )fiber->top->intVal);  break;
+        case TYPE_UINT16:       len = fsnprintf(string, stream, availableLen, curFormat, (uint16_t      )fiber->top->intVal);  break;
+        case TYPE_UINT32:       len = fsnprintf(string, stream, availableLen, curFormat, (uint32_t      )fiber->top->intVal);  break;
+        case TYPE_UINT:         len = fsnprintf(string, stream, availableLen, curFormat,                 fiber->top->uintVal); break;
+        case TYPE_BOOL:         len = fsnprintf(string, stream, availableLen, curFormat, (bool          )fiber->top->intVal);  break;
+        case TYPE_CHAR:         len = fsnprintf(string, stream, availableLen, curFormat, (unsigned char )fiber->top->intVal);  break;
         case TYPE_REAL32:
-        case TYPE_REAL:         len = fsnprintf(string, stream, availableLen, curFormat,           fiber->top->realVal); break;
-        case TYPE_STR:          len = fsnprintf(string, stream, availableLen, curFormat,           fiber->top->ptrVal ? (char *)fiber->top->ptrVal : "");  break;
+        case TYPE_REAL:         len = fsnprintf(string, stream, availableLen, curFormat,                 fiber->top->realVal); break;
+        case TYPE_STR:          len = fsnprintf(string, stream, availableLen, curFormat,                 fiber->top->ptrVal ? (char *)fiber->top->ptrVal : "");  break;
 
         default:                error->handlerRuntime(error->context, "Illegal type"); return;
     }
@@ -1707,8 +1712,7 @@ static FORCE_INLINE void doUnary(Fiber *fiber, Error *error)
                     case TYPE_UINT16: (*(uint16_t *)ptr)++; break;
                     case TYPE_UINT32: (*(uint32_t *)ptr)++; break;
                     case TYPE_UINT:   (*(uint64_t *)ptr)++; break;
-                    case TYPE_CHAR:   (*(char     *)ptr)++; break;
-                    // Structured, boolean and real types are not incremented/decremented
+                    // Structured, boolean, char and real types are not incremented/decremented
                     default:          error->handlerRuntime(error->context, "Illegal type"); return;
                 }
             break;
@@ -1727,8 +1731,7 @@ static FORCE_INLINE void doUnary(Fiber *fiber, Error *error)
                     case TYPE_UINT16: (*(uint16_t *)ptr)--; break;
                     case TYPE_UINT32: (*(uint32_t *)ptr)--; break;
                     case TYPE_UINT:   (*(uint64_t *)ptr)--; break;
-                    case TYPE_CHAR:   (*(char     *)ptr)--; break;
-                    // Structured, boolean and real types are not incremented/decremented
+                    // Structured, boolean, char and real types are not incremented/decremented
                     default:          error->handlerRuntime(error->context, "Illegal type"); return;
                 }
             break;

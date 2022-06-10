@@ -30,27 +30,27 @@ void constDeref(Consts *consts, Const *constant, TypeKind typeKind)
 
     switch (typeKind)
     {
-        case TYPE_INT8:         constant->intVal     = *(int8_t   *)constant->ptrVal; break;
-        case TYPE_INT16:        constant->intVal     = *(int16_t  *)constant->ptrVal; break;
-        case TYPE_INT32:        constant->intVal     = *(int32_t  *)constant->ptrVal; break;
-        case TYPE_INT:          constant->intVal     = *(int64_t  *)constant->ptrVal; break;
-        case TYPE_UINT8:        constant->intVal     = *(uint8_t  *)constant->ptrVal; break;
-        case TYPE_UINT16:       constant->intVal     = *(uint16_t *)constant->ptrVal; break;
-        case TYPE_UINT32:       constant->intVal     = *(uint32_t *)constant->ptrVal; break;
-        case TYPE_UINT:         constant->uintVal    = *(uint64_t *)constant->ptrVal; break;
-        case TYPE_BOOL:         constant->intVal     = *(bool     *)constant->ptrVal; break;
-        case TYPE_CHAR:         constant->intVal     = *(char     *)constant->ptrVal; break;
-        case TYPE_REAL32:       constant->realVal    = *(float    *)constant->ptrVal; break;
-        case TYPE_REAL:         constant->realVal    = *(double   *)constant->ptrVal; break;
-        case TYPE_PTR:          constant->ptrVal     = *(void *   *)constant->ptrVal; break;
-        case TYPE_WEAKPTR:      constant->weakPtrVal = *(uint64_t *)constant->ptrVal; break;
-        case TYPE_STR:          constant->ptrVal     = *(void *   *)constant->ptrVal; break;
+        case TYPE_INT8:         constant->intVal     = *(int8_t         *)constant->ptrVal; break;
+        case TYPE_INT16:        constant->intVal     = *(int16_t        *)constant->ptrVal; break;
+        case TYPE_INT32:        constant->intVal     = *(int32_t        *)constant->ptrVal; break;
+        case TYPE_INT:          constant->intVal     = *(int64_t        *)constant->ptrVal; break;
+        case TYPE_UINT8:        constant->intVal     = *(uint8_t        *)constant->ptrVal; break;
+        case TYPE_UINT16:       constant->intVal     = *(uint16_t       *)constant->ptrVal; break;
+        case TYPE_UINT32:       constant->intVal     = *(uint32_t       *)constant->ptrVal; break;
+        case TYPE_UINT:         constant->uintVal    = *(uint64_t       *)constant->ptrVal; break;
+        case TYPE_BOOL:         constant->intVal     = *(bool           *)constant->ptrVal; break;
+        case TYPE_CHAR:         constant->intVal     = *(unsigned char  *)constant->ptrVal; break;
+        case TYPE_REAL32:       constant->realVal    = *(float          *)constant->ptrVal; break;
+        case TYPE_REAL:         constant->realVal    = *(double         *)constant->ptrVal; break;
+        case TYPE_PTR:          constant->ptrVal     = *(void *         *)constant->ptrVal; break;
+        case TYPE_WEAKPTR:      constant->weakPtrVal = *(uint64_t       *)constant->ptrVal; break;
+        case TYPE_STR:          constant->ptrVal     = *(void *         *)constant->ptrVal; break;
         case TYPE_ARRAY:
         case TYPE_DYNARRAY:
         case TYPE_STRUCT:
         case TYPE_INTERFACE:    break;  // Always represented by pointer, not dereferenced
-        case TYPE_FIBER:        constant->ptrVal     = *(void *   *)constant->ptrVal; break;
-        case TYPE_FN:           constant->intVal     = *(int64_t  *)constant->ptrVal; break;
+        case TYPE_FIBER:        constant->ptrVal     = *(void *         *)constant->ptrVal; break;
+        case TYPE_FN:           constant->intVal     = *(int64_t        *)constant->ptrVal; break;
 
         default:                consts->error->handler(consts->error->context, "Illegal type"); return;
     }
@@ -64,26 +64,26 @@ void constAssign(Consts *consts, void *lhs, Const *rhs, TypeKind typeKind, int s
 
     switch (typeKind)
     {
-        case TYPE_INT8:         *(int8_t   *)lhs = rhs->intVal;         break;
-        case TYPE_INT16:        *(int16_t  *)lhs = rhs->intVal;         break;
-        case TYPE_INT32:        *(int32_t  *)lhs = rhs->intVal;         break;
-        case TYPE_INT:          *(int64_t  *)lhs = rhs->intVal;         break;
-        case TYPE_UINT8:        *(uint8_t  *)lhs = rhs->intVal;         break;
-        case TYPE_UINT16:       *(uint16_t *)lhs = rhs->intVal;         break;
-        case TYPE_UINT32:       *(uint32_t *)lhs = rhs->intVal;         break;
-        case TYPE_UINT:         *(uint64_t *)lhs = rhs->uintVal;        break;
-        case TYPE_BOOL:         *(bool     *)lhs = rhs->intVal;         break;
-        case TYPE_CHAR:         *(char     *)lhs = rhs->intVal;         break;
-        case TYPE_REAL32:       *(float    *)lhs = rhs->realVal;        break;
-        case TYPE_REAL:         *(double   *)lhs = rhs->realVal;        break;
-        case TYPE_PTR:          *(void *   *)lhs = rhs->ptrVal;         break;
-        case TYPE_WEAKPTR:      *(uint64_t *)lhs = rhs->weakPtrVal;     break;
-        case TYPE_STR:          *(void *   *)lhs = rhs->ptrVal;         break;
+        case TYPE_INT8:         *(int8_t        *)lhs = rhs->intVal;         break;
+        case TYPE_INT16:        *(int16_t       *)lhs = rhs->intVal;         break;
+        case TYPE_INT32:        *(int32_t       *)lhs = rhs->intVal;         break;
+        case TYPE_INT:          *(int64_t       *)lhs = rhs->intVal;         break;
+        case TYPE_UINT8:        *(uint8_t       *)lhs = rhs->intVal;         break;
+        case TYPE_UINT16:       *(uint16_t      *)lhs = rhs->intVal;         break;
+        case TYPE_UINT32:       *(uint32_t      *)lhs = rhs->intVal;         break;
+        case TYPE_UINT:         *(uint64_t      *)lhs = rhs->uintVal;        break;
+        case TYPE_BOOL:         *(bool          *)lhs = rhs->intVal;         break;
+        case TYPE_CHAR:         *(unsigned char *)lhs = rhs->intVal;         break;
+        case TYPE_REAL32:       *(float         *)lhs = rhs->realVal;        break;
+        case TYPE_REAL:         *(double        *)lhs = rhs->realVal;        break;
+        case TYPE_PTR:          *(void *        *)lhs = rhs->ptrVal;         break;
+        case TYPE_WEAKPTR:      *(uint64_t      *)lhs = rhs->weakPtrVal;     break;
+        case TYPE_STR:          *(void *        *)lhs = rhs->ptrVal;         break;
         case TYPE_ARRAY:
         case TYPE_STRUCT:
-        case TYPE_INTERFACE:    memcpy(lhs, rhs->ptrVal, size);         break;
-        case TYPE_FIBER:        *(void *   *)lhs = rhs->ptrVal;         break;
-        case TYPE_FN:           *(int64_t  *)lhs = rhs->intVal;         break;
+        case TYPE_INTERFACE:    memcpy(lhs, rhs->ptrVal, size);              break;
+        case TYPE_FIBER:        *(void *        *)lhs = rhs->ptrVal;         break;
+        case TYPE_FN:           *(int64_t       *)lhs = rhs->intVal;         break;
 
         default:          consts->error->handler(consts->error->context, "Illegal type"); return;
     }

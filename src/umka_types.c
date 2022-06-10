@@ -164,7 +164,7 @@ int typeSizeNoCheck(Type *type)
         case TYPE_UINT32:   return sizeof(uint32_t);
         case TYPE_UINT:     return sizeof(uint64_t);
         case TYPE_BOOL:     return sizeof(bool);
-        case TYPE_CHAR:     return sizeof(char);
+        case TYPE_CHAR:     return sizeof(unsigned char);
         case TYPE_REAL32:   return sizeof(float);
         case TYPE_REAL:     return sizeof(double);
         case TYPE_PTR:      return sizeof(void *);

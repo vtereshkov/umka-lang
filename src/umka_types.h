@@ -238,7 +238,7 @@ static inline bool typeOverflow(TypeKind typeKind, Const val)
         case TYPE_UINT32:   return val.intVal  < 0               || val.intVal  > 4294967295;
         case TYPE_UINT:     return false;
         case TYPE_BOOL:     return false;
-        case TYPE_CHAR:     return val.intVal  < -128            || val.intVal  > 255;
+        case TYPE_CHAR:     return val.intVal  < 0               || val.intVal  > 255;
         case TYPE_REAL32:   return val.realVal < -FLT_MAX        || val.realVal > FLT_MAX;
         case TYPE_REAL:     return val.realVal < -DBL_MAX        || val.realVal > DBL_MAX;
         case TYPE_PTR:
