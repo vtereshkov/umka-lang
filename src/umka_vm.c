@@ -1219,7 +1219,15 @@ static FORCE_INLINE void doBuiltinMaketostr(Fiber *fiber, HeapPages *pages, Erro
     if (!src || !src->data)
         error->handlerRuntime(error->context, "Dynamic array is null");
 
-    if (((char *)src->data)[src->len - 1] != 0)
+    bool nullFound = false;
+    for (int i = 0; i < src->len; i++)
+        if (((char *)src->data)[i] == 0)
+        {
+            nullFound = true;
+            break;
+        }
+
+    if (!nullFound)
         error->handlerRuntime(error->context, "Dynamic array is not null-terminated");
 
     char *dest = chunkAlloc(pages, src->len, NULL, error);
