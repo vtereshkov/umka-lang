@@ -19,8 +19,8 @@ static void compileError(void *context, const char *format, ...)
     Compiler *comp = context;
 
     strcpy(comp->error.fileName, comp->lex.fileName);
-    comp->error.line = comp->lex.line;
-    comp->error.pos = comp->lex.pos;
+    comp->error.line = comp->lex.tok.line;
+    comp->error.pos = comp->lex.tok.pos;
     vsnprintf(comp->error.msg, UMKA_MSG_LEN + 1, format, args);
 
     va_end(args);

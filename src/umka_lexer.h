@@ -106,6 +106,7 @@ typedef struct
         double realVal;
         char *strVal;
     };
+    int line, pos;
 } Token;
 
 

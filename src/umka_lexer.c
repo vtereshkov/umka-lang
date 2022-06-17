@@ -121,6 +121,8 @@ int lexInit(Lexer *lex, Storage *storage, DebugInfo *debug, const char *fileName
     lex->pos = 1;
     lex->tok.kind = TOK_NONE;
     lex->tok.strVal = NULL;
+    lex->tok.line = lex->line;
+    lex->tok.pos = lex->pos;
     lex->prevTok = lex->tok;
     lex->storage = storage;
     lex->debug = debug;
@@ -190,7 +192,6 @@ static char lexChar(Lexer *lex)
         if (ch == '\n')
         {
             lex->line++;
-            lex->debug->line++;
             lex->pos = 1;
         }
     }
@@ -742,8 +743,11 @@ static void lexStrLiteral(Lexer *lex)
 
 static void lexNextWithEOLN(Lexer *lex)
 {
-    lex->tok.kind = TOK_NONE;
     lexSpacesAndComments(lex);
+
+    lex->tok.kind = TOK_NONE;
+    lex->tok.line = lex->debug->line = lex->line;
+    lex->tok.pos = lex->pos;
 
     char ch = lex->buf[lex->bufPos];
     if ((ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || ch == '_')
