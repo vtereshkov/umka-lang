@@ -5,8 +5,19 @@ import "std.um"
 
 type (
     Any  = interface{}
-    Item = struct {key, val: Any}
-    Map* = [][]Item
+
+    Item = struct {
+        key, val: Any
+    }
+
+    Iter = struct {
+        b, i: int
+    }
+
+    Map* = struct {
+        data: [][]Item
+        iter: Iter
+    }
 )
 
 
@@ -70,11 +81,11 @@ fn (m: ^Map) rehash()
 
 
 fn (m: ^Map) get*(key: Any): Any {
-    if len(m^) == 0 {return null}
+    if len(m.data) == 0 {return null}
 
-    b := hash(key) % len(m^)
+    b := hash(key) % len(m.data)
 
-    for item in m[b] {
+    for item in m.data[b] {
         if equal(item.key, key) {
             return item.val
         } 
@@ -85,52 +96,89 @@ fn (m: ^Map) get*(key: Any): Any {
 
 
 fn (m: ^Map) set*(key, val: Any) {
-    if len(m^) == 0 {
-        m^ = make(Map, defLen)
+    if len(m.data) == 0 {
+        m.data = make([][]Item, defLen)
     }
 
-    b := hash(key) % len(m^)
+    b := hash(key) % len(m.data)
 
-    if size := len(m[b]); size == 0 {
-        m[b] = []Item{Item{key, val}}
+    if size := len(m.data[b]); size == 0 {
+        m.data[b] = []Item{Item{key, val}}
     } else {
         if size > rehashThreshold {
             m.rehash()
-            b = hash(key) % len(m^)         
+            b = hash(key) % len(m.data)         
         } 
 
-        for i := 0; i < len(m[b]); i++ {
-            if equal(m[b][i].key, key) {
-                m[b][i].val = val
+        for i := 0; i < len(m.data[b]); i++ {
+            if equal(m.data[b][i].key, key) {
+                m.data[b][i].val = val
                 return
             }
         }
 
-        if len(m[b]) == 0 {
-            m[b] = []Item{Item{key, val}}
+        if len(m.data[b]) == 0 {
+            m.data[b] = []Item{Item{key, val}}
         } else {
-            m[b] = append(m[b], Item{key, val})
+            m.data[b] = append(m.data[b], Item{key, val})
         }
     }
 }
 
 
 fn (m: ^Map) del*(key: Any) {
-    b := hash(key) % len(m^)
+    b := hash(key) % len(m.data)
 
-    for i, item in m[b] {
+    for i, item in m.data[b] {
         if equal(item.key, key) {
-            m[b] = delete(m[b], i)
+            m.data[b] = delete(m.data[b], i)
             return
         } 
     }
 }
 
 
-fn (m: ^Map) rehash() {
-    n := make(Map, 2 * len(m^))
+fn (m: ^Map) first*(): (Any, Any) {
+    m.iter.b = 0
 
-    for bucket in m {
+    for m.iter.b < len(m.data); m.iter.b++ {
+        m.iter.i = 0
+        bucket := m.data[m.iter.b]
+
+        for m.iter.i < len(bucket); m.iter.i++ {
+            item := bucket[m.iter.i]
+            return item.key, item.val
+        }
+    }
+
+    var empty: Any
+    return empty, empty
+}
+
+
+fn (m: ^Map) next*(): (Any, Any) {
+    iStart := m.iter.i + 1
+
+    for m.iter.b < len(m.data); m.iter.b++ {
+        m.iter.i = iStart
+        bucket := m.data[m.iter.b]
+
+        for m.iter.i < len(bucket); m.iter.i++ {
+            item := bucket[m.iter.i]
+            return item.key, item.val
+        }
+        iStart = 0
+    }
+    
+    var empty: Any
+    return empty, empty
+}
+
+
+fn (m: ^Map) rehash() {
+    n := Map{data: make([][]Item, 2 * len(m.data))}
+
+    for bucket in m.data {
         for item in bucket {
             n.set(item.key, item.val)
         }
@@ -143,7 +191,7 @@ fn (m: ^Map) rehash() {
 fn (m: ^Map) toStr*(): str {
     out := "{ "
 
-    for bucket in m^ {
+    for bucket in m.data {
         if len(bucket) == 0 {
             continue
         }

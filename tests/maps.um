@@ -27,13 +27,20 @@ fn test1() {
     populations.set("Russia", 146.748)    
     russia2020 := real(populations.get("Russia"))
 
+    printf("Population of Russia was %.2f million. Now it is %.2f million\n\n", russia2019, russia2020)
+    printf(populations.toStr() + '\n')
+
+    printf("\nCountries and regions more populous than Russia:\n")
+    for country, pop := populations.first(); ^real(pop) != null; country, pop = populations.next() {
+        if real(pop) > russia2020 {
+            printf("%40s: %.2f\n", str(country), real(pop))
+        }
+    }
+
     populations.del("Russia")
     if ^real(populations.get("Russia")) != null {
         error("Test failed")
-    }
-
-    printf("Population of Russia was %.2f million. Now it is %.2f million\n\n", russia2019, russia2020)
-    printf(populations.toStr() + '\n')
+    }    
 }
 
 fn test2() {
