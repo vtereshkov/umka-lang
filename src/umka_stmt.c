@@ -877,8 +877,7 @@ void parseFnBlock(Compiler *comp, Ident *fn)
     // StmtList
     parseStmtList(comp);
 
-    if (!comp->blocks.item[comp->blocks.top].hasReturn && fn->type->sig.resultType->kind != TYPE_VOID)
-        comp->error.handler(comp->error.context, "Non-void function block must have return statement");
+    const bool hasReturn = comp->blocks.item[comp->blocks.top].hasReturn;
 
     // 'return' epilog
     genGotosEpilog(&comp->gen, comp->gen.returns);
@@ -897,6 +896,9 @@ void parseFnBlock(Compiler *comp, Ident *fn)
 
     blocksLeave(&comp->blocks);
     lexEat(&comp->lex, TOK_RBRACE);
+
+    if (!hasReturn && fn->type->sig.resultType->kind != TYPE_VOID)
+        comp->error.handler(comp->error.context, "Non-void function must have a return statement");    
 }
 
 
