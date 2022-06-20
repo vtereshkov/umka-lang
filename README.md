@@ -1,8 +1,6 @@
 ![](resources/stopwar.png)
 
-
-![](resources/logo.png)
-
+<img src="https://github.com/vtereshkov/umka-lang/blob/master/resources/logo.svg" width="400")
 
 [![CI](https://github.com/vtereshkov/umka-lang/workflows/CI/badge.svg)](https://github.com/vtereshkov/umka-lang/actions)
 
