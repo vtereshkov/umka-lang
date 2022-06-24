@@ -40,9 +40,9 @@ fn test2() {
 
 		printf(repr(m2[Pt{42, 23}]) + repr(m2[Pt{11, 12}]) + repr(m2[Pt{5, 7}]) + '\n')
 
-	    k := keys(m2)
-	    printf(repr(len(m2)) + repr(k) + '\n')
-	    printf(repr(m2) + '\n')
+		k := keys(m2)
+		printf(repr(len(m2)) + repr(k) + '\n')
+		printf(repr(m2) + '\n')
 
 		p = &m2[Pt{42, 23}]
 	}
@@ -64,16 +64,23 @@ fn test3() {
 }
 
 
+fn foo(): ^map[[]int]str {
+  return &map[[]int]str{
+    []int{13, 15}: "So-so",
+    []int{57, 89}: "Nice"}
+}
+
+
 fn test4() {
 	printf("\nTest 4\n")
-
-	m4 := make(map[[]int]str)
+  
+  m4 := foo()
 
 	m4[[]int{2, 5}] = "OK"
 	m4[[]int{7, 9}] = "Also OK"
 
 	printf(repr(m4[[]int{2, 5}]) + '\n')
-	printf(repr(m4) + '\n')	
+	printf(repr(m4^) + '\n')	
 }
 
 
