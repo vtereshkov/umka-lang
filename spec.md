@@ -778,9 +778,9 @@ int('b')
 
 ### Composite literals
 
-A composite literal constructs a value for an array, dynamic array, structure or function and creates a new value each time it is evaluated. It consists of the type followed by the brace-bound list of item values (for arrays or dynamic arrays), list of field values with optional field names (for structures) or the function body (for functions). 
+A composite literal constructs a value for an array, dynamic array, map, structure or function and creates a new value each time it is evaluated. It consists of the type followed by the brace-bound list of item values (for arrays or dynamic arrays), list of key/item pairs (for maps), list of field values with optional field names (for structures) or the function body (for functions). 
 
-The number of array item values or structure field values (if the optional field names are omitted) should match the literal type. The types of array item values, dynamic array item values or structure field values should be compatible to those of the literal type.
+The number of array item values or structure field values (if the optional field names are omitted) should match the literal type. The types of array item values, dynamic array item values, map key and item values, or structure field values should be compatible to those of the literal type.
 
 Syntax:
 
