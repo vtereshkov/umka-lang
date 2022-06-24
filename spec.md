@@ -282,12 +282,19 @@ String assignment copies the contents of the string.
 
 #### Map types
 
-A map is a collection of items of a single type indexed by unique items, called *keys*, of another type.
+A map is a collection of items of a single type indexed by unique values, called *keys*, of another type.
 
 Syntax:
 
 ```
 mapType = "map" "[" type "]" type.
+```
+
+Examples:
+
+```
+map[str]real
+map[[]int]str
 ```
 
 Maps require initialization by assignment from a map literal or by explicitly calling `make()`. 
@@ -357,6 +364,7 @@ Two types are *equivalent* if
 * They are pointer types and have equivalent base types and both are either strong or weak
 * They are array types and have equal length and equivalent item types
 * They are dynamic array types and have equivalent item types
+* They are map types and have equivalent key types and equivalent item types
 * They are structure or interface types and have equal number of fields, equal field names and equivalent field types
 * They are function types, which are both either methods or non-methods, and have equal number of parameters, equivalent parameter types, equal parameter default values (excluding the receiver parameter) and equivalent result type.
 
@@ -614,10 +622,13 @@ fn new(T): ^T
 Allocates memory for a variable of type `T` , initializes it with zeros and returns a pointer to it. 
 
 ```
-fn make([]T, length: int): []T
+fn make([]T, length: int): []T    // (1)
+fn make(map[K]T): map[K]T         // (2)
 ```
 
-Constructs a dynamic array of `length` items of type `T`.
+(1) Constructs a dynamic array of `length` items of type `T` initialized with zeroes. 
+
+(2) Constructs an empty map with item type `T` indexed by keys of type `K`. 
 
 ```
 fn append(a: []T, x: (^T | []T)): []T
@@ -626,10 +637,13 @@ fn append(a: []T, x: (^T | []T)): []T
 Constructs a copy of the dynamic array `a` and appends `x` to it. The `x` can be either a new item of the same type as the item type  `T`  of `a`, or another dynamic array of the same item type `T`. 
 
 ```
-fn delete(a: []T, index: int): []T
+fn delete(a: []T, index: int): []T        // (1)
+fn delete(m: map[K]T, key: K): map[K]T    // (2)
 ```
 
-Constructs a copy of the dynamic array `a` and deletes the item at position `index` from it.
+(1) Constructs a copy of the dynamic array `a` and deletes the item at position `index` from it.
+
+(2) Deletes an item indexed by `key` from the map `m` and returns this map.
 
 ```
 fn slice(a: ([]T | str), startIndex [, endIndex]: int): ([]T | str)
@@ -638,10 +652,10 @@ fn slice(a: ([]T | str), startIndex [, endIndex]: int): ([]T | str)
 Constructs a copy of the part of the dynamic array or string `a` starting at `startIndex` and ending before `endIndex`. If `endIndex` is omitted, it is treated as equal to `len(a)`. If `endIndex` is negative, `len(a)` is implicitly added to it.
 
 ```
-fn len(a: ([...]T | []T | str)): int
+fn len(a: ([...]T | []T | map[K]T | str)): int
 ```
 
-Returns the length of `a`, where `a` can be an array, a dynamic array or a string.
+Returns the length of `a`, where `a` can be an array, a dynamic array, a map or a string.
 
 ```
 fn sizeof(T | a: T): int
@@ -668,10 +682,24 @@ fn selftypeeq(a, b: interface{...}): bool
 Checks whether the types of the variables that have been converted to the interfaces `a`  and `b` are equivalent.
 
 ```
-fn valid(a: ([]T | interface{...} | fn (...): T | fiber)): bool
+fn valid(a: ([]T | map[K]T | interface{...} | fn (...): T | fiber)): bool
 ```
 
-Checks whether a dynamic array, interface, function variable or fiber has been initialized with some value.
+Checks whether a dynamic array, map, interface, function variable or fiber has been initialized with some value.
+
+##### Map functions
+
+```
+fn validkey(m: map[K]T, key: K): bool
+```
+
+Checks whether the map `m` has an item indexed by `key`.
+
+```
+fn keys(m: map[K]T): []K
+```
+
+Returns a dynamic array of the keys that index the items of the map `m`.
 
 ##### Multitasking functions
 
@@ -757,9 +785,11 @@ The number of array item values or structure field values (if the optional field
 Syntax:
 
 ```
-compositeLiteral = arrayLiteral | dynArrayLiteral | structLiteral | fnLiteral.
+compositeLiteral = arrayLiteral | dynArrayLiteral | mapLiteral | 
+                   structLiteral | fnLiteral.
 arrayLiteral     = "{" [expr {"," expr}] "}".
 dynArrayLiteral  = arrayLiteral.
+mapLiteral       = "{" expr ":" expr {"," expr ":" expr} "}".
 structLiteral    = "{" [[ident ":"] expr {"," [ident ":"] expr}] "}".
 fnLiteral        = fnBlock.
 ```
@@ -769,6 +799,7 @@ Examples:
 ```
 [3]real{2.3, -4.1 / 2, b}
 []interface{}{7.2, "Hello", [2]int{3, 5}}
+map[[]int]str{[]int{13, 15}: "First", []int{57, 89}: "Second"}
 Vec{x: 2, y: 8}
 fn (x: int) {return 2 * x}
 ```
@@ -803,7 +834,7 @@ p^
 
 #### Index selector
 
-The index selector `[...]` accesses an array item. It can be applied to an array, a dynamic array, a string or a pointer to one of these types. The index should be an integer expression. Item indexing starts from 0. If the index is out of bounds, an error is triggered.
+The index selector `[...]` accesses a collection item. It can be applied to an array, a dynamic array, a map, a string or a pointer to one of these types. For maps, the index should be of the type equivalent to the key type of the map. If there is no such a key in the map, a new map item is constructed and initialized with zeroes. For all the other collection types, the index should be an integer expression. Item indexing starts from 0. If the index is out of bounds, an error is triggered.
 
 Syntax:
 
@@ -816,6 +847,7 @@ Examples:
 ```
 b[5]
 longVector[2 * i + 3 * j]
+m["Hello"]
 ```
 
 #### Field or method selector
@@ -1673,9 +1705,11 @@ indexSelector       = "[" expr "]".
 fieldSelector       = "." ident.
 callSelector        = actualParams.
 actualParams        = "(" [expr {"," expr}] ")".
-compositeLiteral    = arrayLiteral | dynArrayLiteral | structLiteral | fnLiteral.
+compositeLiteral    = arrayLiteral | dynArrayLiteral | mapLiteral |
+                      structLiteral | fnLiteral.
 arrayLiteral        = "{" [expr {"," expr}] "}".
 dynArrayLiteral     = arrayLiteral.
+mapLiteral          = "{" expr ":" expr {"," expr ":" expr} "}".
 structLiteral       = "{" [[ident ":"] expr {"," [ident ":"] expr}] "}".
 fnLiteral           = fnBlock.
 typeCast            = type "(" expr ")".
