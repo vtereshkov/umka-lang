@@ -16,7 +16,7 @@ Keywords have special meaning and cannot be used in any other role. Umka has the
 
 ```
 break case const continue default else for fn import 
-interface if in return str struct switch type var weak
+interface if in map return str struct switch type var weak
 ```
 
 ### Identifiers
@@ -153,7 +153,7 @@ Syntax:
 
 ```
 type = qualIdent | ptrType | arrayType | dynArrayType | strType | 
-       structType | interfaceType | fnType.
+       mapType | structType | interfaceType | fnType.
 qualIdent = [ident "."] ident.
 ```
 
@@ -279,6 +279,20 @@ strType = "str"
 ```
 
 String assignment copies the contents of the string.
+
+#### Map types
+
+A map is a collection of items of a single type indexed by unique items, called *keys*, of another type.
+
+Syntax:
+
+```
+mapType = "map" "[" type "]" type.
+```
+
+Maps require initialization by assignment from a map literal or by explicitly calling `make()`. 
+
+Map assignment copies the pointer, but not the contents of the map
 
 #### Structure types
 
@@ -1602,11 +1616,12 @@ exportMark          = ["*"].
 identList           = ident exportMark {"," ident exportMark}.
 typedIdentList      = identList ":" [".."] type.
 type                = qualIdent | ptrType | arrayType | dynArrayType | strType |
-                      structType | interfaceType | fnType.
+                      mapType | structType | interfaceType | fnType.
 ptrType             = ["weak"] "^" type.
 arrayType           = "[" expr "]" type.
 dynArrayType        = "[" "]" type.
 strType             = "str".
+mapType             = "map" "[" type "]" type.
 structType          = "struct" "{" {typedIdentList ";"} "}".
 interfaceType       = "interface" "{" {(ident signature | qualIdent) ";"} "}".
 fnType              = "fn" signature.

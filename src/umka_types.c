@@ -325,7 +325,7 @@ static bool typeEquivalentRecursive(Type *left, Type *right, bool checkTypeIdent
         else if (left->kind == TYPE_MAP)
         {
             // Key type
-            if (typeMapKey(left) != typeMapKey(right))
+            if (!typeEquivalentRecursive(typeMapKey(left), typeMapKey(right), checkTypeIdents, &newPair))
                 return false;
 
             return typeEquivalentRecursive(left->base, right->base, checkTypeIdents, &newPair);
