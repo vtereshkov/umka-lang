@@ -804,7 +804,7 @@ static FORCE_INLINE MapNode *doGetMapNode(Map *map, Slot key, bool createMissing
         case TYPE_STR:
         {
             keyBytes = (char *)key.ptrVal;
-            keySize = strlen(keyBytes);
+            keySize = strlen(keyBytes) + 1;
             break;
         }
         case TYPE_ARRAY:
