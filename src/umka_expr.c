@@ -670,7 +670,7 @@ static void parseBuiltinNewCall(Compiler *comp, Type **type, Const *constant)
 }
 
 
-// fn make(type: Type, len: int): type
+// fn make(type: Type [, len: int]): type
 static void parseBuiltinMakeCall(Compiler *comp, Type **type, Const *constant)
 {
     if (constant)
@@ -678,23 +678,28 @@ static void parseBuiltinMakeCall(Compiler *comp, Type **type, Const *constant)
 
     // Dynamic array type
     *type = parseType(comp, NULL);
-    if ((*type)->kind != TYPE_DYNARRAY)
+    if ((*type)->kind != TYPE_DYNARRAY && (*type)->kind != TYPE_MAP)
         comp->error.handler(comp->error.context, "Incompatible type in make()");
 
     genPushGlobalPtr(&comp->gen, *type);
 
-    lexEat(&comp->lex, TOK_COMMA);
+    if ((*type)->kind == TYPE_DYNARRAY)
+    {
+        // Dynamic array length
+        lexEat(&comp->lex, TOK_COMMA);
 
-    // Dynamic array length
-    Type *lenType;
-    parseExpr(comp, &lenType, NULL);
-    typeAssertCompatible(&comp->types, comp->intType, lenType, false);
+        Type *lenType;
+        parseExpr(comp, &lenType, NULL);
+        typeAssertCompatible(&comp->types, comp->intType, lenType, false);
+    }
+    else // TYPE_MAP
+        genPushIntConst(&comp->gen, 0);
 
     // Pointer to result (hidden parameter)
     int resultOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, *type);
     genPushLocalPtr(&comp->gen, resultOffset);
 
-    genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_MAKE);
+    genCallBuiltin(&comp->gen, (*type)->kind, BUILTIN_MAKE);
 }
 
 
@@ -752,6 +757,7 @@ static void parseBuiltinAppendCall(Compiler *comp, Type **type, Const *constant)
 
 
 // fn delete(array: [] type, index: int): [] type
+// fn delete(m: map [keyType] type, key: keyType): map [keyType] type
 static void parseBuiltinDeleteCall(Compiler *comp, Type **type, Const *constant)
 {
     if (constant)
@@ -759,22 +765,27 @@ static void parseBuiltinDeleteCall(Compiler *comp, Type **type, Const *constant)
 
     // Dynamic array
     parseExpr(comp, type, NULL);
-    if ((*type)->kind != TYPE_DYNARRAY)
+    if ((*type)->kind != TYPE_DYNARRAY && (*type)->kind != TYPE_MAP)
         comp->error.handler(comp->error.context, "Incompatible type in delete()");
 
+    // Item index or map key
     lexEat(&comp->lex, TOK_COMMA);
-
-    // Item index
     Type *indexType;
     parseExpr(comp, &indexType, NULL);
-    doImplicitTypeConv(comp, comp->intType, &indexType, NULL, false);
-    typeAssertCompatible(&comp->types, comp->intType, indexType, false);
+
+    if ((*type)->kind == TYPE_DYNARRAY)
+    {
+        doImplicitTypeConv(comp, comp->intType, &indexType, NULL, false);
+        typeAssertCompatible(&comp->types, comp->intType, indexType, false);
+    }
+    else // TYPE_MAP
+        typeAssertEquivalent(&comp->types, typeMapKey(*type), indexType);
 
     // Pointer to result (hidden parameter)
     int resultOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, *type);
     genPushLocalPtr(&comp->gen, resultOffset);
 
-    genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_DELETE);
+    genCallBuiltin(&comp->gen, (*type)->kind, BUILTIN_DELETE);
 }
 
 
@@ -853,6 +864,14 @@ static void parseBuiltinLenCall(Compiler *comp, Type **type, Const *constant)
                 constCallBuiltin(&comp->consts, constant, NULL, TYPE_STR, BUILTIN_LEN);
             else
                 genCallBuiltin(&comp->gen, TYPE_STR, BUILTIN_LEN);
+            break;
+        }
+        case TYPE_MAP:
+        {
+            if (constant)
+                comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
+
+            genCallBuiltin(&comp->gen, TYPE_MAP, BUILTIN_LEN);
             break;
         }
         default: comp->error.handler(comp->error.context, "Incompatible type in len()"); return;
@@ -958,11 +977,59 @@ static void parseBuiltinValidCall(Compiler *comp, Type **type, Const *constant)
         comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
 
     parseExpr(comp, type, constant);
-    if ((*type)->kind != TYPE_DYNARRAY && (*type)->kind != TYPE_INTERFACE && (*type)->kind != TYPE_FN && (*type)->kind != TYPE_FIBER)
+    if ((*type)->kind != TYPE_DYNARRAY && (*type)->kind != TYPE_MAP && (*type)->kind != TYPE_INTERFACE && (*type)->kind != TYPE_FN && (*type)->kind != TYPE_FIBER)
         comp->error.handler(comp->error.context, "Incompatible type in valid()");
 
     genCallBuiltin(&comp->gen, (*type)->kind, BUILTIN_VALID);
     *type = comp->boolType;
+}
+
+
+// fn validkey(m: map [keyType] type, key: keyType): bool
+static void parseBuiltinValidkeyCall(Compiler *comp, Type **type, Const *constant)
+{
+    if (constant)
+        comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
+
+    // Map
+    parseExpr(comp, type, constant);
+    if ((*type)->kind != TYPE_MAP)
+        comp->error.handler(comp->error.context, "Incompatible type in validkey()");
+
+    lexEat(&comp->lex, TOK_COMMA);
+
+    // Map key
+    Type *keyType = NULL;
+    parseExpr(comp, &keyType, constant);
+    typeAssertEquivalent(&comp->types, typeMapKey(*type), keyType);
+
+    genCallBuiltin(&comp->gen, (*type)->kind, BUILTIN_VALIDKEY);
+    *type = comp->boolType;
+}
+
+
+// fn keys(m: map [keyType] type): []keyType
+static void parseBuiltinKeysCall(Compiler *comp, Type **type, Const *constant)
+{
+    if (constant)
+        comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
+
+    // Map
+    parseExpr(comp, type, constant);
+    if ((*type)->kind != TYPE_MAP)
+        comp->error.handler(comp->error.context, "Incompatible type in keys()");
+
+    // Result type (hidden parameter)
+    Type *keysType = typeAdd(&comp->types, &comp->blocks, TYPE_DYNARRAY);
+    keysType->base = typeMapKey(*type);
+    genPushGlobalPtr(&comp->gen, keysType);
+
+    // Pointer to result (hidden parameter)
+    int resultOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, keysType);
+    genPushLocalPtr(&comp->gen, resultOffset);
+
+    genCallBuiltin(&comp->gen, (*type)->kind, BUILTIN_KEYS);
+    *type = keysType;
 }
 
 
@@ -1084,6 +1151,10 @@ static void parseBuiltinCall(Compiler *comp, Type **type, Const *constant, Built
         case BUILTIN_SELFHASPTR:    parseBuiltinSelfhasptrCall(comp, type, constant);       break;
         case BUILTIN_SELFTYPEEQ:    parseBuiltinSelftypeeqCall(comp, type, constant);       break;
         case BUILTIN_VALID:         parseBuiltinValidCall(comp, type, constant);            break;
+
+        // Maps
+        case BUILTIN_VALIDKEY:      parseBuiltinValidkeyCall(comp, type, constant);         break;
+        case BUILTIN_KEYS:          parseBuiltinKeysCall(comp, type, constant);             break;
 
         // Fibers
         case BUILTIN_FIBERSPAWN:
@@ -1552,32 +1623,59 @@ static void parseIndexSelector(Compiler *comp, Type **type, Const *constant, boo
         genDeref(&comp->gen, TYPE_STR);
 
     if ((*type)->kind == TYPE_PTR &&
-       ((*type)->base->kind == TYPE_ARRAY || (*type)->base->kind == TYPE_DYNARRAY || (*type)->base->kind == TYPE_STR))
+       ((*type)->base->kind == TYPE_ARRAY || (*type)->base->kind == TYPE_DYNARRAY || (*type)->base->kind == TYPE_STR || (*type)->base->kind == TYPE_MAP))
         *type = (*type)->base;
 
-    if ((*type)->kind != TYPE_ARRAY && (*type)->kind != TYPE_DYNARRAY && (*type)->kind != TYPE_STR)
-        comp->error.handler(comp->error.context, "Array or string expected");
+    if ((*type)->kind != TYPE_ARRAY && (*type)->kind != TYPE_DYNARRAY && (*type)->kind != TYPE_STR && (*type)->kind != TYPE_MAP)
+        comp->error.handler(comp->error.context, "Array, string or map expected");
 
-    // Index
+    // Index or key
     lexNext(&comp->lex);
-    Type *indexType;
+    Type *indexType = NULL;
     parseExpr(comp, &indexType, NULL);
-    typeAssertCompatible(&comp->types, comp->intType, indexType, false);
+
+    if ((*type)->kind == TYPE_MAP)
+        typeAssertEquivalent(&comp->types, typeMapKey(*type), indexType);
+    else
+        typeAssertCompatible(&comp->types, comp->intType, indexType, false);
+
     lexEat(&comp->lex, TOK_RBRACKET);
 
-    if ((*type)->kind == TYPE_DYNARRAY)
-        genGetDynArrayPtr(&comp->gen);
-    else if ((*type)->kind == TYPE_STR)
-        genGetArrayPtr(&comp->gen, typeSize(&comp->types, comp->charType), -1);                 // Use actual length for range checking
-    else // TYPE_ARRAY
-        genGetArrayPtr(&comp->gen, typeSize(&comp->types, (*type)->base), (*type)->numItems);   // Use nominal length for range checking
+    Type *itemType = NULL;
+    switch ((*type)->kind)
+    {
+        case TYPE_ARRAY:
+        {
+            genGetArrayPtr(&comp->gen, typeSize(&comp->types, (*type)->base), (*type)->numItems);   // Use nominal length for range checking
+            itemType = (*type)->base;
+            break;
+        }
+        case TYPE_DYNARRAY:
+        {
+            genGetDynArrayPtr(&comp->gen);
+            itemType = (*type)->base;
+            break;
+        }
+        case TYPE_STR:
+        {
+            genGetArrayPtr(&comp->gen, typeSize(&comp->types, comp->charType), -1);                 // Use actual length for range checking
+            itemType = comp->charType;
+            break;
+        }
+        case TYPE_MAP:
+        {
+            genGetMapPtr(&comp->gen, *type);
+            itemType = typeMapItem(*type);
+            break;
+        }
+        default:
+            break;
+    }
 
-    if ((*type)->kind == TYPE_STR)
-        *type = typeAddPtrTo(&comp->types, &comp->blocks, comp->charType);
-    else if (typeStructured((*type)->base))
-        *type = (*type)->base;
+    if (typeStructured(itemType))
+        *type = itemType;
     else
-        *type = typeAddPtrTo(&comp->types, &comp->blocks, (*type)->base);
+        *type = typeAddPtrTo(&comp->types, &comp->blocks, itemType);
 
     *isVar = true;
     *isCall = false;
@@ -1764,6 +1862,7 @@ static void parseFactor(Compiler *comp, Type **type, Const *constant)
         case TOK_WEAK:
         case TOK_LBRACKET:
         case TOK_STR:
+        case TOK_MAP:
         case TOK_STRUCT:
         case TOK_INTERFACE:
         case TOK_FN:

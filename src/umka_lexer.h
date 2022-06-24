@@ -21,6 +21,7 @@ typedef enum
     TOK_INTERFACE,
     TOK_IF,
     TOK_IN,
+    TOK_MAP,
     TOK_RETURN,
     TOK_STR,
     TOK_STRUCT,

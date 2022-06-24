@@ -29,7 +29,7 @@ fn test*() {
 		Person{"Bar", 23, "M"},
 		Person{"FooBar", 23, "F"}}
 
-	mapped := persons.map(fn (person, closure: fnc.Any): fnc.Any {
+	mapped := persons.mapEach(fn (person, closure: fnc.Any): fnc.Any {
 			return Closure(closure).call(Person(person))
 		}, named_foo)
 

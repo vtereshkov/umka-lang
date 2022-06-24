@@ -27,6 +27,7 @@ static const char *spelling [] =
     "interface",
     "if",
     "in",
+    "map",
     "return",
     "str",
     "struct",

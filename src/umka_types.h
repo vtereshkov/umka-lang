@@ -32,6 +32,7 @@ typedef enum
     TYPE_ARRAY,
     TYPE_DYNARRAY,
     TYPE_STR,           // Pointer of a special kind that admits assignment of string literals, concatenation and comparison by content
+    TYPE_MAP,
     TYPE_STRUCT,
     TYPE_INTERFACE,
     TYPE_FIBER,         // Pointer of a special kind
@@ -81,7 +82,7 @@ typedef struct tagType
 {
     TypeKind kind;
     int block;
-    struct tagType *base;                   // For pointers and arrays
+    struct tagType *base;                   // For pointers, arrays and maps (for maps, denotes the tree node type)
     int numItems;                           // For arrays, structures and interfaces
     bool isExprList;                        // For structures that represent expression lists
     bool isVariadicParamList;               // For dynamic arrays of interfaces that represent variadic parameter lists
@@ -122,6 +123,7 @@ int typeSize        (Types *types, Type *type);
 int typeAlignmentNoCheck(Type *type);
 int typeAlignment       (Types *types, Type *type);
 
+
 static inline bool typeKindInteger(TypeKind typeKind)
 {
     return typeKind == TYPE_INT8  || typeKind == TYPE_INT16  || typeKind == TYPE_INT32  || typeKind == TYPE_INT ||
@@ -161,7 +163,7 @@ static inline bool typeReal(Type *type)
 
 static inline bool typeStructured(Type *type)
 {
-    return type->kind == TYPE_ARRAY  || type->kind == TYPE_DYNARRAY  ||
+    return type->kind == TYPE_ARRAY  || type->kind == TYPE_DYNARRAY  || type->kind == TYPE_MAP ||
            type->kind == TYPE_STRUCT || type->kind == TYPE_INTERFACE;
 }
 
@@ -169,7 +171,7 @@ static inline bool typeStructured(Type *type)
 static inline bool typeKindGarbageCollected(TypeKind typeKind)
 {
     return typeKind == TYPE_PTR    || typeKind == TYPE_WEAKPTR   ||
-           typeKind == TYPE_STR    || typeKind == TYPE_ARRAY     || typeKind == TYPE_DYNARRAY ||
+           typeKind == TYPE_STR    || typeKind == TYPE_ARRAY     || typeKind == TYPE_DYNARRAY || typeKind == TYPE_MAP ||
            typeKind == TYPE_STRUCT || typeKind == TYPE_INTERFACE || typeKind == TYPE_FIBER;
 }
 
@@ -246,6 +248,7 @@ static inline bool typeOverflow(TypeKind typeKind, Const val)
         case TYPE_STR:
         case TYPE_ARRAY:
         case TYPE_DYNARRAY:
+        case TYPE_MAP:
         case TYPE_STRUCT:
         case TYPE_INTERFACE:
         case TYPE_FIBER:
@@ -267,6 +270,18 @@ int typeParamSizeTotal  (Types *types, Signature *sig);
 
 const char *typeKindSpelling(TypeKind kind);
 char *typeSpelling          (Type *type, char *buf);
+
+
+static inline Type *typeMapKey(Type *mapType)
+{
+    return mapType->base->field[MAP_NODE_FIELD_KEY]->type->base;
+}
+
+
+static inline Type *typeMapItem(Type *mapType)
+{
+    return mapType->base->field[MAP_NODE_FIELD_DATA]->type->base;
+}
 
 
 #endif // UMKA_TYPES_H_INCLUDED

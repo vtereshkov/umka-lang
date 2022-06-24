@@ -54,6 +54,7 @@ typedef enum
     OP_BINARY,
     OP_GET_ARRAY_PTR,
     OP_GET_DYNARRAY_PTR,
+    OP_GET_MAP_PTR,
     OP_GET_FIELD_PTR,
     OP_ASSERT_TYPE,
     OP_ASSERT_RANGE,
@@ -113,6 +114,10 @@ typedef enum
     BUILTIN_SELFHASPTR,
     BUILTIN_SELFTYPEEQ,
     BUILTIN_VALID,
+
+    // Maps
+    BUILTIN_VALIDKEY,
+    BUILTIN_KEYS,
 
     // Fibers
     BUILTIN_FIBERSPAWN,

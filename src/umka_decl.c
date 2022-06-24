@@ -303,6 +303,36 @@ static Type *parseStrType(Compiler *comp)
 }
 
 
+// mapType = "map" "[" type "]" type.
+static Type *parseMapType(Compiler *comp)
+{
+    lexEat(&comp->lex, TOK_MAP);
+    lexEat(&comp->lex, TOK_LBRACKET);
+
+    Type *type = typeAdd(&comp->types, &comp->blocks, TYPE_MAP);
+
+    Type *keyType = parseType(comp, NULL);
+    Type *ptrKeyType = typeAddPtrTo(&comp->types, &comp->blocks, keyType);
+
+    lexEat(&comp->lex, TOK_RBRACKET);
+
+    Type *itemType = parseType(comp, NULL);
+    Type *ptrItemType = typeAddPtrTo(&comp->types, &comp->blocks, itemType);
+
+    // The map base type is the Umka equivalent of MapNode
+    Type *nodeType = typeAdd(&comp->types, &comp->blocks, TYPE_STRUCT);
+    Type *ptrNodeType = typeAddPtrTo(&comp->types, &comp->blocks, nodeType);
+
+    typeAddField(&comp->types, nodeType, ptrKeyType, "__key");
+    typeAddField(&comp->types, nodeType, ptrItemType, "__data");
+    typeAddField(&comp->types, nodeType, ptrNodeType, "__left");
+    typeAddField(&comp->types, nodeType, ptrNodeType, "__right");
+
+    type->base = nodeType;
+    return type;
+}
+
+
 // structType = "struct" "{" {typedIdentList ";"} "}"
 static Type *parseStructType(Compiler *comp)
 {
@@ -405,7 +435,7 @@ static Type *parseFnType(Compiler *comp)
 }
 
 
-// type = qualIdent | ptrType | arrayType | dynArrayType | strType | structType | interfaceType | fnType.
+// type = qualIdent | ptrType | arrayType | dynArrayType | strType | mapType | structType | interfaceType | fnType.
 Type *parseType(Compiler *comp, Ident *ident)
 {
     if (ident)
@@ -423,6 +453,7 @@ Type *parseType(Compiler *comp, Ident *ident)
         case TOK_WEAK:      return parsePtrType(comp);
         case TOK_LBRACKET:  return parseArrayType(comp);
         case TOK_STR:       return parseStrType(comp);
+        case TOK_MAP:       return parseMapType(comp);
         case TOK_STRUCT:    return parseStructType(comp);
         case TOK_INTERFACE: return parseInterfaceType(comp);
         case TOK_FN:        return parseFnType(comp);

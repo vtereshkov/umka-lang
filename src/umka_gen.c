@@ -548,6 +548,13 @@ void genGetDynArrayPtr(CodeGen *gen)
 }
 
 
+void genGetMapPtr(CodeGen *gen, Type *mapType)
+{
+    const Instruction instr = {.opcode = OP_GET_MAP_PTR, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.ptrVal = mapType};
+    genAddInstr(gen, &instr);
+}
+
+
 void genGetFieldPtr(CodeGen *gen, int fieldOffset)
 {
     if (!optimizeGetFieldPtr(gen, fieldOffset))

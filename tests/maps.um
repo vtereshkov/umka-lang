@@ -1,12 +1,9 @@
-import (
-    "std.um"
-    "../import/map.um"
-)
+import "std.um"
 
 fn test1() {
     printf("\nTest 1\n")
 
-    var populations: map.Map
+    populations := make(map[str]real)
     f := std.fopen("../tests/countries.dat", "r")
 
     for true {
@@ -17,52 +14,63 @@ fn test1() {
         num := fscanf(f, "%s %s %s %lld %lf\n", &code, &name, &typ, &year, &pop) 
         if num != 5 {break}
 
-        populations.set(name, pop)
+        populations[name] = pop
     }
 
     std.fclose(f)
 
-    russia2019 := real(populations.get("Russia"))
+    russia2019 := populations["Russia"]
     
-    populations.set("Russia", 146.748)    
-    russia2020 := real(populations.get("Russia"))
+    populations["Russia"] = 146.748    
+    russia2020 := populations["Russia"]
 
     printf("Population of Russia was %.2f million. Now it is %.2f million\n\n", russia2019, russia2020)
-    printf(populations.toStr() + '\n')
+    //printf(populations.toStr() + '\n')
 
     printf("\nCountries and regions more populous than Russia:\n")
-    for country, pop := populations.first(); ^real(pop) != null; country, pop = populations.next() {
-        if real(pop) > russia2020 {
-            printf("%40s: %.2f\n", str(country), real(pop))
+    for country in keys(populations) {
+        pop := populations[country]
+        if pop > russia2020 {
+            printf("%40s: %.2f\n", country, pop)
         }
     }
 
-    populations.del("Russia")
-    if ^real(populations.get("Russia")) != null {
+    if !validkey(populations, "Russia") {
         error("Test failed")
-    }    
+    }     
+
+    populations = delete(populations, "Russia")
+
+    if validkey(populations, "Russia") {
+        error("Test failed")
+    }     
 }
 
 fn test2() {
     printf("\nTest 2\n")
 
     type Pair = [2]int 
+    writers := make(map[Pair]str)
 
-    var writers: map.Map
-    writers.set(Pair{1564, 1616}, "Shakespeare")
-    writers.set(Pair{1799, 1837}, "Pushkin")
-    writers.set(Pair{1828, 1910}, "Tolstoy")
-    writers.set(Pair{1749, 1832}, "Goethe")
+    writers[Pair{1564, 1616}] = "Shakespeare"
+    writers[Pair{1799, 1837}] = "Pushkin"
+    writers[Pair{1828, 1910}] = "Tolstoy"
+    writers[Pair{1749, 1832}] = "Goethe"
 
-    pushkin := str(writers.get(Pair{1799, 1837}))
+    pushkin := writers[Pair{1799, 1837}]
     printf(pushkin + "\n\n")
 
-    writers.del(Pair{1799, 1837})
-    if ^str(writers.get(Pair{1799, 1837})) != null {
+    if !validkey(writers, Pair{1799, 1837}) {
         error("Test failed")
-    }
+    }    
 
-    printf(writers.toStr() + '\n')
+    writers = delete(writers, Pair{1799, 1837})
+
+    if validkey(writers, Pair{1799, 1837}) {
+        error("Test failed")
+    }  
+
+    //printf(writers.toStr() + '\n')
 }
 
 fn test3() {
@@ -71,14 +79,13 @@ fn test3() {
     a := 42
     b := 43
 
-    type Ptr = struct {p: ^int} 
+    pointers := make(map[^int]int)
 
-    var pointers: map.Map
-    pointers.set(Ptr{&a}, a)
-    pointers.set(Ptr{&b}, b)
+    pointers[&a] = a
+    pointers[&b] = b
 
-    a1 := int(pointers.get(Ptr{&a}))
-    b1 := int(pointers.get(Ptr{&b}))
+    a1 := pointers[&a]
+    b1 := pointers[&b]
 
     if a1 != a || b1 != b {
         error("Test failed")

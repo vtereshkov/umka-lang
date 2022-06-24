@@ -5,7 +5,7 @@ type (
     AnyArray* = []Any
 )
 
-fn (a: ^AnyArray) map*(f: fn (x, ctx: Any): Any, ctx: Any): AnyArray {
+fn (a: ^AnyArray) mapEach*(f: fn (x, ctx: Any): Any, ctx: Any): AnyArray {
     res := make(AnyArray, len(a^))
     for i := 0; i < len(a^); i++ {
         res[i] = f(a[i], ctx)

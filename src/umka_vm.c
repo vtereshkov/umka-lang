@@ -42,6 +42,7 @@ static const char *opcodeSpelling [] =
     "BINARY",
     "GET_ARRAY_PTR",
     "GET_DYNARRAY_PTR",
+    "GET_MAP_PTR",
     "GET_FIELD_PTR",
     "ASSERT_TYPE",
     "ASSERT_RANGE",
@@ -96,6 +97,8 @@ static const char *builtinSpelling [] =
     "selfhasptr",
     "selftypeeq",
     "valid",
+    "validkey",
+    "keys",
     "fiberspawn",
     "fibercall",
     "fiberalive",
@@ -495,6 +498,7 @@ static FORCE_INLINE void doBasicDeref(Slot *slot, TypeKind typeKind, Error *erro
         case TYPE_STR:          slot->ptrVal     = *(void *         *)slot->ptrVal; break;
         case TYPE_ARRAY:
         case TYPE_DYNARRAY:
+        case TYPE_MAP:
         case TYPE_STRUCT:
         case TYPE_INTERFACE:    break;  // Always represented by pointer, not dereferenced
         case TYPE_FIBER:        slot->ptrVal     = *(void *         *)slot->ptrVal; break;
@@ -533,6 +537,7 @@ static FORCE_INLINE void doBasicAssign(void *lhs, Slot rhs, TypeKind typeKind, i
         case TYPE_STR:          *(void *        *)lhs = rhs.ptrVal;  break;
         case TYPE_ARRAY:
         case TYPE_DYNARRAY:
+        case TYPE_MAP:
         case TYPE_STRUCT:
         case TYPE_INTERFACE:    memcpy(lhs, rhs.ptrVal, structSize); break;
         case TYPE_FIBER:        *(void *        *)lhs = rhs.ptrVal;  break;
@@ -592,7 +597,7 @@ static FORCE_INLINE void doAddStructFieldsRefCntCandidates(RefCntChangeCandidate
 }
 
 
-static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type *type, TokenKind tokKind)
+static FORCE_INLINE void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type *type, TokenKind tokKind)
 {
     // Update ref counts for pointers (including static/dynamic array items and structure/interface fields) if allocated dynamically
     // All garbage collected composite types are represented by pointers by default
@@ -718,6 +723,14 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
                 break;
             }
 
+            case TYPE_MAP:
+            {
+                Map *map = (Map *)ptr;
+                Type ptrNodeType = {.kind = TYPE_PTR, .base = type->base, .next = NULL};
+                candidatePush(candidates, map->root, &ptrNodeType);
+                break;
+            }
+
             case TYPE_STRUCT:
             {
                 doAddStructFieldsRefCntCandidates(candidates, ptr, type);
@@ -753,6 +766,124 @@ static void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type 
             default: break;
         }
     }
+}
+
+
+static FORCE_INLINE MapNode *doGetMapNode(Map *map, Slot key, bool createMissingNodes, HeapPages *pages, Error *error, MapNode ***nodePtrInParent)
+{
+    if (!map || !map->root)
+        error->handlerRuntime(error->context, "Map is null");
+
+    Type *keyType = typeMapKey(map->type);
+    char *keyBytes = NULL;
+    int keySize = 0;
+
+    switch (keyType->kind)
+    {
+        case TYPE_INT8:
+        case TYPE_INT16:
+        case TYPE_INT32:
+        case TYPE_INT:
+        case TYPE_UINT8:
+        case TYPE_UINT16:
+        case TYPE_UINT32:
+        case TYPE_UINT:
+        case TYPE_BOOL:
+        case TYPE_CHAR:
+        case TYPE_REAL32:
+        case TYPE_REAL:
+        case TYPE_PTR:
+        case TYPE_WEAKPTR:
+        case TYPE_FIBER:
+        case TYPE_FN:
+        {
+            keyBytes = (char *)&key;
+            keySize = typeSizeNoCheck(keyType);
+            break;
+        }
+        case TYPE_STR:
+        {
+            keyBytes = (char *)key.ptrVal;
+            keySize = strlen(keyBytes);
+            break;
+        }
+        case TYPE_ARRAY:
+        case TYPE_MAP:
+        case TYPE_STRUCT:
+        case TYPE_INTERFACE:
+        {
+            keyBytes = (char *)key.ptrVal;
+            keySize = typeSizeNoCheck(keyType);
+            break;
+        }
+        case TYPE_DYNARRAY:
+        {
+            DynArray *array = (DynArray *)key.ptrVal;
+            keyBytes = (char *)array->data;
+            keySize = array->len * array->itemSize;
+            break;
+        }
+        default:
+        {
+            error->handlerRuntime(error->context, "Illegal type");
+            break;
+        }
+    }
+
+    if (!keyBytes)
+        error->handlerRuntime(error->context, "Map key is null");
+
+    if (keySize == 0)
+        error->handlerRuntime(error->context, "Map key has zero length");
+
+    MapNode *node = map->root;
+
+    for (int64_t bitPos = 0; bitPos < keySize * 8; bitPos++)
+    {
+        const bool bit = getBit(keyBytes, bitPos);
+
+        MapNode **child = bit ? &node->left : &node->right;
+        if (!(*child))
+        {
+            if (!createMissingNodes)
+                return NULL;
+
+            Type *nodeType = map->type->base;
+            *child = (MapNode *)chunkAlloc(pages, typeSizeNoCheck(nodeType), nodeType, error);
+        }
+
+        if (nodePtrInParent)
+            *nodePtrInParent = child;
+
+        node = *child;
+    }
+
+    return node;
+}
+
+
+static void doGetMapKeys(Fiber *fiber, HeapPages *pages, Map *map, MapNode *node, DynArray *keys, int *numKeys, Error *error)
+{
+    if (node->key)
+    {
+        void *destKey = (char *)keys->data + keys->itemSize * (*numKeys);
+        Type *keyType = typeMapKey(map->type);
+
+        // Increase key ref count
+        Slot srcKey = {.ptrVal = node->key};
+        doBasicDeref(&srcKey, keyType->kind, error);
+        doBasicChangeRefCnt(fiber, pages, srcKey.ptrVal, keyType, TOK_PLUSPLUS);
+
+        doBasicAssign(destKey, srcKey, keyType->kind, typeSizeNoCheck(keyType), error);
+
+        (*numKeys)++;
+    }
+
+    if (node->left)
+        doGetMapKeys(fiber, pages, map, node->left, keys, numKeys, error);
+
+    if (node->right)
+        doGetMapKeys(fiber, pages, map, node->right, keys, numKeys, error);
 }
 
 
@@ -1135,16 +1266,28 @@ static FORCE_INLINE void doBuiltinNew(Fiber *fiber, HeapPages *pages, Error *err
 }
 
 
-// fn make(type: Type, len: int): type
+// fn make(type: Type [, len: int]): type
 static FORCE_INLINE void doBuiltinMake(Fiber *fiber, HeapPages *pages, Error *error)
 {
-    DynArray *result = (DynArray *)(fiber->top++)->ptrVal;
+    void *result = (fiber->top++)->ptrVal;
+    int len      = (fiber->top++)->intVal;
+    Type *type   = (Type *)(fiber->top++)->ptrVal;
 
-    result->len      = (fiber->top++)->intVal;
-    result->type     = (Type *)(fiber->top++)->ptrVal;
-
-    result->itemSize = typeSizeNoCheck(result->type->base);
-    result->data     = chunkAlloc(pages, result->len * result->itemSize, result->type, error);
+    if (type->kind == TYPE_DYNARRAY)
+    {
+        DynArray *array = (DynArray *)result;
+        array->len      = len;
+        array->type     = type;
+        array->itemSize = typeSizeNoCheck(array->type->base);
+        array->data     = chunkAlloc(pages, array->len * array->itemSize, array->type, error);
+    }
+    else // TYPE_MAP
+    {
+        Map *map        = (Map *)result;
+        map->len        = 0;
+        map->type       = type;
+        map->root       = chunkAlloc(pages, typeSizeNoCheck(type->base), type->base, error);
+    }
 
     (--fiber->top)->ptrVal = result;
 }
@@ -1279,7 +1422,7 @@ static FORCE_INLINE void doBuiltinAppend(Fiber *fiber, HeapPages *pages, Error *
 
 
 // fn delete(array: [] type, index: int): [] type
-static FORCE_INLINE void doBuiltinDelete(Fiber *fiber, HeapPages *pages, Error *error)
+static FORCE_INLINE void doBuiltinDeleteDynArray(Fiber *fiber, HeapPages *pages, Error *error)
 {
     DynArray *result = (DynArray *)(fiber->top++)->ptrVal;
     int64_t index    =             (fiber->top++)->intVal;
@@ -1302,6 +1445,40 @@ static FORCE_INLINE void doBuiltinDelete(Fiber *fiber, HeapPages *pages, Error *
     // Increase result items' ref counts, as if they have been assigned one by one
     Type staticArrayType = {.kind = TYPE_ARRAY, .base = result->type->base, .numItems = result->len, .next = NULL};
     doBasicChangeRefCnt(fiber, pages, result->data, &staticArrayType, TOK_PLUSPLUS);
+
+    (--fiber->top)->ptrVal = result;
+}
+
+
+// fn delete(m: map [keyType] type, key: keyType): map [keyType] type
+static FORCE_INLINE void doBuiltinDeleteMap(Fiber *fiber, HeapPages *pages, Error *error)
+{
+    Map *result = (Map *)(fiber->top++)->ptrVal;
+    Slot key    = *fiber->top++;
+    Map *map    = (Map *)(fiber->top++)->ptrVal;
+
+    if (!map || !map->root)
+        error->handlerRuntime(error->context, "Map is null");
+
+    Type *nodeType = map->type->base;
+    Type ptrNodeType = {.kind = TYPE_PTR, .base = nodeType, .next = NULL};
+
+    MapNode **nodePtrInParent = NULL;
+    MapNode *node = doGetMapNode(map, key, false, pages, error, &nodePtrInParent);
+
+    if (node)
+    {
+        doBasicChangeRefCnt(fiber, pages, *nodePtrInParent, &ptrNodeType, TOK_MINUSMINUS);
+        *nodePtrInParent = NULL;
+        map->len--;
+        if (map->len < 0)
+            error->handlerRuntime(error->context, "Map length is negative");
+    }
+
+    doBasicChangeRefCnt(fiber, pages, map->root, &ptrNodeType, TOK_PLUSPLUS);
+    result->type = map->type;
+    result->len  = map->len;
+    result->root = map->root;
 
     (--fiber->top)->ptrVal = result;
 }
@@ -1401,6 +1578,15 @@ static FORCE_INLINE void doBuiltinLen(Fiber *fiber, Error *error)
             fiber->top->intVal = str ? strlen(str) : 0;
             break;
         }
+        case TYPE_MAP:
+        {
+            const Map *map = (Map *)(fiber->top->ptrVal);
+            if (!map)
+                error->handlerRuntime(error->context, "Map is null");
+
+            fiber->top->intVal = map->len;
+            break;
+        }
         default:
             error->handlerRuntime(error->context, "Illegal type"); return;
     }
@@ -1460,6 +1646,12 @@ static FORCE_INLINE void doBuiltinValid(Fiber *fiber, Error *error)
             isValid = array && array->data;
             break;
         }
+        case TYPE_MAP:
+        {
+            Map *map = (Map *)fiber->top->ptrVal;
+            isValid = map && map->root;
+            break;
+        }
         case TYPE_INTERFACE:
         {
             // Interface layout: __self, __selftype, methods
@@ -1485,6 +1677,45 @@ static FORCE_INLINE void doBuiltinValid(Fiber *fiber, Error *error)
 
     fiber->top->intVal = isValid;
 }
+
+
+// fn validkey(m: map [keyType] type, key: keyType): bool
+static FORCE_INLINE void doBuiltinValidkey(Fiber *fiber, HeapPages *pages, Error *error)
+{
+    Slot key  = *fiber->top++;
+    Map *map  = (Map *)(fiber->top++)->ptrVal;
+
+    MapNode *node = doGetMapNode(map, key, false, pages, error, NULL);
+    bool isValid = node && node->data;
+
+    (--fiber->top)->intVal = isValid;
+}
+
+
+// fn keys(m: map [keyType] type): []keyType
+static FORCE_INLINE void doBuiltinKeys(Fiber *fiber, HeapPages *pages, Error *error)
+{
+    DynArray *result = (DynArray *)(fiber->top++)->ptrVal;
+    Type *resultType = (Type *)(fiber->top++)->ptrVal;
+    Map *map         = (Map *)(fiber->top++)->ptrVal;
+
+    if (!map || !map->root)
+        error->handlerRuntime(error->context, "Map is null");
+
+    result->len      = map->len;
+    result->type     = resultType;
+    result->itemSize = typeSizeNoCheck(result->type->base);
+    result->data     = chunkAlloc(pages, result->len * result->itemSize, result->type, error);
+
+    int numKeys = 0;
+    doGetMapKeys(fiber, pages, map, map->root, result, &numKeys, error);
+
+    if (numKeys != map->len)
+        error->handlerRuntime(error->context, "Wrong number of keys");
+
+    (--fiber->top)->ptrVal = result;
+}
+
 
 
 // type FiberFunc = fn(parent: fiber, anyParam: ^type)
@@ -1951,6 +2182,36 @@ static FORCE_INLINE void doGetDynArrayPtr(Fiber *fiber, Error *error)
 }
 
 
+static FORCE_INLINE void doGetMapPtr(Fiber *fiber, HeapPages *pages, Error *error)
+{
+    Slot key  = *fiber->top++;
+    Map *map  = (Map *)(fiber->top++)->ptrVal;
+
+    if (!map || !map->root)
+        error->handlerRuntime(error->context, "Map is null");
+
+    Type *keyType = typeMapKey(map->type);
+    Type *itemType = typeMapItem(map->type);
+
+    MapNode *node = doGetMapNode(map, key, true, pages, error, NULL);
+    if (!node->data)
+    {
+        // When allocating dynamic arrays, we mark with type the data chunk, not the header chunk
+        node->key  = chunkAlloc(pages, typeSizeNoCheck(keyType),  keyType->kind  == TYPE_DYNARRAY ? NULL : keyType,  error);
+        node->data = chunkAlloc(pages, typeSizeNoCheck(itemType), itemType->kind == TYPE_DYNARRAY ? NULL : itemType, error);
+
+        // Increase key ref count
+        doBasicChangeRefCnt(fiber, pages, key.ptrVal, keyType, TOK_PLUSPLUS);
+
+        doBasicAssign(node->key, key, keyType->kind, typeSizeNoCheck(keyType), error);
+        map->len++;
+    }
+
+    (--fiber->top)->ptrVal = node->data;
+    fiber->ip++;
+}
+
+
 static FORCE_INLINE void doGetFieldPtr(Fiber *fiber, Error *error)
 {
     int fieldOffset = fiber->code[fiber->ip].operand.intVal;
@@ -2152,7 +2413,14 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         case BUILTIN_MAKETOARR:     doBuiltinMaketoarr(fiber, pages, error); break;
         case BUILTIN_MAKETOSTR:     doBuiltinMaketostr(fiber, pages, error); break;
         case BUILTIN_APPEND:        doBuiltinAppend(fiber, pages, error); break;
-        case BUILTIN_DELETE:        doBuiltinDelete(fiber, pages, error); break;
+        case BUILTIN_DELETE:
+        {
+            if (typeKind == TYPE_DYNARRAY)
+                doBuiltinDeleteDynArray(fiber, pages, error);
+            else
+                doBuiltinDeleteMap(fiber, pages, error);
+            break;
+        }
         case BUILTIN_SLICE:         doBuiltinSlice(fiber, pages, error); break;
         case BUILTIN_LEN:           doBuiltinLen(fiber, error); break;
         case BUILTIN_SIZEOF:        error->handlerRuntime(error->context, "Illegal instruction"); return;       // Done at compile time
@@ -2160,6 +2428,10 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         case BUILTIN_SELFHASPTR:    doBuiltinSelfhasptr(fiber, error); break;
         case BUILTIN_SELFTYPEEQ:    doBuiltinSelftypeeq(fiber, error); break;
         case BUILTIN_VALID:         doBuiltinValid(fiber, error); break;
+
+        // Maps
+        case BUILTIN_VALIDKEY:      doBuiltinValidkey(fiber, pages, error); break;
+        case BUILTIN_KEYS:          doBuiltinKeys(fiber, pages, error); break;
 
         // Fibers
         case BUILTIN_FIBERSPAWN:    doBuiltinFiberspawn(fiber, pages, error); break;
@@ -2308,6 +2580,7 @@ static FORCE_INLINE void vmLoop(VM *vm)
             case OP_BINARY:                         doBinary(fiber, pages, error);                break;
             case OP_GET_ARRAY_PTR:                  doGetArrayPtr(fiber, error);                  break;
             case OP_GET_DYNARRAY_PTR:               doGetDynArrayPtr(fiber, error);               break;
+            case OP_GET_MAP_PTR:                    doGetMapPtr(fiber, pages, error);             break;
             case OP_GET_FIELD_PTR:                  doGetFieldPtr(fiber, error);                  break;
             case OP_ASSERT_TYPE:                    doAssertType(fiber);                          break;
             case OP_ASSERT_RANGE:                   doAssertRange(fiber, error);                  break;
@@ -2432,6 +2705,7 @@ int vmAsm(int ip, Instruction *code, char *buf, int size)
         case OP_CALL_BUILTIN:           chars += snprintf(buf + chars, nonneg(size - chars), " %s",    builtinSpelling[instr->operand.builtinVal]); break;
         case OP_CHANGE_REF_CNT:
         case OP_CHANGE_REF_CNT_ASSIGN:
+        case OP_GET_MAP_PTR:
         case OP_ASSERT_TYPE:
         {
             char typeBuf[DEFAULT_STR_LEN + 1];

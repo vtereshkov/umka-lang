@@ -1,0 +1,86 @@
+fn test1() {
+	printf("\nTest 1\n")
+
+	m := make(map[str]str)
+
+	m["Hello" + " World"] = "English" + " EN"
+	m["Salut" + " le Monde"] = "French" + " FR"
+
+	printf(repr(validkey(m, "Salut le Monde")) + '\n')
+
+	m = delete(m, "Salut le Monde")
+
+	printf(repr(validkey(m, "Salut le Monde")) + '\n')
+
+	a := m["Hello" + " World"]
+	b := m["Privet" + " Mir"]
+	c := m["Salut" + " le Monde"]
+	
+	printf(repr(a) + repr(b) + repr(c) + '\n')
+	printf(repr(keys(m)) + '\n')
+	printf(repr(valid(m)) + '\n')	
+}
+
+
+fn test2() {
+	printf("\nTest 2\n")
+
+	type Pt = struct {
+		x, y: int
+	}
+
+	var p: ^str
+
+	{
+		m2 := make(map[Pt]str)
+
+		m2[Pt{5, 7}] = "Good"
+		m2[Pt{42, 23}] = "Better"
+
+		printf(repr(m2[Pt{42, 23}]) + repr(m2[Pt{11, 12}]) + repr(m2[Pt{5, 7}]) + '\n')
+
+	    k := keys(m2)
+	    printf(repr(len(m2)) + repr(k) + '\n')
+
+		p = &m2[Pt{42, 23}]
+	}
+
+	printf(repr(p^) + '\n')	
+}
+
+
+fn test3() {
+	printf("\nTest 3\n")
+
+	var m3: map[int]int
+	printf(repr(valid(m3)) + '\n')
+
+	m3 = make(map[int]int)
+	m3[1915] = 20
+	printf(repr(valid(m3)) + repr(m3[1915]) + '\n')
+}
+
+
+fn test4() {
+	printf("\nTest 4\n")
+
+	m4 := make(map[[]int]str)
+
+	m4[[]int{2, 5}] = "OK"
+	m4[[]int{7, 9}] = "Also OK"
+
+	printf(repr(m4[[]int{2, 5}]) + '\n')	
+}
+
+
+fn test*() {
+	test1()
+	test2()
+	test3()
+	test4()	
+}
+
+
+fn main() {
+	test()
+}

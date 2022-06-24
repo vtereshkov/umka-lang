@@ -33,6 +33,7 @@ static const char *spelling [] =
     "[...]",
     "[]",
     "str",
+    "map",
     "struct",
     "interface",
     "fiber",
@@ -172,6 +173,7 @@ int typeSizeNoCheck(Type *type)
         case TYPE_STR:      return sizeof(void *);
         case TYPE_ARRAY:    return type->numItems * typeSizeNoCheck(type->base);
         case TYPE_DYNARRAY: return sizeof(DynArray);
+        case TYPE_MAP:      return sizeof(Map);
         case TYPE_STRUCT:
         case TYPE_INTERFACE:
         {
@@ -224,7 +226,8 @@ int typeAlignmentNoCheck(Type *type)
         case TYPE_WEAKPTR:
         case TYPE_STR:      return typeSizeNoCheck(type);
         case TYPE_ARRAY:    return typeAlignmentNoCheck(type->base);
-        case TYPE_DYNARRAY: return sizeof(int64_t);
+        case TYPE_DYNARRAY:
+        case TYPE_MAP:      return sizeof(int64_t);
         case TYPE_STRUCT:
         case TYPE_INTERFACE:
         {
@@ -258,7 +261,7 @@ int typeAlignment(Types *types, Type *type)
 
 bool typeGarbageCollected(Type *type)
 {
-    if (type->kind == TYPE_PTR || type->kind == TYPE_WEAKPTR || type->kind == TYPE_STR ||
+    if (type->kind == TYPE_PTR || type->kind == TYPE_WEAKPTR || type->kind == TYPE_STR || type->kind == TYPE_MAP ||
         type->kind == TYPE_DYNARRAY || type->kind == TYPE_INTERFACE || type->kind == TYPE_FIBER)
         return true;
 
@@ -317,6 +320,16 @@ static bool typeEquivalentRecursive(Type *left, Type *right, bool checkTypeIdent
         // Strings
         else if (left->kind == TYPE_STR)
             return true;
+
+        // Maps
+        else if (left->kind == TYPE_MAP)
+        {
+            // Key type
+            if (typeMapKey(left) != typeMapKey(right))
+                return false;
+
+            return typeEquivalentRecursive(left->base, right->base, checkTypeIdents, &newPair);
+        }
 
         // Structures or interfaces
         else if (left->kind == TYPE_STRUCT || left->kind == TYPE_INTERFACE)
@@ -643,7 +656,14 @@ static char *typeSpellingRecursive(Type *type, char *buf, int size, int depth)
         int len = 0;
 
         if (type->kind == TYPE_ARRAY)
+        {
             len += snprintf(buf + len, nonneg(size - len), "[%d]", type->numItems);
+        }
+        else if (type->kind == TYPE_MAP)
+        {
+            char keyBuf[DEFAULT_STR_LEN + 1];
+            len += snprintf(buf + len, nonneg(size - len), "map[%s]", typeSpellingRecursive(typeMapKey(type), keyBuf, DEFAULT_STR_LEN + 1, depth - 1));
+        }
         else if (typeExprListStruct(type))
         {
             len += snprintf(buf + len, nonneg(size - len), "{ ");
@@ -655,13 +675,17 @@ static char *typeSpellingRecursive(Type *type, char *buf, int size, int depth)
             len += snprintf(buf + len, nonneg(size - len), "}");
         }
         else
-            snprintf(buf + len, nonneg(size - len), "%s", spelling[type->kind]);
-
-        if (type->kind == TYPE_PTR || type->kind == TYPE_WEAKPTR || type->kind == TYPE_ARRAY || type->kind == TYPE_DYNARRAY)
         {
-            char baseBuf[DEFAULT_STR_LEN + 1];
+            snprintf(buf + len, nonneg(size - len), "%s", spelling[type->kind]);
+        }
+
+        if (type->kind == TYPE_PTR || type->kind == TYPE_WEAKPTR || type->kind == TYPE_ARRAY || type->kind == TYPE_DYNARRAY || type->kind == TYPE_MAP)
+        {
+            Type *itemType = (type->kind == TYPE_MAP) ? typeMapItem(type) : type->base;
+
+            char itemBuf[DEFAULT_STR_LEN + 1];
             if (depth > 0)
-                strncat(buf, typeSpellingRecursive(type->base, baseBuf, DEFAULT_STR_LEN + 1, depth - 1), nonneg(size - len - 1));
+                strncat(buf, typeSpellingRecursive(itemType, itemBuf, DEFAULT_STR_LEN + 1, depth - 1), nonneg(size - len - 1));
             else
                 strncat(buf, "...", nonneg(size - len - 1));
         }

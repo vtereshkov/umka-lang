@@ -97,6 +97,10 @@ static void compilerDeclareBuiltinIdents(Compiler *comp)
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "selftypeeq", comp->boolType,    BUILTIN_SELFTYPEEQ);
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "valid",      comp->boolType,    BUILTIN_VALID);
 
+    // Maps
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "validkey",   comp->boolType,    BUILTIN_VALIDKEY);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "keys",       comp->ptrVoidType, BUILTIN_KEYS);
+
     // Fibers
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "fiberspawn", comp->ptrVoidType, BUILTIN_FIBERSPAWN);
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "fibercall",  comp->voidType,    BUILTIN_FIBERCALL);

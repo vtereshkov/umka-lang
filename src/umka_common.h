@@ -18,6 +18,15 @@ enum
 };
 
 
+enum
+{
+    MAP_NODE_FIELD_KEY   = 0,
+    MAP_NODE_FIELD_DATA  = 1,
+    MAP_NODE_FIELD_LEFT  = 2,
+    MAP_NODE_FIELD_RIGHT = 3,
+};
+
+
 typedef struct
 {
     // Must have 8 byte alignment
@@ -26,6 +35,23 @@ typedef struct
     int64_t itemSize;       // Duplicates information contained in type, but useful for better performance
     void *data;
 } DynArray;
+
+
+typedef struct tagMapNode
+{
+    // The C equivalent of the Umka map base type
+    void *key, *data;
+    struct tagMapNode *left, *right;
+} MapNode;
+
+
+typedef struct
+{
+    // Must have 8 byte alignment
+    struct tagType *type;
+    int64_t len;
+    MapNode *root;
+} Map;
 
 
 typedef struct
@@ -178,6 +204,18 @@ static inline int64_t nonneg(int64_t size)
 static inline int64_t align(int64_t size, int64_t alignment)
 {
     return ((size + (alignment - 1)) / alignment) * alignment;
+}
+
+
+static inline bool getBit(const char *buf, int64_t bitPos)
+{
+    return (buf[bitPos / 8] >> (bitPos % 8)) & 1;
+}
+
+
+static inline void setBit(char *buf, int64_t bitPos, bool bit)
+{
+    buf[bitPos / 8] |= (1 << (bitPos % 8));
 }
 
 #endif // UMKA_COMMON_H_INCLUDED

@@ -17,7 +17,7 @@ contexts:
       push: block_comment  
 
     # Keywords
-    - match: '\b(break|case|const|continue|default|else|for|fn|import|interface|if|in|return|str|struct|switch|type|var|weak)\b'
+    - match: '\b(break|case|const|continue|default|else|for|fn|import|interface|if|in|map|return|str|struct|switch|type|var|weak)\b'
       scope: keyword.control.umka         
 
     # Operators
