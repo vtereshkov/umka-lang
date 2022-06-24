@@ -25,7 +25,7 @@ fn test1() {
     russia2020 := populations["Russia"]
 
     printf("Population of Russia was %.2f million. Now it is %.2f million\n\n", russia2019, russia2020)
-    //printf(populations.toStr() + '\n')
+    printf(repr(populations) + '\n')
 
     printf("\nCountries and regions more populous than Russia:\n")
     for country in keys(populations) {
@@ -70,7 +70,7 @@ fn test2() {
         error("Test failed")
     }  
 
-    //printf(writers.toStr() + '\n')
+    printf(repr(writers) + '\n')
 }
 
 fn test3() {

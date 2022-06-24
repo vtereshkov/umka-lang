@@ -862,28 +862,35 @@ static FORCE_INLINE MapNode *doGetMapNode(Map *map, Slot key, bool createMissing
 }
 
 
-static void doGetMapKeys(Fiber *fiber, HeapPages *pages, Map *map, MapNode *node, DynArray *keys, int *numKeys, Error *error)
+static void doGetMapKeysRecursively(Map *map, MapNode *node, void *keys, int *numKeys, Error *error)
 {
     if (node->key)
     {
-        void *destKey = (char *)keys->data + keys->itemSize * (*numKeys);
         Type *keyType = typeMapKey(map->type);
+        int keySize = typeSizeNoCheck(keyType);
+        void *destKey = (char *)keys + keySize * (*numKeys);
 
-        // Increase key ref count
         Slot srcKey = {.ptrVal = node->key};
         doBasicDeref(&srcKey, keyType->kind, error);
-        doBasicChangeRefCnt(fiber, pages, srcKey.ptrVal, keyType, TOK_PLUSPLUS);
-
-        doBasicAssign(destKey, srcKey, keyType->kind, typeSizeNoCheck(keyType), error);
+        doBasicAssign(destKey, srcKey, keyType->kind, keySize, error);
 
         (*numKeys)++;
     }
 
     if (node->left)
-        doGetMapKeys(fiber, pages, map, node->left, keys, numKeys, error);
+        doGetMapKeysRecursively(map, node->left, keys, numKeys, error);
 
     if (node->right)
-        doGetMapKeys(fiber, pages, map, node->right, keys, numKeys, error);
+        doGetMapKeysRecursively(map, node->right, keys, numKeys, error);
+}
+
+
+static FORCE_INLINE void doGetMapKeys(Map *map, void *keys, Error *error)
+{
+    int numKeys = 0;
+    doGetMapKeysRecursively(map, map->root, keys, &numKeys, error);
+    if (numKeys != map->len)
+        error->handlerRuntime(error->context, "Wrong number of map keys");
 }
 
 
@@ -953,6 +960,49 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, Error *e
             len += snprintf(buf + len, maxLen, "} ");
             break;
         }
+
+        case TYPE_MAP:
+        {
+            len += snprintf(buf, maxLen, "{ ");
+
+            Map *map = (Map *)slot->ptrVal;
+            if (map && map->root)
+            {
+                Type *keyType = typeMapKey(map->type);
+                Type *itemType = typeMapItem(map->type);
+
+                int keySize = typeSizeNoCheck(keyType);
+                void *keys = malloc(map->len * keySize);
+
+                doGetMapKeys(map, keys, error);
+
+                char *keyPtr = (char *)keys;
+                for (int i = 0; i < map->len; i++)
+                {
+                    Slot keySlot = {.ptrVal = keyPtr};
+                    doBasicDeref(&keySlot, keyType->kind, error);
+                    len += doFillReprBuf(&keySlot, keyType, buf + len, maxLen, error);
+
+                    len += snprintf(buf + len, maxLen, ": ");
+
+                    MapNode *node = doGetMapNode(map, keySlot, false, NULL, error, NULL);
+                    if (!node)
+                        error->handlerRuntime(error->context, "Map node is null");
+
+                    Slot itemSlot = {.ptrVal = node->data};
+                    doBasicDeref(&itemSlot, itemType->kind, error);
+                    len += doFillReprBuf(&itemSlot, itemType, buf + len, maxLen, error);
+
+                    keyPtr += keySize;
+                }
+
+                free(keys);
+            }
+
+            len += snprintf(buf + len, maxLen, "} ");
+            break;
+        }
+
 
         case TYPE_STRUCT:
         {
@@ -1707,11 +1757,11 @@ static FORCE_INLINE void doBuiltinKeys(Fiber *fiber, HeapPages *pages, Error *er
     result->itemSize = typeSizeNoCheck(result->type->base);
     result->data     = chunkAlloc(pages, result->len * result->itemSize, result->type, error);
 
-    int numKeys = 0;
-    doGetMapKeys(fiber, pages, map, map->root, result, &numKeys, error);
+    doGetMapKeys(map, result->data, error);
 
-    if (numKeys != map->len)
-        error->handlerRuntime(error->context, "Wrong number of keys");
+    // Increase result items' ref counts, as if they have been assigned one by one
+    Type staticArrayType = {.kind = TYPE_ARRAY, .base = result->type->base, .numItems = result->len, .next = NULL};
+    doBasicChangeRefCnt(fiber, pages, result->data, &staticArrayType, TOK_PLUSPLUS);
 
     (--fiber->top)->ptrVal = result;
 }
