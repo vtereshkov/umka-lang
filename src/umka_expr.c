@@ -1523,6 +1523,64 @@ static void parseDynArrayLiteral(Compiler *comp, Type **type, Const *constant)
 }
 
 
+// mapLiteral = "{" expr ":" expr {"," expr ":" expr} "}".
+static void parseMapLiteral(Compiler *comp, Type **type, Const *constant)
+{
+    lexEat(&comp->lex, TOK_LBRACE);
+
+    if (constant)
+        comp->error.handler(comp->error.context, "Map literals are not allowed for constants");
+
+    // Allocate map
+    IdentName mapName;
+    identTempVarName(&comp->idents, mapName);
+    Ident *mapIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, mapName, *type, false);
+    doZeroVar(comp, mapIdent);
+
+    genPushGlobalPtr(&comp->gen, *type);
+    genPushIntConst(&comp->gen, 0);
+    doPushVarPtr(comp, mapIdent);
+    genCallBuiltin(&comp->gen, (*type)->kind, BUILTIN_MAKE);
+
+    doEscapeToHeap(comp, typeAddPtrTo(&comp->types, &comp->blocks, *type), true);
+
+    // Parse map
+    if (comp->lex.tok.kind != TOK_RBRACE)
+    {
+        while (1)
+        {
+            genDup(&comp->gen);
+
+            // Key
+            Type *keyType;
+            parseExpr(comp, &keyType, NULL);
+            typeAssertEquivalent(&comp->types, typeMapKey(*type), keyType);
+
+            lexEat(&comp->lex, TOK_COLON);
+
+            // Get map item by key
+            genGetMapPtr(&comp->gen, *type);
+
+            // Item
+            Type *itemType;
+            parseExpr(comp, &itemType, NULL);
+            doImplicitTypeConv(comp, typeMapItem(*type), &itemType, NULL, false);
+            typeAssertCompatible(&comp->types, typeMapItem(*type), itemType, false);
+
+            // Assign to map item
+            genChangeRefCntAssign(&comp->gen, typeMapItem(*type));
+
+            if (comp->lex.tok.kind != TOK_COMMA)
+                break;
+            lexNext(&comp->lex);
+        }
+    }
+
+    //genPop(&comp->gen);
+    lexEat(&comp->lex, TOK_RBRACE);
+}
+
+
 // fnLiteral = fnBlock.
 static void parseFnLiteral(Compiler *comp, Type **type, Const *constant)
 {
@@ -1548,17 +1606,19 @@ static void parseFnLiteral(Compiler *comp, Type **type, Const *constant)
 }
 
 
-// compositeLiteral = arrayLiteral | dynArrayLiteral | structLiteral | fnLiteral.
+// compositeLiteral = arrayLiteral | dynArrayLiteral | mapLiteral | structLiteral | fnLiteral.
 static void parseCompositeLiteral(Compiler *comp, Type **type, Const *constant)
 {
     if ((*type)->kind == TYPE_ARRAY || (*type)->kind == TYPE_STRUCT)
         parseArrayOrStructLiteral(comp, type, constant);
     else if ((*type)->kind == TYPE_DYNARRAY)
         parseDynArrayLiteral(comp, type, constant);
+    else if ((*type)->kind == TYPE_MAP)
+        parseMapLiteral(comp, type, constant);
     else if ((*type)->kind == TYPE_FN)
         parseFnLiteral(comp, type, constant);
     else
-        comp->error.handler(comp->error.context, "Composite literals are only allowed for arrays, structures and functions");
+        comp->error.handler(comp->error.context, "Composite literals are only allowed for arrays, maps, structures and functions");
 }
 
 

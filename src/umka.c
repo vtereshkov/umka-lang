@@ -25,7 +25,7 @@ void help(void)
     printf("    -locale <locale-string> - Set locale\n");
     printf("    -asm                    - Write assembly listing\n");
     printf("    -check                  - Compile only\n");
-    printf("    -sandbox                - Sandbox mode\n");
+    printf("    -sandbox                - Run in sandbox mode\n");
 }
 
 
