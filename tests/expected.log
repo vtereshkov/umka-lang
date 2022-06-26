@@ -248,6 +248,10 @@ Countries and regions more populous than Russia:
 Test 2
 Pushkin
 
+Pushkin
+Goethe
+Shakespeare
+Tolstoy
 { { 1749 1832 } : "Goethe" { 1564 1616 } : "Shakespeare" { 1828 1910 } : "Tolstoy" } 
 
 Test 3
@@ -279,6 +283,10 @@ true 20
 Test 4
 "OK" 
 { { 7 9 } : "Also OK" { 13 15 } : "So-so" { 57 89 } : "Nice" { 2 5 } : "OK" } 
+{ 7 9 } "Also OK" 
+{ 13 15 } "So-so" 
+{ 57 89 } "Nice" 
+{ 2 5 } "OK" 
 
 
 >>> Multiple returns

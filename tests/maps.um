@@ -28,8 +28,7 @@ fn test1() {
     printf(repr(populations) + '\n')
 
     printf("\nCountries and regions more populous than Russia:\n")
-    for country in keys(populations) {
-        pop := populations[country]
+    for country, pop in populations {
         if pop > russia2020 {
             printf("%40s: %.2f\n", country, pop)
         }
@@ -63,6 +62,10 @@ fn test2() {
     if !validkey(writers, Pair{1799, 1837}) {
         error("Test failed")
     }    
+
+    for writer in writers {
+        printf(writer + '\n')
+    }
 
     writers = delete(writers, Pair{1799, 1837})
 

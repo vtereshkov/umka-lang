@@ -80,7 +80,11 @@ fn test4() {
 	m4[[]int{7, 9}] = "Also OK"
 
 	printf(repr(m4[[]int{2, 5}]) + '\n')
-	printf(repr(m4^) + '\n')	
+	printf(repr(m4^) + '\n')
+
+	for key, item in m4 {
+		printf(repr(key) + repr(item) + '\n')
+	}	
 }
 
 

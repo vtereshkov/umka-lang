@@ -1149,7 +1149,7 @@ for k := 1; k <= 128; k *= 2 {
 
 #### The `for...in` statement
 
-Iterates through all items of an array, a dynamic array or a string. Before each iteration, the index and the value of the next item are evaluated and assigned to the corresponding variables declared via an implicit short variable declaration in the statement header. The index variable may be omitted.
+Iterates through all items of an array, a dynamic array, a map or a string. Before each iteration, the index (or key) and the value of the next item are evaluated and assigned to the corresponding variables declared via an implicit short variable declaration in the statement header. The index or key variable may be omitted.
 
 Syntax:
 

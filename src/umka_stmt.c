@@ -556,26 +556,21 @@ static void parseForHeader(Compiler *comp)
 // forInHeader = [ident ","] ident "in" expr.
 static void parseForInHeader(Compiler *comp, TokenKind lookaheadTokKind)
 {
-    Ident *indexIdent = NULL, *itemIdent = NULL, *collectionIdent = NULL;
+    Ident *indexIdent = NULL, *keyIdent = NULL, *itemIdent = NULL, *collectionIdent = NULL, *keysIdent = NULL;
     Type *collectionType;
-    IdentName itemName;
+    IdentName indexOrKeyName = {0}, itemName = {0};
 
     // [ident ","] ident "in"
     lexCheck(&comp->lex, TOK_IDENT);
 
     if (lookaheadTokKind == TOK_COMMA)
     {
-        indexIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, comp->lex.tok.name, comp->intType, false);
+        strcpy(indexOrKeyName, comp->lex.tok.name);
 
-        lexEat(&comp->lex, TOK_IDENT);
+        lexNext(&comp->lex);
         lexEat(&comp->lex, TOK_COMMA);
         lexCheck(&comp->lex, TOK_IDENT);
     }
-    else if (lookaheadTokKind == TOK_IN)
-        indexIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "__index", comp->intType, false);
-
-    // Zero index
-    doZeroVar(comp, indexIdent);
 
     strcpy(itemName, comp->lex.tok.name);
 
@@ -593,36 +588,84 @@ static void parseForInHeader(Compiler *comp, TokenKind lookaheadTokKind)
     }
 
     // Check collection type
-    if (collectionType->kind != TYPE_ARRAY && collectionType->kind != TYPE_DYNARRAY && collectionType->kind != TYPE_STR)
+    if (collectionType->kind != TYPE_ARRAY && collectionType->kind != TYPE_DYNARRAY && collectionType->kind != TYPE_MAP && collectionType->kind != TYPE_STR)
     {
         char typeBuf[DEFAULT_STR_LEN + 1];
         comp->error.handler(comp->error.context, "Expression of type %s is not iterable", typeSpelling(collectionType, typeBuf));
     }
 
-    // Declare variable for the collection
+    // Declare variable for the collection and assign expr to it
     collectionIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "__collection", collectionType, false);
     doZeroVar(comp, collectionIdent);
     doPushVarPtr(comp, collectionIdent);
     genSwapChangeRefCntAssign(&comp->gen, collectionType);
 
+    // Declare variable for the collection index (for maps, it will be used for indexing keys())
+    const char *indexName = (indexOrKeyName[0] == '\0' || collectionType->kind == TYPE_MAP) ? "__index" : indexOrKeyName;
+    indexIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, indexName, comp->intType, false);
+    doZeroVar(comp, indexIdent);
+
+    if (collectionType->kind == TYPE_MAP)
+    {
+        // Declare variable for the map key
+        const char *keyName = (indexOrKeyName[0] == '\0') ? "__key" : indexOrKeyName;
+        keyIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, keyName, typeMapKey(collectionType), false);
+        doZeroVar(comp, indexIdent);
+
+        // Declare variable for the map keys
+        Type *keysType = typeAdd(&comp->types, &comp->blocks, TYPE_DYNARRAY);
+        keysType->base = typeMapKey(collectionType);
+        keysIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "__keys", keysType, false);
+        doZeroVar(comp, keysIdent);
+
+        // Call keys()
+        int resultOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, keysType);
+        doPushVarPtr(comp, collectionIdent);        // Map
+        genPushGlobalPtr(&comp->gen, keysType);     // Result type (hidden parameter)
+        genPushLocalPtr(&comp->gen, resultOffset);  // Pointer to result (hidden parameter)
+
+        genCallBuiltin(&comp->gen, collectionType->kind, BUILTIN_KEYS);
+        doCopyResultToTempVar(comp, keysType);
+
+        // Assign map keys
+        doPushVarPtr(comp, keysIdent);
+        genSwapChangeRefCntAssign(&comp->gen, keysType);
+    }
+
     // Declare variable for the collection item
-    Type *itemType = (collectionType->kind == TYPE_STR) ? comp->charType : collectionType->base;
+    Type *itemType = NULL;
+    if (collectionType->kind == TYPE_MAP)
+        itemType = typeMapItem(collectionType);
+    else if (collectionType->kind == TYPE_STR)
+        itemType = comp->charType;
+    else
+        itemType = collectionType->base;
+
     itemIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, itemName, itemType, false);
     doZeroVar(comp, itemIdent);
 
     genForCondProlog(&comp->gen);
 
-    // Implicit conditional expression: len(collection) > index
-    doPushVarPtr(comp, collectionIdent);
-    genDeref(&comp->gen, collectionType->kind);
-
-    if (collectionType->kind == TYPE_ARRAY)
+    // Implicit conditional expression: len(__collection) > __index (for maps, len(__keys) > __index)
+    if (collectionType->kind == TYPE_MAP)
     {
-        genPop(&comp->gen);
-        genPushIntConst(&comp->gen, collectionType->numItems);
+        doPushVarPtr(comp, keysIdent);
+        genDeref(&comp->gen, keysIdent->type->kind);
+        genCallBuiltin(&comp->gen, keysIdent->type->kind, BUILTIN_LEN);
     }
     else
-        genCallBuiltin(&comp->gen, collectionType->kind, BUILTIN_LEN);
+    {
+        doPushVarPtr(comp, collectionIdent);
+        genDeref(&comp->gen, collectionType->kind);
+
+        if (collectionType->kind == TYPE_ARRAY)
+        {
+            genPop(&comp->gen);
+            genPushIntConst(&comp->gen, collectionType->numItems);
+        }
+        else
+            genCallBuiltin(&comp->gen, collectionType->kind, BUILTIN_LEN);
+    }
 
     doPushVarPtr(comp, indexIdent);
     genDeref(&comp->gen, TYPE_INT);
@@ -640,15 +683,37 @@ static void parseForInHeader(Compiler *comp, TokenKind lookaheadTokKind)
     doPushVarPtr(comp, collectionIdent);
     genDeref(&comp->gen, collectionType->kind);
 
-    doPushVarPtr(comp, indexIdent);
-    genDeref(&comp->gen, TYPE_INT);
-
-    if (collectionType->kind == TYPE_DYNARRAY)
+    if (collectionType->kind == TYPE_MAP)
+    {
+        // Assign __key = __keys[__index]
+        doPushVarPtr(comp, keysIdent);
+        doPushVarPtr(comp, indexIdent);
+        genDeref(&comp->gen, TYPE_INT);
         genGetDynArrayPtr(&comp->gen);
-    else if (collectionType->kind == TYPE_STR)
-        genGetArrayPtr(&comp->gen, typeSize(&comp->types, itemType), -1);                           // Use actual length for range checking
-    else // TYPE_ARRAY
-        genGetArrayPtr(&comp->gen, typeSize(&comp->types, itemType), collectionType->numItems);     // Use nominal length for range checking
+        genDeref(&comp->gen, keyIdent->type->kind);
+
+        doPushVarPtr(comp, keyIdent);
+        genSwapChangeRefCntAssign(&comp->gen, keyIdent->type);
+
+        // Push item key
+        doPushVarPtr(comp, keyIdent);
+        genDeref(&comp->gen, keyIdent->type->kind);
+    }
+    else
+    {
+        // Push item index
+        doPushVarPtr(comp, indexIdent);
+        genDeref(&comp->gen, TYPE_INT);
+    }
+
+    switch (collectionType->kind)
+    {
+        case TYPE_ARRAY:     genGetArrayPtr(&comp->gen, typeSize(&comp->types, collectionType->base), collectionType->numItems); break; // Use nominal length for range checking
+        case TYPE_DYNARRAY:  genGetDynArrayPtr(&comp->gen);                                                                      break;
+        case TYPE_STR:       genGetArrayPtr(&comp->gen, typeSize(&comp->types, comp->charType), -1);                             break; // Use actual length for range checking
+        case TYPE_MAP:       genGetMapPtr(&comp->gen, collectionType);                                                           break;
+        default:             break;
+    }
 
     // Get collection item value
     genDeref(&comp->gen, itemType->kind);
@@ -898,7 +963,7 @@ void parseFnBlock(Compiler *comp, Ident *fn)
     lexEat(&comp->lex, TOK_RBRACE);
 
     if (!hasReturn && fn->type->sig.resultType->kind != TYPE_VOID)
-        comp->error.handler(comp->error.context, "Non-void function must have a return statement");    
+        comp->error.handler(comp->error.context, "Non-void function must have a return statement");
 }
 
 

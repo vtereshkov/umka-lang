@@ -50,7 +50,7 @@ static void doPassParam(Compiler *comp, Type *formalParamType)
 }
 
 
-static void doCopyResultToTempVar(Compiler *comp, Type *type)
+void doCopyResultToTempVar(Compiler *comp, Type *type)
 {
     IdentName tempName;
     identTempVarName(&comp->idents, tempName);
