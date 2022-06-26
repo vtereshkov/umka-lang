@@ -49,7 +49,6 @@ typedef struct
 {
     // Must have 8 byte alignment
     struct tagType *type;
-    int64_t len;
     MapNode *root;
 } Map;
 
@@ -210,12 +209,6 @@ static inline int64_t align(int64_t size, int64_t alignment)
 static inline bool getBit(const char *buf, int64_t bitPos)
 {
     return (buf[bitPos / 8] >> (bitPos % 8)) & 1;
-}
-
-
-static inline void setBit(char *buf, int64_t bitPos, bool bit)
-{
-    buf[bitPos / 8] |= (1 << (bitPos % 8));
 }
 
 #endif // UMKA_COMMON_H_INCLUDED

@@ -769,6 +769,13 @@ static FORCE_INLINE void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, voi
 }
 
 
+static FORCE_INLINE int64_t *doGetMapLen(Map *map)
+{
+    // Root node stores the map length in the __data field
+    return (int64_t *)map->root->data;
+}
+
+
 static FORCE_INLINE MapNode *doGetMapNode(Map *map, Slot key, bool createMissingNodes, HeapPages *pages, Error *error, MapNode ***nodePtrInParent)
 {
     if (!map || !map->root)
@@ -889,7 +896,7 @@ static FORCE_INLINE void doGetMapKeys(Map *map, void *keys, Error *error)
 {
     int numKeys = 0;
     doGetMapKeysRecursively(map, map->root, keys, &numKeys, error);
-    if (numKeys != map->len)
+    if (numKeys != *doGetMapLen(map))
         error->handlerRuntime(error->context, "Wrong number of map keys");
 }
 
@@ -972,12 +979,12 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, Error *e
                 Type *itemType = typeMapItem(map->type);
 
                 int keySize = typeSizeNoCheck(keyType);
-                void *keys = malloc(map->len * keySize);
+                void *keys = malloc(*doGetMapLen(map) * keySize);
 
                 doGetMapKeys(map, keys, error);
 
                 char *keyPtr = (char *)keys;
-                for (int i = 0; i < map->len; i++)
+                for (int i = 0; i < *doGetMapLen(map); i++)
                 {
                     Slot keySlot = {.ptrVal = keyPtr};
                     doBasicDeref(&keySlot, keyType->kind, error);
@@ -1334,9 +1341,10 @@ static FORCE_INLINE void doBuiltinMake(Fiber *fiber, HeapPages *pages, Error *er
     else // TYPE_MAP
     {
         Map *map        = (Map *)result;
-        map->len        = 0;
         map->type       = type;
         map->root       = chunkAlloc(pages, typeSizeNoCheck(type->base), type->base, error);
+
+        map->root->data = chunkAlloc(pages, sizeof(int64_t), NULL, error);
     }
 
     (--fiber->top)->ptrVal = result;
@@ -1520,14 +1528,12 @@ static FORCE_INLINE void doBuiltinDeleteMap(Fiber *fiber, HeapPages *pages, Erro
     {
         doBasicChangeRefCnt(fiber, pages, *nodePtrInParent, &ptrNodeType, TOK_MINUSMINUS);
         *nodePtrInParent = NULL;
-        map->len--;
-        if (map->len < 0)
+        if (--(*doGetMapLen(map)) < 0)
             error->handlerRuntime(error->context, "Map length is negative");
     }
 
     doBasicChangeRefCnt(fiber, pages, map->root, &ptrNodeType, TOK_PLUSPLUS);
     result->type = map->type;
-    result->len  = map->len;
     result->root = map->root;
 
     (--fiber->top)->ptrVal = result;
@@ -1630,11 +1636,11 @@ static FORCE_INLINE void doBuiltinLen(Fiber *fiber, Error *error)
         }
         case TYPE_MAP:
         {
-            const Map *map = (Map *)(fiber->top->ptrVal);
-            if (!map)
+            Map *map = (Map *)(fiber->top->ptrVal);
+            if (!map || !map->root)
                 error->handlerRuntime(error->context, "Map is null");
 
-            fiber->top->intVal = map->len;
+            fiber->top->intVal = *doGetMapLen(map);
             break;
         }
         default:
@@ -1752,7 +1758,7 @@ static FORCE_INLINE void doBuiltinKeys(Fiber *fiber, HeapPages *pages, Error *er
     if (!map || !map->root)
         error->handlerRuntime(error->context, "Map is null");
 
-    result->len      = map->len;
+    result->len      = *doGetMapLen(map);
     result->type     = resultType;
     result->itemSize = typeSizeNoCheck(result->type->base);
     result->data     = chunkAlloc(pages, result->len * result->itemSize, result->type, error);
@@ -2254,7 +2260,7 @@ static FORCE_INLINE void doGetMapPtr(Fiber *fiber, HeapPages *pages, Error *erro
         doBasicChangeRefCnt(fiber, pages, key.ptrVal, keyType, TOK_PLUSPLUS);
 
         doBasicAssign(node->key, key, keyType->kind, typeSizeNoCheck(keyType), error);
-        map->len++;
+        (*doGetMapLen(map))++;
     }
 
     (--fiber->top)->ptrVal = node->data;
