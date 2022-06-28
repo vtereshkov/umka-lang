@@ -63,8 +63,8 @@ fn test2() {
         error("Test failed")
     }    
 
-    for writer in writers {
-        printf(writer + '\n')
+    for dates in writers {
+        printf(writers[dates] + '\n')
     }
 
     writers = delete(writers, Pair{1799, 1837})

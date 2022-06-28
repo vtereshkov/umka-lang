@@ -1149,19 +1149,19 @@ for k := 1; k <= 128; k *= 2 {
 
 #### The `for...in` statement
 
-Iterates through all items of an array, a dynamic array, a map or a string. Before each iteration, the index (or key) and the value of the next item are evaluated and assigned to the corresponding variables declared via an implicit short variable declaration in the statement header. The index or key variable may be omitted.
+Iterates through all items of an array, a dynamic array, a map or a string. Before each iteration, the index (or key) and the value of the next item are evaluated and assigned to the corresponding variables declared via an implicit short variable declaration in the statement header. The item variable may be omitted.
 
 Syntax:
 
 ```
-forInHeader = [ident ","] ident "in" expr.
+forInHeader = ident ["," ident] "in" expr.
 ```
 
 Examples:
 
 ```
-for x in a {
-    sum += x
+for i in a {
+    sum += a[i]
 }
 
 for index, item in data {
@@ -1185,7 +1185,7 @@ breakStmt = "break".
 Examples:
 
 ```
-for x in a {
+for i, x in a {
     if fabs(x) > 1e12 {break}
     sum += x
 }
@@ -1204,7 +1204,7 @@ continueStmt = "continue".
 Examples:
 
 ```
-for x in a {
+for i, x in a {
     if x < 0 {continue}
     sum += x
 }
@@ -1681,7 +1681,7 @@ case                = "case" expr {"," expr} ":" stmtList.
 default             = "default" ":" stmtList.
 forStmt             = "for" (forHeader | forInHeader) block.
 forHeader           = [shortVarDecl ";"] expr [";" simpleStmt].
-forInHeader         = [ident ","] ident "in" expr.
+forInHeader         = ident ["," ident] "in" expr.
 breakStmt           = "break".
 continueStmt        = "continue".
 returnStmt          = "return" [exprList].

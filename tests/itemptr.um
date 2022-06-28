@@ -21,7 +21,7 @@ fn test2() {
 
 	printf(repr(t) + '\n')
 	
-	for x in s {
+	for _, x in s {
 		printf(repr(x^) + '\n')
 	}
 }

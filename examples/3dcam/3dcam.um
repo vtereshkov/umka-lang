@@ -23,7 +23,7 @@ fn rnd(min, max: real): real {return min + (max - min) * std.frand()}
 fn initBodies() {    
     // Generates some random columns
     std.srand(std.time())
-    for i, _ in cubes {
+    for i in cubes {
         cubes[i].height   = rnd(1, 12);
         cubes[i].position = Vector3{rnd(-15, 15), cubes[i].height / 2, rnd(-15, 15)}
         cubes[i].color    = Color{round(rnd(40, 150)), round(rnd(40, 60)), 40, 255}
@@ -41,7 +41,7 @@ fn drawBodies() {
     drawCube(Vector3{  0, 2.5,  16}, 32, 5, 1, Color{120, 120, 120, 255})    
                 
     // Draw columns
-    for cube in cubes {
+    for _, cube in cubes {
         drawCube(cube.position, 2, cube.height, 2, cube.color)
     }
 }

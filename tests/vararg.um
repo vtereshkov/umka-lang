@@ -1,6 +1,6 @@
 fn printMsg(msg: str, values: ..interface{}) {
 	valStr := ""
-	for value in values {
+	for _, value in values {
 		valStr += repr(value)
 	}
     printf(msg + " " + valStr + '\n')
@@ -12,7 +12,7 @@ fn printPrompt(msg: str, values: ..interface{}) {
 
 fn sum(xs: []real): real {
 	s := 0.0
-	for x in xs {s += x}
+	for _, x in xs {s += x}
 	return s	
 }
 
@@ -27,7 +27,7 @@ type T = struct {
 }
 
 fn (t: ^T) join(strings: ..str): T {
-	for string in strings {
+	for _, string in strings {
 		t.data += string
 	}
 	return t^

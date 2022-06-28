@@ -29,8 +29,8 @@ fn main() {
     
     // Check result
     check := 0.0
-    for row in c {
-        for col in row {check += col}
+    for i, row in c {
+        for j, col in row {check += col}
     }
 
     printf("check: %lf\n", check / size / size)

@@ -553,28 +553,26 @@ static void parseForHeader(Compiler *comp)
 }
 
 
-// forInHeader = [ident ","] ident "in" expr.
-static void parseForInHeader(Compiler *comp, TokenKind lookaheadTokKind)
+// forInHeader = ident ["," ident] "in" expr.
+static void parseForInHeader(Compiler *comp)
 {
     Ident *indexIdent = NULL, *keyIdent = NULL, *itemIdent = NULL, *collectionIdent = NULL, *keysIdent = NULL;
     Type *collectionType;
     IdentName indexOrKeyName = {0}, itemName = {0};
 
-    // [ident ","] ident "in"
+    // ident ["," ident] "in"
     lexCheck(&comp->lex, TOK_IDENT);
+    strcpy(indexOrKeyName, comp->lex.tok.name);
+    lexNext(&comp->lex);
 
-    if (lookaheadTokKind == TOK_COMMA)
+    if (comp->lex.tok.kind == TOK_COMMA)
     {
-        strcpy(indexOrKeyName, comp->lex.tok.name);
-
         lexNext(&comp->lex);
-        lexEat(&comp->lex, TOK_COMMA);
         lexCheck(&comp->lex, TOK_IDENT);
+        strcpy(itemName, comp->lex.tok.name);
+        lexNext(&comp->lex);
     }
 
-    strcpy(itemName, comp->lex.tok.name);
-
-    lexNext(&comp->lex);
     lexEat(&comp->lex, TOK_IN);
 
     // expr
@@ -601,15 +599,14 @@ static void parseForInHeader(Compiler *comp, TokenKind lookaheadTokKind)
     genSwapChangeRefCntAssign(&comp->gen, collectionType);
 
     // Declare variable for the collection index (for maps, it will be used for indexing keys())
-    const char *indexName = (indexOrKeyName[0] == '\0' || collectionType->kind == TYPE_MAP) ? "__index" : indexOrKeyName;
+    const char *indexName = (collectionType->kind == TYPE_MAP) ? "__index" : indexOrKeyName;
     indexIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, indexName, comp->intType, false);
     doZeroVar(comp, indexIdent);
 
     if (collectionType->kind == TYPE_MAP)
     {
         // Declare variable for the map key
-        const char *keyName = (indexOrKeyName[0] == '\0') ? "__key" : indexOrKeyName;
-        keyIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, keyName, typeMapKey(collectionType), false);
+        keyIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, indexOrKeyName, typeMapKey(collectionType), false);
         doZeroVar(comp, indexIdent);
 
         // Declare variable for the map keys
@@ -634,15 +631,18 @@ static void parseForInHeader(Compiler *comp, TokenKind lookaheadTokKind)
 
     // Declare variable for the collection item
     Type *itemType = NULL;
-    if (collectionType->kind == TYPE_MAP)
-        itemType = typeMapItem(collectionType);
-    else if (collectionType->kind == TYPE_STR)
-        itemType = comp->charType;
-    else
-        itemType = collectionType->base;
+    if (itemName[0] != '\0')
+    {
+        if (collectionType->kind == TYPE_MAP)
+            itemType = typeMapItem(collectionType);
+        else if (collectionType->kind == TYPE_STR)
+            itemType = comp->charType;
+        else
+            itemType = collectionType->base;
 
-    itemIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, itemName, itemType, false);
-    doZeroVar(comp, itemIdent);
+        itemIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, itemName, itemType, false);
+        doZeroVar(comp, itemIdent);
+    }
 
     genForCondProlog(&comp->gen);
 
@@ -679,13 +679,9 @@ static void parseForInHeader(Compiler *comp, TokenKind lookaheadTokKind)
 
     genForPostStmtEpilog(&comp->gen);
 
-    // Get collection item pointer
-    doPushVarPtr(comp, collectionIdent);
-    genDeref(&comp->gen, collectionType->kind);
-
     if (collectionType->kind == TYPE_MAP)
     {
-        // Assign __key = __keys[__index]
+        // Assign key = __keys[__index]
         doPushVarPtr(comp, keysIdent);
         doPushVarPtr(comp, indexIdent);
         genDeref(&comp->gen, TYPE_INT);
@@ -694,33 +690,43 @@ static void parseForInHeader(Compiler *comp, TokenKind lookaheadTokKind)
 
         doPushVarPtr(comp, keyIdent);
         genSwapChangeRefCntAssign(&comp->gen, keyIdent->type);
-
-        // Push item key
-        doPushVarPtr(comp, keyIdent);
-        genDeref(&comp->gen, keyIdent->type->kind);
     }
-    else
+
+    // Assign collection item
+    if (itemType)
     {
-        // Push item index
-        doPushVarPtr(comp, indexIdent);
-        genDeref(&comp->gen, TYPE_INT);
+        doPushVarPtr(comp, collectionIdent);
+        genDeref(&comp->gen, collectionType->kind);
+
+        if (collectionType->kind == TYPE_MAP)
+        {
+            // Push item key
+            doPushVarPtr(comp, keyIdent);
+            genDeref(&comp->gen, keyIdent->type->kind);
+        }
+        else
+        {
+            // Push item index
+            doPushVarPtr(comp, indexIdent);
+            genDeref(&comp->gen, TYPE_INT);
+        }
+
+        switch (collectionType->kind)
+        {
+            case TYPE_ARRAY:     genGetArrayPtr(&comp->gen, typeSize(&comp->types, collectionType->base), collectionType->numItems); break; // Use nominal length for range checking
+            case TYPE_DYNARRAY:  genGetDynArrayPtr(&comp->gen);                                                                      break;
+            case TYPE_STR:       genGetArrayPtr(&comp->gen, typeSize(&comp->types, comp->charType), -1);                             break; // Use actual length for range checking
+            case TYPE_MAP:       genGetMapPtr(&comp->gen, collectionType);                                                           break;
+            default:             break;
+        }
+
+        // Get collection item value
+        genDeref(&comp->gen, itemType->kind);
+
+        // Assign collection item to iteration variable
+        doPushVarPtr(comp, itemIdent);
+        genSwapChangeRefCntAssign(&comp->gen, itemType);
     }
-
-    switch (collectionType->kind)
-    {
-        case TYPE_ARRAY:     genGetArrayPtr(&comp->gen, typeSize(&comp->types, collectionType->base), collectionType->numItems); break; // Use nominal length for range checking
-        case TYPE_DYNARRAY:  genGetDynArrayPtr(&comp->gen);                                                                      break;
-        case TYPE_STR:       genGetArrayPtr(&comp->gen, typeSize(&comp->types, comp->charType), -1);                             break; // Use actual length for range checking
-        case TYPE_MAP:       genGetMapPtr(&comp->gen, collectionType);                                                           break;
-        default:             break;
-    }
-
-    // Get collection item value
-    genDeref(&comp->gen, itemType->kind);
-
-    // Assign collection item to iteration variable
-    doPushVarPtr(comp, itemIdent);
-    genSwapChangeRefCntAssign(&comp->gen, itemType);
 }
 
 
@@ -745,7 +751,7 @@ static void parseForStmt(Compiler *comp)
     lexNext(&lookaheadLex);
 
     if (!doShortVarDeclLookahead(comp) && (lookaheadLex.tok.kind == TOK_COMMA || lookaheadLex.tok.kind == TOK_IN))
-        parseForInHeader(comp, lookaheadLex.tok.kind);
+        parseForInHeader(comp);
     else
         parseForHeader(comp);
 

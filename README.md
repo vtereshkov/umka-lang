@@ -195,7 +195,7 @@ fn main() {
     sum  := fn (x, y, ctx: fnc.Any): fnc.Any {return int(x) + int(y)}     
     
     const max = 30     
-    result := data.map(sqr, null).filter(less, max).reduce(sum, null)    
+    result := data.mapEach(sqr, null).filter(less, max).reduce(sum, null)    
     printf("Sum of all squares less than %lld = %s\n", max, repr(result))       
 }
 ```

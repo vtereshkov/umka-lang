@@ -1,7 +1,7 @@
 import "std.um"
 
 fn f(b: [11][2]^int) {
-    for x in b {
+    for _, x in b {
         std.println("b: " + std.itoa(x[0]^) + " " + std.itoa(x[1]^))
     }
 } 
@@ -43,13 +43,13 @@ fn slices() {
 fn test*() {    
     a := make([][2]^int, 10)
     
-    for i, _ in a {
+    for i in a {
         a[i] = [2]^int {new(int), new(int)}
         a[i][0]^ = 5 * i
         a[i][1]^ = 7 * i
     } 
     
-    for x in a {
+    for _, x in a {
         std.println("a: " + std.itoa(x[0]^) + " " + std.itoa(x[1]^))
     }
        
@@ -58,7 +58,7 @@ fn test*() {
     a[len(a) - 1][0]^ = 666
     a[len(a) - 1][1]^ = 777    
 
-    for x in a {
+    for _, x in a {
         std.println("a: " + std.itoa(x[0]^) + " " + std.itoa(x[1]^))
     }   
 
@@ -69,7 +69,7 @@ fn test*() {
     e[len(e) - 1][0]^ = 876
     e[len(e) - 1][1]^ = 765
 
-    for x in e {
+    for _, x in e {
         std.println("e: " + std.itoa(x[0]^) + " " + std.itoa(x[1]^))
     } 
 
@@ -79,11 +79,11 @@ fn test*() {
     std.println("Deleting #" + std.itoa(del) + "...")
     e = delete(e, del)
     
-    for x in e {
+    for _, x in e {
         std.println("e: " + std.itoa(x[0]^) + " " + std.itoa(x[1]^))
     } 
 
-    for x in f {
+    for _, x in f {
         std.println("f: " + std.itoa(x[0]^) + " " + std.itoa(x[1]^))
     }       
     

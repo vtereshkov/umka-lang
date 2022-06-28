@@ -26,7 +26,7 @@ fn new_cat(): Speaker {
 }
 
 fn test*() {
-    for i in []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10} {
+    for _, i in []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10} {
     	var a: Speaker
         if i % 3 == 1 {
             a = new_dog()

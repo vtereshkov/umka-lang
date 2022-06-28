@@ -22,11 +22,11 @@ type System = []^Body
 
 fn NewSystem(body: ^[]Body): System {
    sys := make([]^Body, len(body^))
-   for i, _ in sys {
+   for i in sys {
       sys[i] = &body[i]
    }
    var px, py, pz: real
-   for body in sys {
+   for _, body in sys {
       px += body.vx * body.mass
       py += body.vy * body.mass
       pz += body.vz * body.mass
