@@ -556,8 +556,6 @@ static void parseForHeader(Compiler *comp)
 // forInHeader = ident ["," ident] "in" expr.
 static void parseForInHeader(Compiler *comp)
 {
-    Ident *indexIdent = NULL, *keyIdent = NULL, *itemIdent = NULL, *collectionIdent = NULL, *keysIdent = NULL;
-    Type *collectionType;
     IdentName indexOrKeyName = {0}, itemName = {0};
 
     // ident ["," ident] "in"
@@ -576,6 +574,7 @@ static void parseForInHeader(Compiler *comp)
     lexEat(&comp->lex, TOK_IN);
 
     // expr
+    Type *collectionType;
     parseExpr(comp, &collectionType, NULL);
 
     // Implicit dereferencing: x in a^ == x in a
@@ -592,22 +591,46 @@ static void parseForInHeader(Compiler *comp)
         comp->error.handler(comp->error.context, "Expression of type %s is not iterable", typeSpelling(collectionType, typeBuf));
     }
 
-    // Declare variable for the collection and assign expr to it
-    collectionIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "__collection", collectionType, false);
-    doZeroVar(comp, collectionIdent);
-    doPushVarPtr(comp, collectionIdent);
-    genSwapChangeRefCntAssign(&comp->gen, collectionType);
+    // Declare variable for the collection length and assign len(expr) to it
+    if (collectionType->kind == TYPE_ARRAY)
+        genPushIntConst(&comp->gen, collectionType->numItems);
+    else
+    {
+        genDup(&comp->gen);
+        genCallBuiltin(&comp->gen, collectionType->kind, BUILTIN_LEN);
+    }
+
+    Ident *lenIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "__len", comp->intType, false);
+    doZeroVar(comp, lenIdent);
+    doPushVarPtr(comp, lenIdent);
+    genSwapChangeRefCntAssign(&comp->gen, comp->intType);
+
+    Ident *collectionIdent = NULL;
+    if (itemName[0] != '\0' || collectionType->kind == TYPE_MAP)
+    {
+        // Declare variable for the collection and assign expr to it
+        collectionIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "__collection", collectionType, false);
+        doZeroVar(comp, collectionIdent);
+        doPushVarPtr(comp, collectionIdent);
+        genSwapChangeRefCntAssign(&comp->gen, collectionType);
+    }
+    else
+    {
+        // Remove expr
+        genPop(&comp->gen);
+    }
 
     // Declare variable for the collection index (for maps, it will be used for indexing keys())
     const char *indexName = (collectionType->kind == TYPE_MAP) ? "__index" : indexOrKeyName;
-    indexIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, indexName, comp->intType, false);
+    Ident *indexIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, indexName, comp->intType, false);
     doZeroVar(comp, indexIdent);
 
+    Ident *keyIdent = NULL, *keysIdent = NULL;
     if (collectionType->kind == TYPE_MAP)
     {
         // Declare variable for the map key
         keyIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, indexOrKeyName, typeMapKey(collectionType), false);
-        doZeroVar(comp, indexIdent);
+        doZeroVar(comp, keyIdent);
 
         // Declare variable for the map keys
         Type *keysType = typeAdd(&comp->types, &comp->blocks, TYPE_DYNARRAY);
@@ -629,10 +652,12 @@ static void parseForInHeader(Compiler *comp)
         genSwapChangeRefCntAssign(&comp->gen, keysType);
     }
 
-    // Declare variable for the collection item
-    Type *itemType = NULL;
+    Ident *itemIdent = NULL;
     if (itemName[0] != '\0')
     {
+        // Declare variable for the collection item
+        Type *itemType = NULL;
+
         if (collectionType->kind == TYPE_MAP)
             itemType = typeMapItem(collectionType);
         else if (collectionType->kind == TYPE_STR)
@@ -646,30 +671,12 @@ static void parseForInHeader(Compiler *comp)
 
     genForCondProlog(&comp->gen);
 
-    // Implicit conditional expression: len(__collection) > __index (for maps, len(__keys) > __index)
-    if (collectionType->kind == TYPE_MAP)
-    {
-        doPushVarPtr(comp, keysIdent);
-        genDeref(&comp->gen, keysIdent->type->kind);
-        genCallBuiltin(&comp->gen, keysIdent->type->kind, BUILTIN_LEN);
-    }
-    else
-    {
-        doPushVarPtr(comp, collectionIdent);
-        genDeref(&comp->gen, collectionType->kind);
-
-        if (collectionType->kind == TYPE_ARRAY)
-        {
-            genPop(&comp->gen);
-            genPushIntConst(&comp->gen, collectionType->numItems);
-        }
-        else
-            genCallBuiltin(&comp->gen, collectionType->kind, BUILTIN_LEN);
-    }
-
+    // Implicit conditional expression: __index < __len
     doPushVarPtr(comp, indexIdent);
     genDeref(&comp->gen, TYPE_INT);
-    genBinary(&comp->gen, TOK_GREATER, TYPE_INT, 0);
+    doPushVarPtr(comp, lenIdent);
+    genDeref(&comp->gen, TYPE_INT);
+    genBinary(&comp->gen, TOK_LESS, TYPE_INT, 0);
 
     genForCondEpilog(&comp->gen);
 
@@ -693,7 +700,7 @@ static void parseForInHeader(Compiler *comp)
     }
 
     // Assign collection item
-    if (itemType)
+    if (itemIdent)
     {
         doPushVarPtr(comp, collectionIdent);
         genDeref(&comp->gen, collectionType->kind);
@@ -721,11 +728,11 @@ static void parseForInHeader(Compiler *comp)
         }
 
         // Get collection item value
-        genDeref(&comp->gen, itemType->kind);
+        genDeref(&comp->gen, itemIdent->type->kind);
 
         // Assign collection item to iteration variable
         doPushVarPtr(comp, itemIdent);
-        genSwapChangeRefCntAssign(&comp->gen, itemType);
+        genSwapChangeRefCntAssign(&comp->gen, itemIdent->type);
     }
 }
 
