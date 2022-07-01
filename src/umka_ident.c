@@ -55,9 +55,9 @@ Ident *identFind(Idents *idents, Modules *modules, Blocks *blocks, int module, c
             if (ident->hash == nameHash && strcmp(ident->name, name) == 0 && ident->block == blocks->item[i].block)
             {
                 // What we found has correct name and block scope, check module scope
-                const bool identModuleValid = ident->module == 0 ||                                                                         // Universe module
-                                             (ident->module == module && (blocks->module == module ||                                       // Current module
-                                             (ident->exported && (rcvType || modules->module[blocks->module]->imports[ident->module]))));   // Imported module
+                const bool identModuleValid = ident->module == 0 ||                                                                             // Universe module
+                                             (ident->module == module && (blocks->module == module ||                                           // Current module
+                                             (ident->exported && (rcvType || modules->module[blocks->module]->importAlias[ident->module]))));   // Imported module
 
                 if (identModuleValid)
                 {

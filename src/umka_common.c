@@ -114,20 +114,22 @@ void moduleInit(Modules *modules, bool implLibsEnabled, Error *error)
 
 void moduleFree(Modules *modules)
 {
-    for (int i = 0; i < MAX_MODULES; i++)
+    for (int i = 0; i < modules->numModules; i++)
     {
-        if (modules->module[i])
-        {
-            if (modules->module[i]->implLib)
-                moduleFreeImplLib(modules->module[i]->implLib);
-            free(modules->module[i]);
-        }
+        if (modules->module[i]->implLib)
+            moduleFreeImplLib(modules->module[i]->implLib);
 
-        if (modules->moduleSource[i])
-        {
-            free(modules->moduleSource[i]->source);
-            free(modules->moduleSource[i]);
-        }
+        for (int j = 0; j < modules->numModules; j++)
+            if (modules->module[i]->importAlias[j])
+                free(modules->module[i]->importAlias[j]);
+
+        free(modules->module[i]);
+    }
+
+    for (int i = 0; i < modules->numModuleSources; i++)
+    {
+        free(modules->moduleSource[i]->source);
+        free(modules->moduleSource[i]);
     }
 }
 
@@ -166,13 +168,14 @@ int moduleFind(Modules *modules, const char *path)
 }
 
 
-int moduleFindImported(Modules *modules, Blocks *blocks, const char *name)
+int moduleFindImported(Modules *modules, Blocks *blocks, const char *alias)
 {
-    unsigned int nameHash = hash(name);
     for (int i = 0; i < modules->numModules; i++)
-        if (modules->module[i]->hash == nameHash && strcmp(modules->module[i]->name, name) == 0)
-            if (blocks->module == i || modules->module[blocks->module]->imports[i])
-                return i;
+    {
+        const char *importAlias = modules->module[blocks->module]->importAlias[i];
+        if (importAlias && strcmp(importAlias, alias) == 0)
+            return i;
+    }
     return -1;
 }
 
@@ -202,7 +205,6 @@ int moduleAdd(Modules *modules, const char *path)
     strncpy(module->name, name, DEFAULT_STR_LEN);
     module->name[DEFAULT_STR_LEN] = 0;
 
-    module->hash = hash(name);
     module->pathHash = hash(path);
 
     char libPath[2 + 2 * DEFAULT_STR_LEN + 4 + 1];
@@ -211,7 +213,7 @@ int moduleAdd(Modules *modules, const char *path)
     module->implLib = modules->implLibsEnabled ? moduleLoadImplLib(libPath) : NULL;
 
     for (int i = 0; i < MAX_MODULES; i++)
-        module->imports[i] = false;
+        module->importAlias[i] = NULL;
 
     modules->module[modules->numModules] = module;
     return modules->numModules++;

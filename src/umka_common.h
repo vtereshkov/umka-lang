@@ -9,7 +9,7 @@
 enum
 {
     DEFAULT_STR_LEN     = 255,
-    MAX_IDENT_LEN       = 255,
+    MAX_IDENT_LEN       = DEFAULT_STR_LEN,
     MAX_MODULES         = 1024,
     MAX_FIELDS          = 256,
     MAX_PARAMS          = 16,
@@ -84,9 +84,9 @@ typedef struct
 typedef struct
 {
     char path[DEFAULT_STR_LEN + 1], folder[DEFAULT_STR_LEN + 1], name[DEFAULT_STR_LEN + 1];
-    unsigned int hash, pathHash;
+    unsigned int pathHash;
     void *implLib;
-    bool imports[MAX_MODULES];
+    char *importAlias[MAX_MODULES];
 } Module;
 
 

@@ -1,0 +1,13 @@
+import (
+        utils1 = "lib1/utils.um"
+        utils2 = "lib2/utils.um"
+)
+
+fn test*() {
+        utils1.f()
+        utils2.f()
+}
+
+fn main() {
+        test()
+}

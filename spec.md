@@ -1242,7 +1242,9 @@ fn p(a: int): (int, bool) {
 
 An Umka program consists of one or more source files, or modules. The main module should have the `main()` function with no parameters and no return values, which is the entry point of the program.
 
-Modules can be imported from other modules. In this case, all the identifiers declared as exported in the module scope of the imported module become valid in the importing module, if qualified with the imported module name.
+Modules can be imported from other modules using the `import` clause in the beginning of the importing module. In this case, all the identifiers declared as exported in the module scope of the imported module become valid in the importing module, if qualified with the imported module name.
+
+The imported module name is specified as a string literal containing the module path. It can be assigned an optional alias that will be used instead of the module name.
 
 Syntax:
 
@@ -1250,7 +1252,7 @@ Syntax:
 program    = module.
 module     = [import ";"] decls.
 import     = "import" (importItem | "(" {importItem ";"} ")").
-importItem = stringLiteral.
+importItem = [ident "="] stringLiteral.
 ```
 
 Examples:
@@ -1259,6 +1261,15 @@ Examples:
 import "std.um"
 fn main() {
     std.println("Hello, World!")
+}
+
+import (
+        utils1 = "lib1/utils.um"
+        utils2 = "lib2/utils.um"
+)
+fn main() {
+        utils1.f()
+        utils2.f()
 }
 ```
 
@@ -1629,7 +1640,7 @@ Returns Umka interpreter version (build date) string.
 program             = module.
 module              = [import ";"] decls.
 import              = "import" (importItem | "(" {importItem ";"} ")").
-importItem          = stringLiteral.
+importItem          = [ident "="] stringLiteral.
 decls               = decl {";" decl}.
 decl                = typeDecl | constDecl | varDecl | fnDecl.
 typeDecl            = "type" (typeDeclItem | "(" {typeDeclItem ";"} ")").

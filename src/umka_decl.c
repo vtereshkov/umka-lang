@@ -1,5 +1,6 @@
 #define __USE_MINGW_ANSI_STDIO 1
 
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <limits.h>
@@ -704,9 +705,18 @@ static void parseDecls(Compiler *comp)
 }
 
 
-// importItem = stringLiteral.
+// importItem = [ident "="] stringLiteral.
 static void parseImportItem(Compiler *comp)
 {
+    char *alias = NULL;
+    if (comp->lex.tok.kind == TOK_IDENT)
+    {
+        alias = (char *)malloc(DEFAULT_STR_LEN + 1);
+        strcpy(alias, comp->lex.tok.name);
+        lexNext(&comp->lex);
+        lexEat(&comp->lex, TOK_EQ);
+    }
+
     lexCheck(&comp->lex, TOK_STRLITERAL);
 
     char filePath[DEFAULT_STR_LEN + 1] = "";
@@ -724,8 +734,14 @@ static void parseImportItem(Compiler *comp)
 
     moduleNameFromPath(&comp->modules, path, folder, name, DEFAULT_STR_LEN + 1);
 
-    if (moduleFindImported(&comp->modules, &comp->blocks, name) >= 0)
-        comp->modules.error->handler(comp->modules.error->context, "Ambiguous module name %s", name);
+    if (!alias)
+    {
+        alias = (char *)malloc(DEFAULT_STR_LEN + 1);
+        strcpy(alias, name);
+    }
+
+    if (moduleFindImported(&comp->modules, &comp->blocks, alias) >= 0)
+        comp->modules.error->handler(comp->modules.error->context, "Duplicate imported module %s", alias);
 
     int importedModule = moduleFind(&comp->modules, path);
     if (importedModule < 0)
@@ -746,7 +762,12 @@ static void parseImportItem(Compiler *comp)
         comp->blocks.module     = currentModule;
     }
 
-    comp->modules.module[comp->blocks.module]->imports[importedModule] = true;
+    // Module is imported iff it has an import alias (which may coincide with the module name if not specified explicitly)
+    char **importAlias = &comp->modules.module[comp->blocks.module]->importAlias[importedModule];
+    if (*importAlias)
+         comp->modules.error->handler(comp->modules.error->context, "Duplicate imported module %s", path);
+    *importAlias = alias;
+
     lexNext(&comp->lex);
 }
 
@@ -759,7 +780,7 @@ static void parseImport(Compiler *comp)
     if (comp->lex.tok.kind == TOK_LPAR)
     {
         lexNext(&comp->lex);
-        while (comp->lex.tok.kind == TOK_STRLITERAL)
+        while (comp->lex.tok.kind == TOK_STRLITERAL || comp->lex.tok.kind == TOK_IDENT)
         {
             parseImportItem(comp);
             lexEat(&comp->lex, TOK_SEMICOLON);

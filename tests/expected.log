@@ -434,7 +434,13 @@ characters: 12
 
 
 
->>> Import disambiguation
+>>> Import disambiguation - 1
+
+Utils from lib 1
+Utils from lib 2
+
+
+>>> Import disambiguation - 2
 
 Utils from lib 1
 Utils from lib 2
