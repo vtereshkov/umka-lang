@@ -215,6 +215,10 @@ int moduleAdd(Modules *modules, const char *path)
     for (int i = 0; i < MAX_MODULES; i++)
         module->importAlias[i] = NULL;
 
+    // Self-import
+    module->importAlias[modules->numModules] = malloc(DEFAULT_STR_LEN + 1);
+    strcpy(module->importAlias[modules->numModules], name);
+
     modules->module[modules->numModules] = module;
     return modules->numModules++;
 }
@@ -256,7 +260,6 @@ void moduleAddSource(Modules *modules, const char *path, const char *source)
     strcpy(moduleSource->source, source);
     moduleSource->source[sourceLen] = 0;
 
-    moduleSource->hash = hash(name);
     moduleSource->pathHash = hash(path);
 
     modules->moduleSource[modules->numModuleSources++] = moduleSource;

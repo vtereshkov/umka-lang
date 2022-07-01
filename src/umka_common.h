@@ -93,7 +93,7 @@ typedef struct
 typedef struct
 {
     char path[DEFAULT_STR_LEN + 1], folder[DEFAULT_STR_LEN + 1], name[DEFAULT_STR_LEN + 1];
-    unsigned int hash, pathHash;
+    unsigned int pathHash;
     char *source;
 } ModuleSource;
 
