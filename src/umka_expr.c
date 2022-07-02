@@ -1037,7 +1037,7 @@ static void parseBuiltinFiberCall(Compiler *comp, Type **type, Const *constant, 
         Type *fiberFuncType = NULL;
 
         parseExpr(comp, &fiberFuncType, constant);
-        typeAssertCompatibleBuiltin(&comp->types, *type, builtin, typeFiberFunc(fiberFuncType));
+        typeAssertCompatibleBuiltin(&comp->types, fiberFuncType, builtin, typeFiberFunc(fiberFuncType));
 
         lexEat(&comp->lex, TOK_COMMA);
 
