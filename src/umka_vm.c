@@ -2801,3 +2801,9 @@ void vmSetHook(VM *vm, HookEvent event, HookFunc hook)
     vm->hooks[event] = hook;
 }
 
+
+const char *vmBuiltinSpelling(BuiltinFunc builtin)
+{
+    return builtinSpelling[builtin];
+}
+

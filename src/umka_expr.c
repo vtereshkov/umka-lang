@@ -590,16 +590,12 @@ static void parseBuiltinIOCall(Compiler *comp, Type **type, Const *constant, Bui
 
         if (builtin == BUILTIN_PRINTF || builtin == BUILTIN_FPRINTF || builtin == BUILTIN_SPRINTF)
         {
-            if (!typeOrdinal(*type) && !typeReal(*type) && (*type)->kind != TYPE_STR)
-                comp->error.handler(comp->error.context, "Incompatible type in printf()");
-
+            typeAssertCompatibleBuiltin(&comp->types, *type, builtin, typeOrdinal(*type) || typeReal(*type) || (*type)->kind == TYPE_STR);
             genCallBuiltin(&comp->gen, (*type)->kind, builtin);
         }
         else  // BUILTIN_SCANF, BUILTIN_FSCANF, BUILTIN_SSCANF
         {
-            if ((*type)->kind != TYPE_PTR || (!typeOrdinal((*type)->base) && !typeReal((*type)->base) && (*type)->base->kind != TYPE_STR))
-                comp->error.handler(comp->error.context, "Incompatible type in scanf()");
-
+            typeAssertCompatibleBuiltin(&comp->types, *type, builtin, (*type)->kind == TYPE_PTR && (typeOrdinal((*type)->base) || typeReal((*type)->base) || (*type)->base->kind == TYPE_STR));
             genCallBuiltin(&comp->gen, (*type)->base->kind, builtin);
         }
         genPop(&comp->gen); // Manually remove parameter
@@ -678,8 +674,7 @@ static void parseBuiltinMakeCall(Compiler *comp, Type **type, Const *constant)
 
     // Dynamic array type
     *type = parseType(comp, NULL);
-    if ((*type)->kind != TYPE_DYNARRAY && (*type)->kind != TYPE_MAP)
-        comp->error.handler(comp->error.context, "Incompatible type in make()");
+    typeAssertCompatibleBuiltin(&comp->types, *type, BUILTIN_MAKE, (*type)->kind == TYPE_DYNARRAY || (*type)->kind == TYPE_MAP);
 
     genPushGlobalPtr(&comp->gen, *type);
 
@@ -711,8 +706,7 @@ static void parseBuiltinAppendCall(Compiler *comp, Type **type, Const *constant)
 
     // Dynamic array
     parseExpr(comp, type, NULL);
-    if ((*type)->kind != TYPE_DYNARRAY)
-        comp->error.handler(comp->error.context, "Incompatible type in append()");
+    typeAssertCompatibleBuiltin(&comp->types, *type, BUILTIN_APPEND, (*type)->kind == TYPE_DYNARRAY);
 
     lexEat(&comp->lex, TOK_COMMA);
 
@@ -765,8 +759,7 @@ static void parseBuiltinDeleteCall(Compiler *comp, Type **type, Const *constant)
 
     // Dynamic array
     parseExpr(comp, type, NULL);
-    if ((*type)->kind != TYPE_DYNARRAY && (*type)->kind != TYPE_MAP)
-        comp->error.handler(comp->error.context, "Incompatible type in delete()");
+    typeAssertCompatibleBuiltin(&comp->types, *type, BUILTIN_DELETE, (*type)->kind == TYPE_DYNARRAY || (*type)->kind == TYPE_MAP);
 
     // Item index or map key
     lexEat(&comp->lex, TOK_COMMA);
@@ -797,8 +790,7 @@ static void parseBuiltinSliceCall(Compiler *comp, Type **type, Const *constant)
 
     // Dynamic array
     parseExpr(comp, type, NULL);
-    if ((*type)->kind != TYPE_DYNARRAY && (*type)->kind != TYPE_STR)
-        comp->error.handler(comp->error.context, "Incompatible type in slice()");
+    typeAssertCompatibleBuiltin(&comp->types, *type, BUILTIN_SLICE, (*type)->kind == TYPE_DYNARRAY || (*type)->kind == TYPE_STR);
 
     lexEat(&comp->lex, TOK_COMMA);
 
@@ -874,7 +866,11 @@ static void parseBuiltinLenCall(Compiler *comp, Type **type, Const *constant)
             genCallBuiltin(&comp->gen, TYPE_MAP, BUILTIN_LEN);
             break;
         }
-        default: comp->error.handler(comp->error.context, "Incompatible type in len()"); return;
+        default:
+        {
+            typeAssertCompatibleBuiltin(&comp->types, *type, BUILTIN_LEN, false);
+            return;
+        }
     }
 
     *type = comp->intType;
@@ -927,8 +923,7 @@ static void parseBuiltinSizeofselfCall(Compiler *comp, Type **type, Const *const
         comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
 
     parseExpr(comp, type, constant);
-    if ((*type)->kind != TYPE_INTERFACE)
-        comp->error.handler(comp->error.context, "Incompatible type in sizeofself()");
+    typeAssertCompatibleBuiltin(&comp->types, *type, BUILTIN_SIZEOFSELF, (*type)->kind == TYPE_INTERFACE);
 
     genCallBuiltin(&comp->gen, TYPE_INTERFACE, BUILTIN_SIZEOFSELF);
     *type = comp->intType;
@@ -941,8 +936,7 @@ static void parseBuiltinSelfhasptrCall(Compiler *comp, Type **type, Const *const
         comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
 
     parseExpr(comp, type, constant);
-    if ((*type)->kind != TYPE_INTERFACE)
-        comp->error.handler(comp->error.context, "Incompatible type in selfhasptr()");
+    typeAssertCompatibleBuiltin(&comp->types, *type, BUILTIN_SELFHASPTR, (*type)->kind == TYPE_INTERFACE);
 
     genCallBuiltin(&comp->gen, TYPE_INTERFACE, BUILTIN_SELFHASPTR);
     *type = comp->boolType;
@@ -956,15 +950,13 @@ static void parseBuiltinSelftypeeqCall(Compiler *comp, Type **type, Const *const
 
     // Left interface
     parseExpr(comp, type, constant);
-    if ((*type)->kind != TYPE_INTERFACE)
-        comp->error.handler(comp->error.context, "Incompatible type in selftypeeq()");
+    typeAssertCompatibleBuiltin(&comp->types, *type, BUILTIN_SELFTYPEEQ, (*type)->kind == TYPE_INTERFACE);
 
     lexEat(&comp->lex, TOK_COMMA);
 
     // Right interface
     parseExpr(comp, type, constant);
-    if ((*type)->kind != TYPE_INTERFACE)
-        comp->error.handler(comp->error.context, "Incompatible type in selftypeeq()");
+    typeAssertCompatibleBuiltin(&comp->types, *type, BUILTIN_SELFTYPEEQ, (*type)->kind == TYPE_INTERFACE);
 
     genCallBuiltin(&comp->gen, TYPE_INTERFACE, BUILTIN_SELFTYPEEQ);
     *type = comp->boolType;
@@ -977,8 +969,7 @@ static void parseBuiltinValidCall(Compiler *comp, Type **type, Const *constant)
         comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
 
     parseExpr(comp, type, constant);
-    if ((*type)->kind != TYPE_DYNARRAY && (*type)->kind != TYPE_MAP && (*type)->kind != TYPE_INTERFACE && (*type)->kind != TYPE_FN && (*type)->kind != TYPE_FIBER)
-        comp->error.handler(comp->error.context, "Incompatible type in valid()");
+    typeAssertCompatibleBuiltin(&comp->types, *type, BUILTIN_VALID, (*type)->kind == TYPE_DYNARRAY || (*type)->kind == TYPE_MAP || (*type)->kind == TYPE_INTERFACE || (*type)->kind == TYPE_FN || (*type)->kind == TYPE_FIBER);
 
     genCallBuiltin(&comp->gen, (*type)->kind, BUILTIN_VALID);
     *type = comp->boolType;
@@ -993,8 +984,7 @@ static void parseBuiltinValidkeyCall(Compiler *comp, Type **type, Const *constan
 
     // Map
     parseExpr(comp, type, constant);
-    if ((*type)->kind != TYPE_MAP)
-        comp->error.handler(comp->error.context, "Incompatible type in validkey()");
+    typeAssertCompatibleBuiltin(&comp->types, *type, BUILTIN_VALIDKEY, (*type)->kind == TYPE_MAP);
 
     lexEat(&comp->lex, TOK_COMMA);
 
@@ -1016,8 +1006,7 @@ static void parseBuiltinKeysCall(Compiler *comp, Type **type, Const *constant)
 
     // Map
     parseExpr(comp, type, constant);
-    if ((*type)->kind != TYPE_MAP)
-        comp->error.handler(comp->error.context, "Incompatible type in keys()");
+    typeAssertCompatibleBuiltin(&comp->types, *type, BUILTIN_KEYS, (*type)->kind == TYPE_MAP);
 
     // Result type (hidden parameter)
     Type *keysType = typeAdd(&comp->types, &comp->blocks, TYPE_DYNARRAY);
@@ -1048,8 +1037,7 @@ static void parseBuiltinFiberCall(Compiler *comp, Type **type, Const *constant, 
         Type *fiberFuncType = NULL;
 
         parseExpr(comp, &fiberFuncType, constant);
-        if (!typeFiberFunc(fiberFuncType))
-            comp->error.handler(comp->error.context, "Incompatible function type in fiberspawn()");
+        typeAssertCompatibleBuiltin(&comp->types, *type, builtin, typeFiberFunc(fiberFuncType));
 
         lexEat(&comp->lex, TOK_COMMA);
 
@@ -1089,8 +1077,7 @@ static void parseBuiltinReprCall(Compiler *comp, Type **type, Const *constant)
         comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
 
     parseExpr(comp, type, constant);
-    if ((*type)->kind == TYPE_VOID)
-        comp->error.handler(comp->error.context, "Incompatible type in repr()");
+    typeAssertCompatibleBuiltin(&comp->types, *type, BUILTIN_REPR, (*type)->kind != TYPE_VOID);
 
     genPushGlobalPtr(&comp->gen, *type);
 

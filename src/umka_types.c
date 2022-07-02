@@ -459,6 +459,16 @@ void typeAssertCompatible(Types *types, Type *left, Type *right, bool symmetric)
 }
 
 
+void typeAssertCompatibleBuiltin(Types *types, Type *type, /*BuiltinFunc*/ int builtin, bool condition)
+{
+    if (!condition)
+    {
+        char typeBuf[DEFAULT_STR_LEN + 1];
+        types->error->handler(types->error->context, "Incompatible type %s in %s", typeSpelling(type, typeBuf), vmBuiltinSpelling(builtin));
+    }
+}
+
+
 bool typeValidOperator(Type *type, TokenKind op)
 {
     switch (op)

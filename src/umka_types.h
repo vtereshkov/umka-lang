@@ -198,11 +198,12 @@ static inline bool typeFiberFunc(Type *type)
 }
 
 
-bool typeEquivalent           (Type *left, Type *right);
-bool typeEquivalentExceptIdent(Type *left, Type *right);
-void typeAssertEquivalent     (Types *types, Type *left, Type *right);
-bool typeCompatible           (Type *left, Type *right, bool symmetric);
-void typeAssertCompatible     (Types *types, Type *left, Type *right, bool symmetric);
+bool typeEquivalent             (Type *left, Type *right);
+bool typeEquivalentExceptIdent  (Type *left, Type *right);
+void typeAssertEquivalent       (Types *types, Type *left, Type *right);
+bool typeCompatible             (Type *left, Type *right, bool symmetric);
+void typeAssertCompatible       (Types *types, Type *left, Type *right, bool symmetric);
+void typeAssertCompatibleBuiltin(Types *types, Type *type, /*BuiltinFunc*/ int builtin, bool condition);
 
 
 static inline bool typeCompatibleRcv(Type *left, Type *right)
