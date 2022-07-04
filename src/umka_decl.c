@@ -324,10 +324,11 @@ static Type *parseMapType(Compiler *comp)
     Type *nodeType = typeAdd(&comp->types, &comp->blocks, TYPE_STRUCT);
     Type *ptrNodeType = typeAddPtrTo(&comp->types, &comp->blocks, nodeType);
 
-    typeAddField(&comp->types, nodeType, ptrKeyType, "__key");
-    typeAddField(&comp->types, nodeType, ptrItemType, "__data");
-    typeAddField(&comp->types, nodeType, ptrNodeType, "__left");
-    typeAddField(&comp->types, nodeType, ptrNodeType, "__right");
+    typeAddField(&comp->types, nodeType, comp->intType, "__len");
+    typeAddField(&comp->types, nodeType, ptrKeyType,    "__key");
+    typeAddField(&comp->types, nodeType, ptrItemType,   "__data");
+    typeAddField(&comp->types, nodeType, ptrNodeType,   "__left");
+    typeAddField(&comp->types, nodeType, ptrNodeType,   "__right");
 
     type->base = nodeType;
     return type;
