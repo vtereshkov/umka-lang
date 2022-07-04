@@ -1034,6 +1034,8 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, Error *e
                 doBasicDeref(&selfSlot, __selftype->base->kind, error);
                 len += doFillReprBuf(&selfSlot, __selftype->base, buf + len, maxLen, error);
             }
+            else
+                len += snprintf(buf, maxLen, "null ");
             break;
         }
 
