@@ -38,6 +38,15 @@ typedef struct
 } DynArray;
 
 
+typedef struct
+{
+    // The C equivalent of the Umka interface type
+    void *self;
+    struct tagType *selfType;
+    // Methods are omitted - do not use sizeof()
+} Interface;
+
+
 typedef struct tagMapNode
 {
     // The C equivalent of the Umka map base type

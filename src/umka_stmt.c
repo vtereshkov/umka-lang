@@ -834,15 +834,15 @@ static void parseReturnStmt(Compiler *comp)
     // Copy structure to __result
     if (typeStructured(sig->resultType))
     {
-        Ident *__result = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, "__result", NULL);
+        Ident *result = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, "__result", NULL);
 
-        doPushVarPtr(comp, __result);
+        doPushVarPtr(comp, result);
         genDeref(&comp->gen, TYPE_PTR);
 
         // Assignment to an anonymous stack area (pointed to by __result) does not require updating reference counts
         genSwapAssign(&comp->gen, sig->resultType->kind, typeSize(&comp->types, sig->resultType));
 
-        doPushVarPtr(comp, __result);
+        doPushVarPtr(comp, result);
         genDeref(&comp->gen, TYPE_PTR);
     }
 

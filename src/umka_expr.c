@@ -55,11 +55,11 @@ void doCopyResultToTempVar(Compiler *comp, Type *type)
     IdentName tempName;
     identTempVarName(&comp->idents, tempName);
 
-    Ident *__temp = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, tempName, type, false);
-    doZeroVar(comp, __temp);
+    Ident *temp = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, tempName, type, false);
+    doZeroVar(comp, temp);
 
     genDup(&comp->gen);
-    doPushVarPtr(comp, __temp);
+    doPushVarPtr(comp, temp);
     genSwapAssign(&comp->gen, type->kind, typeSize(&comp->types, type));
 }
 
@@ -240,10 +240,10 @@ static void doPtrToInterfaceConv(Compiler *comp, Type *dest, Type **src, Const *
     genSwapAssign(&comp->gen, TYPE_PTR, 0);                                 // Assign to dest.__self
 
     // Assign to __selftype (RTTI)
-    Field *__selftype = typeAssertFindField(&comp->types, dest, "__selftype");
+    Field *selfType = typeAssertFindField(&comp->types, dest, "__selftype");
 
     genPushGlobalPtr(&comp->gen, *src);                                     // Push src type
-    genPushLocalPtr(&comp->gen, destOffset + __selftype->offset);           // Push dest.__selftype pointer
+    genPushLocalPtr(&comp->gen, destOffset + selfType->offset);             // Push dest.__selftype pointer
     genSwapAssign(&comp->gen, TYPE_PTR, 0);                                 // Assign to dest.__selftype
 
     // Assign to methods
@@ -285,12 +285,12 @@ static void doInterfaceToInterfaceConv(Compiler *comp, Type *dest, Type **src, C
     genSwapAssign(&comp->gen, TYPE_PTR, 0);                                 // Assign to dest.__self (NULL means a dynamic type)
 
     // Assign to __selftype (RTTI)
-    Field *__selftype = typeAssertFindField(&comp->types, dest, "__selftype");
+    Field *selfType = typeAssertFindField(&comp->types, dest, "__selftype");
 
     genDup(&comp->gen);                                                     // Duplicate src pointer
-    genGetFieldPtr(&comp->gen, __selftype->offset);                         // Get src.__selftype pointer
+    genGetFieldPtr(&comp->gen, selfType->offset);                           // Get src.__selftype pointer
     genDeref(&comp->gen, TYPE_PTR);                                         // Get src.__selftype value
-    genPushLocalPtr(&comp->gen, destOffset + __selftype->offset);           // Push dest.__selftype pointer
+    genPushLocalPtr(&comp->gen, destOffset + selfType->offset);             // Push dest.__selftype pointer
     genSwapAssign(&comp->gen, TYPE_PTR, 0);                                 // Assign to dest.__selftype
 
     // Assign to methods

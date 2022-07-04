@@ -739,12 +739,9 @@ static FORCE_INLINE void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, voi
 
             case TYPE_INTERFACE:
             {
-                // Interface layout: __self, __selftype, methods
-                void *__self = *(void **)ptr;
-                Type *__selftype = *(Type **)((char *)ptr + type->field[1]->offset);
-
-                if (__self)
-                    candidatePush(candidates, __self, __selftype);
+                Interface *interface = (Interface *)ptr;
+                if (interface->self)
+                    candidatePush(candidates, interface->self, interface->selfType);
                 break;
             }
 
@@ -769,14 +766,10 @@ static FORCE_INLINE void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, voi
 }
 
 
-static FORCE_INLINE MapNode *doGetMapNode(Map *map, Slot key, bool createMissingNodes, HeapPages *pages, Error *error, MapNode ***nodePtrInParent)
+static void doGetMapKeyBytes(Slot key, Type *keyType, char **keyBytes, int *keySize)
 {
-    if (!map || !map->root)
-        error->handlerRuntime(error->context, "Map is null");
-
-    Type *keyType = typeMapKey(map->type);
-    char *keyBytes = NULL;
-    int keySize = 0;
+    *keyBytes = NULL;
+    *keySize = 0;
 
     switch (keyType->kind)
     {
@@ -797,14 +790,14 @@ static FORCE_INLINE MapNode *doGetMapNode(Map *map, Slot key, bool createMissing
         case TYPE_FIBER:
         case TYPE_FN:
         {
-            keyBytes = (char *)&key;
-            keySize = typeSizeNoCheck(keyType);
+            *keyBytes = (char *)&key;
+            *keySize = typeSizeNoCheck(keyType);
             break;
         }
         case TYPE_STR:
         {
-            keyBytes = (char *)key.ptrVal;
-            keySize = strlen(keyBytes) + 1;
+            *keyBytes = (char *)key.ptrVal;
+            *keySize = strlen(*keyBytes) + 1;
             break;
         }
         case TYPE_ARRAY:
@@ -812,23 +805,30 @@ static FORCE_INLINE MapNode *doGetMapNode(Map *map, Slot key, bool createMissing
         case TYPE_STRUCT:
         case TYPE_INTERFACE:
         {
-            keyBytes = (char *)key.ptrVal;
-            keySize = typeSizeNoCheck(keyType);
+            *keyBytes = (char *)key.ptrVal;
+            *keySize = typeSizeNoCheck(keyType);
             break;
         }
         case TYPE_DYNARRAY:
         {
             DynArray *array = (DynArray *)key.ptrVal;
-            keyBytes = (char *)array->data;
-            keySize = array->len * array->itemSize;
+            *keyBytes = (char *)array->data;
+            *keySize = array->len * array->itemSize;
             break;
         }
-        default:
-        {
-            error->handlerRuntime(error->context, "Illegal type");
-            break;
-        }
+        default: break;
     }
+}
+
+
+static FORCE_INLINE MapNode *doGetMapNode(Map *map, Slot key, bool createMissingNodes, HeapPages *pages, Error *error, MapNode ***nodePtrInParent)
+{
+    if (!map || !map->root)
+        error->handlerRuntime(error->context, "Map is null");
+
+    char *keyBytes = NULL;
+    int keySize = 0;
+    doGetMapKeyBytes(key, typeMapKey(map->type), &keyBytes, &keySize);
 
     if (!keyBytes)
         error->handlerRuntime(error->context, "Map key is null");
@@ -1024,15 +1024,12 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, Error *e
 
         case TYPE_INTERFACE:
         {
-            // Interface layout: __self, __selftype, methods
-            void *__self = *(void **)slot->ptrVal;
-            Type *__selftype = *(Type **)((char *)slot->ptrVal + type->field[1]->offset);
-
-            if (__self)
+            Interface *interface = (Interface *)slot->ptrVal;
+            if (interface->self)
             {
-                Slot selfSlot = {.ptrVal = __self};
-                doBasicDeref(&selfSlot, __selftype->base->kind, error);
-                len += doFillReprBuf(&selfSlot, __selftype->base, buf + len, maxLen, error);
+                Slot selfSlot = {.ptrVal = interface->self};
+                doBasicDeref(&selfSlot, interface->selfType->base->kind, error);
+                len += doFillReprBuf(&selfSlot, interface->selfType->base, buf + len, maxLen, error);
             }
             else
                 len += snprintf(buf, maxLen, "null ");
@@ -1645,12 +1642,11 @@ static FORCE_INLINE void doBuiltinLen(Fiber *fiber, Error *error)
 
 static FORCE_INLINE void doBuiltinSizeofself(Fiber *fiber, Error *error)
 {
-    int size = 0;
+    Interface *interface = (Interface *)fiber->top->ptrVal;
 
-    // Interface layout: __self, __selftype, methods
-    Type *__selftype = *(Type **)((char *)fiber->top->ptrVal + sizeof(void *));
-    if (__selftype)
-        size = typeSizeNoCheck(__selftype->base);
+    int size = 0;
+    if (interface->selfType)
+        size = typeSizeNoCheck(interface->selfType->base);
 
     fiber->top->intVal = size;
 }
@@ -1658,12 +1654,11 @@ static FORCE_INLINE void doBuiltinSizeofself(Fiber *fiber, Error *error)
 
 static FORCE_INLINE void doBuiltinSelfhasptr(Fiber *fiber, Error *error)
 {
-    bool hasPtr = false;
+    Interface *interface = (Interface *)fiber->top->ptrVal;
 
-    // Interface layout: __self, __selftype, methods
-    Type *__selftype = *(Type **)((char *)fiber->top->ptrVal + sizeof(void *));
-    if (__selftype)
-        hasPtr = typeGarbageCollected(__selftype->base);
+    bool hasPtr = false;
+    if (interface->selfType)
+        hasPtr = typeGarbageCollected(interface->selfType->base);
 
     fiber->top->intVal = hasPtr;
 }
@@ -1671,14 +1666,12 @@ static FORCE_INLINE void doBuiltinSelfhasptr(Fiber *fiber, Error *error)
 
 static FORCE_INLINE void doBuiltinSelftypeeq(Fiber *fiber, Error *error)
 {
+    Interface *right = (Interface *)(fiber->top++)->ptrVal;
+    Interface *left  = (Interface *)(fiber->top++)->ptrVal;
+
     bool typesEq = false;
-
-    // Interface layout: __self, __selftype, methods
-    Type *__selftypeRight = *(Type **)((char *)((fiber->top++)->ptrVal) + sizeof(void *));
-    Type *__selftypeLeft  = *(Type **)((char *)((fiber->top++)->ptrVal) + sizeof(void *));
-
-    if (__selftypeLeft && __selftypeRight)
-        typesEq = typeEquivalent(__selftypeLeft->base, __selftypeRight->base);
+    if (left->selfType && right->selfType)
+        typesEq = typeEquivalent(left->selfType->base, right->selfType->base);
 
     (--fiber->top)->intVal = typesEq;
 }
@@ -1704,9 +1697,8 @@ static FORCE_INLINE void doBuiltinValid(Fiber *fiber, Error *error)
         }
         case TYPE_INTERFACE:
         {
-            // Interface layout: __self, __selftype, methods
-            Type *__selftype = *(Type **)((char *)fiber->top->ptrVal + sizeof(void *));
-            isValid = __selftype;
+            Interface *interface = (Interface *)fiber->top->ptrVal;
+            isValid = interface && interface->selfType;
             break;
         }
         case TYPE_FN:
@@ -2280,14 +2272,10 @@ static FORCE_INLINE void doGetFieldPtr(Fiber *fiber, Error *error)
 
 static FORCE_INLINE void doAssertType(Fiber *fiber)
 {
-    void *interface  =(fiber->top++)->ptrVal;
-    Type *type       = (Type *)fiber->code[fiber->ip].operand.ptrVal;
+    Interface *interface  = (Interface *)(fiber->top++)->ptrVal;
+    Type *type            = (Type *)fiber->code[fiber->ip].operand.ptrVal;
 
-    // Interface layout: __self, __selftype, methods
-    void *__self     = *(void **)interface;
-    Type *__selftype = *(Type **)((char *)interface + sizeof(__self));
-
-    (--fiber->top)->ptrVal = (__selftype && typeEquivalent(type, __selftype)) ? __self : NULL;
+    (--fiber->top)->ptrVal = (interface->selfType && typeEquivalent(type, interface->selfType)) ? interface->self : NULL;
     fiber->ip++;
 }
 

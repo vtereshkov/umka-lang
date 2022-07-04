@@ -375,7 +375,7 @@ static Type *parseInterfaceType(Compiler *comp)
     Type *type = typeAdd(&comp->types, &comp->blocks, TYPE_INTERFACE);
     type->numItems = 0;
 
-    // __self, __selftype
+    // The interface type is the Umka equivalent of Interface + methods
     typeAddField(&comp->types, type, comp->ptrVoidType, "__self");
     typeAddField(&comp->types, type, comp->ptrVoidType, "__selftype");
 
