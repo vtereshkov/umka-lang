@@ -764,15 +764,11 @@ static void parseBuiltinDeleteCall(Compiler *comp, Type **type, Const *constant)
     // Item index or map key
     lexEat(&comp->lex, TOK_COMMA);
     Type *indexType;
+    Type *expectedIndexType = ((*type)->kind == TYPE_DYNARRAY) ? comp->intType : typeMapKey(*type);
     parseExpr(comp, &indexType, NULL);
 
-    if ((*type)->kind == TYPE_DYNARRAY)
-    {
-        doImplicitTypeConv(comp, comp->intType, &indexType, NULL, false);
-        typeAssertCompatible(&comp->types, comp->intType, indexType, false);
-    }
-    else // TYPE_MAP
-        typeAssertEquivalent(&comp->types, typeMapKey(*type), indexType);
+    doImplicitTypeConv(comp, expectedIndexType, &indexType, NULL, false);
+    typeAssertCompatible(&comp->types, expectedIndexType, indexType, false);
 
     // Pointer to result (hidden parameter)
     int resultOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, *type);
@@ -991,7 +987,8 @@ static void parseBuiltinValidkeyCall(Compiler *comp, Type **type, Const *constan
     // Map key
     Type *keyType = NULL;
     parseExpr(comp, &keyType, constant);
-    typeAssertEquivalent(&comp->types, typeMapKey(*type), keyType);
+    doImplicitTypeConv(comp, typeMapKey(*type), &keyType, NULL, false);
+    typeAssertCompatible(&comp->types, typeMapKey(*type), keyType, false);
 
     genCallBuiltin(&comp->gen, (*type)->kind, BUILTIN_VALIDKEY);
     *type = comp->boolType;
@@ -1541,7 +1538,8 @@ static void parseMapLiteral(Compiler *comp, Type **type, Const *constant)
             // Key
             Type *keyType;
             parseExpr(comp, &keyType, NULL);
-            typeAssertEquivalent(&comp->types, typeMapKey(*type), keyType);
+            doImplicitTypeConv(comp, typeMapKey(*type), &keyType, NULL, false);
+            typeAssertCompatible(&comp->types, typeMapKey(*type), keyType, false);
 
             lexEat(&comp->lex, TOK_COLON);
 
@@ -1682,7 +1680,10 @@ static void parseIndexSelector(Compiler *comp, Type **type, Const *constant, boo
     parseExpr(comp, &indexType, NULL);
 
     if ((*type)->kind == TYPE_MAP)
-        typeAssertEquivalent(&comp->types, typeMapKey(*type), indexType);
+    {
+        doImplicitTypeConv(comp, typeMapKey(*type), &indexType, NULL, false);
+        typeAssertCompatible(&comp->types, typeMapKey(*type), indexType, false);
+    }
     else
         typeAssertCompatible(&comp->types, comp->intType, indexType, false);
 

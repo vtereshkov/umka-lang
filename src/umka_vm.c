@@ -766,11 +766,8 @@ static FORCE_INLINE void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, voi
 }
 
 
-static void doGetMapKeyBytes(Slot key, Type *keyType, char **keyBytes, int *keySize)
+static void doGetMapKeyBytes(Slot key, Type *keyType, Error *error, char **keyBytes, int *keySize)
 {
-    *keyBytes = NULL;
-    *keySize = 0;
-
     switch (keyType->kind)
     {
         case TYPE_INT8:
@@ -790,7 +787,8 @@ static void doGetMapKeyBytes(Slot key, Type *keyType, char **keyBytes, int *keyS
         case TYPE_FIBER:
         case TYPE_FN:
         {
-            *keyBytes = (char *)&key;
+            // keyBytes must point to a pre-allocated 8-byte buffer
+            doBasicAssign(*keyBytes, key, keyType->kind, 0, error);
             *keySize = typeSizeNoCheck(keyType);
             break;
         }
@@ -816,7 +814,12 @@ static void doGetMapKeyBytes(Slot key, Type *keyType, char **keyBytes, int *keyS
             *keySize = array->len * array->itemSize;
             break;
         }
-        default: break;
+        default:
+        {
+            *keyBytes = NULL;
+            *keySize = 0;
+            break;
+        }
     }
 }
 
@@ -826,9 +829,10 @@ static FORCE_INLINE MapNode *doGetMapNode(Map *map, Slot key, bool createMissing
     if (!map || !map->root)
         error->handlerRuntime(error->context, "Map is null");
 
-    char *keyBytes = NULL;
+    Slot keyBytesBuffer = {0};
+    char *keyBytes = (char *)&keyBytesBuffer;
     int keySize = 0;
-    doGetMapKeyBytes(key, typeMapKey(map->type), &keyBytes, &keySize);
+    doGetMapKeyBytes(key, typeMapKey(map->type), error, &keyBytes, &keySize);
 
     if (!keyBytes)
         error->handlerRuntime(error->context, "Map key is null");

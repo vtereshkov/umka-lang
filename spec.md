@@ -834,7 +834,7 @@ p^
 
 #### Index selector
 
-The index selector `[...]` accesses a collection item. It can be applied to an array, a dynamic array, a map, a string or a pointer to one of these types. For maps, the index should be of the type equivalent to the key type of the map. If there is no such a key in the map, a new map item is constructed and initialized with zeroes. For all the other collection types, the index should be an integer expression. Item indexing starts from 0. If the index is out of bounds, an error is triggered.
+The index selector `[...]` accesses a collection item. It can be applied to an array, a dynamic array, a map, a string or a pointer to one of these types. For maps, the index should be of the type compatible with the key type of the map. If there is no such a key in the map, a new map item is constructed and initialized with zeroes. For all the other collection types, the index should be an integer expression. Item indexing starts from 0. If the index is out of bounds, an error is triggered.
 
 Syntax:
 
