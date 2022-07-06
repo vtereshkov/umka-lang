@@ -801,7 +801,6 @@ static void doGetMapKeyBytes(Slot key, Type *keyType, Error *error, char **keyBy
         case TYPE_ARRAY:
         case TYPE_MAP:
         case TYPE_STRUCT:
-        case TYPE_INTERFACE:
         {
             *keyBytes = (char *)key.ptrVal;
             *keySize = typeSizeNoCheck(keyType);
@@ -812,6 +811,22 @@ static void doGetMapKeyBytes(Slot key, Type *keyType, Error *error, char **keyBy
             DynArray *array = (DynArray *)key.ptrVal;
             *keyBytes = (char *)array->data;
             *keySize = array->len * array->itemSize;
+            break;
+        }
+        case TYPE_INTERFACE:
+        {
+            Interface *interface = (Interface *)key.ptrVal;
+            if (interface->self)
+            {
+                Slot selfKey = {.ptrVal = interface->self};
+                doBasicDeref(&selfKey, interface->selfType->base->kind, error);
+                doGetMapKeyBytes(selfKey, interface->selfType->base, error, keyBytes, keySize);
+            }
+            else
+            {
+                *keyBytes = NULL;
+                *keySize = 0;
+            }
             break;
         }
         default:
