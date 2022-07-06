@@ -898,9 +898,15 @@ static FORCE_INLINE void doGetMapKeys(Map *map, void *keys, Error *error)
 }
 
 
-static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, Error *error)
+static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int maxDepth, Error *error)
 {
     int len = 0;
+    if (maxDepth == 0)
+    {
+        len = snprintf(buf, maxLen, "... ");
+        return len;
+    }
+
     switch (type->kind)
     {
         case TYPE_VOID:     len = snprintf(buf, maxLen, "void ");                                                             break;
@@ -936,7 +942,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, Error *e
             {
                 Slot itemSlot = {.ptrVal = itemPtr};
                 doBasicDeref(&itemSlot, type->base->kind, error);
-                len += doFillReprBuf(&itemSlot, type->base, buf + len, maxLen, error);
+                len += doFillReprBuf(&itemSlot, type->base, buf + len, maxLen, maxDepth - 1, error);
                 itemPtr += itemSize;
             }
 
@@ -956,7 +962,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, Error *e
                 {
                     Slot itemSlot = {.ptrVal = itemPtr};
                     doBasicDeref(&itemSlot, type->base->kind, error);
-                    len += doFillReprBuf(&itemSlot, type->base, buf + len, maxLen, error);
+                    len += doFillReprBuf(&itemSlot, type->base, buf + len, maxLen, maxDepth - 1, error);
                     itemPtr += array->itemSize;
                 }
             }
@@ -985,7 +991,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, Error *e
                 {
                     Slot keySlot = {.ptrVal = keyPtr};
                     doBasicDeref(&keySlot, keyType->kind, error);
-                    len += doFillReprBuf(&keySlot, keyType, buf + len, maxLen, error);
+                    len += doFillReprBuf(&keySlot, keyType, buf + len, maxLen, maxDepth - 1, error);
 
                     len += snprintf(buf + len, maxLen, ": ");
 
@@ -995,7 +1001,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, Error *e
 
                     Slot itemSlot = {.ptrVal = node->data};
                     doBasicDeref(&itemSlot, itemType->kind, error);
-                    len += doFillReprBuf(&itemSlot, itemType, buf + len, maxLen, error);
+                    len += doFillReprBuf(&itemSlot, itemType, buf + len, maxLen, maxDepth - 1, error);
 
                     keyPtr += keySize;
                 }
@@ -1019,7 +1025,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, Error *e
                 doBasicDeref(&fieldSlot, type->field[i]->type->kind, error);
                 if (!skipNames)
                     len += snprintf(buf + len, maxLen, "%s: ", type->field[i]->name);
-                len += doFillReprBuf(&fieldSlot, type->field[i]->type, buf + len, maxLen, error);
+                len += doFillReprBuf(&fieldSlot, type->field[i]->type, buf + len, maxLen, maxDepth - 1, error);
             }
 
             len += snprintf(buf + len, maxLen, "} ");
@@ -1033,7 +1039,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, Error *e
             {
                 Slot selfSlot = {.ptrVal = interface->self};
                 doBasicDeref(&selfSlot, interface->selfType->base->kind, error);
-                len += doFillReprBuf(&selfSlot, interface->selfType->base, buf + len, maxLen, error);
+                len += doFillReprBuf(&selfSlot, interface->selfType->base, buf + len, maxLen, maxDepth - 1, error);
             }
             else
                 len += snprintf(buf, maxLen, "null ");
@@ -1815,9 +1821,11 @@ static FORCE_INLINE void doBuiltinRepr(Fiber *fiber, HeapPages *pages, Error *er
     Type *type = (Type *)(fiber->top++)->ptrVal;
     Slot *val = fiber->top;
 
-    int len = doFillReprBuf(val, type, NULL, 0, error);     // Predict buffer length
-    char *buf = chunkAlloc(pages, len + 1, NULL, error);    // Allocate buffer
-    doFillReprBuf(val, type, buf, INT_MAX, error);          // Fill buffer
+    enum {MAX_REPR_DEPTH = 20};
+
+    int len = doFillReprBuf(val, type, NULL, 0, MAX_REPR_DEPTH, error);     // Predict buffer length
+    char *buf = chunkAlloc(pages, len + 1, NULL, error);                    // Allocate buffer
+    doFillReprBuf(val, type, buf, INT_MAX, MAX_REPR_DEPTH, error);          // Fill buffer
 
     fiber->top->ptrVal = buf;
 }
