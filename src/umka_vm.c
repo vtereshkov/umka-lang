@@ -2288,7 +2288,12 @@ static FORCE_INLINE void doAssertRange(Fiber *fiber, Error *error)
 {
     TypeKind typeKind = fiber->code[fiber->ip].typeKind;
 
-    Const arg = {.intVal = fiber->top->intVal};
+    Const arg;
+    if (typeKindReal(typeKind))
+        arg.realVal = fiber->top->realVal;
+    else
+        arg.intVal = fiber->top->intVal;
+
     if (typeOverflow(typeKind, arg))
         error->handlerRuntime(error->context, "Overflow of %s", typeKindSpelling(typeKind));
 

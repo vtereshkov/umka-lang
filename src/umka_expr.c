@@ -86,7 +86,7 @@ static void doEscapeToHeap(Compiler *comp, Type *ptrType, bool useRefCnt)
 }
 
 
-static void doOrdinalToOrdinalConv(Compiler *comp, Type *dest, Type **src, Const *constant)
+static void doOrdinalToOrdinalOrRealToRealConv(Compiler *comp, Type *dest, Type **src, Const *constant)
 {
     if (constant)
     {
@@ -456,10 +456,10 @@ static void doExplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *co
         *src = dest;
     }
 
-    // Ordinal to ordinal
-    else if (typeOrdinal(*src) && typeOrdinal(dest))
+    // Ordinal to ordinal or real to real
+    else if ((typeOrdinal(*src) && typeOrdinal(dest)) || (typeReal(*src) && typeReal(dest)))
     {
-        doOrdinalToOrdinalConv(comp, dest, src, constant);
+        doOrdinalToOrdinalOrRealToRealConv(comp, dest, src, constant);
     }
 
     // Pointer to pointer
@@ -1822,10 +1822,6 @@ static void parseCallSelector(Compiler *comp, Type **type, Const *constant, bool
     if (typeGarbageCollected(*type))
         doCopyResultToTempVar(comp, *type);
 
-    // All temporary reals are 64-bit
-    if ((*type)->kind == TYPE_REAL32)
-        *type = comp->realType;
-
     *isVar = typeStructured(*type);
     *isCall = true;
 }
@@ -1925,10 +1921,6 @@ static void parseFactor(Compiler *comp, Type **type, Const *constant)
                     genDeref(&comp->gen, (*type)->base->kind);
                     *type = (*type)->base;
                 }
-
-                // All temporary reals are 64-bit
-                if ((*type)->kind == TYPE_REAL32)
-                    *type = comp->realType;
             }
             break;
         }

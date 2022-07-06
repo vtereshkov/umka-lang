@@ -216,9 +216,7 @@ static void parseShortAssignmentStmt(Compiler *comp, Type *type, TokenKind op)
     genDup(&comp->gen);
     genDeref(&comp->gen, type->kind);
 
-    // All temporary reals are 64-bit
-    Type *leftType = (type->kind == TYPE_REAL32) ? comp->realType : type;
-
+    Type *leftType = type;
     Type *rightType;
     parseExpr(comp, &rightType, NULL);
 

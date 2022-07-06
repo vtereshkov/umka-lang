@@ -132,12 +132,12 @@ typedef enum
 
 typedef union
 {
-    int64_t intVal;
+    int64_t intVal;         // For all ordinal types except uint
     uint64_t uintVal;
     int32_t int32Val[2];
     void *ptrVal;
     uint64_t weakPtrVal;
-    double realVal;
+    double realVal;         // For all real types
     BuiltinFunc builtinVal;
 } Slot;
 
