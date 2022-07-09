@@ -83,6 +83,7 @@ type Arr = [a]real                      // Array
 type (
     DynArr = [][5]int                   // Dynamic array
     String = str                        // String
+    MyMap = map[str]real                // Map
     Quat = struct {                     // Structure
         q: [4]real
         normalized: bool
@@ -100,6 +101,7 @@ var f: String = d + "!"
 var (
     g: Arr = [3]real{2.3, -4.1 / 2, b}
     h: DynArr
+    m: MyMap
 )
 q := Quat{q: [4]real{1, 0, 0, 0}, normalized: true}
 ```
@@ -118,7 +120,9 @@ fn (a: ^Arr) print(): int {
 ### Statements
 #### Assignment
 ```
-h = make([][5]int, 3)          // Dynamic arrays are initialized with make()
+h = make([][5]int, 3)   // Dynamic arrays and maps are initialized with make()
+m = make(MyMap)
+m["Hello Umka"] = 3.14
 ```
 #### Declaration via assignment (with type inference)
 ```

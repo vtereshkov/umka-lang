@@ -12,6 +12,7 @@ const (
 type IntPtr = ^uint16
 type Arr = [a]real
 type (
+    MyMap = map[str]real
     Quat = struct {
         q: [4]real
         normalized: bool
@@ -28,6 +29,7 @@ var f: str = d + '!'
 var (
     g: Arr = [3]real{2.3, -4.1 / 2, b}
     h: [][5]int  // Dynamic arrays require calling make()
+    m: MyMap
 )
 q := Quat{q: [4]real{1, 0, 0, 0}, normalized: true}
 
@@ -65,6 +67,8 @@ fn parentFunc() {
 fn test*() {
     // Assignment
     h = make([][5]int, 3)
+    m = make(MyMap)
+    m["Hello Umka"] = 3.14
     
     // Declaration via assignment (with type inference)
     sum := 0.0
@@ -121,6 +125,7 @@ fn test*() {
     printf("%s\n", repr(f))
     printf("%s\n", repr(g))
     printf("%s\n", repr(h))
+    printf("%s\n", repr(m))
     printf("%s\n", repr(q))
     printf("%s\n", repr(sum))
     printf("%s\n", repr('a'))
