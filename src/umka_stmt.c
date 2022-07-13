@@ -25,12 +25,7 @@ void doGarbageCollection(Compiler *comp, int block)
                 genPop(&comp->gen);
             }
 
-            // Warn about unused identifiers
-            if (!ident->used)
-            {
-                comp->error.warningHandler(comp->error.context, "Identifier %s is not used", ident->name);
-                ident->used = true;
-            }
+            identWarnIfUnused(&comp->idents, ident);
         }
 
 }
@@ -63,45 +58,50 @@ void doZeroVar(Compiler *comp, Ident *ident)
 void doResolveExtern(Compiler *comp)
 {
     for (Ident *ident = comp->idents.first; ident; ident = ident->next)
-        if (ident->module == comp->blocks.module && ident->prototypeOffset >= 0)
+        if (ident->module == comp->blocks.module)
         {
-            External *external = externalFind(&comp->externals, ident->name);
-
-            // Try to find the function in the external function list or in an external implementation library
-            void *fn = NULL;
-            if (external)
+            if (ident->prototypeOffset >= 0)
             {
-                if (external->resolved)
-                    comp->error.handler(comp->error.context, "External %s is already resolved", ident->name);
+                External *external = externalFind(&comp->externals, ident->name);
 
-                fn = external->entry;
-                external->resolved = true;
+                // Try to find the function in the external function list or in an external implementation library
+                void *fn = NULL;
+                if (external)
+                {
+                    if (external->resolved)
+                        comp->error.handler(comp->error.context, "External %s is already resolved", ident->name);
+
+                    fn = external->entry;
+                    external->resolved = true;
+                }
+                else
+                    fn = moduleGetImplLibFunc(comp->modules.module[comp->blocks.module], ident->name);
+
+                if (!fn)
+                    comp->error.handler(comp->error.context, "Unresolved prototype of %s", ident->name);
+
+                // All parameters must be declared since they may require garbage collection
+                blocksEnter(&comp->blocks, ident);
+                genEntryPoint(&comp->gen, ident->prototypeOffset);
+                genEnterFrameStub(&comp->gen);
+
+                for (int i = 0; i < ident->type->sig.numParams; i++)
+                    identAllocParam(&comp->idents, &comp->types, &comp->modules, &comp->blocks, &ident->type->sig, i);
+
+                genCallExtern(&comp->gen, fn);
+
+                doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+                identFree(&comp->idents, blocksCurrent(&comp->blocks));
+
+                int paramSlots = align(typeParamSizeTotal(&comp->types, &ident->type->sig), sizeof(Slot)) / sizeof(Slot);
+
+                genLeaveFrameFixup(&comp->gen, 0, paramSlots);
+                genReturn(&comp->gen, paramSlots);
+
+                blocksLeave(&comp->blocks);
             }
-            else
-                fn = moduleGetImplLibFunc(comp->modules.module[comp->blocks.module], ident->name);
 
-            if (!fn)
-                comp->error.handler(comp->error.context, "Unresolved prototype of %s", ident->name);
-
-            // All parameters must be declared since they may require garbage collection
-            blocksEnter(&comp->blocks, ident);
-            genEntryPoint(&comp->gen, ident->prototypeOffset);
-            genEnterFrameStub(&comp->gen);
-
-            for (int i = 0; i < ident->type->sig.numParams; i++)
-                identAllocParam(&comp->idents, &comp->types, &comp->modules, &comp->blocks, &ident->type->sig, i);
-
-            genCallExtern(&comp->gen, fn);
-
-            doGarbageCollection(comp, blocksCurrent(&comp->blocks));
-            identFree(&comp->idents, blocksCurrent(&comp->blocks));
-
-            int paramSlots = align(typeParamSizeTotal(&comp->types, &ident->type->sig), sizeof(Slot)) / sizeof(Slot);
-
-            genLeaveFrameFixup(&comp->gen, 0, paramSlots);
-            genReturn(&comp->gen, paramSlots);
-
-            blocksLeave(&comp->blocks);
+            identWarnIfUnused(&comp->idents, ident);
         }
 }
 

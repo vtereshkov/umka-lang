@@ -823,9 +823,7 @@ void parseProgram(Compiler *comp)
     genEntryPoint(&comp->gen, 0);
 
     Ident *mainFn = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, mainModule, "main", NULL);
-
-    if (mainFn->kind != IDENT_CONST || mainFn->type->kind != TYPE_FN || mainFn->type->sig.method ||
-        mainFn->type->sig.numParams != 0 || mainFn->type->sig.resultType->kind != TYPE_VOID)
+    if (!identIsMain(mainFn))
         comp->error.handler(comp->error.context, "Illegal main() function");
 
     genCall(&comp->gen, mainFn->offset);

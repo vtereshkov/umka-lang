@@ -174,7 +174,7 @@ static Ident *identAdd(Idents *idents, Modules *modules, Blocks *blocks, IdentKi
     ident->block            = blocks->item[blocks->top].block;
     ident->exported         = exported;
     ident->inHeap           = false;
-    ident->used             = exported || ident->module == 0 || ident->name[0] == '_';  // Exported, predefined and temporary identifiers are always treated as used
+    ident->used             = exported || ident->module == 0 || ident->name[0] == '_' || identIsMain(ident);  // Exported, predefined, temporary identifiers and main() are always treated as used
     ident->prototypeOffset  = -1;
     ident->next             = NULL;
 
@@ -289,4 +289,21 @@ char *identMethodNameWithRcv(Ident *method, char *buf, int size)
     typeSpelling(method->type->sig.param[0]->type, typeBuf);
     snprintf(buf, size, "%s.%s", typeBuf, method->name);
     return buf;
+}
+
+
+void identWarnIfUnused(Idents *idents, Ident *ident)
+{
+    if (!ident->used)
+    {
+        idents->error->warningHandler(idents->error->context, "Identifier %s is not used", ident->name);
+        ident->used = true;
+    }
+}
+
+
+bool identIsMain(Ident *ident)
+{
+    return strcmp(ident->name, "main") == 0 && ident->kind == IDENT_CONST &&
+           ident->type->kind == TYPE_FN && !ident->type->sig.method && ident->type->sig.numParams == 0 && ident->type->sig.resultType->kind == TYPE_VOID;
 }
