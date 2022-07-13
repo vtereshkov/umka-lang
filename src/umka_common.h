@@ -103,6 +103,7 @@ typedef struct
     unsigned int pathHash;
     void *implLib;
     char *importAlias[MAX_MODULES];
+    bool importUsed[MAX_MODULES];
 } Module;
 
 
@@ -175,7 +176,8 @@ void  moduleInit                (Modules *modules, bool implLibsEnabled, Error *
 void  moduleFree                (Modules *modules);
 void  moduleNameFromPath        (Modules *modules, const char *path, char *folder, char *name, int size);
 int   moduleFind                (Modules *modules, const char *path);
-int   moduleFindImported        (Modules *modules, Blocks *blocks, const char *name);
+int   moduleFindImported        (Modules *modules, Blocks *blocks, const char *name, bool markAsUsed);
+void  moduleWarnIfUnusedImports (Modules *modules, int module);
 int   moduleAdd                 (Modules *modules, const char *path);
 char *moduleFindSource          (Modules *modules, const char *path);
 void  moduleAddSource           (Modules *modules, const char *path, const char *source);

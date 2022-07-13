@@ -535,7 +535,7 @@ void doApplyOperator(Compiler *comp, Type **type, Type **rightType, Const *const
 Ident *parseQualIdent(Compiler *comp)
 {
     lexCheck(&comp->lex, TOK_IDENT);
-    int module = moduleFindImported(&comp->modules, &comp->blocks, comp->lex.tok.name);
+    int module = moduleFindImported(&comp->modules, &comp->blocks, comp->lex.tok.name, true);
     if (module >= 0)
     {
         if (identFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, comp->lex.tok.name, NULL, false))

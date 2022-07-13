@@ -224,7 +224,7 @@ static Type *parsePtrType(Compiler *comp)
     bool forward = false;
     if (comp->lex.tok.kind == TOK_IDENT)
     {
-        int module = moduleFindImported(&comp->modules, &comp->blocks, comp->lex.tok.name);
+        int module = moduleFindImported(&comp->modules, &comp->blocks, comp->lex.tok.name, true);
         if (module < 0)
         {
             Ident *ident = identFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, comp->lex.tok.name, NULL, true);
@@ -742,7 +742,7 @@ static void parseImportItem(Compiler *comp)
         strcpy(alias, name);
     }
 
-    if (moduleFindImported(&comp->modules, &comp->blocks, alias) >= 0)
+    if (moduleFindImported(&comp->modules, &comp->blocks, alias, false) >= 0)
         comp->modules.error->handler(comp->modules.error->context, "Duplicate imported module %s", alias);
 
     int importedModule = moduleFind(&comp->modules, path);
@@ -806,6 +806,7 @@ static int parseModule(Compiler *comp)
     }
     parseDecls(comp);
     doResolveExtern(comp);
+    moduleWarnIfUnusedImports(&comp->modules, comp->blocks.module);
     return comp->blocks.module;
 }
 
