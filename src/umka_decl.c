@@ -227,7 +227,7 @@ static Type *parsePtrType(Compiler *comp)
         int module = moduleFindImported(&comp->modules, &comp->blocks, comp->lex.tok.name);
         if (module < 0)
         {
-            Ident *ident = identFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, comp->lex.tok.name, NULL);
+            Ident *ident = identFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, comp->lex.tok.name, NULL, true);
             if (!ident)
             {
                 IdentName name;
@@ -238,6 +238,7 @@ static Type *parsePtrType(Compiler *comp)
 
                 type = typeAdd(&comp->types, &comp->blocks, TYPE_FORWARD);
                 type->typeIdent = identAddType(&comp->idents, &comp->modules, &comp->blocks, name, type, exported);
+                type->typeIdent->used = true;
 
                 forward = true;
             }

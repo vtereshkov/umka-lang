@@ -15,13 +15,24 @@ static void parseBlock(Compiler *comp);
 void doGarbageCollection(Compiler *comp, int block)
 {
     for (Ident *ident = comp->idents.first; ident; ident = ident->next)
-        if (ident->kind == IDENT_VAR && ident->block == block && typeGarbageCollected(ident->type) && strcmp(ident->name, "__result") != 0)
+        if (ident->block == block)
         {
-            doPushVarPtr(comp, ident);
-            genDeref(&comp->gen, ident->type->kind);
-            genChangeRefCnt(&comp->gen, TOK_MINUSMINUS, ident->type);
-            genPop(&comp->gen);
+            if (ident->kind == IDENT_VAR && typeGarbageCollected(ident->type) && strcmp(ident->name, "__result") != 0)
+            {
+                doPushVarPtr(comp, ident);
+                genDeref(&comp->gen, ident->type->kind);
+                genChangeRefCnt(&comp->gen, TOK_MINUSMINUS, ident->type);
+                genPop(&comp->gen);
+            }
+
+            // Warn about unused identifiers
+            if (!ident->used)
+            {
+                comp->error.warningHandler(comp->error.context, "Identifier %s is not used", ident->name);
+                ident->used = true;
+            }
         }
+
 }
 
 
@@ -621,6 +632,7 @@ static void parseForInHeader(Compiler *comp)
     // Declare variable for the collection index (for maps, it will be used for indexing keys())
     const char *indexName = (collectionType->kind == TYPE_MAP) ? "__index" : indexOrKeyName;
     Ident *indexIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, indexName, comp->intType, false);
+    indexIdent->used = true;                            // Do not warn about unused index
     doZeroVar(comp, indexIdent);
 
     Ident *keyIdent = NULL, *keysIdent = NULL;
@@ -628,6 +640,7 @@ static void parseForInHeader(Compiler *comp)
     {
         // Declare variable for the map key
         keyIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, indexOrKeyName, typeMapKey(collectionType), false);
+        keyIdent->used = true;                            // Do not warn about unused key
         doZeroVar(comp, keyIdent);
 
         // Declare variable for the map keys

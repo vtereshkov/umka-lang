@@ -11,6 +11,26 @@
 #define UMKA_VERSION    "0.8"
 
 
+static void compileWarning(void *context, const char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+
+    Compiler *comp = context;
+
+    UmkaError warning;
+    strcpy(warning.fileName, comp->lex.fileName);
+    warning.line = comp->lex.tok.line;
+    warning.pos = comp->lex.tok.pos;
+    vsnprintf(warning.msg, UMKA_MSG_LEN + 1, format, args);
+
+    if (comp->error.warningCallback)
+        ((UmkaWarningCallback)comp->error.warningCallback)(&warning);
+
+    va_end(args);
+}
+
+
 static void compileError(void *context, const char *format, ...)
 {
     va_list args;
@@ -55,14 +75,16 @@ UMKA_API void *umkaAlloc(void)
 }
 
 
-UMKA_API bool umkaInit(void *umka, const char *fileName, const char *sourceString, int stackSize, const char *locale, int argc, char **argv, bool fileSystemEnabled, bool implLibsEnabled)
+UMKA_API bool umkaInit(void *umka, const char *fileName, const char *sourceString, int stackSize, const char *locale, int argc, char **argv, bool fileSystemEnabled, bool implLibsEnabled, UmkaWarningCallback warningCallback)
 {
     Compiler *comp = umka;
     memset(comp, 0, sizeof(Compiler));
 
     // First set error handlers
     comp->error.handler = compileError;
-    comp->error.handlerRuntime = runtimeError;
+    comp->error.runtimeHandler = runtimeError;
+    comp->error.warningHandler = compileWarning;
+    comp->error.warningCallback = (WarningCallback)warningCallback;
     comp->error.context = comp;
 
     if (setjmp(comp->error.jumper) == 0)

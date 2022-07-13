@@ -64,10 +64,15 @@ typedef struct
 } Map;
 
 
+typedef void (*WarningCallback)(void * /*UmkaError*/ warning);
+
+
 typedef struct
 {
     void (*handler)(void *context, const char *format, ...);
-    void (*handlerRuntime)(void *context, const char *format, ...);
+    void (*runtimeHandler)(void *context, const char *format, ...);
+    void (*warningHandler)(void *context, const char *format, ...);
+    WarningCallback warningCallback;
     void *context;
     jmp_buf jumper;
 

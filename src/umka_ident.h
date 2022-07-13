@@ -22,7 +22,7 @@ typedef struct tagIdent
     unsigned int hash;
     Type *type;
     int module, block;                  // Global identifiers are in block 0
-    bool exported, inHeap;
+    bool exported, inHeap, used;
     int prototypeOffset;                // For function prototypes
     union
     {
@@ -46,7 +46,7 @@ typedef struct
 void identInit(Idents *idents, Error *error);
 void identFree(Idents *idents, int startBlock /* < 0 to free in all blocks*/);
 
-Ident *identFind          (Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, Type *rcvType);
+Ident *identFind          (Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, Type *rcvType, bool markAsUsed);
 Ident *identAssertFind    (Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, Type *rcvType);
 
 bool identIsOuterLocalVar (Blocks *blocks, Ident *ident);

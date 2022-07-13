@@ -45,7 +45,7 @@ void identFree(Idents *idents, int startBlock)
 }
 
 
-Ident *identFind(Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, Type *rcvType)
+Ident *identFind(Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, Type *rcvType, bool markAsUsed)
 {
     const unsigned int nameHash = hash(name);
 
@@ -65,11 +65,19 @@ Ident *identFind(Idents *idents, Modules *modules, Blocks *blocks, int module, c
 
                     // We don't need a method and what we found is not a method
                     if (!rcvType && !method)
+                    {
+                        if (markAsUsed)
+                            ident->used = true;
                         return ident;
+                    }
 
                     // We need a method and what we found is a method
                     if (rcvType && method && typeCompatibleRcv(ident->type->sig.param[0]->type, rcvType))
+                    {
+                        if (markAsUsed)
+                            ident->used = true;
                         return ident;
+                    }
                 }
             }
     }
@@ -80,7 +88,7 @@ Ident *identFind(Idents *idents, Modules *modules, Blocks *blocks, int module, c
 
 Ident *identAssertFind(Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, Type *rcvType)
 {
-    Ident *res = identFind(idents, modules, blocks, module, name, rcvType);
+    Ident *res = identFind(idents, modules, blocks, module, name, rcvType, true);
     if (!res)
         idents->error->handler(idents->error->context, "Unknown identifier %s", name);
     return res;
@@ -112,7 +120,7 @@ static Ident *identAdd(Idents *idents, Modules *modules, Blocks *blocks, IdentKi
     if (type->kind == TYPE_FN && type->sig.method)
         rcvType = type->sig.param[0]->type;
 
-    Ident *ident = identFind(idents, modules, blocks, blocks->module, name, rcvType);
+    Ident *ident = identFind(idents, modules, blocks, blocks->module, name, rcvType, false);
 
     if (ident && ident->block == blocks->item[blocks->top].block)
     {
@@ -166,6 +174,7 @@ static Ident *identAdd(Idents *idents, Modules *modules, Blocks *blocks, IdentKi
     ident->block            = blocks->item[blocks->top].block;
     ident->exported         = exported;
     ident->inHeap           = false;
+    ident->used             = exported || ident->module == 0 || ident->name[0] == '_';  // Exported, predefined and temporary identifiers are always treated as used
     ident->prototypeOffset  = -1;
     ident->next             = NULL;
 
@@ -261,7 +270,9 @@ Ident *identAllocParam(Idents *idents, Types *types, Modules *modules, Blocks *b
     int paramSizeTotal     = typeParamSizeTotal(types, sig);
 
     int offset = (paramSizeTotal - paramSizeUpToIndex) + 2 * sizeof(Slot);  // + 2 slots for old base pointer and return address
-    return identAddLocalVar(idents, modules, blocks, sig->param[index]->name, sig->param[index]->type, false, offset);
+    Ident *ident = identAddLocalVar(idents, modules, blocks, sig->param[index]->name, sig->param[index]->type, false, offset);
+    ident->used = true;                                                     // Do not warn about unused parameters
+    return ident;
 }
 
 
@@ -279,5 +290,3 @@ char *identMethodNameWithRcv(Ident *method, char *buf, int size)
     snprintf(buf, size, "%s.%s", typeBuf, method->name);
     return buf;
 }
-
-

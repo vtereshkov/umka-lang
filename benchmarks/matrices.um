@@ -8,7 +8,7 @@ fn main() {
     
     // Fill matrices
     for i, row in a {
-        for j, col in row {
+        for j in row {
             a[i][j] = 3 * i + j
             b[i][j] = i - 3 * j
         }

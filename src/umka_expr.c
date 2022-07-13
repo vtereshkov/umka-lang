@@ -254,7 +254,7 @@ static void doPtrToInterfaceConv(Compiler *comp, Type *dest, Type **src, Const *
         Type *rcvType = (*src)->base;
         int rcvTypeModule = rcvType->typeIdent ? rcvType->typeIdent->module : -1;
 
-        Ident *srcMethod = identFind(&comp->idents, &comp->modules, &comp->blocks, rcvTypeModule, name, *src);
+        Ident *srcMethod = identFind(&comp->idents, &comp->modules, &comp->blocks, rcvTypeModule, name, *src, true);
         if (!srcMethod)
             comp->error.handler(comp->error.context, "Method %s is not implemented", name);
 
@@ -538,7 +538,7 @@ Ident *parseQualIdent(Compiler *comp)
     int module = moduleFindImported(&comp->modules, &comp->blocks, comp->lex.tok.name);
     if (module >= 0)
     {
-        if (identFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, comp->lex.tok.name, NULL))
+        if (identFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, comp->lex.tok.name, NULL, false))
             comp->error.handler(comp->error.context, "Conflict between module %s and identifier %s", comp->lex.tok.name, comp->lex.tok.name);
 
         lexNext(&comp->lex);
@@ -881,7 +881,7 @@ static void parseBuiltinSizeofCall(Compiler *comp, Type **type, Const *constant)
     // sizeof(T)
     if (comp->lex.tok.kind == TOK_IDENT)
     {
-        Ident *ident = identFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, comp->lex.tok.name, NULL);
+        Ident *ident = identFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, comp->lex.tok.name, NULL, false);
         if (ident && ident->kind == IDENT_TYPE)
         {
             Lexer lookaheadLex = comp->lex;
@@ -890,6 +890,7 @@ static void parseBuiltinSizeofCall(Compiler *comp, Type **type, Const *constant)
             {
                 lexNext(&comp->lex);
                 *type = ident->type;
+                ident->used = true;
             }
         }
     }
@@ -1754,7 +1755,7 @@ static void parseFieldSelector(Compiler *comp, Type **type, Const *constant, boo
 
     rcvType = typeAddPtrTo(&comp->types, &comp->blocks, rcvType);
 
-    Ident *method = identFind(&comp->idents, &comp->modules, &comp->blocks, rcvTypeModule, comp->lex.tok.name, rcvType);
+    Ident *method = identFind(&comp->idents, &comp->modules, &comp->blocks, rcvTypeModule, comp->lex.tok.name, rcvType, true);
     if (method)
     {
         // Method

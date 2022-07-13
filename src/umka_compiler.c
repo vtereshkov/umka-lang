@@ -250,9 +250,13 @@ int compilerGetFunc(Compiler *comp, const char *moduleName, const char *funcName
         module = moduleFind(&comp->modules, modulePath);
     }
 
-    Ident *fn = identFind(&comp->idents, &comp->modules, &comp->blocks, module, funcName, NULL);
+    Ident *fn = identFind(&comp->idents, &comp->modules, &comp->blocks, module, funcName, NULL, false);
     if (fn && fn->kind == IDENT_CONST && fn->type->kind == TYPE_FN)
+    {
+        fn->used = true;
         return fn->offset;
+    }
+
     return -1;
 }
 

@@ -1544,6 +1544,12 @@ typedef struct
 
 Umka error description structure.
 
+```
+typedef void (*UmkaWarningCallback)(UmkaError *warning);
+```
+
+Umka warning callback.
+
 ### API functions
 
 ```
@@ -1556,10 +1562,11 @@ Allocates memory for the interpreter and returns the interpreter instance handle
 UMKA_API bool umkaInit(void *umka, const char *fileName, const char *sourceString, 
                        int stackSize, const char *locale, 
                        int argc, char **argv, 
-                       bool fileSystemEnabled, bool implLibsEnabled);
+                       bool fileSystemEnabled, bool implLibsEnabled,
+                       UmkaWarningCallback warningCallback);
 ```
 
-Initializes the interpreter instance. Here, `umka` is the interpreter instance handle, `fileName` is the Umka source file name, `sourceString` is an optional string buffer that contains the program source, `stackSize` is the fiber stack size, in slots, `argc` and `argv` represent the standard C/C++ command-line parameter data. If `sourceString` is not `NULL`, the program source is read from this string rather than from a file. A fictitious `fileName` should nevertheless be specified.  An optional `locale` string can be specified. The `fileSystemEnabled` flag allows the Umka program to access the file system, and the `implLibsEnabled`  flag allows it to use UMIs. Returns `true` if the source has been successfully loaded.
+Initializes the interpreter instance. Here, `umka` is the interpreter instance handle, `fileName` is the Umka source file name, `sourceString` is an optional string buffer that contains the program source, `stackSize` is the fiber stack size, in slots, `argc` and `argv` represent the standard C/C++ command-line parameter data. If `sourceString` is not `NULL`, the program source is read from this string rather than from a file. A fictitious `fileName` should nevertheless be specified.  An optional `locale` string can be specified. The `fileSystemEnabled` flag allows the Umka program to access the file system, and the `implLibsEnabled` flag allows it to use UMIs. If `warningCallback` is not `NULL`, it will be called on every warning. Returns `true` if the source has been successfully loaded.
 
 ```
 UMKA_API bool umkaCompile(void *umka);

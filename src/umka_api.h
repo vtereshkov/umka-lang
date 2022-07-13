@@ -78,8 +78,11 @@ typedef struct
 } UmkaError;
 
 
+typedef void (*UmkaWarningCallback)(UmkaError *warning);
+
+
 UMKA_API void *umkaAlloc            (void);
-UMKA_API bool umkaInit              (void *umka, const char *fileName, const char *sourceString, int stackSize, const char *locale, int argc, char **argv, bool fileSystemEnabled, bool implLibsEnabled);
+UMKA_API bool umkaInit              (void *umka, const char *fileName, const char *sourceString, int stackSize, const char *locale, int argc, char **argv, bool fileSystemEnabled, bool implLibsEnabled, UmkaWarningCallback warningCallback);
 UMKA_API bool umkaCompile           (void *umka);
 UMKA_API bool umkaRun               (void *umka);
 UMKA_API bool umkaCall              (void *umka, int entryOffset, int numParamSlots, UmkaStackSlot *params, UmkaStackSlot *result);

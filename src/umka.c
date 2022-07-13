@@ -25,7 +25,14 @@ void help(void)
     printf("    -locale <locale-string> - Set locale\n");
     printf("    -asm                    - Write assembly listing\n");
     printf("    -check                  - Compile only\n");
+    printf("    -warn                   - Enable warnings\n");
     printf("    -sandbox                - Run in sandbox mode\n");
+}
+
+
+void printCompileWarning(UmkaError *warning)
+{
+    fprintf(stderr, "Warning %s (%d, %d): %s\n", warning->fileName, warning->line, warning->pos, warning->msg);
 }
 
 
@@ -62,7 +69,7 @@ void printRuntimeError(void *umka)
 int runPlayground(const char *fileName, const char *sourceString)
 {
     void *umka = umkaAlloc();
-    bool ok = umkaInit(umka, fileName, sourceString, DEFAULT_STACK_SIZE, NULL, 0, NULL, false, false);
+    bool ok = umkaInit(umka, fileName, sourceString, DEFAULT_STACK_SIZE, NULL, 0, NULL, false, false, printCompileWarning);
     if (ok)
         ok = umkaCompile(umka);
 
@@ -89,6 +96,7 @@ int main(int argc, char **argv)
     const char *locale  = NULL;
     bool writeAsm       = false;
     bool compileOnly    = false;
+    bool printWarnings  = false;
     bool isSandbox      = false;
 
     int i = 1;
@@ -133,6 +141,11 @@ int main(int argc, char **argv)
             compileOnly = true;
             i += 1;
         }
+        else if (strcmp(argv[i], "-warn") == 0)
+        {
+            printWarnings = true;
+            i += 1;
+        }
         else if (strcmp(argv[i], "-sandbox") == 0)
         {
             isSandbox = true;
@@ -150,7 +163,7 @@ int main(int argc, char **argv)
     }
 
     void *umka = umkaAlloc();
-    bool ok = umkaInit(umka, argv[i], NULL, stackSize, locale, argc - i, argv + i, !isSandbox, !isSandbox);
+    bool ok = umkaInit(umka, argv[i], NULL, stackSize, locale, argc - i, argv + i, !isSandbox, !isSandbox, printWarnings ? printCompileWarning : NULL);
     if (ok)
         ok = umkaCompile(umka);
 
