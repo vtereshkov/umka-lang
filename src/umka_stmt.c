@@ -85,6 +85,7 @@ void doResolveExtern(Compiler *comp)
                 genCallExtern(&comp->gen, fn);
 
                 doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+                identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
                 identFree(&comp->idents, blocksCurrent(&comp->blocks));
 
                 int paramSlots = align(typeParamSizeTotal(&comp->types, &ident->type->sig), sizeof(Slot)) / sizeof(Slot);
@@ -92,7 +93,6 @@ void doResolveExtern(Compiler *comp)
                 genLeaveFrameFixup(&comp->gen, 0, paramSlots);
                 genReturn(&comp->gen, paramSlots);
 
-                identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
                 blocksLeave(&comp->blocks);
             }
 
@@ -555,6 +555,7 @@ static void parseForHeader(Compiler *comp)
 
         // Additional scope embracing simpleStmt
         doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+        identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
         blocksLeave(&comp->blocks);
     }
 
