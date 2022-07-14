@@ -15,19 +15,13 @@ static void parseBlock(Compiler *comp);
 void doGarbageCollection(Compiler *comp, int block)
 {
     for (Ident *ident = comp->idents.first; ident; ident = ident->next)
-        if (ident->block == block)
+        if (ident->kind == IDENT_VAR && typeGarbageCollected(ident->type) && ident->block == block && strcmp(ident->name, "__result") != 0)
         {
-            if (ident->kind == IDENT_VAR && typeGarbageCollected(ident->type) && strcmp(ident->name, "__result") != 0)
-            {
-                doPushVarPtr(comp, ident);
-                genDeref(&comp->gen, ident->type->kind);
-                genChangeRefCnt(&comp->gen, TOK_MINUSMINUS, ident->type);
-                genPop(&comp->gen);
-            }
-
-            identWarnIfUnused(&comp->idents, ident);
+            doPushVarPtr(comp, ident);
+            genDeref(&comp->gen, ident->type->kind);
+            genChangeRefCnt(&comp->gen, TOK_MINUSMINUS, ident->type);
+            genPop(&comp->gen);
         }
-
 }
 
 
@@ -98,6 +92,7 @@ void doResolveExtern(Compiler *comp)
                 genLeaveFrameFixup(&comp->gen, 0, paramSlots);
                 genReturn(&comp->gen, paramSlots);
 
+                identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
                 blocksLeave(&comp->blocks);
             }
 
@@ -412,6 +407,7 @@ static void parseIfStmt(Compiler *comp)
 
     // Additional scope embracing shortVarDecl and statement body
     doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+    identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
     blocksLeave(&comp->blocks);
 }
 
@@ -448,6 +444,7 @@ static void parseCase(Compiler *comp, Type *selectorType)
 
     // Additional scope embracing stmtList
     doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+    identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
     blocksLeave(&comp->blocks);
 
     genCaseBlockEpilog(&comp->gen);
@@ -467,6 +464,7 @@ static void parseDefault(Compiler *comp)
 
     // Additional scope embracing stmtList
     doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+    identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
     blocksLeave(&comp->blocks);
 }
 
@@ -514,6 +512,7 @@ static void parseSwitchStmt(Compiler *comp)
 
     // Additional scope embracing shortVarDecl and statement body
     doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+    identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
     blocksLeave(&comp->blocks);
 }
 
@@ -540,6 +539,7 @@ static void parseForHeader(Compiler *comp)
 
     // Additional scope embracing expr
     doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+    identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
     blocksLeave(&comp->blocks);
 
     genForCondEpilog(&comp->gen);
@@ -788,6 +788,7 @@ static void parseForStmt(Compiler *comp)
 
     // Additional scope embracing shortVarDecl in forHeader/forEachHeader and statement body
     doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+    identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
     blocksLeave(&comp->blocks);
 }
 
@@ -920,6 +921,7 @@ static void parseBlock(Compiler *comp)
     parseStmtList(comp);
 
     doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+    identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
     identFree(&comp->idents, blocksCurrent(&comp->blocks));
 
     blocksLeave(&comp->blocks);
@@ -973,6 +975,7 @@ void parseFnBlock(Compiler *comp, Ident *fn)
     comp->gen.returns = outerReturns;
 
     doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+    identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
     identFree(&comp->idents, blocksCurrent(&comp->blocks));
 
     int localVarSlots = align(comp->blocks.item[comp->blocks.top].localVarSize, sizeof(Slot)) / sizeof(Slot);

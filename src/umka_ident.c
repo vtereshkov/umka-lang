@@ -302,6 +302,14 @@ void identWarnIfUnused(Idents *idents, Ident *ident)
 }
 
 
+void identWarnIfUnusedAll(Idents *idents, int block)
+{
+    for (Ident *ident = idents->first; ident; ident = ident->next)
+        if (ident->block == block)
+            identWarnIfUnused(idents, ident);
+}
+
+
 bool identIsMain(Ident *ident)
 {
     return strcmp(ident->name, "main") == 0 && ident->kind == IDENT_CONST &&

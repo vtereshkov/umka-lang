@@ -2141,6 +2141,7 @@ static void parseLogicalTerm(Compiler *comp, Type **type, Const *constant)
             doApplyOperator(comp, type, &rightType, NULL, NULL, op, false, true);
 
             doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+            identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
             blocksLeave(&comp->blocks);
 
             genShortCircuitEpilog(&comp->gen);
@@ -2184,6 +2185,7 @@ void parseExpr(Compiler *comp, Type **type, Const *constant)
             doApplyOperator(comp, type, &rightType, NULL, NULL, op, false, true);
 
             doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+            identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
             blocksLeave(&comp->blocks);
 
             genShortCircuitEpilog(&comp->gen);

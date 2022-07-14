@@ -64,7 +64,8 @@ Ident *identAllocParam    (Idents *idents, Types *types, Modules *modules, Block
 char *identTempVarName      (Idents *idents, char *buf);
 char *identMethodNameWithRcv(Ident *method, char *buf, int size);
 
-void identWarnIfUnused(Idents *idents, Ident *ident);
-bool identIsMain      (Ident *ident);
+void identWarnIfUnused        (Idents *idents, Ident *ident);
+void identWarnIfUnusedAll     (Idents *idents, int block);
+bool identIsMain              (Ident *ident);
 
 #endif // UMKA_IDENT_H_INCLUDED
