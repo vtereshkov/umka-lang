@@ -20,6 +20,7 @@ static void compileWarning(void *context, const char *format, ...)
 
     UmkaError warning;
     strcpy(warning.fileName, comp->lex.fileName);
+    strcpy(warning.fnName, comp->debug.fnName);
     warning.line = comp->lex.tok.line;
     warning.pos = comp->lex.tok.pos;
     vsnprintf(warning.msg, UMKA_MSG_LEN + 1, format, args);
@@ -39,6 +40,7 @@ static void compileError(void *context, const char *format, ...)
     Compiler *comp = context;
 
     strcpy(comp->error.fileName, comp->lex.fileName);
+    strcpy(comp->error.fnName, comp->debug.fnName);
     comp->error.line = comp->lex.tok.line;
     comp->error.pos = comp->lex.tok.pos;
     vsnprintf(comp->error.msg, UMKA_MSG_LEN + 1, format, args);
