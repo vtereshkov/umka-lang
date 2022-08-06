@@ -63,6 +63,13 @@ typedef void (*UmkaHookFunc)(const char *fileName, const char *funcName, int lin
 }
 
 
+typedef struct
+{
+    void *internal1;
+    void *internal2;
+} UmkaMap;
+
+
 enum
 {
     UMKA_MSG_LEN = 255
@@ -94,6 +101,7 @@ UMKA_API bool umkaAddFunc           (void *umka, const char *name, UmkaExternFun
 UMKA_API int  umkaGetFunc           (void *umka, const char *moduleName, const char *funcName);
 UMKA_API bool umkaGetCallStack      (void *umka, int depth, int *offset, char *name, int size);
 UMKA_API void umkaSetHook           (void *umka, UmkaHookEvent event, UmkaHookFunc hook);
+UMKA_API void *umkaGetMapItem       (void *umka, UmkaMap *map, UmkaStackSlot key);
 UMKA_API const char *umkaGetVersion (void);
 
 

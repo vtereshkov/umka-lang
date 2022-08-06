@@ -1497,7 +1497,7 @@ Umka fiber stack slot.
 typedef void (*UmkaExternFunc)(UmkaStackSlot *params, UmkaStackSlot *result);
 ```
 
-Umka external function pointer. When an external C/C++ function is called from Umka, its parameters are stored in `params` in right-to-left order.
+Umka external function pointer. When an external C/C++ function is called from Umka, its parameters are stored in `params` in right-to-left order. The returned value should be put to `result`. Upon entry, `result` stores a pointer to the Umka instance.
 
 ```
 typedef enum
@@ -1526,6 +1526,16 @@ Umka debug hook function.
 ```
 
 Umka dynamic array containing `len` items of type `T`. Even though the array items pointed to by `data` can be both read and written, the structure itself is considered read-only. It cannot be used for returning a dynamic array from an external C/C++ function.
+
+```
+typedef struct
+{
+    void *internal1;
+    void *internal2;
+} UmkaMap;
+```
+
+Umka map. Can be accessed by `umkaGetMapItem`.
 
 ```
 enum
@@ -1634,6 +1644,12 @@ UMKA_API void umkaSetHook(void *umka, UmkaHookEvent event, UmkaHookFunc hook);
 ```
 
 Sets a debug hook function `hook` that will be called by the Umka virtual machine each time the `event` occurs.
+
+```
+UMKA_API void *umkaGetMapItem(void *umka, UmkaMap *map, UmkaStackSlot key);
+```
+
+Gets the pointer to the `map` item indexed by `key`. Returns `NULL` if the item does not exist.
 
 ```
 UMKA_API const char *umkaGetVersion(void);

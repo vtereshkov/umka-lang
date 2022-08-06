@@ -211,6 +211,13 @@ UMKA_API void umkaSetHook(void *umka, UmkaHookEvent event, UmkaHookFunc hook)
 }
 
 
+UMKA_API void *umkaGetMapItem(void *umka, UmkaMap *map, UmkaStackSlot key)
+{
+    Compiler *comp = umka;
+    return vmGetMapNodeData(&comp->vm, (Map *)map, *(Slot *)&key);
+}
+
+
 UMKA_API const char *umkaGetVersion(void)
 {
     if (sizeof(void *) == 8)

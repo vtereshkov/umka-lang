@@ -164,6 +164,7 @@ int main(int argc, char **argv)
 
     void *umka = umkaAlloc();
     bool ok = umkaInit(umka, argv[i], NULL, stackSize, locale, argc - i, argv + i, !isSandbox, !isSandbox, printWarnings ? printCompileWarning : NULL);
+
     if (ok)
         ok = umkaCompile(umka);
 

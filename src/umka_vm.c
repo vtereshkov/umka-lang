@@ -2419,9 +2419,10 @@ static FORCE_INLINE void doCallIndirect(Fiber *fiber, Error *error)
 }
 
 
-static FORCE_INLINE void doCallExtern(Fiber *fiber)
+static FORCE_INLINE void doCallExtern(Fiber *fiber, Error *error)
 {
     ExternFunc fn = (ExternFunc)fiber->code[fiber->ip].operand.ptrVal;
+    fiber->reg[VM_REG_RESULT].ptrVal = error->context;    // Upon entry, the result slot stores the Umka instance
     fn(fiber->top + 5, &fiber->reg[VM_REG_RESULT]);       // + 5 for saved I/O registers, old base pointer and return address
     fiber->ip++;
 }
@@ -2675,7 +2676,7 @@ static FORCE_INLINE void vmLoop(VM *vm)
             case OP_GOTO_IF:                        doGotoIf(fiber);                              break;
             case OP_CALL:                           doCall(fiber, error);                         break;
             case OP_CALL_INDIRECT:                  doCallIndirect(fiber, error);                 break;
-            case OP_CALL_EXTERN:                    doCallExtern(fiber);                          break;
+            case OP_CALL_EXTERN:                    doCallExtern(fiber, error);                   break;
             case OP_CALL_BUILTIN:
             {
                 Fiber *newFiber = NULL;
@@ -2828,6 +2829,13 @@ bool vmUnwindCallStack(VM *vm, Slot **base, int *ip)
 void vmSetHook(VM *vm, HookEvent event, HookFunc hook)
 {
     vm->hooks[event] = hook;
+}
+
+
+void *vmGetMapNodeData(VM *vm, Map *map, Slot key)
+{
+    const MapNode *node = doGetMapNode(map, key, false, NULL, vm->error, NULL);
+    return node ? node->data : NULL;
 }
 
 

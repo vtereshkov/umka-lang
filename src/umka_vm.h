@@ -240,6 +240,7 @@ void vmRun(VM *vm, int entryOffset, int numParamSlots, Slot *params, Slot *resul
 int vmAsm(int ip, Instruction *code, char *buf, int size);
 bool vmUnwindCallStack(VM *vm, Slot **base, int *ip);
 void vmSetHook(VM *vm, HookEvent event, HookFunc hook);
+void *vmGetMapNodeData(VM *vm, Map *map, Slot key);
 const char *vmBuiltinSpelling(BuiltinFunc builtin);
 
 #endif // UMKA_VM_H_INCLUDED
