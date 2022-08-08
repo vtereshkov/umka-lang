@@ -95,12 +95,14 @@ void constUnary(Consts *consts, Const *arg, TokenKind tokKind, TypeKind typeKind
     if (typeKind == TYPE_REAL || typeKind == TYPE_REAL32)
         switch (tokKind)
         {
+            case TOK_PLUS:  break;
             case TOK_MINUS: arg->realVal = -arg->realVal; break;
             default:        consts->error->handler(consts->error->context, "Illegal operator");
         }
     else
         switch (tokKind)
         {
+            case TOK_PLUS:  break;
             case TOK_MINUS: arg->intVal = -arg->intVal; break;
             case TOK_NOT:   arg->intVal = !arg->intVal; break;
             case TOK_XOR:   arg->intVal = ~arg->intVal; break;

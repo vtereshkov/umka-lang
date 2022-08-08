@@ -2012,12 +2012,14 @@ static FORCE_INLINE void doUnary(Fiber *fiber, Error *error)
     if (fiber->code[fiber->ip].typeKind == TYPE_REAL || fiber->code[fiber->ip].typeKind == TYPE_REAL32)
         switch (fiber->code[fiber->ip].tokKind)
         {
+            case TOK_PLUS:  break;
             case TOK_MINUS: fiber->top->realVal = -fiber->top->realVal; break;
             default:        error->runtimeHandler(error->context, "Illegal instruction"); return;
         }
     else
         switch (fiber->code[fiber->ip].tokKind)
         {
+            case TOK_PLUS:       break;
             case TOK_MINUS:      fiber->top->intVal = -fiber->top->intVal; break;
             case TOK_NOT:        fiber->top->intVal = !fiber->top->intVal; break;
             case TOK_XOR:        fiber->top->intVal = ~fiber->top->intVal; break;
