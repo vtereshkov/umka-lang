@@ -233,14 +233,17 @@ typedef struct
 } VM;
 
 
-void vmInit(VM *vm, int stackSize /* slots */, bool fileSystemEnabled, Error *error);
-void vmFree(VM *vm);
-void vmReset(VM *vm, Instruction *code);
-void vmRun(VM *vm, int entryOffset, int numParamSlots, Slot *params, Slot *result);
-int vmAsm(int ip, Instruction *code, char *buf, int size);
-bool vmUnwindCallStack(VM *vm, Slot **base, int *ip);
-void vmSetHook(VM *vm, HookEvent event, HookFunc hook);
-void *vmGetMapNodeData(VM *vm, Map *map, Slot key);
-const char *vmBuiltinSpelling(BuiltinFunc builtin);
+void vmInit                     (VM *vm, int stackSize /* slots */, bool fileSystemEnabled, Error *error);
+void vmFree                     (VM *vm);
+void vmReset                    (VM *vm, Instruction *code);
+void vmRun                      (VM *vm, int entryOffset, int numParamSlots, Slot *params, Slot *result);
+int vmAsm                       (int ip, Instruction *code, char *buf, int size);
+bool vmUnwindCallStack          (VM *vm, Slot **base, int *ip);
+void vmSetHook                  (VM *vm, HookEvent event, HookFunc hook);
+void *vmAllocData               (VM *vm, int size);
+void vmIncRef                   (VM *vm, void *ptr);
+void vmDecRef                   (VM *vm, void *ptr);
+void *vmGetMapNodeData          (VM *vm, Map *map, Slot key);
+const char *vmBuiltinSpelling   (BuiltinFunc builtin);
 
 #endif // UMKA_VM_H_INCLUDED

@@ -1646,6 +1646,24 @@ UMKA_API void umkaSetHook(void *umka, UmkaHookEvent event, UmkaHookFunc hook);
 Sets a debug hook function `hook` that will be called by the Umka virtual machine each time the `event` occurs.
 
 ```
+UMKA_API void *umkaAllocData(void *umka, int size);
+```
+
+Allocates a reference-counted memory chunk of `size` bytes and returns a pointer to it.
+
+```
+UMKA_API void umkaIncRef(void *umka, void *ptr);
+```
+
+Increments the reference count of a memory chunk pointed to by `ptr`.
+
+```
+UMKA_API void umkaDecRef(void *umka, void *ptr);
+```
+
+Decrements the reference count of a memory chunk pointed to by `ptr`.
+
+```
 UMKA_API void *umkaGetMapItem(void *umka, UmkaMap *map, UmkaStackSlot key);
 ```
 

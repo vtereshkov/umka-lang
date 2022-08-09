@@ -2834,6 +2834,28 @@ void vmSetHook(VM *vm, HookEvent event, HookFunc hook)
 }
 
 
+void *vmAllocData(VM *vm, int size)
+{
+    return chunkAlloc(&vm->pages, size, NULL, vm->error);
+}
+
+
+void vmIncRef(VM *vm, void *ptr)
+{
+    HeapPage *page = pageFind(&vm->pages, ptr, true);
+    if (page)
+        chunkChangeRefCnt(&vm->pages, page, ptr, 1);
+}
+
+
+void vmDecRef(VM *vm, void *ptr)
+{
+    HeapPage *page = pageFind(&vm->pages, ptr, true);
+    if (page)
+        chunkChangeRefCnt(&vm->pages, page, ptr, -1);
+}
+
+
 void *vmGetMapNodeData(VM *vm, Map *map, Slot key)
 {
     const MapNode *node = doGetMapNode(map, key, false, NULL, vm->error, NULL);

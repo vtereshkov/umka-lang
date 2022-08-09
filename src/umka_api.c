@@ -8,7 +8,7 @@
 #include "umka_compiler.h"
 #include "umka_api.h"
 
-#define UMKA_VERSION    "0.8"
+#define UMKA_VERSION    "0.8.1"
 
 
 static void compileWarning(void *context, const char *format, ...)
@@ -208,6 +208,27 @@ UMKA_API void umkaSetHook(void *umka, UmkaHookEvent event, UmkaHookFunc hook)
 {
     Compiler *comp = umka;
     vmSetHook(&comp->vm, (HookEvent)event, hook);
+}
+
+
+UMKA_API void *umkaAllocData(void *umka, int size)
+{
+    Compiler *comp = umka;
+    return vmAllocData(&comp->vm, size);
+}
+
+
+UMKA_API void umkaIncRef(void *umka, void *ptr)
+{
+    Compiler *comp = umka;
+    vmIncRef(&comp->vm, ptr);
+}
+
+
+UMKA_API void umkaDecRef(void *umka, void *ptr)
+{
+    Compiler *comp = umka;
+    vmDecRef(&comp->vm, ptr);
 }
 
 
