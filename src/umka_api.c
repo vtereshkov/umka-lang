@@ -211,10 +211,10 @@ UMKA_API void umkaSetHook(void *umka, UmkaHookEvent event, UmkaHookFunc hook)
 }
 
 
-UMKA_API void *umkaAllocData(void *umka, int size)
+UMKA_API void *umkaAllocData(void *umka, int size, UmkaExternFunc onFree)
 {
     Compiler *comp = umka;
-    return vmAllocData(&comp->vm, size);
+    return vmAllocData(&comp->vm, size, (ExternFunc)onFree);
 }
 
 

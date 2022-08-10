@@ -241,7 +241,7 @@ static FORCE_INLINE HeapPage *pageFindById(HeapPages *pages, int id)
 }
 
 
-static FORCE_INLINE void *chunkAlloc(HeapPages *pages, int64_t size, Type *type, Error *error)
+static FORCE_INLINE void *chunkAlloc(HeapPages *pages, int64_t size, Type *type, ExternFunc onFree, Error *error)
 {
     // Page layout: header, data, footer (char), padding, header, data, footer (char), padding...
     int64_t chunkSize = align(sizeof(HeapChunkHeader) + align(size + 1, sizeof(int64_t)), VM_MIN_HEAP_CHUNK);
@@ -268,6 +268,7 @@ static FORCE_INLINE void *chunkAlloc(HeapPages *pages, int64_t size, Type *type,
     chunk->refCnt = 1;
     chunk->size = size;
     chunk->type = type;
+    chunk->onFree = onFree;
 
     page->numOccupiedChunks++;
     page->refCnt++;
@@ -286,6 +287,12 @@ static FORCE_INLINE int chunkChangeRefCnt(HeapPages *pages, HeapPage *page, void
 
     if (chunk->refCnt <= 0 || page->refCnt < chunk->refCnt)
         fprintf(stderr, "Warning: Wrong reference count for pointer at %p\n", ptr);
+
+    if (chunk->onFree && chunk->refCnt == 1 && delta == -1)
+    {
+        Slot param = {.ptrVal = ptr};
+        chunk->onFree(&param, NULL);
+    }
 
     chunk->refCnt += delta;
     page->refCnt += delta;
@@ -876,7 +883,7 @@ static FORCE_INLINE MapNode *doGetMapNode(Map *map, Slot key, bool createMissing
                 return NULL;
 
             Type *nodeType = map->type->base;
-            *child = (MapNode *)chunkAlloc(pages, typeSizeNoCheck(nodeType), nodeType, error);
+            *child = (MapNode *)chunkAlloc(pages, typeSizeNoCheck(nodeType), nodeType, NULL, error);
         }
 
         if (nodePtrInParent)
@@ -1319,7 +1326,7 @@ static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool con
             doBasicChangeRefCnt(fiber, pages, *dest, &destType, TOK_MINUSMINUS);
 
             // Allocate new string
-            *dest = chunkAlloc(pages, strlen(src) + 1, NULL, error);
+            *dest = chunkAlloc(pages, strlen(src) + 1, NULL, NULL, error);
             strcpy(*dest, src);
             free(src);
 
@@ -1349,7 +1356,7 @@ static FORCE_INLINE void doBuiltinNew(Fiber *fiber, HeapPages *pages, Error *err
     if (type && type->kind == TYPE_DYNARRAY)
         type = NULL;
 
-    void *result = chunkAlloc(pages, size, type, error);
+    void *result = chunkAlloc(pages, size, type, NULL, error);
 
     (--fiber->top)->ptrVal = result;
 }
@@ -1368,13 +1375,13 @@ static FORCE_INLINE void doBuiltinMake(Fiber *fiber, HeapPages *pages, Error *er
         array->len      = len;
         array->type     = type;
         array->itemSize = typeSizeNoCheck(array->type->base);
-        array->data     = chunkAlloc(pages, array->len * array->itemSize, array->type, error);
+        array->data     = chunkAlloc(pages, array->len * array->itemSize, array->type, NULL, error);
     }
     else // TYPE_MAP
     {
         Map *map        = (Map *)result;
         map->type       = type;
-        map->root       = chunkAlloc(pages, typeSizeNoCheck(type->base), type->base, error);
+        map->root       = chunkAlloc(pages, typeSizeNoCheck(type->base), type->base, NULL, error);
         map->root->len  = 0;
     }
 
@@ -1412,7 +1419,7 @@ static FORCE_INLINE void doBuiltinMakefromstr(Fiber *fiber, HeapPages *pages, Er
 
     dest->len      = strlen(src) + 1;
     dest->itemSize = 1;
-    dest->data     = chunkAlloc(pages, dest->len, dest->type, error);
+    dest->data     = chunkAlloc(pages, dest->len, dest->type, NULL, error);
 
     memcpy(dest->data, src, dest->len);
 
@@ -1462,7 +1469,7 @@ static FORCE_INLINE void doBuiltinMaketostr(Fiber *fiber, HeapPages *pages, Erro
     if (!nullFound)
         error->runtimeHandler(error->context, "Dynamic array is not null-terminated");
 
-    char *dest = chunkAlloc(pages, src->len, NULL, error);
+    char *dest = chunkAlloc(pages, src->len, NULL, NULL, error);
     strcpy(dest, (char *)src->data);
 
     (--fiber->top)->ptrVal = dest;
@@ -1497,7 +1504,7 @@ static FORCE_INLINE void doBuiltinAppend(Fiber *fiber, HeapPages *pages, Error *
     result->type     = array->type;
     result->len      = array->len + rhsLen;
     result->itemSize = array->itemSize;
-    result->data     = chunkAlloc(pages, result->len * result->itemSize, result->type, error);
+    result->data     = chunkAlloc(pages, result->len * result->itemSize, result->type, NULL, error);
 
     memcpy((char *)result->data, (char *)array->data, array->len * array->itemSize);
     memcpy((char *)result->data + array->len * array->itemSize, (char *)rhs, rhsLen * array->itemSize);
@@ -1526,7 +1533,7 @@ static FORCE_INLINE void doBuiltinDeleteDynArray(Fiber *fiber, HeapPages *pages,
     result->type     = array->type;
     result->len      = array->len - 1;
     result->itemSize = array->itemSize;
-    result->data     = chunkAlloc(pages, result->len * result->itemSize, result->type, error);
+    result->data     = chunkAlloc(pages, result->len * result->itemSize, result->type, NULL, error);
 
     memcpy((char *)result->data, (char *)array->data, index * array->itemSize);
     memcpy((char *)result->data + index * result->itemSize, (char *)array->data + (index + 1) * result->itemSize, (result->len - index) * result->itemSize);
@@ -1623,7 +1630,7 @@ static FORCE_INLINE void doBuiltinSlice(Fiber *fiber, HeapPages *pages, Error *e
         result->type     = array->type;
         result->len      = endIndex - startIndex;
         result->itemSize = array->itemSize;
-        result->data     = chunkAlloc(pages, result->len * result->itemSize, result->type, error);
+        result->data     = chunkAlloc(pages, result->len * result->itemSize, result->type, NULL, error);
 
         memcpy((char *)result->data, (char *)array->data + startIndex * result->itemSize, result->len * result->itemSize);
 
@@ -1636,7 +1643,7 @@ static FORCE_INLINE void doBuiltinSlice(Fiber *fiber, HeapPages *pages, Error *e
     else
     {
         // String
-        char *substr = chunkAlloc(pages, endIndex - startIndex + 1, NULL, error);
+        char *substr = chunkAlloc(pages, endIndex - startIndex + 1, NULL, NULL, error);
         memcpy(substr, &str[startIndex], endIndex - startIndex);
         substr[endIndex - startIndex] = 0;
 
@@ -1787,7 +1794,7 @@ static FORCE_INLINE void doBuiltinKeys(Fiber *fiber, HeapPages *pages, Error *er
     result->len      = map->root->len;
     result->type     = resultType;
     result->itemSize = typeSizeNoCheck(result->type->base);
-    result->data     = chunkAlloc(pages, result->len * result->itemSize, result->type, error);
+    result->data     = chunkAlloc(pages, result->len * result->itemSize, result->type, NULL, error);
 
     doGetMapKeys(map, result->data, error);
 
@@ -1808,7 +1815,7 @@ static FORCE_INLINE void doBuiltinFiberspawn(Fiber *fiber, HeapPages *pages, Err
     int childEntryOffset = (fiber->top++)->intVal;
 
     // Copy whole fiber context
-    Fiber *child = chunkAlloc(pages, sizeof(Fiber), NULL, error);
+    Fiber *child = chunkAlloc(pages, sizeof(Fiber), NULL, NULL, error);
 
     *child = *fiber;
     child->stack = malloc(child->stackSize * sizeof(Slot));
@@ -1854,7 +1861,7 @@ static FORCE_INLINE void doBuiltinRepr(Fiber *fiber, HeapPages *pages, Error *er
     enum {MAX_REPR_DEPTH = 20};
 
     int len = doFillReprBuf(val, type, NULL, 0, MAX_REPR_DEPTH, error);     // Predict buffer length
-    char *buf = chunkAlloc(pages, len + 1, NULL, error);                    // Allocate buffer
+    char *buf = chunkAlloc(pages, len + 1, NULL, NULL, error);              // Allocate buffer
     doFillReprBuf(val, type, buf, INT_MAX, MAX_REPR_DEPTH, error);          // Fill buffer
 
     fiber->top->ptrVal = buf;
@@ -2096,7 +2103,7 @@ static FORCE_INLINE void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
         {
             case TOK_PLUS:
             {
-                char *buf = chunkAlloc(pages, strlen(lhsStr) + strlen(rhsStr) + 1, NULL, error);
+                char *buf = chunkAlloc(pages, strlen(lhsStr) + strlen(rhsStr) + 1, NULL, NULL, error);
                 strcpy(buf, lhsStr);
                 strcat(buf, rhsStr);
                 fiber->top->ptrVal = buf;
@@ -2283,8 +2290,8 @@ static FORCE_INLINE void doGetMapPtr(Fiber *fiber, HeapPages *pages, Error *erro
     if (!node->data)
     {
         // When allocating dynamic arrays, we mark with type the data chunk, not the header chunk
-        node->key  = chunkAlloc(pages, typeSizeNoCheck(keyType),  keyType->kind  == TYPE_DYNARRAY ? NULL : keyType,  error);
-        node->data = chunkAlloc(pages, typeSizeNoCheck(itemType), itemType->kind == TYPE_DYNARRAY ? NULL : itemType, error);
+        node->key  = chunkAlloc(pages, typeSizeNoCheck(keyType),  keyType->kind  == TYPE_DYNARRAY ? NULL : keyType,  NULL, error);
+        node->data = chunkAlloc(pages, typeSizeNoCheck(itemType), itemType->kind == TYPE_DYNARRAY ? NULL : itemType, NULL, error);
 
         // Increase key ref count
         doBasicChangeRefCnt(fiber, pages, key.ptrVal, keyType, TOK_PLUSPLUS);
@@ -2564,7 +2571,7 @@ static FORCE_INLINE void doEnterFrame(Fiber *fiber, HeapPages *pages, HookFunc *
     if (inHeap)     // Heap frame
     {
         // Allocate heap frame
-        Slot *heapFrame = chunkAlloc(pages, (localVarSlots + 2 + paramSlots) * sizeof(Slot), NULL, error);      // + 2 for old base pointer and return address
+        Slot *heapFrame = chunkAlloc(pages, (localVarSlots + 2 + paramSlots) * sizeof(Slot), NULL, NULL, error);      // + 2 for old base pointer and return address
 
         // Push old heap frame base pointer, set new one
         (--fiber->top)->ptrVal = fiber->base;
@@ -2834,9 +2841,9 @@ void vmSetHook(VM *vm, HookEvent event, HookFunc hook)
 }
 
 
-void *vmAllocData(VM *vm, int size)
+void *vmAllocData(VM *vm, int size, ExternFunc onFree)
 {
-    return chunkAlloc(&vm->pages, size, NULL, vm->error);
+    return chunkAlloc(&vm->pages, size, NULL, onFree, vm->error);
 }
 
 

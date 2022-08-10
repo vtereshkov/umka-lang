@@ -101,7 +101,7 @@ UMKA_API bool umkaAddFunc           (void *umka, const char *name, UmkaExternFun
 UMKA_API int  umkaGetFunc           (void *umka, const char *moduleName, const char *funcName);
 UMKA_API bool umkaGetCallStack      (void *umka, int depth, int *offset, char *name, int size);
 UMKA_API void umkaSetHook           (void *umka, UmkaHookEvent event, UmkaHookFunc hook);
-UMKA_API void *umkaAllocData        (void *umka, int size);
+UMKA_API void *umkaAllocData        (void *umka, int size, UmkaExternFunc onFree);
 UMKA_API void umkaIncRef            (void *umka, void *ptr);
 UMKA_API void umkaDecRef            (void *umka, void *ptr);
 UMKA_API void *umkaGetMapItem       (void *umka, UmkaMap *map, UmkaStackSlot key);

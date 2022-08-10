@@ -153,6 +153,9 @@ typedef struct
 } Instruction;
 
 
+typedef void (*ExternFunc)(Slot *params, Slot *result);
+
+
 typedef struct tagHeapPage
 {
     int id;
@@ -176,6 +179,7 @@ typedef struct
     int refCnt;
     int size;
     struct tagType *type;       // Optional type for garbage collection
+    ExternFunc onFree;          // Optional callback called when ref count reaches zero
 } HeapChunkHeader;
 
 
@@ -192,9 +196,6 @@ typedef struct
     RefCntChangeCandidate *stack;
     int top, capacity;
 } RefCntChangeCandidates;
-
-
-typedef void (*ExternFunc)(Slot *params, Slot *result);
 
 
 typedef enum
@@ -240,7 +241,7 @@ void vmRun                      (VM *vm, int entryOffset, int numParamSlots, Slo
 int vmAsm                       (int ip, Instruction *code, char *buf, int size);
 bool vmUnwindCallStack          (VM *vm, Slot **base, int *ip);
 void vmSetHook                  (VM *vm, HookEvent event, HookFunc hook);
-void *vmAllocData               (VM *vm, int size);
+void *vmAllocData               (VM *vm, int size, ExternFunc onFree);
 void vmIncRef                   (VM *vm, void *ptr);
 void vmDecRef                   (VM *vm, void *ptr);
 void *vmGetMapNodeData          (VM *vm, Map *map, Slot key);

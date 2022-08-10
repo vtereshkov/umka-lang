@@ -1646,10 +1646,10 @@ UMKA_API void umkaSetHook(void *umka, UmkaHookEvent event, UmkaHookFunc hook);
 Sets a debug hook function `hook` that will be called by the Umka virtual machine each time the `event` occurs.
 
 ```
-UMKA_API void *umkaAllocData(void *umka, int size);
+UMKA_API void *umkaAllocData(void *umka, int size, UmkaExternFunc onFree);
 ```
 
-Allocates a reference-counted memory chunk of `size` bytes and returns a pointer to it.
+Allocates a reference-counted memory chunk of `size` bytes and returns a pointer to it. `onFree` is an optional callback function that will be called when the chunk reference count reaches zero. It accepts one parameter, the chunk pointer. 
 
 ```
 UMKA_API void umkaIncRef(void *umka, void *ptr);
