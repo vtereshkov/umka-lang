@@ -74,6 +74,8 @@ static const char *builtinSpelling [] =
     "narrow",
     "round",
     "trunc",
+    "ceil",
+    "floor",
     "fabs",
     "sqrt",
     "sin",
@@ -2471,6 +2473,8 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         }
         case BUILTIN_ROUND:         fiber->top->intVal = (int64_t)round(fiber->top->realVal); break;
         case BUILTIN_TRUNC:         fiber->top->intVal = (int64_t)trunc(fiber->top->realVal); break;
+        case BUILTIN_CEIL:          fiber->top->intVal = (int64_t)ceil (fiber->top->realVal); break;
+        case BUILTIN_FLOOR:         fiber->top->intVal = (int64_t)floor(fiber->top->realVal); break;
         case BUILTIN_FABS:          fiber->top->realVal = fabs(fiber->top->realVal); break;
         case BUILTIN_SQRT:
         {

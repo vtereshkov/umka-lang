@@ -89,6 +89,8 @@ typedef enum
     BUILTIN_NARROW,         // 64-bit slot to narrower representation
     BUILTIN_ROUND,
     BUILTIN_TRUNC,
+    BUILTIN_CEIL,
+    BUILTIN_FLOOR,
     BUILTIN_FABS,
     BUILTIN_SQRT,
     BUILTIN_SIN,

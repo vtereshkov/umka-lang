@@ -642,7 +642,7 @@ static void parseBuiltinMathCall(Compiler *comp, Type **type, Const *constant, B
     else
         genCallBuiltin(&comp->gen, TYPE_REAL, builtin);
 
-    if (builtin == BUILTIN_ROUND || builtin == BUILTIN_TRUNC)
+    if (builtin == BUILTIN_ROUND || builtin == BUILTIN_TRUNC || builtin == BUILTIN_CEIL || builtin == BUILTIN_FLOOR)
         *type = comp->intType;
     else
         *type = comp->realType;
@@ -1115,6 +1115,8 @@ static void parseBuiltinCall(Compiler *comp, Type **type, Const *constant, Built
         // Math
         case BUILTIN_ROUND:
         case BUILTIN_TRUNC:
+        case BUILTIN_CEIL:
+        case BUILTIN_FLOOR:
         case BUILTIN_FABS:
         case BUILTIN_SQRT:
         case BUILTIN_SIN:

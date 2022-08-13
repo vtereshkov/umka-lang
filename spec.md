@@ -602,7 +602,9 @@ Read `a1`, `a2`... from the console, or from the file `f`, or from the string `b
 
 ```
 fn round(x: real): int          // Rounding to the nearest integer 
-fn trunc(x: real): int          // Rounding towards zero          
+fn trunc(x: real): int          // Rounding towards zero
+fn ceil (x: real): int          // Rounding upwards
+fn floor(x: real): int          // Rounding downwards
 fn fabs (x: real): real         // Absolute value
 fn sqrt (x: real): real         // Square root
 fn sin  (x: real): real         // Sine

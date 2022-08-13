@@ -212,6 +212,8 @@ void constCallBuiltin(Consts *consts, Const *arg, const Const *arg2, TypeKind ar
         }
         case BUILTIN_ROUND:     arg->intVal  = (int64_t)round(arg->realVal); break;
         case BUILTIN_TRUNC:     arg->intVal  = (int64_t)trunc(arg->realVal); break;
+        case BUILTIN_CEIL:      arg->intVal  = (int64_t)ceil (arg->realVal); break;
+        case BUILTIN_FLOOR:     arg->intVal  = (int64_t)floor(arg->realVal); break;
         case BUILTIN_FABS:      arg->realVal = fabs(arg->realVal); break;
         case BUILTIN_SQRT:
         {
