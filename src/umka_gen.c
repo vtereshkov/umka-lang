@@ -296,6 +296,8 @@ static bool optimizeCallBuiltin(CodeGen *gen, TypeKind typeKind, BuiltinFunc bui
             }
             case BUILTIN_ROUND:
             case BUILTIN_TRUNC:
+            case BUILTIN_CEIL:
+            case BUILTIN_FLOOR:
             case BUILTIN_FABS:
             case BUILTIN_SQRT:
             case BUILTIN_SIN:
@@ -305,7 +307,7 @@ static bool optimizeCallBuiltin(CodeGen *gen, TypeKind typeKind, BuiltinFunc bui
             case BUILTIN_LOG:
             {
                 arg.realVal = prev->operand.realVal;
-                resultTypeKind = (builtin == BUILTIN_ROUND || builtin == BUILTIN_TRUNC) ? TYPE_INT : TYPE_REAL;
+                resultTypeKind = (builtin == BUILTIN_ROUND || builtin == BUILTIN_TRUNC || builtin == BUILTIN_CEIL || builtin == BUILTIN_FLOOR) ? TYPE_INT : TYPE_REAL;
                 break;
             }
             case BUILTIN_ATAN2:
