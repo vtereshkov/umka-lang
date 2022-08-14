@@ -359,6 +359,10 @@ static bool typeEquivalentRecursive(Type *left, Type *right, bool checkTypeIdent
             if (left->sig.numParams != right->sig.numParams)
                 return false;
 
+            // Number of default parameters
+            if (left->sig.numDefaultParams != right->sig.numDefaultParams)
+                return false;            
+
             // Method flag
             if (left->sig.method != right->sig.method)
                 return false;
