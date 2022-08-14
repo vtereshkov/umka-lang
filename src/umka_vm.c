@@ -735,8 +735,7 @@ static FORCE_INLINE void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, voi
             case TYPE_MAP:
             {
                 Map *map = (Map *)ptr;
-                Type ptrNodeType = {.kind = TYPE_PTR, .base = type->base, .next = NULL};
-                candidatePush(candidates, map->root, &ptrNodeType);
+                candidatePush(candidates, map->root, typeMapNodePtr(type));
                 break;
             }
 
@@ -1558,21 +1557,18 @@ static FORCE_INLINE void doBuiltinDeleteMap(Fiber *fiber, HeapPages *pages, Erro
     if (!map || !map->root)
         error->runtimeHandler(error->context, "Map is null");
 
-    Type *nodeType = map->type->base;
-    Type ptrNodeType = {.kind = TYPE_PTR, .base = nodeType, .next = NULL};
-
     MapNode **nodePtrInParent = NULL;
     MapNode *node = doGetMapNode(map, key, false, pages, error, &nodePtrInParent);
 
     if (node)
     {
-        doBasicChangeRefCnt(fiber, pages, *nodePtrInParent, &ptrNodeType, TOK_MINUSMINUS);
+        doBasicChangeRefCnt(fiber, pages, *nodePtrInParent, typeMapNodePtr(map->type), TOK_MINUSMINUS);
         *nodePtrInParent = NULL;
         if (--map->root->len < 0)
             error->runtimeHandler(error->context, "Map length is negative");
     }
 
-    doBasicChangeRefCnt(fiber, pages, map->root, &ptrNodeType, TOK_PLUSPLUS);
+    doBasicChangeRefCnt(fiber, pages, map->root, typeMapNodePtr(map->type), TOK_PLUSPLUS);
     result->type = map->type;
     result->root = map->root;
 

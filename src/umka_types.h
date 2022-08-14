@@ -285,4 +285,10 @@ static inline Type *typeMapItem(Type *mapType)
 }
 
 
+static inline Type *typeMapNodePtr(Type *mapType)
+{
+    return mapType->base->field[MAP_NODE_FIELD_LEFT]->type;
+}
+
+
 #endif // UMKA_TYPES_H_INCLUDED
