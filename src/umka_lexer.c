@@ -113,10 +113,48 @@ int lexInit(Lexer *lex, Storage *storage, DebugInfo *debug, const char *fileName
     // Initialize lexer
     errno = 0;
 
+    lex->error = error;
+    lex->buf = NULL;
+    int bufLen = 0;
+
+    if (sourceString)
+    {
+        // Read source from a string buffer
+        bufLen = strlen(sourceString);
+        lex->buf = malloc(bufLen + 1);
+        strcpy(lex->buf, sourceString);
+        lex->buf[bufLen] = 0;
+    }
+    else
+    {
+        // Read source from a file
+        FILE *file = fopen(fileName, "rb");
+
+        if (!file)
+        {
+            lex->error->handler(lex->error->context, "Cannot open file %s", fileName);
+            return 0;
+        }
+
+        fseek(file, 0, SEEK_END);
+        bufLen = ftell(file);
+        rewind(file);
+
+        lex->buf = malloc(bufLen + 1);
+
+        if (fread(lex->buf, bufLen, 1, file) != 1)
+        {
+            lex->error->handler(lex->error->context, "Cannot read file %s", fileName);
+            return 0;
+        }
+
+        lex->buf[bufLen] = 0;
+        fclose(file);
+    }
+
     lex->fileName = storageAdd(storage, strlen(fileName) + 1);
     strcpy(lex->fileName, fileName);
 
-    lex->buf = NULL;
     lex->bufPos = 0;
     lex->line = 1;
     lex->pos = 1;
@@ -130,43 +168,6 @@ int lexInit(Lexer *lex, Storage *storage, DebugInfo *debug, const char *fileName
     lex->debug->fileName = lex->fileName;
     lex->debug->fnName = "<unknown>";
     lex->debug->line = lex->line;
-    lex->error = error;
-
-    int bufLen = 0;
-    if (sourceString)
-    {
-        // Read source from a string buffer
-        bufLen = strlen(sourceString);
-        lex->buf = malloc(bufLen + 1);
-        strcpy(lex->buf, sourceString);
-        lex->buf[bufLen] = 0;
-    }
-    else
-    {
-        // Read source from a file
-        FILE *file = fopen(lex->fileName, "rb");
-
-        if (!file)
-        {
-            lex->error->handler(lex->error->context, "Cannot open file %s", lex->fileName);
-            return 0;
-        }
-
-        fseek(file, 0, SEEK_END);
-        bufLen = ftell(file);
-        rewind(file);
-
-        lex->buf = malloc(bufLen + 1);
-
-        if (fread(lex->buf, bufLen, 1, file) != 1)
-        {
-            lex->error->handler(lex->error->context, "Cannot read file %s", lex->fileName);
-            return 0;
-        }
-
-        lex->buf[bufLen] = 0;
-        fclose(file);
-    }
 
     return bufLen;
 }
