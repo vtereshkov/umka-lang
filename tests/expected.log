@@ -480,3 +480,15 @@ false true false
 >> should work with no values 
 Four averages: 5.233333 3.140000 0.000000 -1.000000 
 Greeting { data: " Hello World" } { data: " Hello World Salut le Monde" } 
+
+
+>>> Default parameters
+
+foo: Hello
+foo: World
+2 3.140000 true { x: 5 y: 7 } { 7 8 } "foo: Hello" 
+2 6.280000 true { x: 5 y: 7 } { 7 8 } "foo: Hello" 
+2 6.280000 false { x: 5 y: 7 } { 7 8 } "foo: Hello" 
+2 6.280000 false { x: 42 y: 43 } { 7 8 } "foo: Hello" 
+2 6.280000 false { x: 42 y: 43 } { 9 10 } "foo: Hello" 
+2 6.280000 false { x: 42 y: 43 } { 9 10 } "foo: Hello" 

@@ -277,6 +277,33 @@ bool typeGarbageCollected(Type *type)
 }
 
 
+static bool typeDefaultParamEqual(Const *left, Const *right, Type *type)
+{
+    if (typeOrdinal(type) || type->kind == TYPE_FN)
+        return left->intVal == right->intVal;
+
+    if (typeReal(type))
+        return left->realVal == right->realVal;
+
+    if (type->kind == TYPE_WEAKPTR)
+        return left->weakPtrVal == right->weakPtrVal;
+
+    if (!left->ptrVal || !right->ptrVal)
+        return left->ptrVal == right->ptrVal;
+
+    if (type->kind == TYPE_PTR)
+        return left->ptrVal == right->ptrVal;
+
+    if (type->kind == TYPE_STR)
+        return strcmp((char *)left->ptrVal, (char *)right->ptrVal) == 0;
+
+    if (type->kind == TYPE_ARRAY || type->kind == TYPE_STRUCT)
+        return memcmp(left->ptrVal, right->ptrVal, typeSizeNoCheck(type)) == 0;
+
+    return false;
+}
+
+
 static bool typeEquivalentRecursive(Type *left, Type *right, bool checkTypeIdents, VisitedTypePair *firstPair)
 {
     // Recursively defined types visited before (need to check first in order to break a possible circular definition)
@@ -361,7 +388,7 @@ static bool typeEquivalentRecursive(Type *left, Type *right, bool checkTypeIdent
 
             // Number of default parameters
             if (left->sig.numDefaultParams != right->sig.numDefaultParams)
-                return false;            
+                return false;
 
             // Method flag
             if (left->sig.method != right->sig.method)
@@ -376,8 +403,9 @@ static bool typeEquivalentRecursive(Type *left, Type *right, bool checkTypeIdent
                     return false;
 
                 // Default value
-                if (left->sig.param[i]->defaultVal.intVal != right->sig.param[i]->defaultVal.intVal)
-                    return false;
+                if (i >= left->sig.numParams - left->sig.numDefaultParams)
+                    if (!typeDefaultParamEqual(&left->sig.param[i]->defaultVal, &right->sig.param[i]->defaultVal, left->sig.param[i]->type))
+                        return false;
             }
 
             // Result type
