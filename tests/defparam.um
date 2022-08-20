@@ -9,15 +9,16 @@ type P = struct {
 }
 
 type I = interface {
-    bar(a: int, b: real = 3.14, c: ^int = null, d: P = P{5, 7}, e: [2]int = [2]int{7, 8}, f: F = foo)
+    bar(a: int, b: real = 3.14, c: ^int = null, d: P = P{5, 7}, e: [2]int = [2]int{7, 8}, f: F = foo): P
 }
 
 type S = struct {
     state: int
 }
 
-fn (s: ^S) bar(a: int, b: real = 3.14, c: ^int = null, d: P = P{5, 7}, e: [2]int = [2]int{7, 8}, f: F = foo) {
+fn (s: ^S) bar(a: int, b: real = 3.14, c: ^int = null, d: P = P{5, 7}, e: [2]int = [2]int{7, 8}, f: F = foo): P {
     printf(repr(a) + repr(b) + repr(c == null) + repr(d) + repr(e) + repr(f()) + '\n')
+    return d
 }
 
 fn check(f: F, i: I) {

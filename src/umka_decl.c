@@ -314,6 +314,9 @@ static Type *parseMapType(Compiler *comp)
     Type *type = typeAdd(&comp->types, &comp->blocks, TYPE_MAP);
 
     Type *keyType = parseType(comp, NULL);
+    if (keyType->kind == TYPE_INTERFACE)
+        comp->error.handler(comp->error.context, "Map key type cannot be an interface");
+
     Type *ptrKeyType = typeAddPtrTo(&comp->types, &comp->blocks, keyType);
 
     lexEat(&comp->lex, TOK_RBRACKET);

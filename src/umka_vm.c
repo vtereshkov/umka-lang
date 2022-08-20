@@ -774,11 +774,8 @@ static FORCE_INLINE void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, voi
 }
 
 
-static void doGetMapKeyBytes(Slot key, Type *keyType, Error *error, char **keyBytes, int *keySize, Type **keySelfType)
+static void doGetMapKeyBytes(Slot key, Type *keyType, Error *error, char **keyBytes, int *keySize)
 {
-    if (keySelfType)
-        *keySelfType = NULL;
-
     switch (keyType->kind)
     {
         case TYPE_INT8:
@@ -824,25 +821,6 @@ static void doGetMapKeyBytes(Slot key, Type *keyType, Error *error, char **keyBy
             *keySize = array->len * array->itemSize;
             break;
         }
-        case TYPE_INTERFACE:
-        {
-            Interface *interface = (Interface *)key.ptrVal;
-            if (interface->self)
-            {
-                Slot selfKey = {.ptrVal = interface->self};
-                doBasicDeref(&selfKey, interface->selfType->base->kind, error);
-                doGetMapKeyBytes(selfKey, interface->selfType->base, error, keyBytes, keySize, NULL);
-
-                if (keySelfType)
-                    *keySelfType = interface->selfType;
-            }
-            else
-            {
-                *keyBytes = NULL;
-                *keySize = 0;
-            }
-            break;
-        }
         default:
         {
             *keyBytes = NULL;
@@ -861,9 +839,8 @@ static FORCE_INLINE MapNode *doGetMapNode(Map *map, Slot key, bool createMissing
     Slot keyBytesBuffer = {0};
     char *keyBytes = (char *)&keyBytesBuffer;
     int keySize = 0;
-    Type *keySelfType = NULL;    // For interface-typed keys only
 
-    doGetMapKeyBytes(key, typeMapKey(map->type), error, &keyBytes, &keySize, &keySelfType);
+    doGetMapKeyBytes(key, typeMapKey(map->type), error, &keyBytes, &keySize);
 
     if (!keyBytes)
         error->runtimeHandler(error->context, "Map key is null");
@@ -891,13 +868,6 @@ static FORCE_INLINE MapNode *doGetMapNode(Map *map, Slot key, bool createMissing
             *nodePtrInParent = child;
 
         node = *child;
-    }
-
-    if (keySelfType && node && node->key)
-    {
-        Interface *interface = (Interface *)node->key;
-        if (!interface->selfType || !typeEquivalent(keySelfType->base, interface->selfType->base))
-            error->runtimeHandler(error->context, "Map key is already occupied by an interface with another concrete type");
     }
 
     return node;

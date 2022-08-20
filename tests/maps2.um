@@ -100,28 +100,12 @@ fn test5() {
 }
 
 
-fn test6() {
-				printf("\nTest 6\n")
-
-				type Any = interface{}
-        m := make(map[Any]Any)
-        
-        m["Hello"] = 42
-        m[[]int{3, 5}] = "Ho-ho"
-        
-        a := m["Hello"]
-        printf(repr(a) + '\n')
-        printf(repr(m) + '\n')
-}
-
-
 fn test*() {
 	test1()
 	test2()
 	test3()
 	test4()
 	test5()
-	test6()
 }
 
 

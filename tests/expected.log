@@ -291,10 +291,6 @@ Test 4
 Test 5
 { 19 : 53 17 : 42 } 
 
-Test 6
-42 
-{ { 3 5 } : "Ho-ho" "Hello" : 42 } 
-
 
 >>> Multiple returns
 

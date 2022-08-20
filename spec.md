@@ -282,7 +282,7 @@ String assignment copies the contents of the string.
 
 #### Map types
 
-A map is a collection of items of a single type indexed by unique values, called *keys*, of another type.
+A map is a collection of items of a single type indexed by unique values, called *keys*, of another type. The key type cannot be an interface type.
 
 Syntax:
 
