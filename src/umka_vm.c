@@ -105,6 +105,7 @@ static const char *builtinSpelling [] =
     "fibercall",
     "fiberalive",
     "repr",
+    "exit",
     "error"
 };
 
@@ -443,6 +444,7 @@ void vmInit(VM *vm, int stackSize, bool fileSystemEnabled, Error *error)
     candidateInit(&vm->refCntChangeCandidates);
 
     memset(&vm->hooks, 0, sizeof(vm->hooks));
+    vm->terminatedNormally = false;
     vm->error = error;
 }
 
@@ -450,7 +452,7 @@ void vmInit(VM *vm, int stackSize, bool fileSystemEnabled, Error *error)
 void vmFree(VM *vm)
 {
     candidateFree(&vm->refCntChangeCandidates);
-    pageFree(&vm->pages, vm->error->pos == 0);  // Suppress memory leak warnings if halted on a runtime error
+    pageFree(&vm->pages, vm->terminatedNormally);
     free(vm->mainFiber->stack);
     free(vm->mainFiber);
 }
@@ -2505,6 +2507,7 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
 
         // Misc
         case BUILTIN_REPR:          doBuiltinRepr(fiber, pages, error); break;
+        case BUILTIN_EXIT:          fiber->alive = false; break;
         case BUILTIN_ERROR:         error->runtimeHandler(error->context, (char *)fiber->top->ptrVal); return;
     }
     fiber->ip++;
@@ -2661,6 +2664,9 @@ static FORCE_INLINE void vmLoop(VM *vm)
                 Fiber *newFiber = NULL;
                 doCallBuiltin(fiber, &newFiber, pages, error);
 
+                if (!fiber->alive)
+                    return;
+
                 if (newFiber)
                     fiber = vm->fiber = newFiber;
 
@@ -2684,7 +2690,7 @@ static FORCE_INLINE void vmLoop(VM *vm)
             }
             case OP_ENTER_FRAME:                    doEnterFrame(fiber, pages, hooks, error);     break;
             case OP_LEAVE_FRAME:                    doLeaveFrame(fiber, pages, hooks, error);     break;
-            case OP_HALT:                           return;
+            case OP_HALT:                           vm->terminatedNormally = true;                return;
 
             default: error->runtimeHandler(error->context, "Illegal instruction"); return;
         } // switch

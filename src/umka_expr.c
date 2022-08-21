@@ -1084,6 +1084,16 @@ static void parseBuiltinReprCall(Compiler *comp, Type **type, Const *constant)
 }
 
 
+static void parseBuiltinExitCall(Compiler *comp, Type **type, Const *constant)
+{
+    if (constant)
+        comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
+
+    genCallBuiltin(&comp->gen, TYPE_VOID, BUILTIN_EXIT);
+    *type = comp->voidType;
+}
+
+
 static void parseBuiltinErrorCall(Compiler *comp, Type **type, Const *constant)
 {
     if (constant)
@@ -1150,6 +1160,7 @@ static void parseBuiltinCall(Compiler *comp, Type **type, Const *constant, Built
 
         // Misc
         case BUILTIN_REPR:          parseBuiltinReprCall(comp, type, constant);             break;
+        case BUILTIN_EXIT:          parseBuiltinExitCall(comp, type, constant);             break;
         case BUILTIN_ERROR:         parseBuiltinErrorCall(comp, type, constant);            break;
 
         default: comp->error.handler(comp->error.context, "Illegal built-in function");

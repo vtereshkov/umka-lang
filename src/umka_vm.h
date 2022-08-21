@@ -128,6 +128,7 @@ typedef enum
 
     // Misc
     BUILTIN_REPR,
+    BUILTIN_EXIT,
     BUILTIN_ERROR
 } BuiltinFunc;
 
@@ -232,6 +233,7 @@ typedef struct
     HeapPages pages;
     RefCntChangeCandidates refCntChangeCandidates;
     HookFunc hooks[NUM_HOOKS];
+    bool terminatedNormally;
     Error *error;
 } VM;
 

@@ -733,6 +733,12 @@ fn repr(a: T): str
 Returns the string representation of `a`.
 
 ```
+fn exit()
+```
+
+Terminates the program without a run-time error.
+
+```
 fn error(msg: str)
 ```
 
