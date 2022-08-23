@@ -567,14 +567,18 @@ static void parseBuiltinIOCall(Compiler *comp, Type **type, Const *constant, Bui
     genPopReg(&comp->gen, VM_REG_IO_COUNT);
 
     // File/string pointer
-    if (builtin == BUILTIN_FPRINTF || builtin == BUILTIN_SPRINTF ||
-        builtin == BUILTIN_FSCANF  || builtin == BUILTIN_SSCANF)
+    if (builtin == BUILTIN_FPRINTF || builtin == BUILTIN_FSCANF  || builtin == BUILTIN_SSCANF)
     {
         Type *expectedType = (builtin == BUILTIN_FPRINTF || builtin == BUILTIN_FSCANF) ? comp->ptrVoidType : comp->strType;
         parseExpr(comp, type, constant);
         typeAssertCompatible(&comp->types, expectedType, *type, false);
         genPopReg(&comp->gen, VM_REG_IO_STREAM);
         lexEat(&comp->lex, TOK_COMMA);
+    }
+    else if (builtin == BUILTIN_SPRINTF)
+    {
+        genPushGlobalPtr(&comp->gen, NULL);
+        genPopReg(&comp->gen, VM_REG_IO_STREAM);
     }
 
     // Format string
@@ -608,9 +612,16 @@ static void parseBuiltinIOCall(Compiler *comp, Type **type, Const *constant, Bui
     genPop(&comp->gen);  // Manually remove parameter
 
     // Result
-    genPushReg(&comp->gen, VM_REG_IO_COUNT);
-
-    *type = comp->intType;
+    if (builtin == BUILTIN_SPRINTF)
+    {
+        genPushReg(&comp->gen, VM_REG_IO_STREAM);
+        *type = comp->strType;
+    }
+    else
+    {
+        genPushReg(&comp->gen, VM_REG_IO_COUNT);
+        *type = comp->intType;
+    }
 }
 
 

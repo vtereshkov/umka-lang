@@ -585,10 +585,10 @@ Built-in functions don't necessarily adhere to the general rules for functions.
 ```
 fn printf(format: str, a1: T1, a2: T2...): int
 fn fprintf(f: ^std.File, format: str, a1: T1, a2: T2...): int
-fn sprintf(buf, format: str, a1: T1, a2: T2...): int
+fn sprintf(format: str, a1: T1, a2: T2...): str
 ```
 
-Write `a1`, `a2`... to the console, or to the file `f`, or to the string `buf`, according to the `format` string. `T1`, `T2`... should be ordinal, or real, or string types. Additional run-time type checking is performed to match the `format` string. Return the number of bytes written.
+Write `a1`, `a2`... to the console, or to the file `f`, or to a string, according to the `format` string. `T1`, `T2`... should be ordinal, or real, or string types. Additional run-time type checking is performed to match the `format` string. `printf` and `fprintf` return the number of bytes written, `sprintf` returns the resulting string.
 
 ```
 fn scanf(format: str, a1: ^T1, a2: ^T2...): int

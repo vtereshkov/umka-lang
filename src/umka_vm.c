@@ -1176,13 +1176,42 @@ static FORCE_INLINE void doCheckFormatString(const char *format, int *formatLen,
 }
 
 
+static FORCE_INLINE int doPrintSlot(bool string, void *stream, int maxLen, const char *format, Slot slot, TypeKind typeKind, Error *error)
+{
+    int len = -1;
+
+    switch (typeKind)
+    {
+        case TYPE_VOID:         len = fsnprintf(string, stream, maxLen, format);                               break;
+        case TYPE_INT8:         len = fsnprintf(string, stream, maxLen, format, (int8_t        )slot.intVal);  break;
+        case TYPE_INT16:        len = fsnprintf(string, stream, maxLen, format, (int16_t       )slot.intVal);  break;
+        case TYPE_INT32:        len = fsnprintf(string, stream, maxLen, format, (int32_t       )slot.intVal);  break;
+        case TYPE_INT:          len = fsnprintf(string, stream, maxLen, format,                 slot.intVal);  break;
+        case TYPE_UINT8:        len = fsnprintf(string, stream, maxLen, format, (uint8_t       )slot.intVal);  break;
+        case TYPE_UINT16:       len = fsnprintf(string, stream, maxLen, format, (uint16_t      )slot.intVal);  break;
+        case TYPE_UINT32:       len = fsnprintf(string, stream, maxLen, format, (uint32_t      )slot.intVal);  break;
+        case TYPE_UINT:         len = fsnprintf(string, stream, maxLen, format,                 slot.uintVal); break;
+        case TYPE_BOOL:         len = fsnprintf(string, stream, maxLen, format, (bool          )slot.intVal);  break;
+        case TYPE_CHAR:         len = fsnprintf(string, stream, maxLen, format, (unsigned char )slot.intVal);  break;
+        case TYPE_REAL32:
+        case TYPE_REAL:         len = fsnprintf(string, stream, maxLen, format,                 slot.realVal); break;
+        case TYPE_STR:          len = fsnprintf(string, stream, maxLen, format,                 slot.ptrVal ? (char *)slot.ptrVal : "");  break;
+
+        default:                error->runtimeHandler(error->context, "Illegal type"); break;
+    }
+
+    return len;
+}
+
+
 static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool console, bool string, Error *error)
 {
     void *stream       = console ? stdout : fiber->reg[VM_REG_IO_STREAM].ptrVal;
     const char *format = (const char *)fiber->reg[VM_REG_IO_FORMAT].ptrVal;
+    const int prevLen  = fiber->reg[VM_REG_IO_COUNT].intVal;
     TypeKind typeKind  = fiber->code[fiber->ip].typeKind;
 
-    if (!stream || (!fiber->fileSystemEnabled && !console && !string))
+    if (!string && (!stream || (!fiber->fileSystemEnabled && !console)))
         error->runtimeHandler(error->context, "printf() destination is null");
 
     if (!format)
@@ -1204,46 +1233,46 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
     memcpy(curFormat, format, formatLen);
     curFormat[formatLen] = 0;
 
-    // Check available buffer length for sprintf()
-    int availableLen = INT_MAX;
+    // Predict buffer length for sprintf() and reallocate it if needed
+    int len = 0;
     if (string)
     {
-        HeapPage *page = pageFind(pages, stream, true);
-        if (!page)
-            error->runtimeHandler(error->context, "sprintf() requires heap-allocated destination");
+        len = doPrintSlot(true, NULL, 0, curFormat, *fiber->top, typeKind, error);
 
-        HeapChunkHeader *chunk = pageGetChunkHeader(page, stream);
-        availableLen = (char *)chunk + sizeof(HeapChunkHeader) + chunk->size - (char *)stream;
-        if (availableLen < 0)
-            availableLen = 0;
+        bool needRealloc = true;
+        if (stream)
+        {
+            HeapPage *page = pageFind(pages, stream, true);
+            if (page)
+            {
+                HeapChunkHeader *chunk = pageGetChunkHeader(page, stream);
+                const int availableLen = chunk->size - prevLen - 1;
+                if (availableLen >= len)
+                    needRealloc = false;
+            }
+        }
+
+        if (needRealloc)
+        {
+            char *newStream = chunkAlloc(pages, 2 * (prevLen + len) + 1, NULL, NULL, error);
+            memcpy(newStream, stream, prevLen);
+            newStream[prevLen] = 0;
+
+            // Decrease old string ref count
+            Type strType = {.kind = TYPE_STR};
+            doBasicChangeRefCnt(fiber, pages, stream, &strType, TOK_MINUSMINUS);
+
+            stream = newStream;
+        }
+
+        len = doPrintSlot(true, (char *)stream + prevLen, len + 1, curFormat, *fiber->top, typeKind, error);
     }
-
-    int len = 0;
-
-    switch (typeKind)
-    {
-        case TYPE_VOID:         len = fsnprintf(string, stream, availableLen, curFormat);                                      break;
-        case TYPE_INT8:         len = fsnprintf(string, stream, availableLen, curFormat, (int8_t        )fiber->top->intVal);  break;
-        case TYPE_INT16:        len = fsnprintf(string, stream, availableLen, curFormat, (int16_t       )fiber->top->intVal);  break;
-        case TYPE_INT32:        len = fsnprintf(string, stream, availableLen, curFormat, (int32_t       )fiber->top->intVal);  break;
-        case TYPE_INT:          len = fsnprintf(string, stream, availableLen, curFormat,                 fiber->top->intVal);  break;
-        case TYPE_UINT8:        len = fsnprintf(string, stream, availableLen, curFormat, (uint8_t       )fiber->top->intVal);  break;
-        case TYPE_UINT16:       len = fsnprintf(string, stream, availableLen, curFormat, (uint16_t      )fiber->top->intVal);  break;
-        case TYPE_UINT32:       len = fsnprintf(string, stream, availableLen, curFormat, (uint32_t      )fiber->top->intVal);  break;
-        case TYPE_UINT:         len = fsnprintf(string, stream, availableLen, curFormat,                 fiber->top->uintVal); break;
-        case TYPE_BOOL:         len = fsnprintf(string, stream, availableLen, curFormat, (bool          )fiber->top->intVal);  break;
-        case TYPE_CHAR:         len = fsnprintf(string, stream, availableLen, curFormat, (unsigned char )fiber->top->intVal);  break;
-        case TYPE_REAL32:
-        case TYPE_REAL:         len = fsnprintf(string, stream, availableLen, curFormat,                 fiber->top->realVal); break;
-        case TYPE_STR:          len = fsnprintf(string, stream, availableLen, curFormat,                 fiber->top->ptrVal ? (char *)fiber->top->ptrVal : "");  break;
-
-        default:                error->runtimeHandler(error->context, "Illegal type"); return;
-    }
+    else
+        len = doPrintSlot(false, stream, INT_MAX, curFormat, *fiber->top, typeKind, error);
 
     fiber->reg[VM_REG_IO_FORMAT].ptrVal = (char *)fiber->reg[VM_REG_IO_FORMAT].ptrVal + formatLen;
     fiber->reg[VM_REG_IO_COUNT].intVal += len;
-    if (string)
-        fiber->reg[VM_REG_IO_STREAM].ptrVal = (char *)fiber->reg[VM_REG_IO_STREAM].ptrVal + len;
+    fiber->reg[VM_REG_IO_STREAM].ptrVal = stream;
 
     if (formatLen + 1 > sizeof(curFormatBuf))
         free(curFormat);
