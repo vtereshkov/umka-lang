@@ -1206,9 +1206,11 @@ static FORCE_INLINE int doPrintSlot(bool string, void *stream, int maxLen, const
 
 static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool console, bool string, Error *error)
 {
-    void *stream       = console ? stdout : fiber->reg[VM_REG_IO_STREAM].ptrVal;
-    const char *format = (const char *)fiber->reg[VM_REG_IO_FORMAT].ptrVal;
-    const int prevLen  = fiber->reg[VM_REG_IO_COUNT].intVal;
+    enum {STACK_OFFSET_COUNT = 3, STACK_OFFSET_STREAM = 2, STACK_OFFSET_FORMAT = 1, STACK_OFFSET_VALUE = 0};
+
+    void *stream       = console ? stdout : fiber->top[STACK_OFFSET_STREAM].ptrVal;
+    const char *format = (const char *)fiber->top[STACK_OFFSET_FORMAT].ptrVal;
+    const int prevLen  = fiber->top[STACK_OFFSET_COUNT].intVal;
     TypeKind typeKind  = fiber->code[fiber->ip].typeKind;
 
     if (!string && (!stream || (!fiber->fileSystemEnabled && !console)))
@@ -1270,9 +1272,9 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
     else
         len = doPrintSlot(false, stream, INT_MAX, curFormat, *fiber->top, typeKind, error);
 
-    fiber->reg[VM_REG_IO_FORMAT].ptrVal = (char *)fiber->reg[VM_REG_IO_FORMAT].ptrVal + formatLen;
-    fiber->reg[VM_REG_IO_COUNT].intVal += len;
-    fiber->reg[VM_REG_IO_STREAM].ptrVal = stream;
+    fiber->top[STACK_OFFSET_FORMAT].ptrVal = (char *)fiber->top[STACK_OFFSET_FORMAT].ptrVal + formatLen;
+    fiber->top[STACK_OFFSET_COUNT].intVal += len;
+    fiber->top[STACK_OFFSET_STREAM].ptrVal = stream;
 
     if (formatLen + 1 > sizeof(curFormatBuf))
         free(curFormat);
@@ -1281,8 +1283,10 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
 
 static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool console, bool string, Error *error)
 {
-    void *stream       = console ? stdin : (void *)fiber->reg[VM_REG_IO_STREAM].ptrVal;
-    const char *format = (const char *)fiber->reg[VM_REG_IO_FORMAT].ptrVal;
+    enum {STACK_OFFSET_COUNT = 3, STACK_OFFSET_STREAM = 2, STACK_OFFSET_FORMAT = 1, STACK_OFFSET_VALUE = 0};
+
+    void *stream       = console ? stdin : (void *)fiber->top[STACK_OFFSET_STREAM].ptrVal;
+    const char *format = (const char *)fiber->top[STACK_OFFSET_FORMAT].ptrVal;
     TypeKind typeKind  = fiber->code[fiber->ip].typeKind;
 
     if (!stream || (!fiber->fileSystemEnabled && !console && !string))
@@ -1338,10 +1342,10 @@ static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool con
             cnt = fsscanf(string, stream, curFormat, (void *)fiber->top->ptrVal, &len);
     }
 
-    fiber->reg[VM_REG_IO_FORMAT].ptrVal = (char *)fiber->reg[VM_REG_IO_FORMAT].ptrVal + formatLen;
-    fiber->reg[VM_REG_IO_COUNT].intVal += cnt;
+    fiber->top[STACK_OFFSET_FORMAT].ptrVal = (char *)fiber->top[STACK_OFFSET_FORMAT].ptrVal + formatLen;
+    fiber->top[STACK_OFFSET_COUNT].intVal += cnt;
     if (string)
-        fiber->reg[VM_REG_IO_STREAM].ptrVal = (char *)fiber->reg[VM_REG_IO_STREAM].ptrVal + len;
+        fiber->top[STACK_OFFSET_STREAM].ptrVal = (char *)fiber->top[STACK_OFFSET_STREAM].ptrVal + len;
 
     if (formatLen + 2 + 1 > sizeof(curFormatBuf))
         free(curFormat);
@@ -2431,7 +2435,7 @@ static FORCE_INLINE void doCallExtern(Fiber *fiber, Error *error)
 {
     ExternFunc fn = (ExternFunc)fiber->code[fiber->ip].operand.ptrVal;
     fiber->reg[VM_REG_RESULT].ptrVal = error->context;    // Upon entry, the result slot stores the Umka instance
-    fn(fiber->top + 5, &fiber->reg[VM_REG_RESULT]);       // + 5 for saved I/O registers, old base pointer and return address
+    fn(fiber->top + 2, &fiber->reg[VM_REG_RESULT]);       // + 2 for old base pointer and return address
     fiber->ip++;
 }
 
@@ -2597,11 +2601,6 @@ static FORCE_INLINE void doEnterFrame(Fiber *fiber, HeapPages *pages, HookFunc *
         memset(fiber->top, 0, localVarSlots * sizeof(Slot));
     }
 
-    // Push I/O registers
-    *(--fiber->top) = fiber->reg[VM_REG_IO_STREAM];
-    *(--fiber->top) = fiber->reg[VM_REG_IO_FORMAT];
-    *(--fiber->top) = fiber->reg[VM_REG_IO_COUNT];
-
     // Call 'call' hook, if any
     doHook(fiber, hooks, HOOK_CALL);
 
@@ -2613,11 +2612,6 @@ static FORCE_INLINE void doLeaveFrame(Fiber *fiber, HeapPages *pages, HookFunc *
 {
     // Call 'return' hook, if any
     doHook(fiber, hooks, HOOK_RETURN);
-
-    // Pop I/O registers
-    fiber->reg[VM_REG_IO_COUNT]  = *(fiber->top++);
-    fiber->reg[VM_REG_IO_FORMAT] = *(fiber->top++);
-    fiber->reg[VM_REG_IO_STREAM] = *(fiber->top++);
 
     bool inHeap = fiber->code[fiber->ip].typeKind == TYPE_PTR;      // TYPE_PTR for heap frame, TYPE_NONE for stack frame
 

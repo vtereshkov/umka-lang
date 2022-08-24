@@ -562,29 +562,25 @@ static void parseBuiltinIOCall(Compiler *comp, Type **type, Const *constant, Bui
     if (constant)
         comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
 
+    // Parameters: count, stream, format, value
+
     // Count (number of characters for printf(), number of items for scanf())
     genPushIntConst(&comp->gen, 0);
-    genPopReg(&comp->gen, VM_REG_IO_COUNT);
 
-    // File/string pointer
+    // Stream (file/string pointer)
     if (builtin == BUILTIN_FPRINTF || builtin == BUILTIN_FSCANF  || builtin == BUILTIN_SSCANF)
     {
         Type *expectedType = (builtin == BUILTIN_FPRINTF || builtin == BUILTIN_FSCANF) ? comp->ptrVoidType : comp->strType;
         parseExpr(comp, type, constant);
         typeAssertCompatible(&comp->types, expectedType, *type, false);
-        genPopReg(&comp->gen, VM_REG_IO_STREAM);
         lexEat(&comp->lex, TOK_COMMA);
     }
-    else if (builtin == BUILTIN_SPRINTF)
-    {
+    else
         genPushGlobalPtr(&comp->gen, NULL);
-        genPopReg(&comp->gen, VM_REG_IO_STREAM);
-    }
 
     // Format string
     parseExpr(comp, type, constant);
     typeAssertCompatible(&comp->types, comp->strType, *type, false);
-    genPopReg(&comp->gen, VM_REG_IO_FORMAT);
 
     // Values, if any
     while (comp->lex.tok.kind == TOK_COMMA)
@@ -602,24 +598,27 @@ static void parseBuiltinIOCall(Compiler *comp, Type **type, Const *constant, Bui
             typeAssertCompatibleBuiltin(&comp->types, *type, builtin, (*type)->kind == TYPE_PTR && (typeOrdinal((*type)->base) || typeReal((*type)->base) || (*type)->base->kind == TYPE_STR));
             genCallBuiltin(&comp->gen, (*type)->base->kind, builtin);
         }
-        genPop(&comp->gen); // Manually remove parameter
+        genPop(&comp->gen); // Remove parameter
 
     } // while
 
     // The rest of format string
     genPushIntConst(&comp->gen, 0);
     genCallBuiltin(&comp->gen, TYPE_VOID, builtin);
-    genPop(&comp->gen);  // Manually remove parameter
+    genPop(&comp->gen);  // Remove parameter
+
+    genPop(&comp->gen);  // Remove format string
 
     // Result
     if (builtin == BUILTIN_SPRINTF)
     {
-        genPushReg(&comp->gen, VM_REG_IO_STREAM);
+        genSwap(&comp->gen);                    // Swap stream and count
+        genPop(&comp->gen);                     // Remove count, keep stream
         *type = comp->strType;
     }
     else
     {
-        genPushReg(&comp->gen, VM_REG_IO_COUNT);
+        genPop(&comp->gen);                     // Remove stream, keep count
         *type = comp->intType;
     }
 }
