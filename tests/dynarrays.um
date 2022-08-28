@@ -38,6 +38,22 @@ fn slices() {
     printf(repr(slice(a, 4)) + '\n' + '\n')
 
     printf(repr(slice(a, 2, -2)) + '\n')
+}
+
+fn insertions() {
+    a := []str{"Hello" + ' ', "World"}
+    b := insert(a, 1, "My " + "Wonderful")
+    c := insert(b, 1, ", ") 
+    d := insert(c, 0, "Oh" + ',' + " ")
+    e := insert(d, len(d), "!")
+
+    printf(repr(a) + '\n')        
+    printf(repr(b) + '\n')
+    printf(repr(c) + '\n')
+    printf(repr(d) + '\n')
+    printf(repr(e) + '\n')
+
+    printf(repr(insert(insert([]int{}, 0, 42), 1, 43)) + '\n')  
 }      
 
 fn test*() {    
@@ -100,6 +116,9 @@ fn test*() {
     std.println("Appending...")    
     d = append(d, [2]int {444, 555})
     std.println("d: " + repr(d))
+
+    std.println("Inserting...") 
+    insertions()       
 
     std.println("Slicing...") 
     slices()    

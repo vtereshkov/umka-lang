@@ -103,6 +103,7 @@ typedef enum
     BUILTIN_MAKETOARR,      // Dynamic array to array - implicit calls only
     BUILTIN_MAKETOSTR,      // Dynamic array to string - implicit calls only
     BUILTIN_APPEND,
+    BUILTIN_INSERT,
     BUILTIN_DELETE,
     BUILTIN_SLICE,
     BUILTIN_LEN,

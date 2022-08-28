@@ -636,7 +636,13 @@ fn make(map[K]T): map[K]T         // (2)
 fn append(a: []T, x: (^T | []T)): []T
 ```
 
-Constructs a copy of the dynamic array `a` and appends `x` to it. The `x` can be either a new item of the same type as the item type  `T`  of `a`, or another dynamic array of the same item type `T`. 
+Constructs a copy of the dynamic array `a` and appends `x` to it. The `x` can be either a new item of the same type as the item type `T`  of `a`, or another dynamic array of the same item type `T`.
+
+```
+fn insert(a: []T, index: int, x: T): []T
+```
+
+Constructs a copy of the dynamic array `a` and inserts `x` at position `index` into it. The `x` should be a new item of the same type as the item type `T` of `a`.
 
 ```
 fn delete(a: []T, index: int): []T        // (1)

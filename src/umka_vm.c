@@ -91,6 +91,7 @@ static const char *builtinSpelling [] =
     "maketoarr",
     "maketostr",
     "append",
+    "insert",
     "delete",
     "slice",
     "len",
@@ -1523,6 +1524,37 @@ static FORCE_INLINE void doBuiltinAppend(Fiber *fiber, HeapPages *pages, Error *
 }
 
 
+// fn insert(array: [] type, index: int, item: type): [] type
+static FORCE_INLINE void doBuiltinInsert(Fiber *fiber, HeapPages *pages, Error *error)
+{
+    DynArray *result = (DynArray *)(fiber->top++)->ptrVal;
+    void *item       = (fiber->top++)->ptrVal;
+    int64_t index    = (fiber->top++)->intVal;
+    DynArray *array  = (DynArray *)(fiber->top++)->ptrVal;
+
+    if (!array || !array->data)
+        error->runtimeHandler(error->context, "Dynamic array is null");
+
+    if (index < 0 || index > array->len)
+        error->runtimeHandler(error->context, "Index %lld is out of range 0...%lld", index, array->len);
+
+    result->type     = array->type;
+    result->len      = array->len + 1;
+    result->itemSize = array->itemSize;
+    result->data     = chunkAlloc(pages, result->len * result->itemSize, result->type, NULL, error);
+
+    memcpy((char *)result->data, (char *)array->data, index * result->itemSize);
+    memcpy((char *)result->data + index * result->itemSize, (char *)item, result->itemSize);
+    memcpy((char *)result->data + (index + 1) * result->itemSize, (char *)array->data + index * result->itemSize, (result->len - index - 1) * result->itemSize);
+
+    // Increase result items' ref counts, as if they have been assigned one by one
+    Type staticArrayType = {.kind = TYPE_ARRAY, .base = result->type->base, .numItems = result->len, .next = NULL};
+    doBasicChangeRefCnt(fiber, pages, result->data, &staticArrayType, TOK_PLUSPLUS);
+
+    (--fiber->top)->ptrVal = result;
+}
+
+
 // fn delete(array: [] type, index: int): [] type
 static FORCE_INLINE void doBuiltinDeleteDynArray(Fiber *fiber, HeapPages *pages, Error *error)
 {
@@ -2513,6 +2545,7 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         case BUILTIN_MAKETOARR:     doBuiltinMaketoarr(fiber, pages, error); break;
         case BUILTIN_MAKETOSTR:     doBuiltinMaketostr(fiber, pages, error); break;
         case BUILTIN_APPEND:        doBuiltinAppend(fiber, pages, error); break;
+        case BUILTIN_INSERT:        doBuiltinInsert(fiber, pages, error); break;
         case BUILTIN_DELETE:
         {
             if (typeKind == TYPE_DYNARRAY)

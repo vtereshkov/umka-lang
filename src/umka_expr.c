@@ -760,6 +760,50 @@ static void parseBuiltinAppendCall(Compiler *comp, Type **type, Const *constant)
 }
 
 
+// fn insert(array: [] type, index: int, item: type): [] type
+static void parseBuiltinInsertCall(Compiler *comp, Type **type, Const *constant)
+{
+    if (constant)
+        comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
+
+    // Dynamic array
+    parseExpr(comp, type, NULL);
+    typeAssertCompatibleBuiltin(&comp->types, *type, BUILTIN_INSERT, (*type)->kind == TYPE_DYNARRAY);
+
+    // New item index
+    lexEat(&comp->lex, TOK_COMMA);
+
+    Type *indexType;
+    parseExpr(comp, &indexType, NULL);
+    doImplicitTypeConv(comp, comp->intType, &indexType, NULL, false);
+    typeAssertCompatible(&comp->types, comp->intType, indexType, false);
+
+    // New item (must always be a pointer, even for value types)
+    lexEat(&comp->lex, TOK_COMMA);
+
+    Type *itemType;
+    parseExpr(comp, &itemType, NULL);
+    doImplicitTypeConv(comp, (*type)->base, &itemType, NULL, false);
+    typeAssertCompatible(&comp->types, (*type)->base, itemType, false);
+
+    if (!typeStructured(itemType))
+    {
+        // Assignment to an anonymous stack area does not require updating reference counts
+        int itemOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, itemType);
+        genPushLocalPtr(&comp->gen, itemOffset);
+        genSwapAssign(&comp->gen, itemType->kind, 0);
+
+        genPushLocalPtr(&comp->gen, itemOffset);
+    }
+
+    // Pointer to result (hidden parameter)
+    int resultOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, *type);
+    genPushLocalPtr(&comp->gen, resultOffset);
+
+    genCallBuiltin(&comp->gen, (*type)->kind, BUILTIN_INSERT);
+}
+
+
 // fn delete(array: [] type, index: int): [] type
 // fn delete(m: map [keyType] type, key: keyType): map [keyType] type
 static void parseBuiltinDeleteCall(Compiler *comp, Type **type, Const *constant)
@@ -767,7 +811,7 @@ static void parseBuiltinDeleteCall(Compiler *comp, Type **type, Const *constant)
     if (constant)
         comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
 
-    // Dynamic array
+    // Dynamic array or map
     parseExpr(comp, type, NULL);
     typeAssertCompatibleBuiltin(&comp->types, *type, BUILTIN_DELETE, (*type)->kind == TYPE_DYNARRAY || (*type)->kind == TYPE_MAP);
 
@@ -1150,6 +1194,7 @@ static void parseBuiltinCall(Compiler *comp, Type **type, Const *constant, Built
         case BUILTIN_NEW:           parseBuiltinNewCall(comp, type, constant);              break;
         case BUILTIN_MAKE:          parseBuiltinMakeCall(comp, type, constant);             break;
         case BUILTIN_APPEND:        parseBuiltinAppendCall(comp, type, constant);           break;
+        case BUILTIN_INSERT:        parseBuiltinInsertCall(comp, type, constant);           break;
         case BUILTIN_DELETE:        parseBuiltinDeleteCall(comp, type, constant);           break;
         case BUILTIN_SLICE:         parseBuiltinSliceCall(comp, type, constant);            break;
         case BUILTIN_LEN:           parseBuiltinLenCall(comp, type, constant);              break;
