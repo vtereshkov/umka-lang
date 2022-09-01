@@ -47,11 +47,17 @@ fn fread*    (f: File, buf: interface{}): int {
     if f == null {
         error("File is null")
     }
-    if bytes := ^[]uint8(buf); bytes != null {
+    if bytes := ^[]int8(buf); bytes != null {
         return rtlfread(&bytes[0], len(bytes^), 1, f)
     }
+    if ubytes := ^[]uint8(buf); ubytes != null {
+        return rtlfread(&ubytes[0], len(ubytes^), 1, f)
+    }        
+    if chars := ^[]char(buf); chars != null {
+        return rtlfread(&chars[0], len(chars^), 1, f)
+    }
     if selfhasptr(buf) {
-        error("Cannot read reference types except ^[]uint8")
+        error("Cannot read reference types except ^[]int8, ^[]uint8, ^[]char")
     }
     return rtlfread(buf.__self, sizeofself(buf), 1, f)
 }
@@ -61,11 +67,17 @@ fn fwrite*   (f: File, buf: interface{}): int {
     if f == null {
         error("File is null")
     }
-    if bytes := ^[]uint8(buf); bytes != null {
+    if bytes := ^[]int8(buf); bytes != null {
         return rtlfwrite(&bytes[0], len(bytes^), 1, f)
-    }    
+    }
+    if ubytes := ^[]uint8(buf); ubytes != null {
+        return rtlfwrite(&ubytes[0], len(ubytes^), 1, f)
+    } 
+    if chars := ^[]uint8(buf); chars != null {
+        return rtlfwrite(&chars[0], len(chars^), 1, f)
+    }             
     if selfhasptr(buf) {
-        error("Cannot write reference types except ^[]uint8")
+        error("Cannot write reference types except ^[]int8, ^[]uint8, ^[]char")
     }
     return rtlfwrite(buf.__self, sizeofself(buf), 1, f)
 }
