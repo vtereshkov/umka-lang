@@ -73,7 +73,7 @@ fn fwrite*   (f: File, buf: interface{}): int {
     if ubytes := ^[]uint8(buf); ubytes != null {
         return rtlfwrite(&ubytes[0], len(ubytes^), 1, f)
     } 
-    if chars := ^[]uint8(buf); chars != null {
+    if chars := ^[]char(buf); chars != null {
         return rtlfwrite(&chars[0], len(chars^), 1, f)
     }             
     if selfhasptr(buf) {

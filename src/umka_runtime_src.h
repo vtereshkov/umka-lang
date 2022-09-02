@@ -78,7 +78,7 @@ static const char *rtlSrc =
 "    if ubytes := ^[]uint8(buf); ubytes != null {\n"
 "        return rtlfwrite(&ubytes[0], len(ubytes^), 1, f)\n"
 "    } \n"
-"    if chars := ^[]uint8(buf); chars != null {\n"
+"    if chars := ^[]char(buf); chars != null {\n"
 "        return rtlfwrite(&chars[0], len(chars^), 1, f)\n"
 "    }             \n"
 "    if selfhasptr(buf) {\n"
