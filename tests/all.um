@@ -1,4 +1,5 @@
 import (
+    "binfileio.um"
     "dynarrays.um"
     "dynarrays2.um"
     "strings.um"
@@ -30,6 +31,7 @@ import (
 )
 
 fn main() {
+    printf("\n\n>>> Binary file I/O\n\n");          binfileio.test()
     printf("\n\n>>> Dynamic arrays - 1\n\n");       dynarrays.test()
     printf("\n\n>>> Dynamic arrays - 2\n\n");       dynarrays2.test()
     printf("\n\n>>> Strings\n\n");                  strings.test()

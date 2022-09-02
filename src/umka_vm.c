@@ -1424,7 +1424,7 @@ static FORCE_INLINE void doBuiltinMakefromstr(Fiber *fiber, HeapPages *pages, Er
     if (!src)
         src = "";
 
-    dest->len      = strlen(src) + 1;
+    dest->len      = strlen(src);
     dest->itemSize = 1;
     dest->data     = chunkAlloc(pages, dest->len, dest->type, NULL, error);
 
@@ -1465,19 +1465,9 @@ static FORCE_INLINE void doBuiltinMaketostr(Fiber *fiber, HeapPages *pages, Erro
     if (!src || !src->data)
         error->runtimeHandler(error->context, "Dynamic array is null");
 
-    bool nullFound = false;
-    for (int i = 0; i < src->len; i++)
-        if (((char *)src->data)[i] == 0)
-        {
-            nullFound = true;
-            break;
-        }
-
-    if (!nullFound)
-        error->runtimeHandler(error->context, "Dynamic array is not null-terminated");
-
-    char *dest = chunkAlloc(pages, src->len, NULL, NULL, error);
-    strcpy(dest, (char *)src->data);
+    char *dest = chunkAlloc(pages, src->len + 1, NULL, NULL, error);
+    memcpy(dest, src->data, src->len);
+    dest[src->len] = 0;
 
     (--fiber->top)->ptrVal = dest;
 }

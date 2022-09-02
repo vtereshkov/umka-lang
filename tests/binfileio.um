@@ -1,0 +1,31 @@
+import "std.um"
+
+fn write(name, s: str) {
+	f := std.fopen(name, "wb")
+	std.fwrite(f, &[]char(s))
+	std.fclose(f)	
+} 
+
+fn read(name: str): str {
+	f := std.fopen(name, "rb")
+	std.fseek(f, 0, std.seekEnd)
+	size := std.ftell(f)
+	std.fseek(f, 0, std.seekBegin)
+
+	data := make([]char, size)
+	std.fread(f, &data)
+	std.fclose(f)
+
+	return str(data)
+}
+
+fn test*() {
+	name := "fio.txt"
+	write(name, "Hello World")
+	printf(read(name) + '\n')
+	std.remove(name)
+}
+
+fn main() {
+	test()
+}

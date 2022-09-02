@@ -1,5 +1,10 @@
 
 
+>>> Binary file I/O
+
+Hello World
+
+
 >>> Dynamic arrays - 1
 
 a: 0 0
@@ -389,7 +394,7 @@ fn
 { 1 5 7 10 } 
 { 1 4 7 } 
 Hey Hello
-{ 'H' 'e' 'l' 'l' 0x00 0x00 } Hell
+{ 'H' 'e' 'l' 'l' 0x00 } Hell
 HellHell
 HellHell
 
@@ -470,7 +475,7 @@ running by_name_eq with name : "Foo"  and person : { name: "FooBar" age: 23 sex:
 
 s2 = 
 "" "" "" "Hello " 
-{ 0x00 } 
+{ } 
 len = 0, 6
 Hello 
 true false true 

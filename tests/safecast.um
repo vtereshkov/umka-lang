@@ -24,7 +24,7 @@ fn test*() {
 		printf(s + '\n')				
 	}
 
-	pc[len(pc) - 2] = '\0'
+	pc[len(pc) - 1] = '\0'
 
 	var s2: str = pc
 	
