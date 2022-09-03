@@ -143,10 +143,10 @@ typedef union
 
 typedef struct
 {
-    int16_t opcode;
-    int16_t inlineOpcode;         // Inlined instruction (DEREF, POP, SWAP): PUSH + DEREF, CHANGE_REF_CNT + POP, SWAP + ASSIGN etc.
-    int16_t tokKind;              // Unary/binary operation token
-    int16_t typeKind;             // Slot type kind
+    Opcode opcode;
+    Opcode inlineOpcode;         // Inlined instruction (DEREF, POP, SWAP): PUSH + DEREF, CHANGE_REF_CNT + POP, SWAP + ASSIGN etc.
+    TokenKind tokKind;           // Unary/binary operation token
+    TypeKind typeKind;           // Slot type kind
     Slot operand;
 } Instruction;
 
