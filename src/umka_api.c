@@ -8,7 +8,7 @@
 #include "umka_compiler.h"
 #include "umka_api.h"
 
-#define UMKA_VERSION    "0.8.1"
+#define UMKA_VERSION    "0.9"
 
 
 static void compileWarning(void *context, const char *format, ...)
@@ -56,11 +56,11 @@ static void runtimeError(void *context, const char *format, ...)
     va_start(args, format);
 
     Compiler *comp = context;
-    Instruction *instr = &comp->vm.fiber->code[comp->vm.fiber->ip];
+    DebugInfo *debug = &comp->vm.fiber->debugPerInstr[comp->vm.fiber->ip];
 
-    strcpy(comp->error.fileName, instr->debug.fileName);
-    strcpy(comp->error.fnName, instr->debug.fnName);
-    comp->error.line = instr->debug.line;
+    strcpy(comp->error.fileName, debug->fileName);
+    strcpy(comp->error.fnName, debug->fnName);
+    comp->error.line = debug->line;
     comp->error.pos = 1;
     vsnprintf(comp->error.msg, UMKA_MSG_LEN + 1, format, args);
 
@@ -198,7 +198,7 @@ UMKA_API bool umkaGetCallStack(void *umka, int depth, int *offset, char *name, i
         *offset = ip;
 
     if (name)
-        snprintf(name, size, "%s", comp->vm.fiber->code[ip].debug.fnName);
+        snprintf(name, size, "%s", comp->vm.fiber->debugPerInstr[ip].fnName);
 
     return true;
 }
@@ -242,10 +242,10 @@ UMKA_API void *umkaGetMapItem(void *umka, UmkaMap *map, UmkaStackSlot key)
 UMKA_API const char *umkaGetVersion(void)
 {
     if (sizeof(void *) == 8)
-        return UMKA_VERSION" ("__DATE__" "__TIME__" 64 bit)";
+        return "Umka "UMKA_VERSION" ("__DATE__" "__TIME__" 64 bit)";
     else if (sizeof(void *) == 4)
-        return UMKA_VERSION" ("__DATE__" "__TIME__" 32 bit)";
+        return "Umka "UMKA_VERSION" ("__DATE__" "__TIME__" 32 bit)";
     else
-        return UMKA_VERSION" ("__DATE__" "__TIME__")";
+        return "Umka "UMKA_VERSION" ("__DATE__" "__TIME__")";
 }
 

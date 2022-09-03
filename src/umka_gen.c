@@ -17,6 +17,7 @@ void genInit(CodeGen *gen, DebugInfo *debug, Error *error)
     gen->top = -1;
     gen->breaks = gen->continues = gen->returns = NULL;
     gen->debug = debug;
+    gen->debugPerInstr = malloc(gen->capacity * sizeof(DebugInfo));
     gen->error = error;
 }
 
@@ -24,6 +25,7 @@ void genInit(CodeGen *gen, DebugInfo *debug, Error *error)
 void genFree(CodeGen *gen)
 {
     free(gen->code);
+    free(gen->debugPerInstr);
 }
 
 
@@ -31,6 +33,7 @@ static void genRealloc(CodeGen *gen)
 {
     gen->capacity *= 2;
     gen->code = realloc(gen->code, gen->capacity * sizeof(Instruction));
+    gen->debugPerInstr = realloc(gen->debugPerInstr, gen->capacity * sizeof(DebugInfo));
 }
 
 
@@ -40,7 +43,7 @@ static void genAddInstr(CodeGen *gen, const Instruction *instr)
         genRealloc(gen);
 
     gen->code[gen->ip] = *instr;
-    gen->code[gen->ip].debug = *gen->debug;
+    gen->debugPerInstr[gen->ip] = *gen->debug;
 
     gen->ip++;
 }
@@ -915,13 +918,13 @@ char *genAsm(CodeGen *gen, char *buf, int size)
     int ip = 0, chars = 0;
     do
     {
-        if (ip == 0 || gen->code[ip].debug.fileName != gen->code[ip - 1].debug.fileName)
-            chars += snprintf(buf + chars, nonneg(size - chars), "\nModule: %s\n\n", gen->code[ip].debug.fileName);
+        if (ip == 0 || gen->debugPerInstr[ip].fileName != gen->debugPerInstr[ip - 1].fileName)
+            chars += snprintf(buf + chars, nonneg(size - chars), "\nModule: %s\n\n", gen->debugPerInstr[ip].fileName);
 
         if (gen->code[ip].opcode == OP_ENTER_FRAME)
-            chars += snprintf(buf + chars, nonneg(size - chars), "\nFunction: %s\n\n", gen->code[ip].debug.fnName);
+            chars += snprintf(buf + chars, nonneg(size - chars), "\nFunction: %s\n\n", gen->debugPerInstr[ip].fnName);
 
-        chars += vmAsm(ip, gen->code, buf + chars, nonneg(size - chars));
+        chars += vmAsm(ip, gen->code, gen->debugPerInstr, buf + chars, nonneg(size - chars));
         chars += snprintf(buf + chars, nonneg(size - chars), "\n");
 
         if (gen->code[ip].opcode == OP_GOTO || gen->code[ip].opcode == OP_GOTO_IF || gen->code[ip].opcode == OP_RETURN)

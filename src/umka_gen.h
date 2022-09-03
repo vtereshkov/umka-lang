@@ -21,7 +21,7 @@ typedef struct
     int stack[MAX_BLOCK_NESTING];
     int top;
     Gotos *breaks, *continues, *returns;
-    DebugInfo *debug;
+    DebugInfo *debug, *debugPerInstr;
     Error *error;
 } CodeGen;
 

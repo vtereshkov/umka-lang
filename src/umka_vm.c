@@ -459,10 +459,11 @@ void vmFree(VM *vm)
 }
 
 
-void vmReset(VM *vm, Instruction *code)
+void vmReset(VM *vm, Instruction *code, DebugInfo *debugPerInstr)
 {
     vm->fiber = vm->mainFiber;
     vm->fiber->code = code;
+    vm->fiber->debugPerInstr = debugPerInstr;
     vm->fiber->ip = 0;
     vm->fiber->top = vm->fiber->base = vm->fiber->stack + vm->fiber->stackSize - 1;
 }
@@ -473,7 +474,7 @@ static FORCE_INLINE void doHook(Fiber *fiber, HookFunc *hooks, HookEvent event)
     if (!hooks || !hooks[event])
         return;
 
-    const DebugInfo *debug = &fiber->code[fiber->ip].debug;
+    const DebugInfo *debug = &fiber->debugPerInstr[fiber->ip];
     hooks[event](debug->fileName, debug->fnName, debug->line);
 }
 
@@ -2771,13 +2772,14 @@ void vmRun(VM *vm, int entryOffset, int numParamSlots, Slot *params, Slot *resul
 }
 
 
-int vmAsm(int ip, Instruction *code, char *buf, int size)
+int vmAsm(int ip, Instruction *code, DebugInfo *debugPerInstr, char *buf, int size)
 {
     Instruction *instr = &code[ip];
+    DebugInfo *debug = &debugPerInstr[ip];
 
     char opcodeBuf[DEFAULT_STR_LEN + 1];
     snprintf(opcodeBuf, DEFAULT_STR_LEN + 1, "%s%s", instr->inlineOpcode == OP_SWAP ? "SWAP; " : "", opcodeSpelling[instr->opcode]);
-    int chars = snprintf(buf, size, "%09d %6d %28s", ip, instr->debug.line, opcodeBuf);
+    int chars = snprintf(buf, size, "%09d %6d %28s", ip, debug->line, opcodeBuf);
 
     if (instr->tokKind != TOK_NONE)
         chars += snprintf(buf + chars, nonneg(size - chars), " %s", lexSpelling(instr->tokKind));
@@ -2812,7 +2814,7 @@ int vmAsm(int ip, Instruction *code, char *buf, int size)
         case OP_RETURN:                 chars += snprintf(buf + chars, nonneg(size - chars), " %lld",  (long long int)instr->operand.intVal); break;
         case OP_CALL:
         {
-            const char *fnName = code[instr->operand.intVal].debug.fnName;
+            const char *fnName = debugPerInstr[instr->operand.intVal].fnName;
             chars += snprintf(buf + chars, nonneg(size - chars), " %s (%lld)", fnName, (long long int)instr->operand.intVal);
             break;
         }

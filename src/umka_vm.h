@@ -143,12 +143,11 @@ typedef union
 
 typedef struct
 {
-    Opcode opcode;
-    Opcode inlineOpcode;            // Inlined instruction (DEREF, POP, SWAP): PUSH + DEREF, CHANGE_REF_CNT + POP, SWAP + ASSIGN etc.
-    TokenKind tokKind;              // Unary/binary operation token
-    TypeKind typeKind;              // Slot type kind
+    int16_t opcode;
+    int16_t inlineOpcode;         // Inlined instruction (DEREF, POP, SWAP): PUSH + DEREF, CHANGE_REF_CNT + POP, SWAP + ASSIGN etc.
+    int16_t tokKind;              // Unary/binary operation token
+    int16_t typeKind;             // Slot type kind
     Slot operand;
-    DebugInfo debug;
 } Instruction;
 
 
@@ -217,6 +216,7 @@ typedef struct
     Slot *stack, *top, *base;
     int stackSize;
     Slot reg[VM_NUM_REGS];
+    DebugInfo *debugPerInstr;
     RefCntChangeCandidates *refCntChangeCandidates;
     bool alive;
     bool fileSystemEnabled;
@@ -236,9 +236,9 @@ typedef struct
 
 void vmInit                     (VM *vm, int stackSize /* slots */, bool fileSystemEnabled, Error *error);
 void vmFree                     (VM *vm);
-void vmReset                    (VM *vm, Instruction *code);
+void vmReset                    (VM *vm, Instruction *code, DebugInfo *debugPerInstr);
 void vmRun                      (VM *vm, int entryOffset, int numParamSlots, Slot *params, Slot *result);
-int vmAsm                       (int ip, Instruction *code, char *buf, int size);
+int vmAsm                       (int ip, Instruction *code, DebugInfo *debugPerInstr, char *buf, int size);
 bool vmUnwindCallStack          (VM *vm, Slot **base, int *ip);
 void vmSetHook                  (VM *vm, HookEvent event, HookFunc hook);
 void *vmAllocData               (VM *vm, int size, ExternFunc onFree);
