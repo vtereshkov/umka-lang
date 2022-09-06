@@ -505,8 +505,6 @@ static void parseTypeDecl(Compiler *comp)
     }
     else
         parseTypeDeclItem(comp);
-
-    typeAssertForwardResolved(&comp->types);
 }
 
 
@@ -694,6 +692,8 @@ void parseDecl(Compiler *comp)
 
         default: comp->error.handler(comp->error.context, "Declaration expected but %s found", lexSpelling(comp->lex.tok.kind)); break;
     }
+
+    typeAssertForwardResolved(&comp->types);
 }
 
 
