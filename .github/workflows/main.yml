@@ -7,7 +7,7 @@ on:
     branches: [ master ]
 
 jobs:
-  ubuntu-build:
+  linux-build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -17,6 +17,13 @@ jobs:
         run: meson setup build --buildtype=release
       - name: build 
         run: cd build && ninja
+      - uses: actions/upload-artifact@v3
+        with:
+          name: linux
+          path: |
+            build/libumka.a
+            build/libumka.so
+            build/umka
 
   mingw-build:
     runs-on: ubuntu-latest
@@ -28,6 +35,13 @@ jobs:
         run: meson setup build --cross-file x86_64-w64-mingw32.txt --buildtype=release
       - name: build
         run: cd build && ninja
+      - uses: actions/upload-artifact@v3
+        with:
+          name: mingw
+          path: |
+            build/libumka.a
+            build/libumka.dll
+            build/umka.exe
 
   macos-build:
     runs-on: macos-latest
@@ -39,6 +53,13 @@ jobs:
         run: meson setup build --buildtype=release
       - name: build 
         run: meson compile -C build
+      - uses: actions/upload-artifact@v3
+        with:
+          name: macos
+          path: |
+            build/libumka.a
+            build/libumka.dynlib
+            build/umka
 
   windows-build:
     runs-on: windows-latest
@@ -53,3 +74,11 @@ jobs:
         run: meson setup build --buildtype=release
       - name: build
         run: meson compile -C build
+      - uses: actions/upload-artifact@v3
+        with:
+          name: windows
+          path: |
+            build/libumka.a
+            build/libumka.dll
+            build/umka.exe
+
