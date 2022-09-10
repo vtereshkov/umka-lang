@@ -630,6 +630,7 @@ static void parseBuiltinMathCall(Compiler *comp, Type **type, Const *constant, B
     doImplicitTypeConv(comp, comp->realType, type, constant, false);
     typeAssertCompatible(&comp->types, comp->realType, *type, false);
 
+    Const constant2Val = {.realVal = 0};
     Const *constant2 = NULL;
 
     // fn atan2(y, x: real): real
@@ -638,7 +639,6 @@ static void parseBuiltinMathCall(Compiler *comp, Type **type, Const *constant, B
         lexEat(&comp->lex, TOK_COMMA);
 
         Type *type2;
-        Const constant2Val;
         if (constant)
             constant2 = &constant2Val;
 
