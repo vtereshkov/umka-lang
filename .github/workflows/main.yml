@@ -26,7 +26,7 @@ jobs:
 
       # Build it
       - name: build 
-        run: make all
+        run: meson setup build --buildtype=release && meson compile -C build
 
   macos-build:
     # The type of runner that the job will run on
@@ -39,4 +39,4 @@ jobs:
 
       # Build it
       - name: build 
-        run: make all
+        run: meson setup build --buildtype=release && meson compile -C build
