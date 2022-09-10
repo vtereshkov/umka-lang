@@ -1,16 +1,16 @@
 project('umka', 'c', version: '0.8')
 
-add_project_arguments(['-fPIC', '-DUMKA_EXT_LIBS'], language: 'c')
+add_project_arguments(['-fPIC', '-DUMKA_EXT_LIBS', '-DUMKA_BUILD'], language: 'c')
 
 cc = meson.get_compiler('c')
 deps = []
 
 if target_machine.system() != 'darwin'
-  deps += cc.find_library('m', required: true)
+  deps += [cc.find_library('m', required: true)]
 endif
 
 if target_machine.system() == 'linux'
-  deps += cc.find_library('dl', required: true)
+  deps += [cc.find_library('dl', required: true)]
 endif
 
 src = [
@@ -28,7 +28,7 @@ src = [
   'src/umka_types.c',
   'src/umka_vm.c']
 
-src_exe = src + 'src/umka.c'
+src_exe = src + ['src/umka.c']
 
 inc = include_directories('import/embed')
 
