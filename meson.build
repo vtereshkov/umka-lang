@@ -47,13 +47,16 @@ src = [
 src_exe = src + ['src/umka.c']
 src_fuz = src + ['src/umka_fuzz.c']
 
-inc = include_directories('import/embed')
+public_headers = 'include'
+
+inc = include_directories(['import/embed', public_headers])
 
 executable('umka', src_exe,
   include_directories: inc,
   dependencies: deps,
   c_args: sans,
-  link_args: sans)
+  link_args: sans,
+  install: true)
 
 if debug and meson.get_compiler('c').has_argument(sans_f)
   executable('umkafuzz', src_fuz,
@@ -68,9 +71,25 @@ if debug and meson.get_compiler('c').has_argument(sans_f)
     link_args: sans_f + ['-fprofile-instr-generate', '-fcoverage-mapping'])
 endif
 
-both_libraries(
+umka_lib = both_libraries(
   'umka',
   src,
   include_directories: inc,
-  dependencies: deps)
+  dependencies: deps,
+  install: true)
+
+
+
+umka_dep = declare_dependency(
+  include_directories: public_headers,
+  link_with: umka_lib)
+
+install_headers(public_headers / 'umka_api.h', subdir: meson.project_name())
+
+pkg_mod = import('pkgconfig')
+pkg_mod.generate(
+  name: meson.project_name(),
+  filebase: meson.project_name(),
+  description: 'A statically typed embeddable scripting language',
+  subdirs: meson.project_name())
 
