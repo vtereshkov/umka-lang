@@ -11,18 +11,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: download deps
+      - name: install deps
         run: sudo apt-get update && sudo apt-get install meson
       - name: setup
         run: meson setup build --buildtype=release
       - name: build 
         run: cd build && ninja
 
+  mingw-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: install deps
+        run: sudo apt-get update && sudo apt-get install meson gcc-mingw-w64
+      - name: setup
+        run: meson setup build --cross-file x86_64-w64-mingw32.txt --buildtype=release
+      - name: build
+        run: cd build && ninja
+
   macos-build:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
-      - name: download deps
+      - name: install deps
         run: brew update && brew install meson
       - name: setup
         run: meson setup build --buildtype=release

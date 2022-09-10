@@ -1,0 +1,9 @@
+[binaries]
+c = 'x86_64-w64-mingw32-gcc'
+ar = 'x86_64-w64-mingw32-ar'
+
+[host_machine]
+system = 'windows'
+cpu_family = 'x86_64'
+cpu = 'x86_64'
+endian = 'little'
