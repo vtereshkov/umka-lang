@@ -20,12 +20,11 @@ int LLVMFuzzerTestOneInput(uint8_t *data, size_t size) {
   bool ok = umkaInit(umka, "fuzz", string, 1024 * 1024, NULL, 0, NULL, false,
                      false, NULL);
 
-  if (!ok) // should never happen - kill fuzzer
-    exit(1);
-
-  umkaCompile(umka);
+  if (ok)
+    umkaCompile(umka);
 
   umkaFree(umka);
+  free(string);
 
   return 0;
 }
