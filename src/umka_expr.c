@@ -1776,6 +1776,7 @@ static void parseIndexSelector(Compiler *comp, Type **type, Const *constant, boo
         case TYPE_STR:
         {
             genGetArrayPtr(&comp->gen, typeSize(&comp->types, comp->charType), -1);                 // Use actual length for range checking
+            genDeref(&comp->gen, TYPE_CHAR);
             itemType = comp->charType;
             break;
         }
@@ -1789,12 +1790,20 @@ static void parseIndexSelector(Compiler *comp, Type **type, Const *constant, boo
             break;
     }
 
-    if (typeStructured(itemType))
+    if ((*type)->kind == TYPE_STR)
+    {
         *type = itemType;
+        *isVar = false;
+    }
     else
-        *type = typeAddPtrTo(&comp->types, &comp->blocks, itemType);
+    {
+        if (typeStructured(itemType))
+            *type = itemType;
+        else
+            *type = typeAddPtrTo(&comp->types, &comp->blocks, itemType);
+        *isVar = true;
+    }
 
-    *isVar = true;
     *isCall = false;
 }
 
