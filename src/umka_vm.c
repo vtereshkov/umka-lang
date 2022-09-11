@@ -806,7 +806,7 @@ static void doGetMapKeyBytes(Slot key, Type *keyType, Error *error, char **keyBy
         }
         case TYPE_STR:
         {
-            *keyBytes = (char *)key.ptrVal;
+            *keyBytes = key.ptrVal ? (char *)key.ptrVal : "";
             *keySize = strlen(*keyBytes) + 1;
             break;
         }
