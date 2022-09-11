@@ -90,6 +90,7 @@ static const char *builtinSpelling [] =
     "makefromstr",
     "maketoarr",
     "maketostr",
+    "copy",
     "append",
     "insert",
     "delete",
@@ -1474,6 +1475,30 @@ static FORCE_INLINE void doBuiltinMaketostr(Fiber *fiber, HeapPages *pages, Erro
 }
 
 
+// fn copy(array: [] type): [] type
+static FORCE_INLINE void doBuiltinCopy(Fiber *fiber, HeapPages *pages, Error *error)
+{
+    DynArray *result = (DynArray *)(fiber->top++)->ptrVal;
+    DynArray *array  = (DynArray *)(fiber->top++)->ptrVal;
+
+    if (!array || !array->data)
+        error->runtimeHandler(error->context, "Dynamic array is null");
+
+    result->type     = array->type;
+    result->len      = array->len;
+    result->itemSize = array->itemSize;
+    result->data     = chunkAlloc(pages, result->len * result->itemSize, result->type, NULL, error);
+
+    memcpy((char *)result->data, (char *)array->data, array->len * array->itemSize);
+
+    // Increase result items' ref counts, as if they have been assigned one by one
+    Type staticArrayType = {.kind = TYPE_ARRAY, .base = result->type->base, .numItems = result->len, .next = NULL};
+    doBasicChangeRefCnt(fiber, pages, result->data, &staticArrayType, TOK_PLUSPLUS);
+
+    (--fiber->top)->ptrVal = result;
+}
+
+
 // fn append(array: [] type, item: (^type | [] type), single: bool): [] type
 static FORCE_INLINE void doBuiltinAppend(Fiber *fiber, HeapPages *pages, Error *error)
 {
@@ -2535,6 +2560,7 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         case BUILTIN_MAKEFROMSTR:   doBuiltinMakefromstr(fiber, pages, error); break;
         case BUILTIN_MAKETOARR:     doBuiltinMaketoarr(fiber, pages, error); break;
         case BUILTIN_MAKETOSTR:     doBuiltinMaketostr(fiber, pages, error); break;
+        case BUILTIN_COPY:          doBuiltinCopy(fiber, pages, error); break;
         case BUILTIN_APPEND:        doBuiltinAppend(fiber, pages, error); break;
         case BUILTIN_INSERT:        doBuiltinInsert(fiber, pages, error); break;
         case BUILTIN_DELETE:

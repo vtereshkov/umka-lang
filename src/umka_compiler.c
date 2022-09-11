@@ -89,6 +89,7 @@ static void compilerDeclareBuiltinIdents(Compiler *comp)
     // Memory
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "new",        comp->ptrVoidType, BUILTIN_NEW);
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "make",       comp->ptrVoidType, BUILTIN_MAKE);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "copy",       comp->ptrVoidType, BUILTIN_COPY);
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "append",     comp->ptrVoidType, BUILTIN_APPEND);
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "insert",     comp->ptrVoidType, BUILTIN_INSERT);
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "delete",     comp->ptrVoidType, BUILTIN_DELETE);

@@ -120,6 +120,8 @@ Slicing...
 { } 
 
 { } 
+Copying...
+{ { 5 7 } { 10 12 } } { { 5 7 } { 9 11 } } 
 
 
 >>> Dynamic arrays - 2

@@ -54,7 +54,14 @@ fn insertions() {
     printf(repr(e) + '\n')
 
     printf(repr(insert(insert([]int{}, 0, 42), 1, 43)) + '\n')  
-}      
+} 
+
+fn copies() {
+    a := [][]int{[]int{5, 7}, []int{9, 11}}
+    b := copy(a)
+    a[1] = []int{10, 12}
+    printf(repr(a) + repr(b) + '\n')
+}     
 
 fn test*() {    
     a := make([][2]^int, 10)
@@ -121,7 +128,10 @@ fn test*() {
     insertions()       
 
     std.println("Slicing...") 
-    slices()    
+    slices()
+
+    std.println("Copying...") 
+    copies()          
 }
 
 fn main() {

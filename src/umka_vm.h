@@ -102,6 +102,7 @@ typedef enum
     BUILTIN_MAKEFROMSTR,    // String to dynamic array - implicit calls only
     BUILTIN_MAKETOARR,      // Dynamic array to array - implicit calls only
     BUILTIN_MAKETOSTR,      // Dynamic array to string - implicit calls only
+    BUILTIN_COPY,
     BUILTIN_APPEND,
     BUILTIN_INSERT,
     BUILTIN_DELETE,
