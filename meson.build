@@ -5,7 +5,7 @@ add_project_arguments('-DUMKA_BUILD', language: 'c')
 cc = meson.get_compiler('c')
 
 m_dep = cc.find_library('m', required: false)
-dl_dep = cc.find_library('dl', required: true)
+dl_dep = cc.find_library('dl', required: false)
 
 deps = [m_dep, dl_dep]
 
