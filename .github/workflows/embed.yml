@@ -7,61 +7,52 @@ on:
     branches: [ master ]
 
 jobs:
-  linux-build:
+  linux-example-build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - name: install deps
         run: sudo apt-get update && sudo apt-get install meson
       - name: setup
-        run: meson setup build --buildtype=release
+        run: cd examples/embed && meson setup build --buildtype=release
       - name: build 
-        run: cd build && ninja # meson on ubuntu is old and can't do the `compile -C build`
+        run: cd examples/embed/build && ninja # meson on ubuntu is old and can't do the `compile -C build`
       - uses: actions/upload-artifact@v3
         with:
-          name: linux
-          path: |
-            build/libumka.a
-            build/libumka.so
-            build/umka
+          name: example-linux
+          path: example/embed/build/umka
 
-  mingw-build:
+  mingw-example-build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - name: install deps
         run: sudo apt-get update && sudo apt-get install meson gcc-mingw-w64
       - name: setup
-        run: meson setup build --cross-file x86_64-w64-mingw32.txt --buildtype=release
+        run: cd examples/embed && meson setup build --cross-file ../../x86_64-w64-mingw32.txt --buildtype=release
       - name: build
-        run: cd build && ninja
+        run: cd examples/embed && cd build && ninja
       - uses: actions/upload-artifact@v3
         with:
-          name: mingw
-          path: |
-            build/libumka.a
-            build/libumka.dll
-            build/umka.exe
+          name: example-mingw
+          path: examples/embed/build/umka_test.exe
 
-  macos-build:
+  macos-example-build:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - name: install deps
         run: brew update && brew install meson
       - name: setup
-        run: meson setup build --buildtype=release
+        run: cd examples/embed && meson setup build --buildtype=release
       - name: build 
-        run: meson compile -C build
+        run: cd examples/embed && meson compile -C build
       - uses: actions/upload-artifact@v3
         with:
-          name: macos
-          path: |
-            build/libumka.a
-            build/libumka.dynlib
-            build/umka
+          name: example-macos
+          path: examples/embed/build/umka_test
 
-  windows-build:
+  windows-example-build:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
@@ -71,14 +62,11 @@ jobs:
       - name: install deps
         run: pip install meson ninja
       - name: setup
-        run: meson setup build --buildtype=release
+        run: cd examples/embed && meson setup build --buildtype=release
       - name: build
-        run: meson compile -C build
+        run: cd examples/embed && meson compile -C build
       - uses: actions/upload-artifact@v3
         with:
-          name: windows
-          path: |
-            build/libumka.a
-            build/libumka.dll
-            build/umka.exe
+          name: example-windows
+          path: examples/embed/build/umka_test.exe
 
