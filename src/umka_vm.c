@@ -2184,6 +2184,13 @@ static FORCE_INLINE void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
                 fiber->top->realVal /= rhs.realVal;
                 break;
             }
+            case TOK_MOD:
+            {
+                if (rhs.realVal == 0)
+                    error->runtimeHandler(error->context, "Division by zero");
+                fiber->top->realVal = fmod(fiber->top->realVal, rhs.realVal);
+                break;
+            }
 
             case TOK_EQEQ:      fiber->top->intVal = fiber->top->realVal == rhs.realVal; break;
             case TOK_NOTEQ:     fiber->top->intVal = fiber->top->realVal != rhs.realVal; break;

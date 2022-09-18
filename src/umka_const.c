@@ -148,6 +148,13 @@ void constBinary(Consts *consts, Const *lhs, const Const *rhs, TokenKind tokKind
                 lhs->realVal /= rhs->realVal;
                 break;
             }
+            case TOK_MOD:
+            {
+                if (rhs->realVal == 0)
+                    consts->error->handler(consts->error->context, "Division by zero");
+                lhs->realVal = fmod(lhs->realVal, rhs->realVal);
+                break;
+            }
 
             case TOK_EQEQ:      lhs->intVal = lhs->realVal == rhs->realVal; break;
             case TOK_NOTEQ:     lhs->intVal = lhs->realVal != rhs->realVal; break;

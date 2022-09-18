@@ -508,8 +508,8 @@ bool typeValidOperator(Type *type, TokenKind op)
         case TOK_PLUS:      return typeInteger(type) || typeReal(type) || type->kind == TYPE_STR;
         case TOK_MINUS:
         case TOK_MUL:
-        case TOK_DIV:       return typeInteger(type) || typeReal(type);
-        case TOK_MOD:
+        case TOK_DIV:
+        case TOK_MOD:       return typeInteger(type) || typeReal(type);
         case TOK_AND:
         case TOK_OR:
         case TOK_XOR:

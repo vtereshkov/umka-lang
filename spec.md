@@ -948,7 +948,7 @@ p != null && p[i] > 0
 -      Difference                Integers, reals
 *      Product                   Integers, reals
 /      Quotient                  Integers, reals
-%      Remainder                 Integers
+%      Remainder                 Integers, reals
 &      Bitwise "and"             Integers
 |      Bitwise "or"              Integers
 ~      Bitwise "xor"             Integers
