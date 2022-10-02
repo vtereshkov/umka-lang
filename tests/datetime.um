@@ -1,0 +1,13 @@
+import "std.um"
+
+fn test*() {
+        t := std.time()
+        printf(repr(std.mktime(std.localtime(t)) - t) + '\n')
+
+        d := std.DateTime{year: 2022, month: 10, day: 2, hour: 15, minute: 13, second: 32}
+        printf(std.timestr(d) + '\n')
+}
+
+fn main() {
+        test()
+}
