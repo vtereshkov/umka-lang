@@ -119,19 +119,22 @@ static void compilerDeclareBuiltinIdents(Compiler *comp)
 
 static void compilerDeclareExternalFuncs(Compiler *comp, bool fileSystemEnabled)
 {
-    externalAdd(&comp->externals, "rtlmemcpy",  &rtlmemcpy);
-    externalAdd(&comp->externals, "rtlfopen",   fileSystemEnabled ? &rtlfopen  : &rtlfopenSandbox);
-    externalAdd(&comp->externals, "rtlfclose",  fileSystemEnabled ? &rtlfclose : &rtlfcloseSandbox);
-    externalAdd(&comp->externals, "rtlfread",   fileSystemEnabled ? &rtlfread  : &rtlfreadSandbox);
-    externalAdd(&comp->externals, "rtlfwrite",  fileSystemEnabled ? &rtlfwrite : &rtlfwriteSandbox);
-    externalAdd(&comp->externals, "rtlfseek",   fileSystemEnabled ? &rtlfseek  : &rtlfseekSandbox);
-    externalAdd(&comp->externals, "rtlftell",   fileSystemEnabled ? &rtlftell  : &rtlftellSandbox);
-    externalAdd(&comp->externals, "rtlremove",  fileSystemEnabled ? &rtlremove : &rtlremoveSandbox);
-    externalAdd(&comp->externals, "rtlfeof",    fileSystemEnabled ? &rtlfeof   : &rtlfeofSandbox);
-    externalAdd(&comp->externals, "rtltime",    &rtltime);
-    externalAdd(&comp->externals, "rtlclock",   &rtlclock);
-    externalAdd(&comp->externals, "rtlgetenv",  fileSystemEnabled ? &rtlgetenv : &rtlgetenvSandbox);
-    externalAdd(&comp->externals, "rtlsystem",  fileSystemEnabled ? &rtlsystem : &rtlsystemSandbox);
+    externalAdd(&comp->externals, "rtlmemcpy",      &rtlmemcpy);
+    externalAdd(&comp->externals, "rtlfopen",       fileSystemEnabled ? &rtlfopen  : &rtlfopenSandbox);
+    externalAdd(&comp->externals, "rtlfclose",      fileSystemEnabled ? &rtlfclose : &rtlfcloseSandbox);
+    externalAdd(&comp->externals, "rtlfread",       fileSystemEnabled ? &rtlfread  : &rtlfreadSandbox);
+    externalAdd(&comp->externals, "rtlfwrite",      fileSystemEnabled ? &rtlfwrite : &rtlfwriteSandbox);
+    externalAdd(&comp->externals, "rtlfseek",       fileSystemEnabled ? &rtlfseek  : &rtlfseekSandbox);
+    externalAdd(&comp->externals, "rtlftell",       fileSystemEnabled ? &rtlftell  : &rtlftellSandbox);
+    externalAdd(&comp->externals, "rtlremove",      fileSystemEnabled ? &rtlremove : &rtlremoveSandbox);
+    externalAdd(&comp->externals, "rtlfeof",        fileSystemEnabled ? &rtlfeof   : &rtlfeofSandbox);
+    externalAdd(&comp->externals, "rtltime",        &rtltime);
+    externalAdd(&comp->externals, "rtlclock",       &rtlclock);
+    externalAdd(&comp->externals, "rtllocaltime",   &rtllocaltime);
+    externalAdd(&comp->externals, "rtlgmtime",      &rtlgmtime);
+    externalAdd(&comp->externals, "rtlmktime",      &rtlmktime);
+    externalAdd(&comp->externals, "rtlgetenv",      fileSystemEnabled ? &rtlgetenv : &rtlgetenvSandbox);
+    externalAdd(&comp->externals, "rtlsystem",      fileSystemEnabled ? &rtlsystem : &rtlsystemSandbox);
 }
 
 

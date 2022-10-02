@@ -502,3 +502,9 @@ foo: World
 2 6.280000 false { x: 42 y: 43 } { 7 8 } "foo: Hello" 
 2 6.280000 false { x: 42 y: 43 } { 9 10 } "foo: Hello" 
 2 6.280000 false { x: 42 y: 43 } { 9 10 } "foo: Hello" 
+
+
+>>> Date/time
+
+0 
+2022-10-02 15:13:32

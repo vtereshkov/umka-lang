@@ -8,6 +8,34 @@
 #include "umka_runtime.h"
 
 
+static void convToRTLDateTime(RTLDateTime *dest, const struct tm *src)
+{
+    dest->second    = src->tm_sec;
+    dest->minute    = src->tm_min;
+    dest->hour      = src->tm_hour;
+    dest->day       = src->tm_mday;
+    dest->month     = src->tm_mon + 1;
+    dest->year      = src->tm_year + 1900;
+    dest->dayOfWeek = src->tm_wday + 1;
+    dest->dayOfYear = src->tm_yday + 1;
+    dest->isDST     = src->tm_isdst != 0;
+}
+
+
+static void convFromRTLDateTime(struct tm *dest, const RTLDateTime *src)
+{
+    dest->tm_sec    = src->second;
+    dest->tm_min    = src->minute;
+    dest->tm_hour   = src->hour;
+    dest->tm_mday   = src->day;
+    dest->tm_mon    = src->month - 1;
+    dest->tm_year   = src->year - 1900;
+    dest->tm_wday   = src->dayOfWeek - 1;
+    dest->tm_yday   = src->dayOfYear - 1;
+    dest->tm_isdst  = src->isDST;
+}
+
+
 void rtlmemcpy(Slot *params, Slot *result)
 {
     void *dest   = params[2].ptrVal;
@@ -157,6 +185,41 @@ void rtlclock(Slot *params, Slot *result)
     clock_gettime(CLOCK_REALTIME, &t);
     result->realVal = (double)t.tv_sec + (double)t.tv_nsec * 1e-9;
 #endif
+}
+
+
+void rtllocaltime(Slot *params, Slot *result)
+{
+    RTLDateTime *rtlDateTime = (RTLDateTime *)params[0].ptrVal;
+    time_t curTime = params[1].intVal;
+
+    struct tm *dateTime = localtime(&curTime);
+    convToRTLDateTime(rtlDateTime, dateTime);
+
+    result->ptrVal = rtlDateTime;
+}
+
+
+void rtlgmtime(Slot *params, Slot *result)
+{
+    RTLDateTime *rtlDateTime = (RTLDateTime *)params[0].ptrVal;
+    time_t curTime = params[1].intVal;
+
+    struct tm *dateTime = gmtime(&curTime);
+    convToRTLDateTime(rtlDateTime, dateTime);
+
+    result->ptrVal = rtlDateTime;
+}
+
+
+void rtlmktime(Slot *params, Slot *result)
+{
+    RTLDateTime *rtlDateTime = (RTLDateTime *)params[0].ptrVal;
+
+    struct tm dateTime;
+    convFromRTLDateTime(&dateTime, rtlDateTime);
+
+    result->intVal = mktime(&dateTime);
 }
 
 

@@ -28,6 +28,7 @@ import (
     "nullstr.um"
     "vararg.um"
     "defparam.um"
+    "datetime.um"
 )
 
 fn main() {
@@ -60,4 +61,5 @@ fn main() {
     printf("\n\n>>> Null strings\n\n");             nullstr.test()
     printf("\n\n>>> Variadic functions\n\n");       vararg.test()
     printf("\n\n>>> Default parameters\n\n");       defparam.test()
+    printf("\n\n>>> Date/time\n\n");                datetime.test()
 }

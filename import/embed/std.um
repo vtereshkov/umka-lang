@@ -195,13 +195,35 @@ fn rand*(): int {
 
 fn frand*(): real {return real(rand()) / randMax}
 
-// Timer
+// Time
+
+type DateTime* = struct {
+    second, minute, hour: int
+    day, month, year: int
+    dayOfWeek, dayOfYear: int
+    isDST: bool
+}
 
 fn rtltime(): int
 fn time*(): int {return rtltime()}
 
 fn rtlclock(): real
 fn clock*(): real {return rtlclock()}
+
+fn rtllocaltime(t: int): DateTime
+fn localtime*(t: int): DateTime {return rtllocaltime(t)}
+
+fn rtlgmtime(t: int): DateTime
+fn gmtime*(t: int): DateTime {return rtlgmtime(t)}
+
+fn rtlmktime(d: ^DateTime): int
+fn mktime*(d: DateTime): int {return rtlmktime(&d)}
+
+fn timestr*(d: DateTime): str {
+    return sprintf("%4d-%02d-%02d %02d:%02d:%02d", 
+                   d.year, d.month, d.day,
+                   d.hour, d.minute, d.second)
+}
 
 // Command line and environment
 

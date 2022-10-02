@@ -1450,7 +1450,20 @@ fn frand*(): real
 
 Returns a real pseudo-random number between 0 and 1 inclusive.
 
-### Timer
+### Time
+
+#### Types
+
+```
+type DateTime* = struct {
+    second, minute, hour: int
+    day, month, year: int
+    dayOfWeek, dayOfYear: int
+    isDST: bool
+}
+```
+
+Date/time structure.
 
 #### Functions
 
@@ -1465,6 +1478,30 @@ fn clock*(): real
 ```
 
 Returns the number of seconds since the start of the program.
+
+```
+fn localtime*(t: int): DateTime
+```
+
+Converts the time `t` to a date/time structure. `t` is treated as local time.
+
+```
+fn gmtime*(t: int): DateTime
+```
+
+Converts the time `t` to a date/time structure. `t` is treated as UTC time.
+
+```
+fn mktime*(d: DateTime): int
+```
+
+Converts the date/time structure `d` to time.
+
+```
+fn timestr*(d: DateTime): str
+```
+
+Returns the string representation of the date/time structure `d`.
 
 ### Command line and environment
 
