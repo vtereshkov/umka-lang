@@ -1,4 +1,4 @@
-*.o
-*build/
-*obj/
+build*/
 src/umka_runtime_src.h
+.ccls-cache/
+

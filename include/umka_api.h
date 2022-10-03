@@ -3,7 +3,7 @@
 
 
 #ifdef _WIN32
-    #if defined(UMKA_STATIC)
+    #ifdef UMKA_STATIC
         #define UMKA_EXPORT
         #define UMKA_IMPORT
     #else
@@ -26,7 +26,7 @@
 #include <stdbool.h>
 
 
-#if defined(__cplusplus)
+#ifdef __cplusplus
 extern "C" {
 #endif
 
@@ -108,7 +108,7 @@ UMKA_API void *umkaGetMapItem       (void *umka, UmkaMap *map, UmkaStackSlot key
 UMKA_API const char *umkaGetVersion (void);
 
 
-#if defined(__cplusplus)
+#ifdef __cplusplus
 }
 #endif
 
