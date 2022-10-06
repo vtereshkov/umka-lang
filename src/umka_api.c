@@ -184,7 +184,7 @@ UMKA_API int umkaGetFunc(void *umka, const char *moduleName, const char *funcNam
 }
 
 
-UMKA_API bool umkaGetCallStack(void *umka, int depth, int *offset, char *name, int size)
+UMKA_API bool umkaGetCallStack(void *umka, int depth, int nameSize, int *offset, char *fileName, char *fnName, int *line)
 {
     Compiler *comp = umka;
     Slot *base = comp->vm.fiber->base;
@@ -197,8 +197,14 @@ UMKA_API bool umkaGetCallStack(void *umka, int depth, int *offset, char *name, i
     if (offset)
         *offset = ip;
 
-    if (name)
-        snprintf(name, size, "%s", comp->vm.fiber->debugPerInstr[ip].fnName);
+    if (fileName)
+        snprintf(fileName, nameSize, "%s", comp->vm.fiber->debugPerInstr[ip].fileName);
+
+    if (fnName)
+        snprintf(fnName, nameSize, "%s", comp->vm.fiber->debugPerInstr[ip].fnName);
+
+    if (line)
+        *line = comp->vm.fiber->debugPerInstr[ip].line;
 
     return true;
 }

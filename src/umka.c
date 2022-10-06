@@ -53,13 +53,13 @@ void printRuntimeError(void *umka)
 
     for (int depth = 0; depth < MAX_CALL_STACK_DEPTH; depth++)
     {
-        char fnName[UMKA_MSG_LEN + 1];
-        int fnOffset;
+        char fileName[UMKA_MSG_LEN + 1], fnName[UMKA_MSG_LEN + 1];
+        int line;
 
-        if (!umkaGetCallStack(umka, depth, &fnOffset, fnName, UMKA_MSG_LEN + 1))
+        if (!umkaGetCallStack(umka, depth, UMKA_MSG_LEN + 1, NULL, fileName, fnName, &line))
             break;
 
-        fprintf(stderr, "%08d: %s\n", fnOffset, fnName);
+        fprintf(stderr, "    %s: %s (%d)\n", fnName, fileName, line);
     }
 }
 

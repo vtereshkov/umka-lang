@@ -1691,10 +1691,11 @@ UMKA_API int umkaGetFunc(void *umka, const char *moduleName, const char *funcNam
 Gets an Umka function that can be called from C/C++ using `umkaCall()`.  Here, `umka` is the interpreter instance handle, `moduleName` is the Umka module name, `funcName` is the Umka function name. Returns the function entry point offset.
 
 ```
-UMKA_API bool umkaGetCallStack(void *umka, int depth, int *offset, char *name, int size);
+UMKA_API bool umkaGetCallStack(void *umka, int depth, int nameSize, 
+                               int *offset, char *fileName, char *fnName, int *line);
 ```
 
-Gets the Umka function `name` and entry point `offset` from the call stack at the specified call `depth`. If `depth` is zero, the current function information is retrieved. Here, `umka` is the interpreter instance handle and `size`  is the `name` buffer size, including the null character. Returns `true` on success.
+Gets the Umka call stack entry at the specified call `depth`. The entry is defined by the bytecode `offset`, source file `fileName`, function `fnName` and source `line`. If `depth` is zero, the current function information is retrieved. Here, `umka` is the interpreter instance handle, `nameSize` is the `fileName` or `fnName` buffer size, including the null character. Returns `true` on success.
 
 ```
 UMKA_API void umkaSetHook(void *umka, UmkaHookEvent event, UmkaHookFunc hook);
