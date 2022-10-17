@@ -1576,13 +1576,12 @@ Umka debug hook function.
 #define UmkaDynArray(T) struct \
 { \
     void *internal; \
-    int64_t len; \
     int64_t itemSize; \
     T *data; \
 }
 ```
 
-Umka dynamic array containing `len` items of type `T`. Even though the array items pointed to by `data` can be both read and written, the structure itself is considered read-only. It cannot be used for returning a dynamic array from an external C/C++ function.
+Umka dynamic array containing items of type `T`. Even though the array items pointed to by `data` can be both read and written, the structure itself is considered read-only. It cannot be used for returning a dynamic array from an external C/C++ function.
 
 ```
 typedef struct
@@ -1726,6 +1725,12 @@ UMKA_API void *umkaGetMapItem(void *umka, UmkaMap *map, UmkaStackSlot key);
 ```
 
 Gets the pointer to the `map` item indexed by `key`. Returns `NULL` if the item does not exist.
+
+```
+UMKA_API int umkaGetDynArrayLen(const void *array);
+```
+
+Returns the length of the dynamic `array` passed as a pointer to `UmkaDynArray(T)`.
 
 ```
 UMKA_API const char *umkaGetVersion(void);
