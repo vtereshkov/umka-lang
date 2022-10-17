@@ -642,20 +642,20 @@ Constructs a copy of the dynamic array `a`.
 fn append(a: []T, x: (^T | []T)): []T
 ```
 
-Constructs a copy of the dynamic array `a` and appends `x` to it. The `x` can be either a new item of the same type as the item type `T`  of `a`, or another dynamic array of the same item type `T`.
+Appends `x` to the dynamic array `a`. The `x` can be either a new item of the same type as the item type `T`  of `a`, or another dynamic array of the same item type `T`. If `a` has a capacity of at least `len(a) + len(x)` items, it is altered and returned. Otherwise, a new dynamic array is constructed and returned. 
 
 ```
 fn insert(a: []T, index: int, x: T): []T
 ```
 
-Constructs a copy of the dynamic array `a` and inserts `x` at position `index` into it. The `x` should be a new item of the same type as the item type `T` of `a`.
+Inserts `x` into the dynamic array `a` at position `index`. The `x` should be a new item of the same type as the item type `T` of `a`. If `a` has a capacity of at least `len(a) + 1` items, it is altered and returned. Otherwise, a new dynamic array is constructed and returned.
 
 ```
 fn delete(a: []T, index: int): []T        // (1)
 fn delete(m: map[K]T, key: K): map[K]T    // (2)
 ```
 
-(1) Constructs a copy of the dynamic array `a` and deletes the item at position `index` from it.
+(1) Deletes an item at position `index` from the dynamic array `a` and returns this dynamic array.
 
 (2) Deletes an item indexed by `key` from the map `m` and returns this map.
 

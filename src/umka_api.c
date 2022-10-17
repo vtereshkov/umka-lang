@@ -8,7 +8,7 @@
 #include "umka_compiler.h"
 #include "umka_api.h"
 
-#define UMKA_VERSION    "0.9"
+#define UMKA_VERSION    "0.10"
 
 
 static void compileWarning(void *context, const char *format, ...)
@@ -242,6 +242,15 @@ UMKA_API void *umkaGetMapItem(void *umka, UmkaMap *map, UmkaStackSlot key)
 {
     Compiler *comp = umka;
     return vmGetMapNodeData(&comp->vm, (Map *)map, *(Slot *)&key);
+}
+
+
+UMKA_API int umkaGetDynArrayLen(const void *array)
+{
+    const DynArray *dynArray = (const DynArray *)array;
+    if (!dynArray->data)
+        return 0;
+    return getDims(dynArray)->len;
 }
 
 

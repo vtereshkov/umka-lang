@@ -42,10 +42,10 @@ fn slices() {
 
 fn insertions() {
     a := []str{"Hello" + ' ', "World"}
-    b := insert(a, 1, "My " + "Wonderful")
-    c := insert(b, 1, ", ") 
-    d := insert(c, 0, "Oh" + ',' + " ")
-    e := insert(d, len(d), "!")
+    b := insert(copy(a), 1, "My " + "Wonderful")
+    c := insert(copy(b), 1, ", ") 
+    d := insert(copy(c), 0, "Oh" + ',' + " ")
+    e := insert(copy(d), len(d), "!")
 
     printf(repr(a) + '\n')        
     printf(repr(b) + '\n')
@@ -88,7 +88,7 @@ fn test*() {
     f(a)
         
     std.println("Appending...")
-    e := append(a, [2]^int {new(int), new(int)})
+    e := append(copy(a), [2]^int {new(int), new(int)})
     e[len(e) - 1][0]^ = 876
     e[len(e) - 1][1]^ = 765
 
@@ -96,7 +96,7 @@ fn test*() {
         std.println("e: " + std.itoa(x[0]^) + " " + std.itoa(x[1]^))
     } 
 
-    f := e
+    f := copy(e)
     
     del := 4
     std.println("Deleting #" + std.itoa(del) + "...")

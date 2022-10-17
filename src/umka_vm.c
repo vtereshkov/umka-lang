@@ -671,8 +671,9 @@ static FORCE_INLINE void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, voi
                             }
                             case TYPE_DYNARRAY:
                             {
-                                int len = chunk->size / typeSizeNoCheck(chunk->type->base);
-                                doAddArrayItemsRefCntCandidates(candidates, chunkDataPtr, chunk->type, len);
+                                DynArrayDimensions *dims = (DynArrayDimensions *)chunkDataPtr;
+                                void *data = (char *)chunkDataPtr + sizeof(DynArrayDimensions);
+                                doAddArrayItemsRefCntCandidates(candidates, data, chunk->type, dims->len);
                                 break;
                             }
                             case TYPE_STRUCT:
@@ -732,7 +733,7 @@ static FORCE_INLINE void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, voi
 
                     // Only one ref is left. Defer processing the parent and traverse the children before removing the ref
                     candidatePushDeferred(candidates, array->data, type, page);
-                    doAddArrayItemsRefCntCandidates(candidates, array->data, type, array->len);
+                    doAddArrayItemsRefCntCandidates(candidates, array->data, type, getDims(array)->len);
                 }
                 break;
             }
@@ -776,6 +777,28 @@ static FORCE_INLINE void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, voi
             default: break;
         }
     }
+}
+
+
+static FORCE_INLINE void doAllocDynArray(HeapPages *pages, DynArray *array, Type *type, int64_t len, Error *error)
+{
+    array->type     = type;
+    array->itemSize = typeSizeNoCheck(array->type->base);
+
+    DynArrayDimensions dims = {.len = len, .capacity = 2 * (len + 1)};
+
+    char *dimsAndData = chunkAlloc(pages, sizeof(DynArrayDimensions) + dims.capacity * array->itemSize, array->type, NULL, error);
+    *(DynArrayDimensions *)dimsAndData = dims;
+
+    array->data = dimsAndData + sizeof(DynArrayDimensions);
+}
+
+
+static FORCE_INLINE void doAllocMap(HeapPages *pages, Map *map, Type *type, Error *error)
+{
+    map->type      = type;
+    map->root      = chunkAlloc(pages, typeSizeNoCheck(type->base), type->base, NULL, error);
+    map->root->len = 0;
 }
 
 
@@ -823,7 +846,7 @@ static void doGetMapKeyBytes(Slot key, Type *keyType, Error *error, char **keyBy
         {
             DynArray *array = (DynArray *)key.ptrVal;
             *keyBytes = (char *)array->data;
-            *keySize = array->len * array->itemSize;
+            *keySize = array->data ? (getDims(array)->len * array->itemSize) : 0;
             break;
         }
         default:
@@ -971,7 +994,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int maxD
             if (array && array->data)
             {
                 char *itemPtr = array->data;
-                for (int i = 0; i < array->len; i++)
+                for (int i = 0; i < getDims(array)->len; i++)
                 {
                     Slot itemSlot = {.ptrVal = itemPtr};
                     doBasicDeref(&itemSlot, type->base->kind, error);
@@ -1379,20 +1402,9 @@ static FORCE_INLINE void doBuiltinMake(Fiber *fiber, HeapPages *pages, Error *er
     Type *type   = (Type *)(fiber->top++)->ptrVal;
 
     if (type->kind == TYPE_DYNARRAY)
-    {
-        DynArray *array = (DynArray *)result;
-        array->len      = len;
-        array->type     = type;
-        array->itemSize = typeSizeNoCheck(array->type->base);
-        array->data     = chunkAlloc(pages, array->len * array->itemSize, array->type, NULL, error);
-    }
+        doAllocDynArray(pages, (DynArray *)result, type, len, error);
     else // TYPE_MAP
-    {
-        Map *map        = (Map *)result;
-        map->type       = type;
-        map->root       = chunkAlloc(pages, typeSizeNoCheck(type->base), type->base, NULL, error);
-        map->root->len  = 0;
-    }
+        doAllocMap(pages, (Map *)result, type, error);
 
     (--fiber->top)->ptrVal = result;
 }
@@ -1406,10 +1418,10 @@ static FORCE_INLINE void doBuiltinMakefromarr(Fiber *fiber, HeapPages *pages, Er
     DynArray *dest = (DynArray *)(fiber->top++)->ptrVal;
     void *src      = (fiber->top++)->ptrVal;
 
-    memcpy(dest->data, src, dest->len * dest->itemSize);
+    memcpy(dest->data, src, getDims(dest)->len * dest->itemSize);
 
     // Increase result items' ref counts, as if they have been assigned one by one
-    Type staticArrayType = {.kind = TYPE_ARRAY, .base = dest->type->base, .numItems = dest->len, .next = NULL};
+    Type staticArrayType = {.kind = TYPE_ARRAY, .base = dest->type->base, .numItems = getDims(dest)->len, .next = NULL};
     doBasicChangeRefCnt(fiber, pages, dest->data, &staticArrayType, TOK_PLUSPLUS);
 
     (--fiber->top)->ptrVal = dest;
@@ -1420,17 +1432,14 @@ static FORCE_INLINE void doBuiltinMakefromarr(Fiber *fiber, HeapPages *pages, Er
 static FORCE_INLINE void doBuiltinMakefromstr(Fiber *fiber, HeapPages *pages, Error *error)
 {
     DynArray *dest   = (DynArray   *)(fiber->top++)->ptrVal;
-    dest->type       = (Type       *)(fiber->top++)->ptrVal;
+    Type *destType   = (Type       *)(fiber->top++)->ptrVal;
     const char *src  = (const char *)(fiber->top++)->ptrVal;
 
     if (!src)
         src = "";
 
-    dest->len      = strlen(src);
-    dest->itemSize = 1;
-    dest->data     = chunkAlloc(pages, dest->len, dest->type, NULL, error);
-
-    memcpy(dest->data, src, dest->len);
+    doAllocDynArray(pages, dest, destType, strlen(src), error);
+    memcpy(dest->data, src, getDims(dest)->len);
 
     (--fiber->top)->ptrVal = dest;
 }
@@ -1446,11 +1455,11 @@ static FORCE_INLINE void doBuiltinMaketoarr(Fiber *fiber, HeapPages *pages, Erro
     if (!src || !src->data)
         error->runtimeHandler(error->context, "Dynamic array is null");
 
-    if (src->len > destType->numItems)
+    if (getDims(src)->len > destType->numItems)
         error->runtimeHandler(error->context, "Dynamic array is too long");
 
     memset(dest, 0, typeSizeNoCheck(destType));
-    memcpy(dest, src->data, src->len * src->itemSize);
+    memcpy(dest, src->data, getDims(src)->len * src->itemSize);
 
     // Increase result items' ref counts, as if they have been assigned one by one
     doBasicChangeRefCnt(fiber, pages, dest, destType, TOK_PLUSPLUS);
@@ -1467,9 +1476,9 @@ static FORCE_INLINE void doBuiltinMaketostr(Fiber *fiber, HeapPages *pages, Erro
     if (!src || !src->data)
         error->runtimeHandler(error->context, "Dynamic array is null");
 
-    char *dest = chunkAlloc(pages, src->len + 1, NULL, NULL, error);
-    memcpy(dest, src->data, src->len);
-    dest[src->len] = 0;
+    char *dest = chunkAlloc(pages, getDims(src)->len + 1, NULL, NULL, error);
+    memcpy(dest, src->data, getDims(src)->len);
+    dest[getDims(src)->len] = 0;
 
     (--fiber->top)->ptrVal = dest;
 }
@@ -1484,15 +1493,11 @@ static FORCE_INLINE void doBuiltinCopy(Fiber *fiber, HeapPages *pages, Error *er
     if (!array || !array->data)
         error->runtimeHandler(error->context, "Dynamic array is null");
 
-    result->type     = array->type;
-    result->len      = array->len;
-    result->itemSize = array->itemSize;
-    result->data     = chunkAlloc(pages, result->len * result->itemSize, result->type, NULL, error);
-
-    memcpy((char *)result->data, (char *)array->data, array->len * array->itemSize);
+    doAllocDynArray(pages, result, array->type, getDims(array)->len, error);
+    memmove((char *)result->data, (char *)array->data, getDims(array)->len * array->itemSize);
 
     // Increase result items' ref counts, as if they have been assigned one by one
-    Type staticArrayType = {.kind = TYPE_ARRAY, .base = result->type->base, .numItems = result->len, .next = NULL};
+    Type staticArrayType = {.kind = TYPE_ARRAY, .base = result->type->base, .numItems = getDims(result)->len, .next = NULL};
     doBasicChangeRefCnt(fiber, pages, result->data, &staticArrayType, TOK_PLUSPLUS);
 
     (--fiber->top)->ptrVal = result;
@@ -1521,20 +1526,35 @@ static FORCE_INLINE void doBuiltinAppend(Fiber *fiber, HeapPages *pages, Error *
             error->runtimeHandler(error->context, "Dynamic array is null");
 
         rhs = rhsArray->data;
-        rhsLen = rhsArray->len;
+        rhsLen = getDims(rhsArray)->len;
     }
 
-    result->type     = array->type;
-    result->len      = array->len + rhsLen;
-    result->itemSize = array->itemSize;
-    result->data     = chunkAlloc(pages, result->len * result->itemSize, result->type, NULL, error);
+    int newLen = getDims(array)->len + rhsLen;
 
-    memcpy((char *)result->data, (char *)array->data, array->len * array->itemSize);
-    memcpy((char *)result->data + array->len * array->itemSize, (char *)rhs, rhsLen * array->itemSize);
+    if (newLen < getDims(array)->capacity)
+    {
+        doBasicChangeRefCnt(fiber, pages, array, array->type, TOK_PLUSPLUS);
+        *result = *array;
 
-    // Increase result items' ref counts, as if they have been assigned one by one
-    Type staticArrayType = {.kind = TYPE_ARRAY, .base = result->type->base, .numItems = result->len, .next = NULL};
-    doBasicChangeRefCnt(fiber, pages, result->data, &staticArrayType, TOK_PLUSPLUS);
+        memmove((char *)result->data + getDims(array)->len * array->itemSize, (char *)rhs, rhsLen * array->itemSize);
+
+        // Increase result items' ref counts, as if they have been assigned one by one
+        Type staticArrayType = {.kind = TYPE_ARRAY, .base = result->type->base, .numItems = rhsLen, .next = NULL};
+        doBasicChangeRefCnt(fiber, pages, (char *)result->data + getDims(array)->len * array->itemSize, &staticArrayType, TOK_PLUSPLUS);
+
+        getDims(result)->len = newLen;
+    }
+    else
+    {
+        doAllocDynArray(pages, result, array->type, newLen, error);
+
+        memmove((char *)result->data, (char *)array->data, getDims(array)->len * array->itemSize);
+        memmove((char *)result->data + getDims(array)->len * array->itemSize, (char *)rhs, rhsLen * array->itemSize);
+
+        // Increase result items' ref counts, as if they have been assigned one by one
+        Type staticArrayType = {.kind = TYPE_ARRAY, .base = result->type->base, .numItems = newLen, .next = NULL};
+        doBasicChangeRefCnt(fiber, pages, result->data, &staticArrayType, TOK_PLUSPLUS);
+    }
 
     (--fiber->top)->ptrVal = result;
 }
@@ -1551,21 +1571,35 @@ static FORCE_INLINE void doBuiltinInsert(Fiber *fiber, HeapPages *pages, Error *
     if (!array || !array->data)
         error->runtimeHandler(error->context, "Dynamic array is null");
 
-    if (index < 0 || index > array->len)
-        error->runtimeHandler(error->context, "Index %lld is out of range 0...%lld", index, array->len);
+    if (index < 0 || index > getDims(array)->len)
+        error->runtimeHandler(error->context, "Index %lld is out of range 0...%lld", index, getDims(array)->len);
 
-    result->type     = array->type;
-    result->len      = array->len + 1;
-    result->itemSize = array->itemSize;
-    result->data     = chunkAlloc(pages, result->len * result->itemSize, result->type, NULL, error);
+    if (getDims(array)->len + 1 < getDims(array)->capacity)
+    {
+        doBasicChangeRefCnt(fiber, pages, array, array->type, TOK_PLUSPLUS);
+        *result = *array;
 
-    memcpy((char *)result->data, (char *)array->data, index * result->itemSize);
-    memcpy((char *)result->data + index * result->itemSize, (char *)item, result->itemSize);
-    memcpy((char *)result->data + (index + 1) * result->itemSize, (char *)array->data + index * result->itemSize, (result->len - index - 1) * result->itemSize);
+        memmove((char *)result->data + (index + 1) * result->itemSize, (char *)result->data + index * result->itemSize, (getDims(array)->len - index) * result->itemSize);
+        memmove((char *)result->data + index * result->itemSize, (char *)item, result->itemSize);
 
-    // Increase result items' ref counts, as if they have been assigned one by one
-    Type staticArrayType = {.kind = TYPE_ARRAY, .base = result->type->base, .numItems = result->len, .next = NULL};
-    doBasicChangeRefCnt(fiber, pages, result->data, &staticArrayType, TOK_PLUSPLUS);
+        // Increase result items' ref counts, as if they have been assigned one by one
+        Type staticArrayType = {.kind = TYPE_ARRAY, .base = result->type->base, .numItems = 1, .next = NULL};
+        doBasicChangeRefCnt(fiber, pages, (char *)result->data + index * result->itemSize, &staticArrayType, TOK_PLUSPLUS);
+
+        getDims(result)->len++;
+    }
+    else
+    {
+        doAllocDynArray(pages, result, array->type, getDims(array)->len + 1, error);
+
+        memmove((char *)result->data, (char *)array->data, index * result->itemSize);
+        memmove((char *)result->data + (index + 1) * result->itemSize, (char *)array->data + index * result->itemSize, (getDims(array)->len - index) * result->itemSize);
+        memmove((char *)result->data + index * result->itemSize, (char *)item, result->itemSize);
+
+        // Increase result items' ref counts, as if they have been assigned one by one
+        Type staticArrayType = {.kind = TYPE_ARRAY, .base = result->type->base, .numItems = getDims(result)->len, .next = NULL};
+        doBasicChangeRefCnt(fiber, pages, result->data, &staticArrayType, TOK_PLUSPLUS);
+    }
 
     (--fiber->top)->ptrVal = result;
 }
@@ -1581,20 +1615,19 @@ static FORCE_INLINE void doBuiltinDeleteDynArray(Fiber *fiber, HeapPages *pages,
     if (!array || !array->data)
         error->runtimeHandler(error->context, "Dynamic array is null");
 
-    if (index < 0 || index > array->len - 1)
-        error->runtimeHandler(error->context, "Index %lld is out of range 0...%lld", index, array->len - 1);
+    if (index < 0 || index > getDims(array)->len - 1)
+        error->runtimeHandler(error->context, "Index %lld is out of range 0...%lld", index, getDims(array)->len - 1);
 
-    result->type     = array->type;
-    result->len      = array->len - 1;
-    result->itemSize = array->itemSize;
-    result->data     = chunkAlloc(pages, result->len * result->itemSize, result->type, NULL, error);
+    doBasicChangeRefCnt(fiber, pages, array, array->type, TOK_PLUSPLUS);
+    *result = *array;
 
-    memcpy((char *)result->data, (char *)array->data, index * array->itemSize);
-    memcpy((char *)result->data + index * result->itemSize, (char *)array->data + (index + 1) * result->itemSize, (result->len - index) * result->itemSize);
+    // Decrease result item's ref count
+    Type staticArrayType = {.kind = TYPE_ARRAY, .base = result->type->base, .numItems = 1, .next = NULL};
+    doBasicChangeRefCnt(fiber, pages, (char *)result->data + index * result->itemSize, &staticArrayType, TOK_MINUSMINUS);
 
-    // Increase result items' ref counts, as if they have been assigned one by one
-    Type staticArrayType = {.kind = TYPE_ARRAY, .base = result->type->base, .numItems = result->len, .next = NULL};
-    doBasicChangeRefCnt(fiber, pages, result->data, &staticArrayType, TOK_PLUSPLUS);
+    memmove((char *)result->data + index * result->itemSize, (char *)result->data + (index + 1) * result->itemSize, (getDims(array)->len - index - 1) * result->itemSize);
+
+    getDims(result)->len--;
 
     (--fiber->top)->ptrVal = result;
 }
@@ -1649,7 +1682,7 @@ static FORCE_INLINE void doBuiltinSlice(Fiber *fiber, HeapPages *pages, Error *e
         if (!array || !array->data)
             error->runtimeHandler(error->context, "Dynamic array is null");
 
-        len = array->len;
+        len = getDims(array)->len;
     }
     else
     {
@@ -1678,15 +1711,12 @@ static FORCE_INLINE void doBuiltinSlice(Fiber *fiber, HeapPages *pages, Error *e
     if (result)
     {
         // Dynamic array
-        result->type     = array->type;
-        result->len      = endIndex - startIndex;
-        result->itemSize = array->itemSize;
-        result->data     = chunkAlloc(pages, result->len * result->itemSize, result->type, NULL, error);
+        doAllocDynArray(pages, result, array->type, endIndex - startIndex, error);
 
-        memcpy((char *)result->data, (char *)array->data + startIndex * result->itemSize, result->len * result->itemSize);
+        memcpy((char *)result->data, (char *)array->data + startIndex * result->itemSize, getDims(result)->len * result->itemSize);
 
         // Increase result items' ref counts, as if they have been assigned one by one
-        Type staticArrayType = {.kind = TYPE_ARRAY, .base = result->type->base, .numItems = result->len, .next = NULL};
+        Type staticArrayType = {.kind = TYPE_ARRAY, .base = result->type->base, .numItems = getDims(result)->len, .next = NULL};
         doBasicChangeRefCnt(fiber, pages, result->data, &staticArrayType, TOK_PLUSPLUS);
 
         (--fiber->top)->ptrVal = result;
@@ -1711,10 +1741,10 @@ static FORCE_INLINE void doBuiltinLen(Fiber *fiber, Error *error)
         case TYPE_DYNARRAY:
         {
             const DynArray *array = (DynArray *)(fiber->top->ptrVal);
-            if (!array)
+            if (!array || !array->data)
                 error->runtimeHandler(error->context, "Dynamic array is null");
 
-            fiber->top->intVal = array->len;
+            fiber->top->intVal = getDims(array)->len;
             break;
         }
         case TYPE_STR:
@@ -1842,15 +1872,11 @@ static FORCE_INLINE void doBuiltinKeys(Fiber *fiber, HeapPages *pages, Error *er
     if (!map || !map->root)
         error->runtimeHandler(error->context, "Map is null");
 
-    result->len      = map->root->len;
-    result->type     = resultType;
-    result->itemSize = typeSizeNoCheck(result->type->base);
-    result->data     = chunkAlloc(pages, result->len * result->itemSize, result->type, NULL, error);
-
+    doAllocDynArray(pages, result, resultType, map->root->len, error);
     doGetMapKeys(map, result->data, error);
 
     // Increase result items' ref counts, as if they have been assigned one by one
-    Type staticArrayType = {.kind = TYPE_ARRAY, .base = result->type->base, .numItems = result->len, .next = NULL};
+    Type staticArrayType = {.kind = TYPE_ARRAY, .base = result->type->base, .numItems = getDims(result)->len, .next = NULL};
     doBasicChangeRefCnt(fiber, pages, result->data, &staticArrayType, TOK_PLUSPLUS);
 
     (--fiber->top)->ptrVal = result;
@@ -2319,7 +2345,7 @@ static FORCE_INLINE void doGetDynArrayPtr(Fiber *fiber, Error *error)
         error->runtimeHandler(error->context, "Dynamic array is null");
 
     int itemSize    = array->itemSize;
-    int len         = array->len;
+    int len         = getDims(array)->len;
 
     if (index < 0 || index > len - 1)
         error->runtimeHandler(error->context, "Index %d is out of range 0...%d", index, len - 1);

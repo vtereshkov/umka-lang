@@ -57,7 +57,6 @@ typedef void (*UmkaHookFunc)(const char *fileName, const char *funcName, int lin
 #define UmkaDynArray(T) struct \
 { \
     void *internal; \
-    int64_t len; \
     int64_t itemSize; \
     T *data; \
 }
@@ -105,6 +104,7 @@ UMKA_API void *umkaAllocData        (void *umka, int size, UmkaExternFunc onFree
 UMKA_API void umkaIncRef            (void *umka, void *ptr);
 UMKA_API void umkaDecRef            (void *umka, void *ptr);
 UMKA_API void *umkaGetMapItem       (void *umka, UmkaMap *map, UmkaStackSlot key);
+UMKA_API int  umkaGetDynArrayLen    (const void *array);
 UMKA_API const char *umkaGetVersion (void);
 
 

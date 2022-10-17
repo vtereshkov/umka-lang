@@ -30,11 +30,16 @@ enum
 
 typedef struct
 {
+    int64_t len, capacity;
+} DynArrayDimensions;
+
+
+typedef struct
+{
     // Must have 8 byte alignment
     struct tagType *type;
-    int64_t len;
-    int64_t itemSize;       // Duplicates information contained in type, but useful for better performance
-    void *data;
+    int64_t itemSize;           // Duplicates information contained in type, but useful for better performance
+    void *data;                 // Allocated chunk should start at (char *)data - sizeof(DynArrayDimensions)
 } DynArray;
 
 
@@ -228,5 +233,12 @@ static inline bool getBit(const char *buf, int64_t bitPos)
 {
     return (buf[bitPos / 8] >> (bitPos % 8)) & 1;
 }
+
+
+static inline DynArrayDimensions *getDims(const DynArray *array)
+{
+    return (DynArrayDimensions *)((char *)array->data - sizeof(DynArrayDimensions));
+}
+
 
 #endif // UMKA_COMMON_H_INCLUDED
