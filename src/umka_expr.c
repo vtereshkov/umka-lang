@@ -945,6 +945,19 @@ static void parseBuiltinLenCall(Compiler *comp, Type **type, Const *constant)
 }
 
 
+static void parseBuiltinCapCall(Compiler *comp, Type **type, Const *constant)
+{
+    if (constant)
+        comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
+
+    parseExpr(comp, type, NULL);
+    typeAssertCompatibleBuiltin(&comp->types, *type, BUILTIN_CAP, (*type)->kind == TYPE_DYNARRAY);
+
+    genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_CAP);
+    *type = comp->intType;
+}
+
+
 // fn sizeof(T | a: T): int
 static void parseBuiltinSizeofCall(Compiler *comp, Type **type, Const *constant)
 {
@@ -1217,6 +1230,7 @@ static void parseBuiltinCall(Compiler *comp, Type **type, Const *constant, Built
         case BUILTIN_DELETE:        parseBuiltinDeleteCall(comp, type, constant);           break;
         case BUILTIN_SLICE:         parseBuiltinSliceCall(comp, type, constant);            break;
         case BUILTIN_LEN:           parseBuiltinLenCall(comp, type, constant);              break;
+        case BUILTIN_CAP:           parseBuiltinCapCall(comp, type, constant);              break;
         case BUILTIN_SIZEOF:        parseBuiltinSizeofCall(comp, type, constant);           break;
         case BUILTIN_SIZEOFSELF:    parseBuiltinSizeofselfCall(comp, type, constant);       break;
         case BUILTIN_SELFHASPTR:    parseBuiltinSelfhasptrCall(comp, type, constant);       break;

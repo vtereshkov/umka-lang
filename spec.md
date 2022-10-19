@@ -642,13 +642,13 @@ Constructs a copy of the dynamic array `a`.
 fn append(a: []T, x: (^T | []T)): []T
 ```
 
-Appends `x` to the dynamic array `a`. The `x` can be either a new item of the same type as the item type `T`  of `a`, or another dynamic array of the same item type `T`. If `a` has a capacity of at least `len(a) + len(x)` items, it is altered and returned. Otherwise, a new dynamic array is constructed and returned. 
+Appends `x` to the dynamic array `a`. The `x` can be either a new item of the same type as the item type `T`  of `a`, or another dynamic array of the same item type `T`. If `len(a) + len(x) <= cap(a)`, it is altered and returned. Otherwise, a new dynamic array is constructed and returned. 
 
 ```
 fn insert(a: []T, index: int, x: T): []T
 ```
 
-Inserts `x` into the dynamic array `a` at position `index`. The `x` should be a new item of the same type as the item type `T` of `a`. If `a` has a capacity of at least `len(a) + 1` items, it is altered and returned. Otherwise, a new dynamic array is constructed and returned.
+Inserts `x` into the dynamic array `a` at position `index`. The `x` should be a new item of the same type as the item type `T` of `a`. If `len(a) + 1 <= cap(a)`, it is altered and returned. Otherwise, a new dynamic array is constructed and returned.
 
 ```
 fn delete(a: []T, index: int): []T        // (1)
@@ -670,6 +670,12 @@ fn len(a: ([...]T | []T | map[K]T | str)): int
 ```
 
 Returns the length of `a`, where `a` can be an array, a dynamic array, a map or a string.
+
+```
+fn cap(a: []T): int
+```
+
+Returns the capacity of the dynamic array `a`, i.e., the number of items for which the space is allocated in `a`.
 
 ```
 fn sizeof(T | a: T): int

@@ -96,6 +96,7 @@ static const char *builtinSpelling [] =
     "delete",
     "slice",
     "len",
+    "cap",
     "sizeof",
     "sizeofself",
     "selfhasptr",
@@ -1531,7 +1532,7 @@ static FORCE_INLINE void doBuiltinAppend(Fiber *fiber, HeapPages *pages, Error *
 
     int newLen = getDims(array)->len + rhsLen;
 
-    if (newLen < getDims(array)->capacity)
+    if (newLen <= getDims(array)->capacity)
     {
         doBasicChangeRefCnt(fiber, pages, array, array->type, TOK_PLUSPLUS);
         *result = *array;
@@ -1574,7 +1575,7 @@ static FORCE_INLINE void doBuiltinInsert(Fiber *fiber, HeapPages *pages, Error *
     if (index < 0 || index > getDims(array)->len)
         error->runtimeHandler(error->context, "Index %lld is out of range 0...%lld", index, getDims(array)->len);
 
-    if (getDims(array)->len + 1 < getDims(array)->capacity)
+    if (getDims(array)->len + 1 <= getDims(array)->capacity)
     {
         doBasicChangeRefCnt(fiber, pages, array, array->type, TOK_PLUSPLUS);
         *result = *array;
@@ -1765,6 +1766,16 @@ static FORCE_INLINE void doBuiltinLen(Fiber *fiber, Error *error)
         default:
             error->runtimeHandler(error->context, "Illegal type"); return;
     }
+}
+
+
+static FORCE_INLINE void doBuiltinCap(Fiber *fiber, Error *error)
+{
+    const DynArray *array = (DynArray *)(fiber->top->ptrVal);
+    if (!array || !array->data)
+        error->runtimeHandler(error->context, "Dynamic array is null");
+
+    fiber->top->intVal = getDims(array)->capacity;
 }
 
 
@@ -2606,6 +2617,7 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         }
         case BUILTIN_SLICE:         doBuiltinSlice(fiber, pages, error); break;
         case BUILTIN_LEN:           doBuiltinLen(fiber, error); break;
+        case BUILTIN_CAP:           doBuiltinCap(fiber, error); break;
         case BUILTIN_SIZEOF:        error->runtimeHandler(error->context, "Illegal instruction"); return;       // Done at compile time
         case BUILTIN_SIZEOFSELF:    doBuiltinSizeofself(fiber, error); break;
         case BUILTIN_SELFHASPTR:    doBuiltinSelfhasptr(fiber, error); break;
