@@ -726,7 +726,7 @@ static void parseBuiltinCopyCall(Compiler *comp, Type **type, Const *constant)
 }
 
 
-// fn append(array: [] type, item: (^type | [] type), single: bool): [] type
+// fn append(array: [] type, item: (^type | [] type), single: bool, type: Type): [] type
 static void parseBuiltinAppendCall(Compiler *comp, Type **type, Const *constant)
 {
     if (constant)
@@ -770,6 +770,9 @@ static void parseBuiltinAppendCall(Compiler *comp, Type **type, Const *constant)
     // 'Append single item' flag (hidden parameter)
     genPushIntConst(&comp->gen, singleItem);
 
+    // Dynamic array type (hidden parameter)
+    genPushGlobalPtr(&comp->gen, *type);
+
     // Pointer to result (hidden parameter)
     int resultOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, *type);
     genPushLocalPtr(&comp->gen, resultOffset);
@@ -778,7 +781,7 @@ static void parseBuiltinAppendCall(Compiler *comp, Type **type, Const *constant)
 }
 
 
-// fn insert(array: [] type, index: int, item: type): [] type
+// fn insert(array: [] type, index: int, item: type, type: Type): [] type
 static void parseBuiltinInsertCall(Compiler *comp, Type **type, Const *constant)
 {
     if (constant)
@@ -813,6 +816,9 @@ static void parseBuiltinInsertCall(Compiler *comp, Type **type, Const *constant)
 
         genPushLocalPtr(&comp->gen, itemOffset);
     }
+
+    // Dynamic array type (hidden parameter)
+    genPushGlobalPtr(&comp->gen, *type);
 
     // Pointer to result (hidden parameter)
     int resultOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, *type);
@@ -850,13 +856,13 @@ static void parseBuiltinDeleteCall(Compiler *comp, Type **type, Const *constant)
 }
 
 
-// fn slice(array: [] type | str, startIndex [, endIndex]: int): [] type | str
+// fn slice(array: [] type | str, startIndex [, endIndex]: int, type: Type): [] type | str
 static void parseBuiltinSliceCall(Compiler *comp, Type **type, Const *constant)
 {
     if (constant)
         comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
 
-    // Dynamic array
+    // Dynamic array or string
     parseExpr(comp, type, NULL);
     typeAssertCompatibleBuiltin(&comp->types, *type, BUILTIN_SLICE, (*type)->kind == TYPE_DYNARRAY || (*type)->kind == TYPE_STR);
 
@@ -879,6 +885,9 @@ static void parseBuiltinSliceCall(Compiler *comp, Type **type, Const *constant)
     }
     else
         genPushIntConst(&comp->gen, INT_MIN);
+
+    // Dynamic array or string type (hidden parameter)
+    genPushGlobalPtr(&comp->gen, *type);
 
     if ((*type)->kind == TYPE_DYNARRAY)
     {

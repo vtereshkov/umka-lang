@@ -483,6 +483,40 @@ Hello
 true false true 
 false true false 
 
+{ } 
+len = 0   cap = 0 
+
+{ } 
+len = 0   cap = 0 
+
+{ "Hello" "World" } 
+    Item #0  = "Hello" 
+    Item #1  = "World" 
+len = 2   cap = 6 
+
+{ } 
+len = 0   cap = 0 
+
+{ "Hello" "World" } 
+    Item #0  = "Hello" 
+    Item #1  = "World" 
+len = 2   cap = 6 
+
+{ "Hello" "World" } 
+    Item #0  = "Hello" 
+    Item #1  = "World" 
+len = 2   cap = 6 
+
+{ "World" } 
+    Item #0  = "World" 
+len = 1   cap = 2 
+
+{ } 
+len = 0   cap = 2 
+
+{ "" "" } { "Hello" "World" } 
+"" 
+
 
 >>> Variadic functions
 

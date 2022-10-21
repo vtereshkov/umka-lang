@@ -795,6 +795,16 @@ static FORCE_INLINE void doAllocDynArray(HeapPages *pages, DynArray *array, Type
 }
 
 
+static FORCE_INLINE void doGetEmptyDynArray(DynArray *array, Type *type)
+{
+    array->type     = type;
+    array->itemSize = typeSizeNoCheck(array->type->base);
+
+    static DynArrayDimensions dims = {.len = 0, .capacity = 0};
+    array->data = &dims + sizeof(DynArrayDimensions);
+}
+
+
 static FORCE_INLINE void doAllocMap(HeapPages *pages, Map *map, Type *type, Error *error)
 {
     map->type      = type;
@@ -1453,17 +1463,21 @@ static FORCE_INLINE void doBuiltinMaketoarr(Fiber *fiber, HeapPages *pages, Erro
     Type *destType = (Type     *)(fiber->top++)->ptrVal;
     DynArray *src  = (DynArray *)(fiber->top++)->ptrVal;
 
-    if (!src || !src->data)
+    if (!src)
         error->runtimeHandler(error->context, "Dynamic array is null");
 
-    if (getDims(src)->len > destType->numItems)
-        error->runtimeHandler(error->context, "Dynamic array is too long");
-
     memset(dest, 0, typeSizeNoCheck(destType));
-    memcpy(dest, src->data, getDims(src)->len * src->itemSize);
 
-    // Increase result items' ref counts, as if they have been assigned one by one
-    doBasicChangeRefCnt(fiber, pages, dest, destType, TOK_PLUSPLUS);
+    if (src->data)
+    {
+        if (getDims(src)->len > destType->numItems)
+            error->runtimeHandler(error->context, "Dynamic array is too long");
+
+        memcpy(dest, src->data, getDims(src)->len * src->itemSize);
+
+        // Increase result items' ref counts, as if they have been assigned one by one
+        doBasicChangeRefCnt(fiber, pages, dest, destType, TOK_PLUSPLUS);
+    }
 
     (--fiber->top)->ptrVal = dest;
 }
@@ -1474,12 +1488,17 @@ static FORCE_INLINE void doBuiltinMaketostr(Fiber *fiber, HeapPages *pages, Erro
 {
     DynArray *src  = (DynArray *)(fiber->top++)->ptrVal;
 
-    if (!src || !src->data)
+    if (!src)
         error->runtimeHandler(error->context, "Dynamic array is null");
 
-    char *dest = chunkAlloc(pages, getDims(src)->len + 1, NULL, NULL, error);
-    memcpy(dest, src->data, getDims(src)->len);
-    dest[getDims(src)->len] = 0;
+    char *dest = "";
+
+    if (src->data)
+    {
+        dest = chunkAlloc(pages, getDims(src)->len + 1, NULL, NULL, error);
+        memcpy(dest, src->data, getDims(src)->len);
+        dest[getDims(src)->len] = 0;
+    }
 
     (--fiber->top)->ptrVal = dest;
 }
@@ -1491,30 +1510,39 @@ static FORCE_INLINE void doBuiltinCopy(Fiber *fiber, HeapPages *pages, Error *er
     DynArray *result = (DynArray *)(fiber->top++)->ptrVal;
     DynArray *array  = (DynArray *)(fiber->top++)->ptrVal;
 
-    if (!array || !array->data)
+    if (!array)
         error->runtimeHandler(error->context, "Dynamic array is null");
 
-    doAllocDynArray(pages, result, array->type, getDims(array)->len, error);
-    memmove((char *)result->data, (char *)array->data, getDims(array)->len * array->itemSize);
+    *result = *array;
 
-    // Increase result items' ref counts, as if they have been assigned one by one
-    Type staticArrayType = {.kind = TYPE_ARRAY, .base = result->type->base, .numItems = getDims(result)->len, .next = NULL};
-    doBasicChangeRefCnt(fiber, pages, result->data, &staticArrayType, TOK_PLUSPLUS);
+    if (array->data)
+    {
+        doAllocDynArray(pages, result, array->type, getDims(array)->len, error);
+        memmove((char *)result->data, (char *)array->data, getDims(array)->len * array->itemSize);
+
+        // Increase result items' ref counts, as if they have been assigned one by one
+        Type staticArrayType = {.kind = TYPE_ARRAY, .base = result->type->base, .numItems = getDims(result)->len, .next = NULL};
+        doBasicChangeRefCnt(fiber, pages, result->data, &staticArrayType, TOK_PLUSPLUS);
+    }
 
     (--fiber->top)->ptrVal = result;
 }
 
 
-// fn append(array: [] type, item: (^type | [] type), single: bool): [] type
+// fn append(array: [] type, item: (^type | [] type), single: bool, type: Type): [] type
 static FORCE_INLINE void doBuiltinAppend(Fiber *fiber, HeapPages *pages, Error *error)
 {
     DynArray *result = (DynArray *)(fiber->top++)->ptrVal;
+    Type *arrayType  = (Type     *)(fiber->top++)->ptrVal;
     bool single      = (bool      )(fiber->top++)->intVal;
     void *item       = (fiber->top++)->ptrVal;
     DynArray *array  = (DynArray *)(fiber->top++)->ptrVal;
 
-    if (!array || !array->data)
+    if (!array)
         error->runtimeHandler(error->context, "Dynamic array is null");
+
+    if (!array->data)
+        doGetEmptyDynArray(array, arrayType);
 
     void *rhs = item;
     int rhsLen = 1;
@@ -1523,8 +1551,11 @@ static FORCE_INLINE void doBuiltinAppend(Fiber *fiber, HeapPages *pages, Error *
     {
         DynArray *rhsArray = item;
 
-        if (!rhsArray || !rhsArray->data)
+        if (!rhsArray)
             error->runtimeHandler(error->context, "Dynamic array is null");
+
+        if (!rhsArray->data)
+            doGetEmptyDynArray(rhsArray, arrayType);
 
         rhs = rhsArray->data;
         rhsLen = getDims(rhsArray)->len;
@@ -1561,16 +1592,20 @@ static FORCE_INLINE void doBuiltinAppend(Fiber *fiber, HeapPages *pages, Error *
 }
 
 
-// fn insert(array: [] type, index: int, item: type): [] type
+// fn insert(array: [] type, index: int, item: type, type: Type): [] type
 static FORCE_INLINE void doBuiltinInsert(Fiber *fiber, HeapPages *pages, Error *error)
 {
     DynArray *result = (DynArray *)(fiber->top++)->ptrVal;
+    Type *arrayType  = (Type     *)(fiber->top++)->ptrVal;
     void *item       = (fiber->top++)->ptrVal;
     int64_t index    = (fiber->top++)->intVal;
     DynArray *array  = (DynArray *)(fiber->top++)->ptrVal;
 
-    if (!array || !array->data)
+    if (!array)
         error->runtimeHandler(error->context, "Dynamic array is null");
+
+    if (!array->data)
+        doGetEmptyDynArray(array, arrayType);
 
     if (index < 0 || index > getDims(array)->len)
         error->runtimeHandler(error->context, "Index %lld is out of range 0...%lld", index, getDims(array)->len);
@@ -1667,6 +1702,7 @@ static FORCE_INLINE void doBuiltinDeleteMap(Fiber *fiber, HeapPages *pages, Erro
 static FORCE_INLINE void doBuiltinSlice(Fiber *fiber, HeapPages *pages, Error *error)
 {
     DynArray *result   = (DynArray *)(fiber->top++)->ptrVal;
+    Type *argType      = (Type     *)(fiber->top++)->ptrVal;
     int64_t endIndex   = (fiber->top++)->intVal;
     int64_t startIndex = (fiber->top++)->intVal;
     void *arg          = (fiber->top++)->ptrVal;
@@ -1680,8 +1716,11 @@ static FORCE_INLINE void doBuiltinSlice(Fiber *fiber, HeapPages *pages, Error *e
         // Dynamic array
         array = (DynArray *)arg;
 
-        if (!array || !array->data)
+        if (!array)
             error->runtimeHandler(error->context, "Dynamic array is null");
+
+        if (!array->data)
+            doGetEmptyDynArray(array, argType);
 
         len = getDims(array)->len;
     }
@@ -1742,10 +1781,10 @@ static FORCE_INLINE void doBuiltinLen(Fiber *fiber, Error *error)
         case TYPE_DYNARRAY:
         {
             const DynArray *array = (DynArray *)(fiber->top->ptrVal);
-            if (!array || !array->data)
+            if (!array)
                 error->runtimeHandler(error->context, "Dynamic array is null");
 
-            fiber->top->intVal = getDims(array)->len;
+            fiber->top->intVal = array->data ? getDims(array)->len : 0;
             break;
         }
         case TYPE_STR:
@@ -1757,10 +1796,10 @@ static FORCE_INLINE void doBuiltinLen(Fiber *fiber, Error *error)
         case TYPE_MAP:
         {
             Map *map = (Map *)(fiber->top->ptrVal);
-            if (!map || !map->root)
+            if (!map)
                 error->runtimeHandler(error->context, "Map is null");
 
-            fiber->top->intVal = map->root->len;
+            fiber->top->intVal =  map->root ? map->root->len : 0;
             break;
         }
         default:
@@ -1772,10 +1811,10 @@ static FORCE_INLINE void doBuiltinLen(Fiber *fiber, Error *error)
 static FORCE_INLINE void doBuiltinCap(Fiber *fiber, Error *error)
 {
     const DynArray *array = (DynArray *)(fiber->top->ptrVal);
-    if (!array || !array->data)
+    if (!array)
         error->runtimeHandler(error->context, "Dynamic array is null");
 
-    fiber->top->intVal = getDims(array)->capacity;
+    fiber->top->intVal = array->data ? getDims(array)->capacity : 0;
 }
 
 
