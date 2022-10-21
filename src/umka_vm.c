@@ -1919,15 +1919,19 @@ static FORCE_INLINE void doBuiltinKeys(Fiber *fiber, HeapPages *pages, Error *er
     Type *resultType = (Type *)(fiber->top++)->ptrVal;
     Map *map         = (Map *)(fiber->top++)->ptrVal;
 
-    if (!map || !map->root)
+    if (!map)
         error->runtimeHandler(error->context, "Map is null");
 
-    doAllocDynArray(pages, result, resultType, map->root->len, error);
-    doGetMapKeys(map, result->data, error);
+    doAllocDynArray(pages, result, resultType, map->root ? map->root->len : 0, error);
 
-    // Increase result items' ref counts, as if they have been assigned one by one
-    Type staticArrayType = {.kind = TYPE_ARRAY, .base = result->type->base, .numItems = getDims(result)->len, .next = NULL};
-    doBasicChangeRefCnt(fiber, pages, result->data, &staticArrayType, TOK_PLUSPLUS);
+    if (map->root)
+    {
+        doGetMapKeys(map, result->data, error);
+
+        // Increase result items' ref counts, as if they have been assigned one by one
+        Type staticArrayType = {.kind = TYPE_ARRAY, .base = result->type->base, .numItems = getDims(result)->len, .next = NULL};
+        doBasicChangeRefCnt(fiber, pages, result->data, &staticArrayType, TOK_PLUSPLUS);
+    }
 
     (--fiber->top)->ptrVal = result;
 }
