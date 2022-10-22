@@ -532,6 +532,7 @@ len = 1
 { "Bubu" : "Bobo" } 
     Item "Bubu"  = "Bobo" 
 len = 1 
+false true 
 
 
 >>> Variadic functions

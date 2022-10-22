@@ -1905,8 +1905,16 @@ static FORCE_INLINE void doBuiltinValidkey(Fiber *fiber, HeapPages *pages, Error
     Slot key  = *fiber->top++;
     Map *map  = (Map *)(fiber->top++)->ptrVal;
 
-    MapNode *node = doGetMapNode(map, key, false, pages, error, NULL);
-    bool isValid = node && node->data;
+    if (!map)
+        error->runtimeHandler(error->context, "Map is null");
+
+    bool isValid = false;
+
+    if (map->root)
+    {
+        MapNode *node = doGetMapNode(map, key, false, pages, error, NULL);
+        isValid = node && node->data;
+    }
 
     (--fiber->top)->intVal = isValid;
 }
@@ -3008,6 +3016,9 @@ void vmDecRef(VM *vm, void *ptr)
 
 void *vmGetMapNodeData(VM *vm, Map *map, Slot key)
 {
+    if (!map || !map->root)
+        return NULL;
+
     const MapNode *node = doGetMapNode(map, key, false, NULL, vm->error, NULL);
     return node ? node->data : NULL;
 }
