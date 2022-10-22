@@ -20,7 +20,7 @@ fn testStr() {
 	printf(repr(s1 == s4) + repr(s1 < s4) + repr(s1 >= s4) + '\n')
 }
 
-fn check(a: []str) {
+fn checkArr(a: []str) {
 	printf('\n' + repr(a) + '\n')
 	for i, x in a {
 		printf("    Item #" + repr(i) + " = " + repr(x) + '\n')
@@ -32,14 +32,14 @@ fn testArr() {
 	var a, b, c: []str
 	c = []str{"Hel" + "lo", "Wor" + "ld"}
 
-	check(a)
-	check(b)
-	check(c)
-	check(append(copy(a), b))
-	check(append(copy(a), c))
-	check(append(copy(c), a))
-	check(insert(copy(a), 0, c[1]))
-	check(slice(a, 0, 0))
+	checkArr(a)
+	checkArr(b)
+	checkArr(c)
+	checkArr(append(copy(a), b))
+	checkArr(append(copy(a), c))
+	checkArr(append(copy(c), a))
+	checkArr(insert(copy(a), 0, c[1]))
+	checkArr(slice(a, 0, 0))
 
 	printf('\n' + repr([2]str(a)) + repr([2]str(c)) + '\n')
 
@@ -47,9 +47,40 @@ fn testArr() {
 	printf(repr(str(d)) + '\n')
 }
 
+fn checkMap(a: map[str]str) {
+	printf('\n' + repr(a) + '\n')
+	for i, x in a {
+		printf("    Item " + repr(i) + " = " + repr(x) + '\n')
+	}
+	printf("len = " + repr(len(a)) + '\n')
+}
+
+fn mk(): map[str]str {
+	var e: map[str]str
+	return e
+}
+
+fn testMap() {
+	var a, b, c, d: map[str]str
+	c = map[str]str{"Hel" + "lo": "Wor" + "ld"}
+
+	b = mk()
+
+	b["Ha" + "ha"] = "Ho" + "ho"
+	b["He" + "he"] = "Hu" + "hu"
+
+	d["Bu" + "bu"] = "Bo" + "bo"
+
+	checkMap(a)
+	checkMap(b)
+	checkMap(c)
+	checkMap(d)
+}
+
 fn test*() {
 	testStr()
 	testArr()
+	testMap()
 }
 
 fn main() {

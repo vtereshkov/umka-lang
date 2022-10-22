@@ -2418,8 +2418,13 @@ static FORCE_INLINE void doGetMapPtr(Fiber *fiber, HeapPages *pages, Error *erro
     Slot key  = *fiber->top++;
     Map *map  = (Map *)(fiber->top++)->ptrVal;
 
-    if (!map || !map->root)
+    Type *mapType = (Type *)fiber->code[fiber->ip].operand.ptrVal;
+
+    if (!map)
         error->runtimeHandler(error->context, "Map is null");
+
+    if (!map->root)
+        doAllocMap(pages, map, mapType, error);
 
     Type *keyType = typeMapKey(map->type);
     Type *itemType = typeMapItem(map->type);

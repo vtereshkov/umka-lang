@@ -1,7 +1,7 @@
 fn test1() {
 	printf("\nTest 1\n")
 
-	m := make(map[str]str)
+	var m: map[str]str
 
 	m["Hello" + " World"] = "English" + " EN"
 	m["Salut" + " le Monde"] = "French" + " FR"
@@ -57,7 +57,6 @@ fn test3() {
 	var m3: map[int]int
 	printf(repr(valid(m3)) + '\n')
 
-	m3 = make(map[int]int)
 	m3[1915] = 20
 	printf(repr(valid(m3)) + repr(m3[1915]) + '\n')
 	printf(repr(m3) + '\n')

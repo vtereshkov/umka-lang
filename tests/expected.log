@@ -517,6 +517,22 @@ len = 0   cap = 2
 { "" "" } { "Hello" "World" } 
 "" 
 
+{ } 
+len = 0 
+
+{ "Hehe" : "Huhu" "Haha" : "Hoho" } 
+    Item "Hehe"  = "Huhu" 
+    Item "Haha"  = "Hoho" 
+len = 2 
+
+{ "Hello" : "World" } 
+    Item "Hello"  = "World" 
+len = 1 
+
+{ "Bubu" : "Bobo" } 
+    Item "Bubu"  = "Bobo" 
+len = 1 
+
 
 >>> Variadic functions
 
