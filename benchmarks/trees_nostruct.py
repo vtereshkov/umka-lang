@@ -4,6 +4,12 @@ from __future__ import print_function
 
 import time
 
+# Python3 has time.perf_counter instead time.clock
+try:
+    time.clock = time.perf_counter
+except:
+    pass
+
 # Map "range" to an efficient range in both Python 2 and 3.
 try:
     range = xrange
