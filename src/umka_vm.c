@@ -801,7 +801,7 @@ static FORCE_INLINE void doGetEmptyDynArray(DynArray *array, Type *type)
     array->itemSize = typeSizeNoCheck(array->type->base);
 
     static DynArrayDimensions dims = {.len = 0, .capacity = 0};
-    array->data = &dims + sizeof(DynArrayDimensions);
+    array->data = (char *)(&dims) + sizeof(DynArrayDimensions);
 }
 
 
