@@ -1978,6 +1978,9 @@ void parseDesignator(Compiler *comp, Type **type, Const *constant, bool *isVar, 
         parseTypeCastOrCompositeLiteral(comp, ident, type, constant, isVar, isCall);
 
     parseSelectors(comp, type, constant, isVar, isCall);
+
+    if ((*type)->kind == TYPE_FN && (*type)->sig.method)
+        comp->error.handler(comp->error.context, "Method must be called");
 }
 
 
