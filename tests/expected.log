@@ -130,6 +130,9 @@ foo: { "Hello World" "Hallo Welt" "Salut le Monde" }
 foo: Hallo Welt = Hallo Welt : true 
 foo: Salut le Monde = Salut le Monde : true 
 bar: { { 3 5 } { 4 6 -8 } { 9 } { } { } }  = { { 3 5 } { 4 6 -8 } { 9 } { } { } } 
+{ 5.000000 7.000000 9.000000 11.000000 13.000000 15.000000 17.000000 } 
+true false 
+{ "Hello World" "Privet Mir" "Ha-ha" "Ho-ho" } 
 
 
 >>> Strings

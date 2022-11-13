@@ -24,14 +24,14 @@ fn by_name_eq(n: str): Closure {
 fn test*() {
 	named_foo := by_name_eq("Foo")
 
-	persons := fnc.AnyArray{
+	persons := []Person{
 		Person{"Foo", 24, "M"},
 		Person{"Bar", 23, "M"},
 		Person{"FooBar", 23, "F"}}
 
-	mapped := persons.mapEach(fn (person, closure: fnc.Any): fnc.Any {
+	mapped := []bool(fnc.AnyArray(persons).mapEach(fn (person, closure: fnc.Any): fnc.Any {
 			return Closure(closure).call(Person(person))
-		}, named_foo)
+		}, named_foo))
 
 	printf(repr(mapped) + '\n')
 }

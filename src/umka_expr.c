@@ -12,6 +12,7 @@
 
 
 static void parseDynArrayLiteral(Compiler *comp, Type **type, Const *constant);
+static void doExplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant, bool lhs);
 
 
 void doPushConst(Compiler *comp, Type *type, Const *constant)
@@ -223,6 +224,90 @@ static void doArrayToDynArrayConv(Compiler *comp, Type *dest, Type **src, Const 
 
     // Copy result to a temporary local variable to collect it as garbage when leaving the block
     doCopyResultToTempVar(comp, dest);
+
+    *src = dest;
+}
+
+
+static void doDynArrayToDynArrayConv(Compiler *comp, Type *dest, Type **src, Const *constant)
+{
+    if (constant)
+        comp->error.handler(comp->error.context, "Conversion from dynamic array is not allowed in constant expressions");
+
+    // Get source array length: length = len(srcArray)
+    int lenOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, comp->intType);
+
+    genDup(&comp->gen);
+    genCallBuiltin(&comp->gen, (*src)->kind, BUILTIN_LEN);
+    genPushLocalPtr(&comp->gen, lenOffset);
+    genSwapAssign(&comp->gen, TYPE_INT, 0);
+
+    // Allocate destination array: destArray = make(dest, length)
+    IdentName destArrayName;
+    identTempVarName(&comp->idents, destArrayName);
+
+    Ident *destArray = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, destArrayName, dest, false);
+    doZeroVar(comp, destArray);
+
+    genPushGlobalPtr(&comp->gen, dest);
+    genPushLocal(&comp->gen, TYPE_INT, lenOffset);
+    doPushVarPtr(comp, destArray);
+    genCallBuiltin(&comp->gen, dest->kind, BUILTIN_MAKE);
+    genPop(&comp->gen);
+
+    // Loop initialization: index = length - 1
+    int indexOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, comp->intType);
+
+    genPushLocal(&comp->gen, TYPE_INT, lenOffset);
+    genPushIntConst(&comp->gen, 1);
+    genBinary(&comp->gen, TOK_MINUS, TYPE_INT, 0);
+    genPushLocalPtr(&comp->gen, indexOffset);
+    genSwapAssign(&comp->gen, TYPE_INT, 0);
+
+    // Loop condition: index >= 0
+    genWhileCondProlog(&comp->gen);
+
+    genPushLocal(&comp->gen, TYPE_INT, indexOffset);
+    genPushIntConst(&comp->gen, 0);
+    genBinary(&comp->gen, TOK_GREATEREQ, TYPE_INT, 0);
+
+    genWhileCondEpilog(&comp->gen);
+
+    // Additional scope embracing temporary variables declaration
+    blocksEnter(&comp->blocks, NULL);
+
+    // Loop body: destArray[index] = destItemType(srcArray[index]); index--
+    genDup(&comp->gen);
+    genPushLocal(&comp->gen, TYPE_INT, indexOffset);
+    genGetDynArrayPtr(&comp->gen);
+    genDeref(&comp->gen, (*src)->base->kind);
+
+    Type *itemType = (*src)->base;
+    doExplicitTypeConv(comp, dest->base, &itemType, constant, false);
+
+    if (!typeEquivalent(itemType, dest->base))
+        comp->error.handler(comp->error.context, "Invalid type cast");
+
+    doPushVarPtr(comp, destArray);
+    genDeref(&comp->gen, dest->kind);
+    genPushLocal(&comp->gen, TYPE_INT, indexOffset);
+    genGetDynArrayPtr(&comp->gen);
+    genSwapChangeRefCntAssign(&comp->gen, dest->base);
+
+    genPushLocalPtr(&comp->gen, indexOffset);
+    genUnary(&comp->gen, TOK_MINUSMINUS, TYPE_INT);
+
+    // Additional scope embracing temporary variables declaration
+    doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+    identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
+    blocksLeave(&comp->blocks);
+
+    genWhileEpilog(&comp->gen);
+
+    // Remove srcArray and push destArray
+    genPop(&comp->gen);
+    doPushVarPtr(comp, destArray);
+    genDeref(&comp->gen, dest->kind);
 
     *src = dest;
 }
@@ -481,6 +566,12 @@ static void doExplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *co
             // Interface to value
             doInterfaceToValueConv(comp, dest, src, constant);
         }
+    }
+
+    // Dynamic array to dynamic array of another base type (covariant arrays)
+    else if ((*src)->kind == TYPE_DYNARRAY && dest->kind == TYPE_DYNARRAY)
+    {
+        doDynArrayToDynArrayConv(comp, dest, src, constant);
     }
 }
 
