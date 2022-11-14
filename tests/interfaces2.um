@@ -1,5 +1,3 @@
-type any = interface{}
-
 fn sort(a: []any, ordered: fn (x, y: any): bool): []any {
     for sorted := false; !sorted {
         sorted = true
@@ -14,8 +12,8 @@ fn sort(a: []any, ordered: fn (x, y: any): bool): []any {
 }
 
 fn test*() {
-    a := [10]any{"red", "green", "blue", "yellow", "gray", "brown", "black", "cyan", "magenta", "white"}
-    b := sort(a, fn (x, y: any): bool {return ^str(x)^ < ^str(y)^})            
+    a := []str{"red", "green", "blue", "yellow", "gray", "brown", "black", "cyan", "magenta", "white"}
+    b := []str(sort([]any(a), fn (x, y: any): bool {return str(x) < str(y)}))            
     printf("%s\n%s\n", repr(a), repr(b))
 }
 

@@ -1,4 +1,4 @@
-fn printMsg(msg: str, values: ..interface{}) {
+fn printMsg(msg: str, values: ..any) {
 	valStr := ""
 	for _, value in values {
 		valStr += repr(value)
@@ -6,7 +6,7 @@ fn printMsg(msg: str, values: ..interface{}) {
     printf(msg + " " + valStr + '\n')
 }
 
-fn printPrompt(msg: str, values: ..interface{}) {
+fn printPrompt(msg: str, values: ..any) {
     printMsg(">> " + msg, values)
 }
 

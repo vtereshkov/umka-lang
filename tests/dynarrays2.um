@@ -27,10 +27,10 @@ fn test1() {
 }
 
 fn test2() {
-    a := []real([]int([]interface{}([]int{5, 7, 9, 11, 13, 15, 17})))
+    a := []real([]int([]any([]int{5, 7, 9, 11, 13, 15, 17})))
     printf(repr(a) + '\n')
 
-    b := []interface{}([]int{42, 43, 44})
+    b := []any([]int{42, 43, 44})
     printf(repr([]^int(b)[1] != null) + repr([]^real(b)[1] != null) + '\n')
 
     c := []str([][]char([]str{"Hello " + "World", "Privet " + "Mir", "Ha-" + "ha", "Ho-" + "ho"}))

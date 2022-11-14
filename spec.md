@@ -347,7 +347,7 @@ The interface does not implement these methods itself. Instead, any type that im
 
 Let`T` be a non-pointer type. If a pointer of type `^T` is converted to the interface, the interface stores that pointer. If a variable of type `T`  is converted to the interface, the variable is first copied to a new memory location, and the interface stores the pointer to that location. In any case, the interface can be converted back to the type `T` or  `^T`. If a conversion of the interface to some non-pointer type `S` not equivalent to `T` is attempted, a runtime error is triggered. If a conversion of the interface to some pointer type `^S` not equivalent to `^T` is attempted, the result is `null`. 
 
-Any type can be converted to the empty interface `interface{}`.
+Any type can be converted to the built-in type `any`, which is an alias for `interface{}`.
 
 Interface assignment copies the pointer, but not the contents of the variable that has been converted to the interface.
 
@@ -455,6 +455,7 @@ bool
 char
 real32 real
 fiber
+any
 ```
 
 ### Constant declarations
@@ -825,7 +826,7 @@ Examples:
 
 ```
 [3]real{2.3, -4.1 / 2, b}
-[]interface{}{7.2, "Hello", [2]int{3, 5}}
+[]any{7.2, "Hello", [2]int{3, 5}}
 map[[]int]str{[]int{13, 15}: "First", []int{57, 89}: "Second"}
 Vec{x: 2, y: 8}
 fn (x: int) {return 2 * x}
@@ -1309,13 +1310,13 @@ The standard library is contained in the `std.um` module embedded into the Umka 
 #### Functions
 
 ```
-fn tobytes*(buf: interface{}): []uint8
+fn tobytes*(buf: any): []uint8
 ```
 
 Copies the bytes of `buf` to a byte array.
 
 ```
-fn frombytes*(buf: interface{}, bytes: []uint8)
+fn frombytes*(buf: any, bytes: []uint8)
 ```
 
 Copies the `bytes` array to `buf`. An error is triggered if some of the bytes represent a pointer.
@@ -1357,13 +1358,13 @@ fn fclose*(f: File): int
 Closes the file `f`. Returns 0 if successful.
 
 ```
-fn fread*(f: File, buf: interface{}): int
+fn fread*(f: File, buf: any): int
 ```
 
 Reads the `buf` variable from the file `f`. `buf` can be of any type that doesn't contain pointers, strings, dynamic arrays, interfaces or fibers, except for `^[]int8`, `^[]uint8`, `^[]char`. Returns 1 if successful.
 
 ```
-fn fwrite*(f: File, buf: interface{}): int
+fn fwrite*(f: File, buf: any): int
 ```
 
 Writes the `buf` variable to the file `f`. `buf` can be of any type that doesn't contain pointers, strings, dynamic arrays, interfaces or fibers, except for `^[]int8`, `^[]uint8`, `^[]char`. Returns 1 if successful.

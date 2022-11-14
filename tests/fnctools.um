@@ -4,12 +4,12 @@ fn test*() {
     data := []int{3, 7, 1, -4, 2, 5}
     printf("Array = %s\n", repr(data))
      
-    sqr  := fn (x, ctx: fnc.Any): fnc.Any    {p := int(x); return p * p}
-    less := fn (x, ctx: fnc.Any): bool       {return int(x) < int(ctx)} 
-    sum  := fn (x, y, ctx: fnc.Any): fnc.Any {return int(x) + int(y)}     
+    sqr  := fn (x, ctx: any): any    {return int(x) * int(x)}
+    less := fn (x, ctx: any): bool   {return int(x) < int(ctx)} 
+    sum  := fn (x, y, ctx: any): any {return int(x) + int(y)}     
     
     const max = 30     
-    result := int(fnc.AnyArray(data).mapEach(sqr, null).filter(less, max).reduce(sum, null))   
+    result := int(fnc.Array(data).map_(sqr, null).filter(less, max).reduce(sum, null))   
     printf("Sum of all squares less than %lld = %lld \n", max, result)     
 }
 

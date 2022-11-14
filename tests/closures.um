@@ -7,7 +7,7 @@ type Person = struct {
 }
 
 type Closure = struct {
-	data: interface{}
+	data: any
 }
 
 fn (c: ^Closure) call(person: Person): bool {
@@ -29,7 +29,7 @@ fn test*() {
 		Person{"Bar", 23, "M"},
 		Person{"FooBar", 23, "F"}}
 
-	mapped := []bool(fnc.AnyArray(persons).mapEach(fn (person, closure: fnc.Any): fnc.Any {
+	mapped := []bool(fnc.Array(persons).map_(fn (person, closure: any): any {
 			return Closure(closure).call(Person(person))
 		}, named_foo))
 

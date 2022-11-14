@@ -36,10 +36,10 @@ fn test*() {
         s3: S3
         s4: S4
 
-        p1: interface{} = s1
-        p2: interface{} = s2
-        p3: interface{} = s3
-        p4: interface{} = s4
+        p1: any = s1
+        p2: any = s2
+        p3: any = s3
+        p4: any = s4
     )
 
     if q1, q2 := P1(p1), P2(p1); q1 == null || q2 != null {

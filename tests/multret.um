@@ -22,7 +22,7 @@ fn test*() {
     a, b, c = c, a, b   
     printf(repr(a) + " " + repr(b) + " " + repr(c) + "\n")
 
-    var x, y, z: interface{} = a, b, c
+    var x, y, z: any = a, b, c
     printf(repr(x) + " " + repr(y) + " " + repr(z) + "\n")    
 
     s, t := "Hello", "World"

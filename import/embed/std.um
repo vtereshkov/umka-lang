@@ -4,7 +4,7 @@
 
 fn rtlmemcpy(dest, src: ^void, count: int)
 
-fn tobytes*(buf: interface{}): []uint8 {
+fn tobytes*(buf: any): []uint8 {
     if buf.__self == null {
         error("Buffer is null")
     }
@@ -13,7 +13,7 @@ fn tobytes*(buf: interface{}): []uint8 {
     return bytes
 }
 
-fn frombytes*(buf: interface{}, bytes: []uint8) {
+fn frombytes*(buf: any, bytes: []uint8) {
     if buf.__self == null {
         error("Buffer is null")
     }    
@@ -43,7 +43,7 @@ fn rtlfclose (f: File): int
 fn fclose*   (f: File): int {return rtlfclose(f)}
 
 fn rtlfread  (buf: ^void, size, cnt: int, f: File): int
-fn fread*    (f: File, buf: interface{}): int {
+fn fread*    (f: File, buf: any): int {
     if f == null {
         error("File is null")
     }
@@ -63,7 +63,7 @@ fn fread*    (f: File, buf: interface{}): int {
 }
 
 fn rtlfwrite (buf: ^void, size, cnt: int, f: File): int
-fn fwrite*   (f: File, buf: interface{}): int {
+fn fwrite*   (f: File, buf: any): int {
     if f == null {
         error("File is null")
     }
