@@ -115,10 +115,11 @@ static const char *builtinSpelling [] =
 
 // Memory management
 
-static void pageInit(HeapPages *pages)
+static void pageInit(HeapPages *pages, Error *error)
 {
     pages->first = pages->last = NULL;
     pages->freeId = 1;
+    pages->error = error;
 }
 
 
@@ -213,7 +214,7 @@ static FORCE_INLINE HeapPage *pageFind(HeapPages *pages, void *ptr, bool warnDan
             HeapChunkHeader *chunk = pageGetChunkHeader(page, ptr);
 
             if (warnDangling && chunk->refCnt == 0)
-                fprintf(stderr, "Warning: Dangling pointer at %p\n", ptr);
+                pages->error->runtimeHandler(pages->error->context, "Dangling pointer at %p", ptr);
 
             if (chunk->magic == VM_HEAP_CHUNK_MAGIC && chunk->refCnt > 0)
                 return page;
@@ -292,7 +293,7 @@ static FORCE_INLINE int chunkChangeRefCnt(HeapPages *pages, HeapPage *page, void
     HeapChunkHeader *chunk = pageGetChunkHeader(page, ptr);
 
     if (chunk->refCnt <= 0 || page->refCnt < chunk->refCnt)
-        fprintf(stderr, "Warning: Wrong reference count for pointer at %p\n", ptr);
+        pages->error->runtimeHandler(pages->error->context, "Wrong reference count for pointer at %p\n", ptr);
 
     if (chunk->onFree && chunk->refCnt == 1 && delta == -1)
     {
@@ -443,7 +444,7 @@ void vmInit(VM *vm, int stackSize, bool fileSystemEnabled, Error *error)
     vm->fiber->alive = true;
     vm->fiber->fileSystemEnabled = fileSystemEnabled;
 
-    pageInit(&vm->pages);
+    pageInit(&vm->pages, error);
     candidateInit(&vm->refCntChangeCandidates);
 
     memset(&vm->hooks, 0, sizeof(vm->hooks));

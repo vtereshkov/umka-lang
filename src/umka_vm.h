@@ -170,6 +170,7 @@ typedef struct
 {
     HeapPage *first, *last;
     int freeId;
+    Error *error;
 } HeapPages;
 
 
