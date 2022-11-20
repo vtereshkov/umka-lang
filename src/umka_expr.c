@@ -630,9 +630,13 @@ Ident *parseQualIdent(Compiler *comp)
 
     if (ident->kind == IDENT_MODULE)
     {
+        comp->modules.module[comp->blocks.module]->importUsed[ident->moduleVal] = true;
+        ident->used = true;
+
         lexNext(&comp->lex);
         lexEat(&comp->lex, TOK_PERIOD);
         lexCheck(&comp->lex, TOK_IDENT);
+
         ident = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, ident->moduleVal, comp->lex.tok.name, NULL);
     }
 
