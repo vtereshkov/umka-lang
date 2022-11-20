@@ -24,6 +24,7 @@ import (
     "utf8test.um"
     "imports.um"
     "imports2.um"
+    "imports3.um"
     "closures.um"
     "nullstr.um"
     "vararg.um"
@@ -57,6 +58,7 @@ fn main() {
     printf("\n\n>>> UTF-8\n\n");                    utf8test.test()
     printf("\n\n>>> Import disambiguation - 1\n\n");imports.test()
     printf("\n\n>>> Import disambiguation - 2\n\n");imports2.test()
+    printf("\n\n>>> Import disambiguation - 3\n\n");imports3.test()
     printf("\n\n>>> Simulated closures\n\n");       closures.test()
     printf("\n\n>>> Null strings\n\n");             nullstr.test()
     printf("\n\n>>> Variadic functions\n\n");       vararg.test()

@@ -1,0 +1,12 @@
+import s = "std.um"
+
+std := 42
+imports3 := 43
+
+fn test*() {
+    printf(repr(std) + repr(imports3) + repr(s.argc()) + '\n')
+}
+
+fn main() {
+    test()
+}

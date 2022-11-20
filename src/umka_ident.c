@@ -229,6 +229,14 @@ Ident *identAddBuiltinFunc(Idents *idents, Modules *modules, Blocks *blocks, con
 }
 
 
+Ident *identAddModule(Idents *idents, Modules *modules, Blocks *blocks, const char *name, Type *type, int moduleVal)
+{
+    Ident *ident = identAdd(idents, modules, blocks, IDENT_MODULE, name, type, false);
+    ident->moduleVal = moduleVal;
+    return ident;
+}
+
+
 int identAllocStack(Idents *idents, Types *types, Blocks *blocks, Type *type)
 {
     int *localVarSize = NULL;

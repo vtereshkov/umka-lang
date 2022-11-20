@@ -626,20 +626,15 @@ void doApplyOperator(Compiler *comp, Type **type, Type **rightType, Const *const
 Ident *parseQualIdent(Compiler *comp)
 {
     lexCheck(&comp->lex, TOK_IDENT);
-    int module = moduleFindImported(&comp->modules, &comp->blocks, comp->lex.tok.name, true);
-    if (module >= 0)
-    {
-        if (identFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, comp->lex.tok.name, NULL, false))
-            comp->error.handler(comp->error.context, "Conflict between module %s and identifier %s", comp->lex.tok.name, comp->lex.tok.name);
+    Ident *ident = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, comp->lex.tok.name, NULL);
 
+    if (ident->kind == IDENT_MODULE)
+    {
         lexNext(&comp->lex);
         lexEat(&comp->lex, TOK_PERIOD);
         lexCheck(&comp->lex, TOK_IDENT);
+        ident = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, ident->moduleVal, comp->lex.tok.name, NULL);
     }
-    else
-        module = comp->blocks.module;
-
-    Ident *ident = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, module, comp->lex.tok.name, NULL);
 
     if (identIsOuterLocalVar(&comp->blocks, ident))
         comp->error.handler(comp->error.context, "Closures are not supported, cannot close over %s", ident->name);
@@ -1522,7 +1517,7 @@ static void parsePrimary(Compiler *comp, Ident *ident, Type **type, Const *const
             break;
         }
 
-        default: comp->error.handler(comp->error.context, "Illegal identifier");
+        default: comp->error.handler(comp->error.context, "Unexpected identifier %s", ident->name);
     }
 }
 

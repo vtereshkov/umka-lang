@@ -467,6 +467,11 @@ Utils from lib 1
 Utils from lib 2
 
 
+>>> Import disambiguation - 3
+
+42 43 1 
+
+
 >>> Simulated closures
 
 running by_name_eq with name : Foo

@@ -224,24 +224,20 @@ static Type *parsePtrType(Compiler *comp)
     bool forward = false;
     if (comp->lex.tok.kind == TOK_IDENT)
     {
-        int module = moduleFindImported(&comp->modules, &comp->blocks, comp->lex.tok.name, true);
-        if (module < 0)
+        Ident *ident = identFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, comp->lex.tok.name, NULL, true);
+        if (!ident)
         {
-            Ident *ident = identFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, comp->lex.tok.name, NULL, true);
-            if (!ident)
-            {
-                IdentName name;
-                strcpy(name, comp->lex.tok.name);
+            IdentName name;
+            strcpy(name, comp->lex.tok.name);
 
-                lexNext(&comp->lex);
-                bool exported = parseExportMark(comp);
+            lexNext(&comp->lex);
+            bool exported = parseExportMark(comp);
 
-                type = typeAdd(&comp->types, &comp->blocks, TYPE_FORWARD);
-                type->typeIdent = identAddType(&comp->idents, &comp->modules, &comp->blocks, name, type, exported);
-                type->typeIdent->used = true;
+            type = typeAdd(&comp->types, &comp->blocks, TYPE_FORWARD);
+            type->typeIdent = identAddType(&comp->idents, &comp->modules, &comp->blocks, name, type, exported);
+            type->typeIdent->used = true;
 
-                forward = true;
-            }
+            forward = true;
         }
     }
 
@@ -772,6 +768,8 @@ static void parseImportItem(Compiler *comp)
     if (*importAlias)
          comp->modules.error->handler(comp->modules.error->context, "Duplicate imported module %s", path);
     *importAlias = alias;
+
+    identAddModule(&comp->idents, &comp->modules, &comp->blocks, alias, comp->voidType, importedModule);
 
     lexNext(&comp->lex);
 }

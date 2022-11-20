@@ -11,7 +11,8 @@ typedef enum
     IDENT_CONST,
     IDENT_VAR,
     IDENT_TYPE,
-    IDENT_BUILTIN_FN
+    IDENT_BUILTIN_FN,
+    IDENT_MODULE
 } IdentKind;
 
 
@@ -21,7 +22,7 @@ typedef struct tagIdent
     IdentName name;
     unsigned int hash;
     Type *type;
-    int module, block;                  // Global identifiers are in block 0
+    int module, block;                  // Place of definition (global identifiers are in block 0)
     bool exported, inHeap, used;
     int prototypeOffset;                // For function prototypes
     union
@@ -30,6 +31,7 @@ typedef struct tagIdent
         void *ptr;                      // For global variables
         int64_t offset;                 // For functions (code offset) or local variables (stack offset)
         Const constant;                 // For constants
+        int64_t moduleVal;              // For modules
     };
     struct tagIdent *next;
 } Ident;
@@ -56,6 +58,7 @@ Ident *identAddGlobalVar  (Idents *idents, Modules *modules, Blocks *blocks, con
 Ident *identAddLocalVar   (Idents *idents, Modules *modules, Blocks *blocks, const char *name, Type *type, bool exported, int offset);
 Ident *identAddType       (Idents *idents, Modules *modules, Blocks *blocks, const char *name, Type *type, bool exported);
 Ident *identAddBuiltinFunc(Idents *idents, Modules *modules, Blocks *blocks, const char *name, Type *type, BuiltinFunc builtin);
+Ident *identAddModule     (Idents *idents, Modules *modules, Blocks *blocks, const char *name, Type *type, int moduleVal);
 
 int    identAllocStack    (Idents *idents, Types *types, Blocks *blocks, Type *type);
 Ident *identAllocVar      (Idents *idents, Types *types, Modules *modules, Blocks *blocks, const char *name, Type *type, bool exported);
