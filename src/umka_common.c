@@ -168,33 +168,15 @@ int moduleFind(Modules *modules, const char *path)
 }
 
 
-int moduleFindImported(Modules *modules, Blocks *blocks, const char *alias, bool markAsUsed)
+int moduleFindImported(Modules *modules, Blocks *blocks, const char *alias)
 {
     for (int i = 0; i < modules->numModules; i++)
     {
         const char *importAlias = modules->module[blocks->module]->importAlias[i];
         if (importAlias && strcmp(importAlias, alias) == 0)
-        {
-            if (markAsUsed)
-                modules->module[blocks->module]->importUsed[i] = true;
             return i;
-        }
     }
     return -1;
-}
-
-
-void moduleWarnIfUnusedImports(Modules *modules, int module)
-{
-    for (int i = 0; i < modules->numModules; i++)
-    {
-        const char *importAlias = modules->module[module]->importAlias[i];
-        if (importAlias && !modules->module[module]->importUsed[i])
-        {
-            modules->error->warningHandler(modules->error->context, "Imported module %s is not used", importAlias);
-            modules->module[module]->importUsed[i] = true;
-        }
-    }
 }
 
 
@@ -231,15 +213,11 @@ int moduleAdd(Modules *modules, const char *path)
     module->implLib = modules->implLibsEnabled ? moduleLoadImplLib(libPath) : NULL;
 
     for (int i = 0; i < MAX_MODULES; i++)
-    {
         module->importAlias[i] = NULL;
-        module->importUsed[i] = false;
-    }
 
     // Self-import
     module->importAlias[modules->numModules] = malloc(DEFAULT_STR_LEN + 1);
     strcpy(module->importAlias[modules->numModules], name);
-    module->importUsed[modules->numModules] = true;
 
     modules->module[modules->numModules] = module;
     return modules->numModules++;

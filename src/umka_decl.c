@@ -741,7 +741,7 @@ static void parseImportItem(Compiler *comp)
         strcpy(alias, name);
     }
 
-    if (moduleFindImported(&comp->modules, &comp->blocks, alias, false) >= 0)
+    if (moduleFindImported(&comp->modules, &comp->blocks, alias) >= 0)
         comp->modules.error->handler(comp->modules.error->context, "Duplicate imported module %s", alias);
 
     int importedModule = moduleFind(&comp->modules, path);
@@ -807,7 +807,6 @@ static int parseModule(Compiler *comp)
     }
     parseDecls(comp);
     doResolveExtern(comp);
-    moduleWarnIfUnusedImports(&comp->modules, comp->blocks.module);
     return comp->blocks.module;
 }
 

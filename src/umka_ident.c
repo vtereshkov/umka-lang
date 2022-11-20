@@ -302,9 +302,9 @@ char *identMethodNameWithRcv(Ident *method, char *buf, int size)
 
 void identWarnIfUnused(Idents *idents, Ident *ident)
 {
-    if (!ident->used && ident->kind != IDENT_MODULE)    // Report unused modules separately
+    if (!ident->used)
     {
-        idents->error->warningHandler(idents->error->context, "Identifier %s is not used", ident->name);
+        idents->error->warningHandler(idents->error->context, "%s %s is not used", (ident->kind == IDENT_MODULE ? "Module" : "Identifier"), ident->name);
         ident->used = true;
     }
 }
