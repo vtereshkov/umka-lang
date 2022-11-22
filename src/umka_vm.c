@@ -216,7 +216,7 @@ static FORCE_INLINE HeapPage *pageFind(HeapPages *pages, void *ptr, bool warnDan
             if (warnDangling && chunk->refCnt == 0)
                 pages->error->runtimeHandler(pages->error->context, "Dangling pointer at %p", ptr);
 
-            if (chunk->magic == VM_HEAP_CHUNK_MAGIC && chunk->refCnt > 0)
+            if (chunk->refCnt > 0)
                 return page;
             return NULL;
         }
@@ -271,7 +271,6 @@ static FORCE_INLINE void *chunkAlloc(HeapPages *pages, int64_t size, Type *type,
     HeapChunkHeader *chunk = (HeapChunkHeader *)((char *)page->ptr + page->numOccupiedChunks * page->chunkSize);
 
     memset(chunk, 0, page->chunkSize);
-    chunk->magic = VM_HEAP_CHUNK_MAGIC;
     chunk->refCnt = 1;
     chunk->size = size;
     chunk->type = type;
