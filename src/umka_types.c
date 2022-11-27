@@ -515,11 +515,11 @@ bool typeValidOperator(Type *type, TokenKind op)
         case TOK_XOR:
         case TOK_SHL:
         case TOK_SHR:       return typeInteger(type);
-        case TOK_PLUSEQ:
+        case TOK_PLUSEQ:    return typeInteger(type) || typeReal(type) || type->kind == TYPE_STR;
         case TOK_MINUSEQ:
         case TOK_MULEQ:
-        case TOK_DIVEQ:     return typeInteger(type) || typeReal(type);
-        case TOK_MODEQ:
+        case TOK_DIVEQ:
+        case TOK_MODEQ:     return typeInteger(type) || typeReal(type);
         case TOK_ANDEQ:
         case TOK_OREQ:
         case TOK_XOREQ:

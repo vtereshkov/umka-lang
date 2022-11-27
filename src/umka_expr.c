@@ -576,20 +576,23 @@ static void doExplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *co
 }
 
 
-static void doApplyStrCat(Compiler *comp, Const *constant, Const *rightConstant)
+static void doApplyStrCat(Compiler *comp, Const *constant, Const *rightConstant, TokenKind op)
 {
     if (constant)
     {
+        if (op == TOK_PLUSEQ)
+            comp->error.handler(comp->error.context, "Operator is not allowed in constant expressions");
+
         int bufLen = strlen((char *)constant->ptrVal) + strlen((char *)rightConstant->ptrVal) + 1;
         char *buf = storageAdd(&comp->storage, bufLen);
         strcpy(buf, (char *)constant->ptrVal);
 
         constant->ptrVal = buf;
-        constBinary(&comp->consts, constant, rightConstant, TOK_PLUS, TYPE_STR);
+        constBinary(&comp->consts, constant, rightConstant, TOK_PLUS, TYPE_STR);    // "+" only
     }
     else
     {
-        genBinary(&comp->gen, TOK_PLUS, TYPE_STR, 0);
+        genBinary(&comp->gen, op, TYPE_STR, 0);                                     // "+" or "+=" only
         doCopyResultToTempVar(comp, comp->strType);
     }
 }
@@ -609,8 +612,8 @@ void doApplyOperator(Compiler *comp, Type **type, Type **rightType, Const *const
 
     if (apply)
     {
-        if ((*type)->kind == TYPE_STR && op == TOK_PLUS)
-            doApplyStrCat(comp, constant, rightConstant);
+        if ((*type)->kind == TYPE_STR && (op == TOK_PLUS || op == TOK_PLUSEQ))
+            doApplyStrCat(comp, constant, rightConstant, op);
         else
         {
             if (constant)

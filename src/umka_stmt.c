@@ -226,7 +226,10 @@ static void parseShortAssignmentStmt(Compiler *comp, Type *type, TokenKind op)
     Type *rightType;
     parseExpr(comp, &rightType, NULL);
 
-    doApplyOperator(comp, &leftType, &rightType, NULL, NULL, lexShortAssignment(op), true, false);
+    // Keep "+=" for strings as is for better optimizations
+    const TokenKind shortOp = (leftType->kind == TYPE_STR && op == TOK_PLUSEQ) ? op : lexShortAssignment(op);
+
+    doApplyOperator(comp, &leftType, &rightType, NULL, NULL, shortOp, true, false);
     genChangeRefCntAssign(&comp->gen, type);
 }
 

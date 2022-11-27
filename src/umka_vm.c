@@ -2230,21 +2230,47 @@ static FORCE_INLINE void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
     }
     else if (fiber->code[fiber->ip].typeKind == TYPE_STR)
     {
-        const char *lhsStr = (const char *)fiber->top->ptrVal;
+        char *lhsStr = (char *)fiber->top->ptrVal;
         if (!lhsStr)
             lhsStr = "";
 
-        const char *rhsStr = (const char *)rhs.ptrVal;
+        char *rhsStr = (char *)rhs.ptrVal;
         if (!rhsStr)
             rhsStr = "";
 
         switch (fiber->code[fiber->ip].tokKind)
         {
             case TOK_PLUS:
+            case TOK_PLUSEQ:
             {
-                char *buf = chunkAlloc(pages, strlen(lhsStr) + strlen(rhsStr) + 1, NULL, NULL, error);
-                strcpy(buf, lhsStr);
-                strcat(buf, rhsStr);
+                const int lhsLen = strlen(lhsStr), rhsLen = strlen(rhsStr);
+                bool inPlace = false;
+
+                if (fiber->code[fiber->ip].tokKind == TOK_PLUSEQ)
+                {
+                    HeapPage *page = pageFind(pages, lhsStr, true);
+                    if (page)
+                    {
+                        HeapChunkHeader *chunk = pageGetChunkHeader(page, lhsStr);
+                        if (lhsStr == (char *)chunk + sizeof(HeapChunkHeader) && lhsLen + rhsLen + 1 <= chunk->size)
+                            inPlace = true;
+                    }
+                }
+
+                char *buf = NULL;
+                if (inPlace)
+                {
+                    buf = lhsStr;
+                    Type strType = {.kind = TYPE_STR};
+                    doBasicChangeRefCnt(fiber, pages, buf, &strType, TOK_PLUSPLUS);
+                }
+                else
+                {
+                    buf = chunkAlloc(pages, 2 * (lhsLen + rhsLen) + 1, NULL, NULL, error);
+                    memmove(buf, lhsStr, lhsLen);
+                }
+
+                memmove(buf + lhsLen, rhsStr, rhsLen + 1);
                 fiber->top->ptrVal = buf;
                 break;
             }
