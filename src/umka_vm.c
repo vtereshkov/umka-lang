@@ -2718,7 +2718,7 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         // Misc
         case BUILTIN_REPR:          doBuiltinRepr(fiber, pages, error); break;
         case BUILTIN_EXIT:          fiber->alive = false; break;
-        case BUILTIN_ERROR:         error->runtimeHandler(error->context, (char *)fiber->top->ptrVal); return;
+        case BUILTIN_ERROR:         error->runtimeHandler(error->context, "%s", (char *)fiber->top->ptrVal); return;
     }
     fiber->ip++;
 }
