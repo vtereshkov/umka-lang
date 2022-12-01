@@ -735,9 +735,9 @@ static void parseForInHeader(Compiler *comp)
 
         switch (collectionType->kind)
         {
-            case TYPE_ARRAY:     genGetArrayPtr(&comp->gen, typeSize(&comp->types, collectionType->base), collectionType->numItems); break; // Use nominal length for range checking
+            case TYPE_ARRAY:     genGetArrayPtr(&comp->gen, typeSize(&comp->types, collectionType->base), collectionType->numItems); break;
             case TYPE_DYNARRAY:  genGetDynArrayPtr(&comp->gen);                                                                      break;
-            case TYPE_STR:       genGetArrayPtr(&comp->gen, typeSize(&comp->types, comp->charType), -1);                             break; // Use actual length for range checking
+            case TYPE_STR:       genGetArrayPtr(&comp->gen, typeSize(&comp->types, comp->charType), INT_MAX);                        break; // No range checking
             case TYPE_MAP:       genGetMapPtr(&comp->gen, collectionType);                                                           break;
             default:             break;
         }
