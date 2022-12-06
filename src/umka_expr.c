@@ -282,11 +282,14 @@ static void doDynArrayToDynArrayConv(Compiler *comp, Type *dest, Type **src, Con
     genGetDynArrayPtr(&comp->gen);
     genDeref(&comp->gen, (*src)->base->kind);
 
-    Type *itemType = (*src)->base;
-    doExplicitTypeConv(comp, dest->base, &itemType, constant, false);
+    Type *castType = (*src)->base;
+    doExplicitTypeConv(comp, dest->base, &castType, constant, false);
 
-    if (!typeEquivalent(itemType, dest->base))
-        comp->error.handler(comp->error.context, "Invalid type cast");
+    if (!typeEquivalent(dest->base, castType))
+    {
+        char srcBuf[DEFAULT_STR_LEN + 1], destBuf[DEFAULT_STR_LEN + 1];
+        comp->error.handler(comp->error.context, "Cannot cast %s to %s", typeSpelling((*src)->base, srcBuf), typeSpelling(dest->base, destBuf));
+    }
 
     doPushVarPtr(comp, destArray);
     genDeref(&comp->gen, dest->kind);
@@ -1533,10 +1536,15 @@ static void parseTypeCast(Compiler *comp, Type **type, Const *constant)
 
     Type *originalType;
     parseExpr(comp, &originalType, constant);
-    doExplicitTypeConv(comp, *type, &originalType, constant, false);
 
-    if (!typeEquivalent(*type, originalType))
-        comp->error.handler(comp->error.context, "Invalid type cast");
+    Type *castType = originalType;
+    doExplicitTypeConv(comp, *type, &castType, constant, false);
+
+    if (!typeEquivalent(*type, castType))
+    {
+        char srcBuf[DEFAULT_STR_LEN + 1], destBuf[DEFAULT_STR_LEN + 1];
+        comp->error.handler(comp->error.context, "Cannot cast %s to %s", typeSpelling(originalType, srcBuf), typeSpelling(*type, destBuf));
+    }
 
     lexEat(&comp->lex, TOK_RPAR);
 }
