@@ -716,6 +716,27 @@ static char *typeSpellingRecursive(Type *type, char *buf, int size, int depth)
             }
             len += snprintf(buf + len, nonneg(size - len), "}");
         }
+        else if (type->kind == TYPE_FN)
+        {
+            len += snprintf(buf + len, nonneg(size - len), "fn (");
+
+            int iStart = type->sig.offsetFromSelf == 0 ? 0 : 1;
+            for (int i = iStart; i < type->sig.numParams; i++)
+            {
+                char paramBuf[DEFAULT_STR_LEN + 1];
+                if (i > iStart)
+                    len += snprintf(buf + len, nonneg(size - len), ", ");
+                len += snprintf(buf + len, nonneg(size - len), "%s", typeSpellingRecursive(type->sig.param[i]->type, paramBuf, DEFAULT_STR_LEN + 1, depth - 1));
+            }
+
+            len += snprintf(buf + len, nonneg(size - len), ")");
+
+            if (type->sig.resultType->kind != TYPE_VOID)
+            {
+                char resultBuf[DEFAULT_STR_LEN + 1];
+                len += snprintf(buf + len, nonneg(size - len), ": %s", typeSpellingRecursive(type->sig.resultType, resultBuf, DEFAULT_STR_LEN + 1, depth - 1));
+            }
+        }
         else
         {
             snprintf(buf + len, nonneg(size - len), "%s", spelling[type->kind]);
