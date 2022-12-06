@@ -2229,14 +2229,6 @@ static void parseFactor(Compiler *comp, Type **type, Const *constant)
             if (typeStructured(*type))
                 *type = typeAddPtrTo(&comp->types, &comp->blocks, *type);
 
-            // Find embracing function block and mark it as having at least one address operator
-            for (int i = comp->blocks.top; i >= 1; i--)
-                if (comp->blocks.item[i].fn)
-                {
-                    comp->blocks.item[i].hasAddressOperator = true;
-                    break;
-                }
-
             break;
         }
 

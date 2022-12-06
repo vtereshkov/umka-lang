@@ -854,12 +854,12 @@ void genEnterFrameStub(CodeGen *gen)
 }
 
 
-void genLeaveFrameFixup(CodeGen *gen, int localVarSlots, int paramSlots, bool hasAddressOperator)
+void genLeaveFrameFixup(CodeGen *gen, int localVarSlots, int paramSlots)
 {
     // Fixup enter stub
     int next = gen->ip;
     gen->ip = genRestorePos(gen);
-    bool inHeap = hasAddressOperator && genNeedHeapFrame(gen, gen->ip, next);
+    bool inHeap = genNeedHeapFrame(gen, gen->ip, next);
 
     genEnterFrame(gen, localVarSlots, paramSlots, inHeap);
     gen->ip = next;

@@ -90,7 +90,7 @@ void doResolveExtern(Compiler *comp)
 
                 int paramSlots = align(typeParamSizeTotal(&comp->types, &ident->type->sig), sizeof(Slot)) / sizeof(Slot);
 
-                genLeaveFrameFixup(&comp->gen, 0, paramSlots, false);
+                genLeaveFrameFixup(&comp->gen, 0, paramSlots);
                 genReturn(&comp->gen, paramSlots);
 
                 blocksLeave(&comp->blocks);
@@ -985,9 +985,7 @@ void parseFnBlock(Compiler *comp, Ident *fn)
     const int localVarSlots = align(comp->blocks.item[comp->blocks.top].localVarSize, sizeof(Slot)) / sizeof(Slot);
     const int paramSlots    = align(typeParamSizeTotal(&comp->types, &fn->type->sig), sizeof(Slot)) / sizeof(Slot);
 
-    const bool hasAddressOperator = comp->blocks.item[comp->blocks.top].hasAddressOperator;
-
-    genLeaveFrameFixup(&comp->gen, localVarSlots, paramSlots, hasAddressOperator);
+    genLeaveFrameFixup(&comp->gen, localVarSlots, paramSlots);
     genReturn(&comp->gen, paramSlots);
 
     comp->lex.debug->fnName = prevDebugFnName;

@@ -112,7 +112,7 @@ void genShortCircuitProlog(CodeGen *gen, TokenKind op);
 void genShortCircuitEpilog(CodeGen *gen);
 
 void genEnterFrameStub (CodeGen *gen);
-void genLeaveFrameFixup(CodeGen *gen, int localVarSlots, int paramSlots, bool hasAddressOperator);
+void genLeaveFrameFixup(CodeGen *gen, int localVarSlots, int paramSlots);
 
 void genEntryPoint(CodeGen *gen, int start);
 
