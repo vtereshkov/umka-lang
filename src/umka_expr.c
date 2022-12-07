@@ -1395,7 +1395,10 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
         while (1)
         {
             if (numPreHiddenParams + numExplicitParams + numPostHiddenParams > (*type)->sig.numParams - 1)
-                comp->error.handler(comp->error.context, "Too many actual parameters");
+            {
+                char fnTypeBuf[DEFAULT_STR_LEN + 1];
+                comp->error.handler(comp->error.context, "Too many actual parameters to %s", typeSpelling(*type, fnTypeBuf));
+            }
 
             Type *formalParamType = (*type)->sig.param[i]->type;
             Type *actualParamType;
@@ -1412,7 +1415,7 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
                 parseExpr(comp, &actualParamType, constant);
 
                 doImplicitTypeConv(comp, formalParamType, &actualParamType, constant, false);
-                typeAssertCompatible(&comp->types, formalParamType, actualParamType, false);
+                typeAssertCompatibleParam(&comp->types, formalParamType, actualParamType, *type, numExplicitParams + 1);
             }
 
             doPassParam(comp, formalParamType);
@@ -1433,7 +1436,10 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
         numDefaultOrVariadicFormalParams = 1;
 
     if (numPreHiddenParams + numExplicitParams + numPostHiddenParams < (*type)->sig.numParams - numDefaultOrVariadicFormalParams)
-        comp->error.handler(comp->error.context, "Too few actual parameters");
+    {
+        char fnTypeBuf[DEFAULT_STR_LEN + 1];
+        comp->error.handler(comp->error.context, "Too few actual parameters to %s", typeSpelling(*type, fnTypeBuf));
+    }
 
     // Push default or variadic parameters, if not specified explicitly
     while (i + numPostHiddenParams < (*type)->sig.numParams)

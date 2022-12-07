@@ -203,6 +203,7 @@ bool typeEquivalentExceptIdent  (Type *left, Type *right);
 void typeAssertEquivalent       (Types *types, Type *left, Type *right);
 bool typeCompatible             (Type *left, Type *right, bool symmetric);
 void typeAssertCompatible       (Types *types, Type *left, Type *right, bool symmetric);
+void typeAssertCompatibleParam  (Types *types, Type *left, Type *right, Type *fnType, int paramIndex);
 void typeAssertCompatibleBuiltin(Types *types, Type *type, /*BuiltinFunc*/ int builtin, bool condition);
 
 

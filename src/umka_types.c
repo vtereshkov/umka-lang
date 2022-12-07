@@ -491,6 +491,16 @@ void typeAssertCompatible(Types *types, Type *left, Type *right, bool symmetric)
 }
 
 
+void typeAssertCompatibleParam(Types *types, Type *left, Type *right, Type *fnType, int paramIndex)
+{
+    if (!typeCompatible(left, right, false))
+    {
+        char rightBuf[DEFAULT_STR_LEN + 1], fnTypeBuf[DEFAULT_STR_LEN + 1];
+        types->error->handler(types->error->context, "Incompatible type %s for parameter %d to %s", typeSpelling(right, rightBuf), paramIndex, typeSpelling(fnType, fnTypeBuf));
+    }
+}
+
+
 void typeAssertCompatibleBuiltin(Types *types, Type *type, /*BuiltinFunc*/ int builtin, bool condition)
 {
     if (!condition)
@@ -720,12 +730,19 @@ static char *typeSpellingRecursive(Type *type, char *buf, int size, int depth)
         {
             len += snprintf(buf + len, nonneg(size - len), "fn (");
 
-            int iStart = type->sig.offsetFromSelf == 0 ? 0 : 1;
-            for (int i = iStart; i < type->sig.numParams; i++)
+            if (type->sig.method)
             {
                 char paramBuf[DEFAULT_STR_LEN + 1];
+                len += snprintf(buf + len, nonneg(size - len), "%s) (", typeSpellingRecursive(type->sig.param[0]->type, paramBuf, DEFAULT_STR_LEN + 1, depth - 1));
+            }
+
+            int iStart = (!type->sig.method && type->sig.offsetFromSelf == 0) ? 0 : 1;
+            for (int i = iStart; i < type->sig.numParams; i++)
+            {
                 if (i > iStart)
                     len += snprintf(buf + len, nonneg(size - len), ", ");
+
+                char paramBuf[DEFAULT_STR_LEN + 1];
                 len += snprintf(buf + len, nonneg(size - len), "%s", typeSpellingRecursive(type->sig.param[i]->type, paramBuf, DEFAULT_STR_LEN + 1, depth - 1));
             }
 
