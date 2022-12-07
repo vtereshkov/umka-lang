@@ -736,10 +736,12 @@ static char *typeSpellingRecursive(Type *type, char *buf, int size, int depth)
                 len += snprintf(buf + len, nonneg(size - len), "%s) (", typeSpellingRecursive(type->sig.param[0]->type, paramBuf, DEFAULT_STR_LEN + 1, depth - 1));
             }
 
-            int iStart = (!type->sig.method && type->sig.offsetFromSelf == 0) ? 0 : 1;
-            for (int i = iStart; i < type->sig.numParams; i++)
+            int numPreHiddenParams = type->sig.method ? 1 : 0;                          // __self
+            int numPostHiddenParams = typeStructured(type->sig.resultType) ? 1 : 0;     // __result
+
+            for (int i = numPreHiddenParams; i < type->sig.numParams - numPostHiddenParams; i++)
             {
-                if (i > iStart)
+                if (i > numPreHiddenParams)
                     len += snprintf(buf + len, nonneg(size - len), ", ");
 
                 char paramBuf[DEFAULT_STR_LEN + 1];
