@@ -693,7 +693,7 @@ static void lexCharLiteral(Lexer *lex)
     const char ch = lexChar(lex);
     if (ch != '\'')
     {
-        lex->error->handler(lex->error->context, "Character literal is not found");
+        lex->error->handler(lex->error->context, "Invalid character literal");
         lex->tok.kind = TOK_NONE;
     }
     lexChar(lex);
