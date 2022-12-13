@@ -635,10 +635,13 @@ fn make(map[K]T): map[K]T         // (2)
 (2) Constructs an empty map with item type `T` indexed by keys of type `K`. 
 
 ```
-fn copy(a: []T): []T
+fn copy(a: []T): []T              // (1)
+fn copy(m: map[K]T): map[K]T      // (2)
 ```
 
-Constructs a copy of the dynamic array `a`.
+(1) Constructs a copy of the dynamic array `a`.
+
+(2) Constructs a copy of the map `m`.
 
 ```
 fn append(a: []T, x: (^T | []T)): []T

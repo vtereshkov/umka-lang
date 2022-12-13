@@ -99,12 +99,28 @@ fn test5() {
 }
 
 
+fn test6() {
+	printf("\nTest 6\n")
+
+	m := map[str][]real{"pi": []real{3.14, 6.28}, "e": []real{2.72, 5.44}, "ten": []real{10, 20}}
+
+	n := copy(m)
+	m["one"] = []real{1.0, 2.0}
+	o := delete(copy(m), "pi")
+
+	printf(repr(m) + '\n')
+	printf(repr(n) + '\n')
+	printf(repr(o) + '\n')
+}
+
+
 fn test*() {
 	test1()
 	test2()
 	test3()
 	test4()
 	test5()
+	test6()
 }
 
 

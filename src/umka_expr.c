@@ -802,6 +802,7 @@ static void parseBuiltinMakeCall(Compiler *comp, Type **type, Const *constant)
 
 
 // fn copy(array: [] type): [] type
+// fn copy(m: map [keyType] type): map [keyType] type
 static void parseBuiltinCopyCall(Compiler *comp, Type **type, Const *constant)
 {
     if (constant)
@@ -809,13 +810,13 @@ static void parseBuiltinCopyCall(Compiler *comp, Type **type, Const *constant)
 
     // Dynamic array
     parseExpr(comp, type, NULL);
-    typeAssertCompatibleBuiltin(&comp->types, *type, BUILTIN_COPY, (*type)->kind == TYPE_DYNARRAY);
+    typeAssertCompatibleBuiltin(&comp->types, *type, BUILTIN_COPY, (*type)->kind == TYPE_DYNARRAY || (*type)->kind == TYPE_MAP);
 
     // Pointer to result (hidden parameter)
     int resultOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, *type);
     genPushLocalPtr(&comp->gen, resultOffset);
 
-    genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_COPY);
+    genCallBuiltin(&comp->gen, (*type)->kind, BUILTIN_COPY);
 }
 
 

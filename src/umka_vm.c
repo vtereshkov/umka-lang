@@ -913,6 +913,60 @@ static FORCE_INLINE MapNode *doGetMapNode(Map *map, Slot key, bool createMissing
 }
 
 
+static MapNode *doCopyMapNode(Map *map, MapNode *node, Fiber *fiber, HeapPages *pages, Error *error)
+{
+    if (!node)
+        return NULL;
+
+    Type *nodeType = map->type->base;
+    MapNode *result = (MapNode *)chunkAlloc(pages, typeSizeNoCheck(nodeType), nodeType, NULL, error);
+
+    result->len = node->len;
+
+    if (node->key)
+    {
+        Type *keyType = typeMapKey(map->type);
+        int keySize = typeSizeNoCheck(keyType);
+
+        Slot srcKey = {.ptrVal = node->key};
+        doBasicDeref(&srcKey, keyType->kind, error);
+
+        // When allocating dynamic arrays, we mark with type the data chunk, not the header chunk
+        result->key = chunkAlloc(pages, typeSizeNoCheck(keyType), keyType->kind == TYPE_DYNARRAY ? NULL : keyType, NULL, error);
+
+        if (typeGarbageCollected(keyType))
+            doBasicChangeRefCnt(fiber, pages, srcKey.ptrVal, keyType, TOK_PLUSPLUS);
+
+        doBasicAssign(result->key, srcKey, keyType->kind, keySize, error);
+    }
+
+    if (node->data)
+    {
+        Type *itemType = typeMapItem(map->type);
+        int itemSize = typeSizeNoCheck(itemType);
+
+        Slot srcItem = {.ptrVal = node->data};
+        doBasicDeref(&srcItem, itemType->kind, error);
+
+        // When allocating dynamic arrays, we mark with type the data chunk, not the header chunk
+        result->data = chunkAlloc(pages, typeSizeNoCheck(itemType), itemType->kind == TYPE_DYNARRAY ? NULL : itemType, NULL, error);
+
+        if (typeGarbageCollected(itemType))
+            doBasicChangeRefCnt(fiber, pages, srcItem.ptrVal, itemType, TOK_PLUSPLUS);
+
+        doBasicAssign(result->data, srcItem, itemType->kind, itemSize, error);
+    }
+
+    if (node->left)
+        result->left = doCopyMapNode(map, node->left, fiber, pages, error);
+
+    if (node->right)
+        result->right = doCopyMapNode(map, node->right, fiber, pages, error);
+
+    return result;
+}
+
+
 static void doGetMapKeysRecursively(Map *map, MapNode *node, void *keys, int *numKeys, Error *error)
 {
     if (node->key)
@@ -1505,7 +1559,7 @@ static FORCE_INLINE void doBuiltinMaketostr(Fiber *fiber, HeapPages *pages, Erro
 
 
 // fn copy(array: [] type): [] type
-static FORCE_INLINE void doBuiltinCopy(Fiber *fiber, HeapPages *pages, Error *error)
+static FORCE_INLINE void doBuiltinCopyDynArray(Fiber *fiber, HeapPages *pages, Error *error)
 {
     DynArray *result = (DynArray *)(fiber->top++)->ptrVal;
     DynArray *array  = (DynArray *)(fiber->top++)->ptrVal;
@@ -1526,6 +1580,36 @@ static FORCE_INLINE void doBuiltinCopy(Fiber *fiber, HeapPages *pages, Error *er
     }
 
     (--fiber->top)->ptrVal = result;
+}
+
+
+// fn copy(m: map [keyType] type): map [keyType] type
+static FORCE_INLINE void doBuiltinCopyMap(Fiber *fiber, HeapPages *pages, Error *error)
+{
+    Map *result = (Map *)(fiber->top++)->ptrVal;
+    Map *map    = (Map *)(fiber->top++)->ptrVal;
+
+    if (!map)
+        error->runtimeHandler(error->context, "Map is null");
+
+    if (!map->root)
+        *result = *map;
+    else
+    {
+        result->type = map->type;
+        result->root = doCopyMapNode(map, map->root, fiber, pages, error);
+    }
+
+    (--fiber->top)->ptrVal = result;
+}
+
+
+static FORCE_INLINE void doBuiltinCopy(Fiber *fiber, HeapPages *pages, TypeKind typeKind, Error *error)
+{
+    if (typeKind == TYPE_DYNARRAY)
+        doBuiltinCopyDynArray(fiber, pages, error);
+    else
+        doBuiltinCopyMap(fiber, pages, error);
 }
 
 
@@ -1695,6 +1779,15 @@ static FORCE_INLINE void doBuiltinDeleteMap(Fiber *fiber, HeapPages *pages, Erro
     result->root = map->root;
 
     (--fiber->top)->ptrVal = result;
+}
+
+
+static FORCE_INLINE void doBuiltinDelete(Fiber *fiber, HeapPages *pages, TypeKind typeKind, Error *error)
+{
+    if (typeKind == TYPE_DYNARRAY)
+        doBuiltinDeleteDynArray(fiber, pages, error);
+    else
+        doBuiltinDeleteMap(fiber, pages, error);
 }
 
 
@@ -2471,7 +2564,8 @@ static FORCE_INLINE void doGetMapPtr(Fiber *fiber, HeapPages *pages, Error *erro
         node->data = chunkAlloc(pages, typeSizeNoCheck(itemType), itemType->kind == TYPE_DYNARRAY ? NULL : itemType, NULL, error);
 
         // Increase key ref count
-        doBasicChangeRefCnt(fiber, pages, key.ptrVal, keyType, TOK_PLUSPLUS);
+        if (typeGarbageCollected(keyType))
+            doBasicChangeRefCnt(fiber, pages, key.ptrVal, keyType, TOK_PLUSPLUS);
 
         doBasicAssign(node->key, key, keyType->kind, typeSizeNoCheck(keyType), error);
         map->root->len++;
@@ -2686,17 +2780,10 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         case BUILTIN_MAKEFROMSTR:   doBuiltinMakefromstr(fiber, pages, error); break;
         case BUILTIN_MAKETOARR:     doBuiltinMaketoarr(fiber, pages, error); break;
         case BUILTIN_MAKETOSTR:     doBuiltinMaketostr(fiber, pages, error); break;
-        case BUILTIN_COPY:          doBuiltinCopy(fiber, pages, error); break;
+        case BUILTIN_COPY:          doBuiltinCopy(fiber, pages, typeKind, error); break;
         case BUILTIN_APPEND:        doBuiltinAppend(fiber, pages, error); break;
         case BUILTIN_INSERT:        doBuiltinInsert(fiber, pages, error); break;
-        case BUILTIN_DELETE:
-        {
-            if (typeKind == TYPE_DYNARRAY)
-                doBuiltinDeleteDynArray(fiber, pages, error);
-            else
-                doBuiltinDeleteMap(fiber, pages, error);
-            break;
-        }
+        case BUILTIN_DELETE:        doBuiltinDelete(fiber, pages, typeKind, error); break;
         case BUILTIN_SLICE:         doBuiltinSlice(fiber, pages, error); break;
         case BUILTIN_LEN:           doBuiltinLen(fiber, error); break;
         case BUILTIN_CAP:           doBuiltinCap(fiber, error); break;
