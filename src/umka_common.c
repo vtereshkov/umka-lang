@@ -57,6 +57,19 @@ char *storageAdd(Storage *storage, int size)
 
 // Modules
 
+static const char *moduleImplLibSuffix()
+{
+#ifdef UMKA_EXT_LIBS
+    #ifdef _WIN32
+        return "_windows";
+    #else
+        return "_linux";
+    #endif
+#endif
+    return "";
+}
+
+
 static void *moduleLoadImplLib(const char *path)
 {
 #ifdef UMKA_EXT_LIBS
@@ -207,10 +220,24 @@ int moduleAdd(Modules *modules, const char *path)
 
     module->pathHash = hash(path);
 
-    char libPath[2 + 2 * DEFAULT_STR_LEN + 4 + 1];
-    sprintf(libPath, "%s%s%s.umi", modulePathIsAbsolute(module->path) ? "" : "./", module->folder, module->name);
+    module->implLib = NULL;
+    if (modules->implLibsEnabled)
+    {
+        char libPath[2 + 2 * DEFAULT_STR_LEN + 8 + 4 + 1];
 
-    module->implLib = modules->implLibsEnabled ? moduleLoadImplLib(libPath) : NULL;
+        const char *pathPrefix = modulePathIsAbsolute(module->path) ? "" : "./";
+
+        // First, search for an implementation library with an OS-specific suffix
+        sprintf(libPath, "%s%s%s%s.umi", pathPrefix, module->folder, module->name, moduleImplLibSuffix());
+        module->implLib = moduleLoadImplLib(libPath);
+
+        // If not found, search for an implementation library without suffix
+        if (!module->implLib)
+        {
+            sprintf(libPath, "%s%s%s.umi", pathPrefix, module->folder, module->name);
+            module->implLib = moduleLoadImplLib(libPath);
+        }
+    }
 
     for (int i = 0; i < MAX_MODULES; i++)
         module->importAlias[i] = NULL;
