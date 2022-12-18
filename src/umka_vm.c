@@ -769,7 +769,11 @@ static FORCE_INLINE void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, voi
                 // Don't use ref counting for the fiber stack, otherwise every local variable will also be ref-counted
                 HeapChunkHeader *chunk = pageGetChunkHeader(page, ptr);
                 if (chunk->refCnt == 1 && tokKind == TOK_MINUSMINUS)
+                {
                     free(((Fiber *)ptr)->stack);
+                    if (((Fiber *)ptr)->alive)
+                        pages->error->runtimeHandler(pages->error->context, "Cannot destroy a fiber that did not return");
+                }
 
                 chunkChangeRefCnt(pages, page, ptr, (tokKind == TOK_PLUSPLUS) ? 1 : -1);
                 break;
