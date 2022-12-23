@@ -1322,6 +1322,19 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
                                         !(typeKindReal(typeKind)    && typeKindReal(expectedTypeKind)))
         error->runtimeHandler(error->context, "Incompatible types %s and %s in printf()", typeKindSpelling(expectedTypeKind), typeKindSpelling(typeKind));
 
+    // Check overflow
+    if (expectedTypeKind != TYPE_VOID)
+    {
+        Const arg;
+        if (typeKindReal(expectedTypeKind))
+            arg.realVal = fiber->top->realVal;
+        else
+            arg.intVal = fiber->top->intVal;
+
+        if (typeOverflow(expectedTypeKind, arg))
+            error->runtimeHandler(error->context, "Overflow of %s", typeKindSpelling(expectedTypeKind));
+    }
+
     char curFormatBuf[DEFAULT_STR_LEN + 1];
     char *curFormat = curFormatBuf;
     if (formatLen + 1 > sizeof(curFormatBuf))
