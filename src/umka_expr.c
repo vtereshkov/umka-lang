@@ -622,7 +622,7 @@ void doApplyOperator(Compiler *comp, Type **type, Type **rightType, Const *const
             if (constant)
                 constBinary(&comp->consts, constant, rightConstant, op, (*type)->kind);
             else
-                genBinary(&comp->gen, op, (*type)->kind, 0);
+                genBinary(&comp->gen, op, (*type)->kind, typeSize(&comp->types, *type));
         }
     }
 }

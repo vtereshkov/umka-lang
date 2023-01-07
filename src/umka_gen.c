@@ -526,11 +526,11 @@ void genUnary(CodeGen *gen, TokenKind tokKind, TypeKind typeKind)
 }
 
 
-void genBinary(CodeGen *gen, TokenKind tokKind, TypeKind typeKind, int bufOffset)
+void genBinary(CodeGen *gen, TokenKind tokKind, TypeKind typeKind, int structSize)
 {
     if (!optimizeBinary(gen, tokKind, typeKind))
     {
-        const Instruction instr = {.opcode = OP_BINARY, .tokKind = tokKind, .typeKind = typeKind, .operand.intVal = bufOffset};
+        const Instruction instr = {.opcode = OP_BINARY, .tokKind = tokKind, .typeKind = typeKind, .operand.intVal = structSize};
         genAddInstr(gen, &instr);
     }
 }

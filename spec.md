@@ -282,7 +282,7 @@ String assignment copies the contents of the string.
 
 #### Map types
 
-A map is a collection of items of a single type indexed by unique values, called *keys*, of another type. The key type cannot be an interface type.
+A map is a collection of items of a single type indexed by unique values, called *keys*, of another type. The key type must be comparable, i.e., the `==` and `!=` operators must be applicable to operands of this type.
 
 Syntax:
 
@@ -945,39 +945,41 @@ p != null && p[i] > 0
 #### Unary operators
 
 ```
-+      Unary plus                Integers, reals
--      Unary minus               Integers, reals
-~      Bitwise "not"             Integers
-!      Logical "not"             Booleans
-&      Address                   Addressable designators
++   Unary plus          Integers, reals
+-   Unary minus         Integers, reals
+~   Bitwise "not"       Integers
+!   Logical "not"       Booleans
+&   Address             Addressable designators
 ```
 
 #### Binary operators
 
 ```
-+      Sum                       Integers, reals, strings
--      Difference                Integers, reals
-*      Product                   Integers, reals
-/      Quotient                  Integers, reals
-%      Remainder                 Integers, reals
-&      Bitwise "and"             Integers
-|      Bitwise "or"              Integers
-~      Bitwise "xor"             Integers
-<<     Left shift                Integers
->>     Right shift               Integers
-&&     Logical "and"             Booleans
-||     Logical "or"              Booleans
-==     "Equal"                   Ordinals, reals, pointers, strings
-!=     "Not equal"               Ordinals, reals, pointers, strings
->      "Greater"                 Ordinals, reals, strings
-<      "Less"                    Ordinals, reals, strings
->=     "Greater or equal"        Ordinals, reals, strings
-<=     "Less or equal"           Ordinals, reals, strings
++   Sum                 Integers, reals, strings
+-   Difference          Integers, reals
+*   Product             Integers, reals
+/   Quotient            Integers, reals
+%   Remainder           Integers, reals
+&   Bitwise "and"       Integers
+|   Bitwise "or"        Integers
+~   Bitwise "xor"       Integers
+<<  Left shift          Integers
+>>  Right shift         Integers
+&&  Logical "and"       Booleans
+||  Logical "or"        Booleans
+==  "Equal"             Ordinals, reals, pointers, strings, arrays, structures, functions
+!=  "Not equal"         Ordinals, reals, pointers, strings, arrays, structures, functions
+>   "Greater"           Ordinals, reals, strings
+<   "Less"              Ordinals, reals, strings
+>=  "Greater or equal"  Ordinals, reals, strings
+<=  "Less or equal"     Ordinals, reals, strings
 ```
 
 The `/` operator performs an integer division (with the remainder discarded) if both operands are of integer types, otherwise it performs a real division.
 
 The `&&` and `||` operators don't evaluate the second operand if the first operand is sufficient to evaluate the result.
+
+The `==` and `!=` operators, when applied to arrays or structures, perform bitwise comparison.
 
 ##### Operand type conversions
 

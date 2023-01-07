@@ -835,7 +835,6 @@ static void doGetMapKeyBytes(Slot key, Type *keyType, Error *error, char **keyBy
         case TYPE_REAL:
         case TYPE_PTR:
         case TYPE_WEAKPTR:
-        case TYPE_FIBER:
         case TYPE_FN:
         {
             // keyBytes must point to a pre-allocated 8-byte buffer
@@ -850,18 +849,10 @@ static void doGetMapKeyBytes(Slot key, Type *keyType, Error *error, char **keyBy
             break;
         }
         case TYPE_ARRAY:
-        case TYPE_MAP:
         case TYPE_STRUCT:
         {
             *keyBytes = (char *)key.ptrVal;
             *keySize = typeSizeNoCheck(keyType);
-            break;
-        }
-        case TYPE_DYNARRAY:
-        {
-            DynArray *array = (DynArray *)key.ptrVal;
-            *keyBytes = (char *)array->data;
-            *keySize = array->data ? (getDims(array)->len * array->itemSize) : 0;
             break;
         }
         default:
@@ -1151,8 +1142,8 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int maxD
             break;
         }
 
-        case TYPE_FIBER:    len = snprintf(buf, maxLen, "fiber ");                                 break;
-        case TYPE_FN:       len = snprintf(buf, maxLen, "fn ");                                    break;
+        case TYPE_FIBER:    len = snprintf(buf, maxLen, "fiber @ %p ", slot->ptrVal);                break;
+        case TYPE_FN:       len = snprintf(buf, maxLen, "fn @ %lld ", (long long int)slot->intVal);  break;
         default:            break;
     }
 
@@ -2395,7 +2386,20 @@ static FORCE_INLINE void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
             default:            error->runtimeHandler(error->context, "Illegal instruction"); return;
         }
     }
-    else if (fiber->code[fiber->ip].typeKind == TYPE_REAL || fiber->code[fiber->ip].typeKind == TYPE_REAL32)
+    else if (fiber->code[fiber->ip].typeKind == TYPE_ARRAY || fiber->code[fiber->ip].typeKind == TYPE_STRUCT)
+    {
+        const int structSize = fiber->code[fiber->ip].operand.intVal;
+
+        switch (fiber->code[fiber->ip].tokKind)
+        {
+            case TOK_EQEQ:      fiber->top->intVal = memcmp(fiber->top->ptrVal, rhs.ptrVal, structSize) == 0; break;
+            case TOK_NOTEQ:     fiber->top->intVal = memcmp(fiber->top->ptrVal, rhs.ptrVal, structSize) != 0; break;
+
+            default:            error->runtimeHandler(error->context, "Illegal instruction"); return;
+        }
+    }
+    else if (typeKindReal(fiber->code[fiber->ip].typeKind))
+    {
         switch (fiber->code[fiber->ip].tokKind)
         {
             case TOK_PLUS:  fiber->top->realVal += rhs.realVal; break;
@@ -2425,7 +2429,9 @@ static FORCE_INLINE void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
 
             default:            error->runtimeHandler(error->context, "Illegal instruction"); return;
         }
+    }
     else if (fiber->code[fiber->ip].typeKind == TYPE_UINT)
+    {
         switch (fiber->code[fiber->ip].tokKind)
         {
             case TOK_PLUS:  fiber->top->uintVal += rhs.uintVal; break;
@@ -2461,7 +2467,9 @@ static FORCE_INLINE void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
 
             default:            error->runtimeHandler(error->context, "Illegal instruction"); return;
         }
+    }
     else  // All ordinal types except TYPE_UINT
+    {
         switch (fiber->code[fiber->ip].tokKind)
         {
             case TOK_PLUS:  fiber->top->intVal += rhs.intVal; break;
@@ -2497,6 +2505,7 @@ static FORCE_INLINE void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
 
             default:            error->runtimeHandler(error->context, "Illegal instruction"); return;
         }
+    }
 
     fiber->ip++;
 }

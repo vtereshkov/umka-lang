@@ -57,7 +57,7 @@ void genChangeRefCntAssign      (CodeGen *gen, Type *type);
 void genSwapChangeRefCntAssign  (CodeGen *gen, Type *type);
 
 void genUnary (CodeGen *gen, TokenKind tokKind, TypeKind typeKind);
-void genBinary(CodeGen *gen, TokenKind tokKind, TypeKind typeKind, int bufOffset /*bytes*/);
+void genBinary(CodeGen *gen, TokenKind tokKind, TypeKind typeKind, int structSize);
 
 void genGetArrayPtr   (CodeGen *gen, int itemSize, int len);
 void genGetDynArrayPtr(CodeGen *gen);

@@ -129,7 +129,6 @@ fn test*() {
     printf("%s\n", repr(q))
     printf("%s\n", repr(sum))
     printf("%s\n", repr('a'))
-    printf("%s\n", repr(parentFunc))
     printf("%s\n", repr(printable))
     
 }
