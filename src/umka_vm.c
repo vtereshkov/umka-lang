@@ -1977,7 +1977,7 @@ static FORCE_INLINE void doBuiltinValid(Fiber *fiber, Error *error)
         case TYPE_INTERFACE:
         {
             Interface *interface = (Interface *)fiber->top->ptrVal;
-            isValid = interface && interface->selfType;
+            isValid = interface && interface->self;
             break;
         }
         case TYPE_FN:
