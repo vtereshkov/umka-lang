@@ -19,8 +19,6 @@ Umka is a statically typed embeddable scripting language. It combines the simpli
 * C99 source
 
 ## Performance
-Due to the efficient `for` loop implementation and support for static data structures, Umka demonstrates high performance in multidimensional array operations and similar tasks.
-
 _400 x 400 matrix multiplication (AMD A4-3300M @ 1.9 GHz, Windows 7)_
 ![](resources/perf.png)
 
@@ -45,13 +43,13 @@ _C+Umka 3D camera example_
 
 ## Projects in Umka
 
-* [VDrift/Umka](https://github.com/vtereshkov/vdrift) - a racing simulator that lets you design, tune and test your own car autopilot
-
-![](resources/vdrift.png)
-
 * [tophat](https://github.com/marekmaskarinec/tophat) - a 2D game engine focused on minimalism
 
 ![](resources/tophat.png)
+
+* [VDrift/Umka](https://github.com/vtereshkov/vdrift) - a racing simulator that lets you design, tune and test your own car autopilot
+
+![](resources/vdrift.png)
 
 * TractorSim3D - a 6 DOF tractor dynamics simulator with a scriptable steering controller and [raylib](https://www.raylib.com)-based graphics
 
@@ -189,16 +187,16 @@ fn parentFunc() {
 import "../import/fnc.um"
 
 fn main() {
-    var data: fnc.AnyArray = [6]fnc.Any{3, 7, 1, -4, 2, 5}
+    data := []int{3, 7, 1, -4, 2, 5}
     printf("Array = %s\n", repr(data))
      
-    sqr  := fn (x, ctx: fnc.Any): fnc.Any    {p := int(x); return p * p}
-    less := fn (x, ctx: fnc.Any): bool       {return int(x) < int(ctx)} 
-    sum  := fn (x, y, ctx: fnc.Any): fnc.Any {return int(x) + int(y)}     
+    sqr  := fn (x, ctx: any): any    {return int(x) * int(x)}
+    less := fn (x, ctx: any): bool   {return int(x) < int(ctx)} 
+    sum  := fn (x, y, ctx: any): any {return int(x) + int(y)}     
     
     const max = 30     
-    result := data.mapEach(sqr, null).filter(less, max).reduce(sum, null)    
-    printf("Sum of all squares less than %lld = %s\n", max, repr(result))       
+    result := int(fnc.Array(data).map_(sqr, null).filter(less, max).reduce(sum, null))   
+    printf("Sum of all squares less than %lld = %lld \n", max, result)       
 }
 ```
 ## Umka vs Go
