@@ -1997,7 +1997,10 @@ static void parseFieldSelector(Compiler *comp, Type **type, Const *constant, boo
     {
         // Field
         if ((*type)->kind != TYPE_STRUCT && (*type)->kind != TYPE_INTERFACE)
-            comp->error.handler(comp->error.context, "Method %s is not found, structure expected to look for field", comp->lex.tok.name);
+        {
+            char typeBuf[DEFAULT_STR_LEN + 1];
+            comp->error.handler(comp->error.context, "Method %s is not found, type %s is not a structure and cannot have fields", comp->lex.tok.name, typeSpelling(*type, typeBuf));
+        }
 
         Field *field = typeAssertFindField(&comp->types, *type, comp->lex.tok.name);
         lexNext(&comp->lex);
