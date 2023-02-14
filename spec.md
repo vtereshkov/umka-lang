@@ -620,10 +620,10 @@ fn log  (x: real): real         // Natural logarithm
 ##### Memory management functions
 
 ```
-fn new(T): ^T
+fn new(T [, x: T]): ^T
 ```
 
-Allocates memory for a variable of type `T` , initializes it with zeros and returns a pointer to it. 
+Allocates memory for a variable of type `T`, initializes it with zeros (or with the value `x` if specified) and returns a pointer to it. 
 
 ```
 fn make([]T, length: int): []T    // (1)

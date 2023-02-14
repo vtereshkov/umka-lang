@@ -752,18 +752,33 @@ static void parseBuiltinMathCall(Compiler *comp, Type **type, Const *constant, B
 }
 
 
-// fn new(type: Type, size: int): ^type
+// fn new(type: Type, size: int [, expr: type]): ^type
 static void parseBuiltinNewCall(Compiler *comp, Type **type, Const *constant)
 {
     if (constant)
         comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
 
+    // Type
     *type = parseType(comp, NULL);
     int size = typeSize(&comp->types, *type);
 
     genPushGlobalPtr(&comp->gen, *type);
     genPushIntConst(&comp->gen, size);
     genCallBuiltin(&comp->gen, TYPE_PTR, BUILTIN_NEW);
+
+    // Initializer expression
+    if (comp->lex.tok.kind == TOK_COMMA)
+    {
+        lexNext(&comp->lex);
+        genDup(&comp->gen);
+
+        Type *exprType = NULL;
+        parseExpr(comp, &exprType, NULL);
+        doImplicitTypeConv(comp, *type, &exprType, NULL, false);
+        typeAssertCompatible(&comp->types, *type, exprType, false);
+
+        genChangeRefCntAssign(&comp->gen, *type);
+    }
 
     *type = typeAddPtrTo(&comp->types, &comp->blocks, *type);
 }

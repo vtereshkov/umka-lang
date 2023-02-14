@@ -1451,7 +1451,7 @@ static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool con
 }
 
 
-// fn new(type: Type, size: int): ^type
+// fn new(type: Type, size: int [, expr: type]): ^type
 static FORCE_INLINE void doBuiltinNew(Fiber *fiber, HeapPages *pages, Error *error)
 {
     int size     = (fiber->top++)->intVal;
