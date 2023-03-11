@@ -720,15 +720,15 @@ static void parseImportItem(Compiler *comp)
 
     lexCheck(&comp->lex, TOK_STRLITERAL);
 
-    char filePath[DEFAULT_STR_LEN + 1] = "";
-    moduleAssertRegularizePath(&comp->modules, comp->lex.tok.strVal, comp->modules.module[comp->blocks.module]->folder, filePath, DEFAULT_STR_LEN + 1);
-
-    char sourcePath[DEFAULT_STR_LEN + 1] = "";
-    moduleAssertRegularizePath(&comp->modules, comp->lex.tok.strVal, comp->modules.curFolder, sourcePath, DEFAULT_STR_LEN + 1);
+    char path[DEFAULT_STR_LEN + 1] = "";
 
     // Module source strings, if any, have precedence over files
-    char *sourceString = moduleFindSource(&comp->modules, sourcePath);
-    char *path = sourceString ? sourcePath : filePath;
+    char *sourceString = NULL;
+    if (moduleRegularizePath(comp->lex.tok.strVal, comp->modules.curFolder, path, DEFAULT_STR_LEN + 1))
+        sourceString = moduleFindSource(&comp->modules, path);
+
+    if (!sourceString)
+        moduleAssertRegularizePath(&comp->modules, comp->lex.tok.strVal, comp->modules.module[comp->blocks.module]->folder, path, DEFAULT_STR_LEN + 1);
 
     char folder[DEFAULT_STR_LEN + 1] = "";
     char name  [DEFAULT_STR_LEN + 1] = "";
