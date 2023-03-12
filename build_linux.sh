@@ -33,6 +33,6 @@ cp src/umka_api.h Umka.sublime-syntax LICENSE umka_linux/ &&
 
 cp examples/* umka_linux/examples -r &&
 cp import/*.um umka_linux/import &&
-cp import/* umka_linux/doc
+cp doc/* umka_linux/doc
 
 echo Build successful
