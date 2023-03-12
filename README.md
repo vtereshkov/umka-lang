@@ -5,7 +5,10 @@
 # Welcome to Umka!
 Umka is a statically typed embeddable scripting language. It combines the simplicity and flexibility needed for scripting with a compile-time protection against type errors. Its aim is to follow the Python Zen principle _Explicit is better than implicit_ more consistently than dynamically typed languages generally do.
 
-[Go to Playground](https://vtereshkov.github.io/umka-lang)
+* [Playground](https://vtereshkov.github.io/umka-lang)
+* [Downloads](https://github.com/vtereshkov/umka-lang/releases)
+* [Language reference](https://github.com/vtereshkov/umka-lang/blob/master/doc/lang.md)
+* [Library reference](https://github.com/vtereshkov/umka-lang/blob/master/doc/lib.md)
 
 ## Features
 * Clean syntax inspired by Go
@@ -26,7 +29,7 @@ _400 x 400 matrix multiplication (AMD A4-3300M @ 1.9 GHz, Windows 7)_
 * Try Umka in the [playground](https://vtereshkov.github.io/umka-lang)
 * Download the [latest release](https://github.com/vtereshkov/umka-lang/releases) for Windows and Linux
 * Take a [tour of Umka](https://github.com/vtereshkov/umka-lang/blob/master/README.md#a-tour-of-umka)
-* Read the [language specification](https://github.com/vtereshkov/umka-lang/blob/master/spec.md)
+* Read the [language](https://github.com/vtereshkov/umka-lang/blob/master/doc/lang.md) and [standard library](https://github.com/vtereshkov/umka-lang/blob/master/doc/lib.md) documentation 
 * Explore the [raytracer](https://github.com/vtereshkov/umka-lang/blob/master/examples/raytracer/raytracer.um) example that demonstrates many language features like fibers, interfaces and dynamic arrays
 * Play with the toy [Lisp interpreter](https://github.com/vtereshkov/umka-lang/blob/master/examples/lisp) written in Umka
 * Try the more realistic [C](https://github.com/vtereshkov/umka-lang/blob/master/examples/3dcam/3dcam.c)+[Umka](https://github.com/vtereshkov/umka-lang/blob/master/examples/3dcam/3dcam.um) embedded scripting example (_Note:_ [raylib](https://www.raylib.com) is required to compile and run it)
