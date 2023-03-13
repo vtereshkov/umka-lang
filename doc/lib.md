@@ -266,7 +266,7 @@ Computes the function `f` for each item `y` of the array `a^` starting from inde
 
 Example:
 ```
-import "import/fnc.um"
+import "fnc.um"
 
 fn main() {
     data := []int{3, 7, 1, -4, 2, 5}
