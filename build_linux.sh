@@ -7,8 +7,6 @@ sourcefiles="umka_api.c umka_common.c umka_compiler.c umka_const.c   umka_decl.c
 
 rm umka_linux -rf && # remove previous build
 
-cp import/embed/umka_runtime_src.h src/ &&
-
 cd src &&
 
 gcc $gccflags -c $sourcefiles &&
@@ -25,14 +23,12 @@ mkdir umka_linux/examples/3dcam -p &&
 mkdir umka_linux/examples/fractal -p &&
 mkdir umka_linux/examples/lisp -p &&
 mkdir umka_linux/examples/raytracer -p &&
-mkdir umka_linux/import &&
 mkdir umka_linux/doc &&
 
 mv src/libumka.* src/umka umka_linux/ &&
 cp src/umka_api.h Umka.sublime-syntax LICENSE umka_linux/ &&
 
 cp examples/* umka_linux/examples -r &&
-cp import/*.um umka_linux/import &&
 cp doc/* umka_linux/doc
 
 echo Build successful

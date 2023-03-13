@@ -1,4 +1,4 @@
-import "../import/fnc.um"
+import "fnc.um"
 
 type Person = struct {
 	name: str

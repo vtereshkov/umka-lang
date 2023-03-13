@@ -1,8 +1,8 @@
 # The Umka Standard Library Reference
 
-## Basic library: `std.um`
+All standard library modules are embedded into the Umka interpreter binary. They are not provided as standalone files.
 
-The basic library module is embedded into the Umka interpreter binary. It is not provided as a standalone file.
+## Basic library: `std.um`
 
 ### Memory 
 
@@ -238,7 +238,7 @@ fn system*(command: str): int
 
 Invokes the command processor to execute a `command`. Returns a platform-specific result.
 
-## Functional programming library: `import/fnc.um`
+## Functional programming library: `fnc.um`
 
 #### Types
 
@@ -282,7 +282,7 @@ fn main() {
 }
 ```
 
-## 3D vector/matrix library: `import/mat.um`
+## 3D vector/matrix library: `mat.um`
 
 ### Vector operations
 
@@ -349,7 +349,7 @@ fn (m: ^Mat) toAttAngles*(): Vec
 ```
 Returns the attitude angles (roll, pitch, yaw) formally combined into a vector given the attitude matrix `m`. Attitude angles are in radians. Any vector `u` can be transformed from the rotating to the non-rotating coordinate system as `m * u`.
 
-## Unicode library: `import/utf8.um`
+## Unicode library: `utf8.um`
 
 #### Types
 

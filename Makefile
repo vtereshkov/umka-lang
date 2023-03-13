@@ -22,7 +22,7 @@ UMKA_LIB_STATIC  = $(BUILD_PATH)/libumka.a
 UMKA_LIB_DYNAMIC = $(BUILD_PATH)/libumka.so
 UMKA_EXE = $(BUILD_PATH)/umka
 
-CFLAGS = -s -fPIC -O3 -Wall -Wno-format-security -malign-double -fno-strict-aliasing -DUMKA_EXT_LIBS -Iimport/embed
+CFLAGS = -s -fPIC -O3 -Wall -Wno-format-security -malign-double -fno-strict-aliasing -DUMKA_EXT_LIBS
 STATIC_CFLAGS  = $(CFLAGS) -DUMKA_STATIC
 DYNAMIC_CFLAGS = $(CFLAGS) -DUMKA_BUILD  -shared -fvisibility=hidden
 
@@ -40,7 +40,6 @@ exe:     $(UMKA_EXE)
 
 clean:
 	$(RM) $(BUILD_PATH) $(OBJ_PATH) -r
-	$(RM) src/umka_runtime_src.h
 
 $(UMKA_LIB_STATIC): $(OBJS_STATIC)
 	@echo AR $@

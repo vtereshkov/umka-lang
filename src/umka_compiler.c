@@ -191,9 +191,14 @@ void compilerInit(Compiler *comp, const char *fileName, const char *sourceString
     *(int64_t *)(rtlargc->ptr) = comp->argc;
     *(void *  *)(rtlargv->ptr) = comp->argv;
 
-    char rtlPath[DEFAULT_STR_LEN + 1] = "";
-    moduleAssertRegularizePath(&comp->modules, "std.um", comp->modules.curFolder, rtlPath, DEFAULT_STR_LEN + 1);
-    moduleAddSource(&comp->modules, rtlPath, rtlSrc);
+    // Embedded standard library modules
+    const int numRuntimeModules = sizeof(runtimeModuleSources) / sizeof(runtimeModuleSources[0]);
+    for (int i = 0; i < numRuntimeModules; i++)
+    {
+        char runtimeModulePath[DEFAULT_STR_LEN + 1] = "";
+        moduleAssertRegularizePath(&comp->modules, runtimeModuleNames[i], comp->modules.curFolder, runtimeModulePath, DEFAULT_STR_LEN + 1);
+        moduleAddSource(&comp->modules, runtimeModulePath, runtimeModuleSources[i]);
+    }
 }
 
 

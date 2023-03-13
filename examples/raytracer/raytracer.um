@@ -2,7 +2,7 @@
 
 import (
     "std.um"
-    "../../import/mat.um"
+    "mat.um"
 )
 
 fn randn(): mat.Vec {

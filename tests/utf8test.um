@@ -1,6 +1,4 @@
-import (
-	"../import/utf8.um"
-)
+import "utf8.um"
 
 fn testStr(s: str) {
 	printf("string: %s\n", s)

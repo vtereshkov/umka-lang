@@ -1,0 +1,65 @@
+import "std.um"
+
+fn main() {
+	if std.argc() < 2 {
+		error("No input file(s)")
+	}
+
+	fout := std.fopen("umka_runtime_src.h", "w")
+	if fout == null {
+		error("Cannot open output file")
+	}	
+
+	fprintf(fout, "#ifndef UMKA_RUNTIME_SRC_H_INCLUDED\n")
+	fprintf(fout, "#define UMKA_RUNTIME_SRC_H_INCLUDED\n\n")
+
+	fprintf(fout, "// This is an automatically generated file. Do not edit it\n\n")
+
+	fprintf(fout, "static const char *runtimeModuleNames[] = {")
+
+	for argi := 1; argi < std.argc(); argi++ {
+		fprintf(fout, "\"" + std.argv(argi) + "\"")
+		if argi != std.argc() - 1 {
+			fprintf(fout, ", ")
+		}
+	}
+
+	fprintf(fout, "};\n\n")
+
+	fprintf(fout, "static const char *runtimeModuleSources[] = {\n")
+
+	for argi := 1; argi < std.argc(); argi++ {
+		fprintf(fout, "\n// " + std.argv(argi) + "\n\n\"")
+
+		fin := std.fopen(std.argv(argi), "rb")
+		if fin == null {
+			error("Cannot open input file")
+		}	
+
+		for !std.feof(fin) {
+			c := ' '
+			fscanf(fin, "%c", &c)
+
+			switch c {
+				case '\\': fprintf(fout, "\\\\")
+				case '\'': fprintf(fout, "\\\'")
+				case '\"': fprintf(fout, "\\\"")
+				case '\n': fprintf(fout, "\\n\"\n\"")
+				case '\r': 
+				default:   fprintf(fout, "%c", c)
+			}
+		}
+
+		if argi != std.argc() - 1 {
+			fprintf(fout, "\",\n")
+		} else {
+			fprintf(fout, "\"\n};\n\n")
+		}
+
+		std.fclose(fin)
+	}
+
+	fprintf(fout, "#endif // UMKA_RUNTIME_SRC_H_INCLUDED\n")
+	
+	std.fclose(fout)
+}
