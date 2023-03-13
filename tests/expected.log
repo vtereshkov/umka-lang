@@ -440,6 +440,7 @@ characters: 4
 €: U+20ac
 $: U+24
 ¢: U+a2
+reconstructed string: ▀€$¢
 
 string: Привет, мир!
 bytes: 21
@@ -456,6 +457,7 @@ characters: 12
 и: U+438
 р: U+440
 !: U+21
+reconstructed string: Привет, мир!
 
 
 

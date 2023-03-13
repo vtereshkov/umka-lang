@@ -354,7 +354,7 @@ Returns the attitude angles (roll, pitch, yaw) formally combined into a vector g
 #### Types
 
 ```
-type Rune = int32                                
+type Rune* = int32                                
 ```
 A rune, i.e., an integer value identifying a Unicode code point.
 
@@ -371,11 +371,16 @@ fn (r: ^Rune) encode*(): str
 Returns the string encoded in UTF-8 corresponding to the rune `r`.
 
 ```
+fn encode*(runes: []Rune): str
+```
+Returns the string encoded in UTF-8 corresponding to the array `runes`.
+
+```
 fn decode*(s: str): []Rune
 ```
 Returns the array of runes corresponding to the string `s` encoded in UTF-8.
 
 ```
-fn realLength*(s: str): int
+fn runeCount*(s: str): int
 ```
 Returns the number of runes contained in the string `s` encoded in UTF-8.

@@ -1,48 +1,34 @@
 // UTF-8 utilities
 
-type (
-    Rune = int32                                
-)
+type Rune* = int32                                
 
 fn (r: ^Rune) size*(): int {
-    if r^ <= 0x7f {
-        return 1
-    }
-
-    if r^ <= 0x7ff {
-        return 2
-    }
-
-    if r^ <= 0xffff {
-        return 3
-    }
-
-    if r^ <= 0x10ffff {
-        return 4
-    }
-
+    if r^ <= 0x7f     {return 1}
+    if r^ <= 0x7ff    {return 2}
+    if r^ <= 0xffff   {return 3}
+    if r^ <= 0x10ffff {return 4}
     return 0
 }
 
 fn (r: ^Rune) encode*(): str {
-    s := r.size()
+    size := r.size()
 
-    if s == 1 {
+    if size == 1 {
         return str(char(r^))
     }
 
-    out := make([]char, s + 1)
+    out := make([]char, size + 1)
 
     // header is size amount of ones at the start
     header := 0
-    for i := 0; i < s; i++ {
+    for i := 0; i < size; i++ {
         header |= 1 << (7 - i)
     }
 
-    shift := (s - 1) * 6
+    shift := (size - 1) * 6
     out[0] = char(((r^ >> shift & 0xff) | header) & 0xff)
 
-    for i := 1; i < s; i++ {
+    for i := 1; i < size; i++ {
         shift -= 6
         out[i] = char(r^ >> shift & 0x3f | 0x80)
     }
@@ -50,17 +36,27 @@ fn (r: ^Rune) encode*(): str {
     return str(out)
 }
 
-fn getNextRune*(a: str, pos: int): Rune {
-    c := int32(a[pos])
+fn encode*(runes: []Rune): str {
+    s := ""
+    for _, r in runes {
+        s += r.encode()
+    }
+    return s
+}
+
+fn nextRune(s: str, pos: int): Rune {
+    c := int32(s[pos])
 
     // exit early if ascii character is detected
     if c & 0x80 == 0 {
         return Rune(c)
     }
 
+    l := len(s)
+
     // find size of the rune
     size := 1
-    for pos + size < len(a) && int(a[pos + size]) & 0xc0 == 0x80 { 
+    for pos + size < l && int(s[pos + size]) & 0xc0 == 0x80 { 
         size++
     }
 
@@ -72,8 +68,8 @@ fn getNextRune*(a: str, pos: int): Rune {
 
     sum := 0
     shift := (size - 1) * 6
-    for i := 0; i < size && pos + i < len(a); i++ {
-        sum |= ((int32(a[pos + i]) & mask) << shift)
+    for i := 0; i < size && pos + i < l; i++ {
+        sum |= ((int32(s[pos + i]) & mask) << shift)
         if i == 0 {
             mask = 0x3f // following bytes have 0011 1111 mask
         }
@@ -85,24 +81,25 @@ fn getNextRune*(a: str, pos: int): Rune {
 
 fn decode*(s: str): []Rune {
     runes := make([]Rune, len(s))
-    runeCount := 0
-
+    numRunes := 0
     l := len(s)
-    for i := 0; i < l; runeCount++ {
-        runes[runeCount] = getNextRune(s, i)
-        i += runes[runeCount].size()
+
+    for i := 0; i < l; numRunes++ {
+        runes[numRunes] = nextRune(s, i)
+        i += runes[numRunes].size()
     }
 
-    return slice(runes, 0, runeCount)
+    return slice(runes, 0, numRunes)
 }
 
-fn realLength*(s: str): int {
-    rl := 0
+fn runeCount*(s: str): int {
+    numRunes := 0
     l := len(s)
-    for i := 0; i < l; rl++ {
-        r := getNextRune(s, i)
+
+    for i := 0; i < l; numRunes++ {
+        r := nextRune(s, i)
         i += r.size()
     }
 
-    return rl
+    return numRunes
 }
