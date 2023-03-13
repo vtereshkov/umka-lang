@@ -62,7 +62,7 @@ fn (m: ^Mat) normalize*(): Mat {
 }
 
 
-// Vector/matrix conversions
+// Rotations
 
 fn (v: ^Vec) toRateMat*(): Mat {
     return Mat{Vec{ 0,    -v[2],  v[1]},

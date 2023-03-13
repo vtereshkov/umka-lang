@@ -330,7 +330,7 @@ fn (m: ^Mat) transpose*(): Mat         // Transpose
 fn (m: ^Mat) normalize*(): Mat         // Orthogonalized matrix
 ```
 
-### Vector/matrix conversions
+### Rotations
 
 #### Functions
 
