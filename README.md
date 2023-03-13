@@ -185,23 +185,6 @@ fn parentFunc() {
     }    
 }
 ```
-### Functional tools
-```
-import "../import/fnc.um"
-
-fn main() {
-    data := []int{3, 7, 1, -4, 2, 5}
-    printf("Array = %s\n", repr(data))
-     
-    sqr  := fn (x, ctx: any): any    {return int(x) * int(x)}
-    less := fn (x, ctx: any): bool   {return int(x) < int(ctx)} 
-    sum  := fn (x, y, ctx: any): any {return int(x) + int(y)}     
-    
-    const max = 30     
-    result := int(fnc.Array(data).map_(sqr, null).filter(less, max).reduce(sum, null))   
-    printf("Sum of all squares less than %lld = %lld \n", max, result)       
-}
-```
 ## Umka vs Go
 ### Purpose
 While Go is a compiled systems programming language with a complex runtime library and big output binaries, Umka is a scripting language with a lightweight interpreter that can be easily embedded into any application as a shared library.

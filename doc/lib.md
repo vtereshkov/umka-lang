@@ -264,6 +264,24 @@ fn (a: ^Array) reduce*(f: fn (x, y, ctx: any): any, ctx: any): any
 ```
 Computes the function `f` for each item `y` of the array `a^` starting from index `i = 1` to `len(a^) - 1`. The previous result of `f` computed for items 1 to `i - 1` is passed as `x`. For `i = 1` it is assumed that `x = a[0]`. Returns the result of `f` computed for the last item of `a^`. Any context stored in `ctx` will be passed unchanged to `f` on each its call.
 
+Example:
+```
+import "import/fnc.um"
+
+fn main() {
+    data := []int{3, 7, 1, -4, 2, 5}
+    printf("Array = %s\n", repr(data))
+     
+    sqr  := fn (x, ctx: any): any    {return int(x) * int(x)}
+    less := fn (x, ctx: any): bool   {return int(x) < int(ctx)} 
+    sum  := fn (x, y, ctx: any): any {return int(x) + int(y)}     
+    
+    const max = 30     
+    result := int(fnc.Array(data).map_(sqr, null).filter(less, max).reduce(sum, null))   
+    printf("Sum of all squares less than %lld = %lld \n", max, result)       
+}
+```
+
 ## 3D vector/matrix library: `import/mat.um`
 
 ### Vector operations
