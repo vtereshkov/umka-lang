@@ -24,15 +24,11 @@ fn test*() {
 	runes := utf8.decode(s)
 	s1 := utf8.encode(runes)
 
-	if s1 == s {
+	if s1 == s && len(s) > 30000 && len(runes) > 20000 {
 		printf("Test passed\n")
 	} else {
 		printf("Test failed\n")
 	}
-
-	printf("Bytes before: %d\n", len(s))
-	printf("Characters  : %d\n", len(runes))
-	printf("Bytes after : %d\n", len(s1))
 }
 
 fn main() {

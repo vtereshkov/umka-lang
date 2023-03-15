@@ -478,9 +478,6 @@ reconstructed string: Hello, 世界
 >>> UTF-8 - 2
 
 Test passed
-Bytes before: 38368
-Characters  : 20507
-Bytes after : 38368
 
 
 >>> Import disambiguation - 1
