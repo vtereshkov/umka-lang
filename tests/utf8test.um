@@ -21,6 +21,7 @@ fn testStr(s: str) {
 fn test*() {
 	testStr("▀€$¢")
 	testStr("Привет, мир!")
+	testStr("Hello, 世界")
 }
 
 fn main() {

@@ -1,39 +1,39 @@
 // UTF-8 utilities
 
-type Rune* = int32                                
+type Rune* = int32 
+
+const (
+    errRune* = Rune(0xFFFD)
+    errStr* = "\xEF\xBF\xBD"
+
+    headerOnes = [6]uint8{0x00, 0x00, 0xC0, 0xE0, 0xF0, 0xF8}                               
+)
 
 fn (r: ^Rune) size*(): int {
-    if r^ <= 0x7f     {return 1}
-    if r^ <= 0x7ff    {return 2}
-    if r^ <= 0xffff   {return 3}
-    if r^ <= 0x10ffff {return 4}
-    return 0
+    if r^ <= 0x7F     {return 1}
+    if r^ <= 0x7FF    {return 2}
+    if r^ <= 0xFFFF   {return 3}
+    if r^ <= 0x10FFFF {return 4}
+    return -1
 }
 
 fn (r: ^Rune) encode*(): str {
     size := r.size()
 
-    if size == 1 {
-        return str(char(r^))
-    }
+    if size <= 0 {return errStr} 
+    if size == 1 {return str(char(r^))}
 
-    out := make([]char, size + 1)
-
-    // header is size amount of ones at the start
-    header := 0
-    for i := 0; i < size; i++ {
-        header |= 1 << (7 - i)
-    }
+    chars := make([]char, size + 1)
 
     shift := (size - 1) * 6
-    out[0] = char(((r^ >> shift & 0xff) | header) & 0xff)
+    chars[0] = char(((r^ >> shift & 0xFF) | headerOnes[size]) & 0xFF)
 
     for i := 1; i < size; i++ {
         shift -= 6
-        out[i] = char(r^ >> shift & 0x3f | 0x80)
+        chars[i] = char(r^ >> shift & 0x3F | 0x80)
     }
 
-    return str(out)
+    return str(chars)
 }
 
 fn encode*(runes: []Rune): str {
@@ -44,62 +44,77 @@ fn encode*(runes: []Rune): str {
     return s
 }
 
-fn nextRune(s: str, pos: int): Rune {
-    c := int32(s[pos])
+fn decodeRune*(chars: []char, pos: int): Rune {
+    // Process header byte
+    header := uint8(chars[pos])
 
-    // exit early if ascii character is detected
-    if c & 0x80 == 0 {
-        return Rune(c)
+    if header & 0x80 == 0 {
+        return Rune(header) // ASCII character
     }
 
-    l := len(s)
+    size := 0
 
-    // find size of the rune
-    size := 1
-    for pos + size < l && int(s[pos + size]) & 0xc0 == 0x80 { 
-        size++
+    if header & headerOnes[3] == headerOnes[2] {
+        size = 2
+    } else if header & headerOnes[4] == headerOnes[3] {
+        size = 3
+    } else if header & headerOnes[5] == headerOnes[4] {
+        size = 4
     }
 
-    // generate mask for the first byte
-    mask := 0
-    for i := 0; i < 8 - size - 1; i++ {
-        mask |= 1 << i
+    if size == 0 {
+        return errRune
     }
-
-    sum := 0
+     
     shift := (size - 1) * 6
-    for i := 0; i < size && pos + i < l; i++ {
-        sum |= ((int32(s[pos + i]) & mask) << shift)
-        if i == 0 {
-            mask = 0x3f // following bytes have 0011 1111 mask
+    rune := Rune(header & ~headerOnes[size + 1]) << shift
+    
+    // Process continuation bytes
+    for i := 1; i < size; i++ {
+        if pos + i >= len(chars) {
+            return errRune
         }
-        shift -= 6
+
+        byte := uint8(chars[pos + i])
+        if byte & 0xC0 != 0x80 {
+            return errRune
+        }
+
+        shift -= 6        
+        rune |= Rune(byte & 0x3F) << shift
     }
 
-    return sum
+    return rune
 }
 
 fn decode*(s: str): []Rune {
-    runes := make([]Rune, len(s))
-    numRunes := 0
-    l := len(s)
+    chars := []char(s)
+    runes := []Rune{}
 
-    for i := 0; i < l; numRunes++ {
-        runes[numRunes] = nextRune(s, i)
-        i += runes[numRunes].size()
+    for pos := 0; pos < len(chars) {
+        rune := decodeRune(chars, pos)
+        if rune == errRune {
+            break
+        }
+        runes = append(runes, rune)
+        pos += rune.size()
     }
 
-    return slice(runes, 0, numRunes)
+    return runes
 }
 
 fn runeCount*(s: str): int {
-    numRunes := 0
-    l := len(s)
+    chars := []char(s)    
+    count := 0
 
-    for i := 0; i < l; numRunes++ {
-        r := nextRune(s, i)
-        i += r.size()
+    for pos := 0; pos < len(chars) {
+        rune := decodeRune(chars, pos)
+        if rune == errRune {
+            break
+        }
+        count++
+        pos += rune.size()
     }
 
-    return numRunes
+    return count
 }

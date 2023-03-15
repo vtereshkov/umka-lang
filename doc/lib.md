@@ -376,6 +376,11 @@ fn encode*(runes: []Rune): str
 Returns the string encoded in UTF-8 corresponding to the array `runes`.
 
 ```
+fn decodeRune*(chars: []char, pos: int): Rune
+```
+Returns the rune contained in the array `chars` starting at index `pos`.
+
+```
 fn decode*(s: str): []Rune
 ```
 Returns the array of runes corresponding to the string `s` encoded in UTF-8.

@@ -1,0 +1,40 @@
+import (
+	"std.um"
+	"utf8.um"
+	//utf8 = "utf8n.um"
+)
+
+fn readall(name: str): str {
+    f := std.fopen(name, "rb")
+
+    std.fseek(f, 0, std.seekEnd)
+    size := std.ftell(f)
+    std.fseek(f, 0, std.seekBegin)
+
+    data := make([]char, size)
+    std.fread(f, &data)
+    std.fclose(f)
+
+    return str(data)
+}
+
+fn test*() {
+	s := readall("../tests/utf8test2.txt")
+
+	runes := utf8.decode(s)
+	s1 := utf8.encode(runes)
+
+	if s1 == s {
+		printf("Test passed\n")
+	} else {
+		printf("Test failed\n")
+	}
+
+	printf("Bytes before: %d\n", len(s))
+	printf("Characters  : %d\n", len(runes))
+	printf("Bytes after : %d\n", len(s1))
+}
+
+fn main() {
+	test()
+}

@@ -22,6 +22,7 @@ import (
     "weakptr.um"
     "byteconv.um"
     "utf8test.um"
+    "utf8test2.um"
     "imports.um"
     "imports2.um"
     "imports3.um"
@@ -55,7 +56,8 @@ fn main() {
     printf("\n\n>>> Non-local scope\n\n");          nonlocal.test()
     printf("\n\n>>> Weak pointers\n\n");            weakptr.test()
     printf("\n\n>>> Byte conversions\n\n");         byteconv.test()
-    printf("\n\n>>> UTF-8\n\n");                    utf8test.test()
+    printf("\n\n>>> UTF-8 - 1\n\n");                utf8test.test()
+    printf("\n\n>>> UTF-8 - 2\n\n");                utf8test2.test()
     printf("\n\n>>> Import disambiguation - 1\n\n");imports.test()
     printf("\n\n>>> Import disambiguation - 2\n\n");imports2.test()
     printf("\n\n>>> Import disambiguation - 3\n\n");imports3.test()

@@ -431,7 +431,7 @@ true true
 { x: 23 y: -5 } 
 
 
->>> UTF-8
+>>> UTF-8 - 1
 
 string: ▀€$¢
 bytes: 9
@@ -459,6 +459,28 @@ characters: 12
 !: U+21
 reconstructed string: Привет, мир!
 
+string: Hello, 世界
+bytes: 13
+characters: 9
+H: U+48
+e: U+65
+l: U+6c
+l: U+6c
+o: U+6f
+,: U+2c
+ : U+20
+世: U+4e16
+界: U+754c
+reconstructed string: Hello, 世界
+
+
+
+>>> UTF-8 - 2
+
+Test passed
+Bytes before: 38368
+Characters  : 20507
+Bytes after : 38368
 
 
 >>> Import disambiguation - 1
