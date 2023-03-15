@@ -358,6 +358,16 @@ type Rune* = int32
 ```
 A rune, i.e., an integer value identifying a Unicode code point.
 
+#### Constants
+
+```
+const (
+    errRune* = Rune(0xFFFD)
+    errStr* = "\xEF\xBF\xBD"                          
+)
+```
+The invalid rune and its UTF-8 encoding. Returned from functions on encoding/decoding errors.
+
 #### Functions
 
 ```
