@@ -134,7 +134,7 @@ fn ftoa*(x: real, decimals: int): str   // Real to string with `decimals` decima
 
 ```
 const pi* = 3.14159265358979323846
-const randMax* = 0x7FFFFFFF
+const randMax* = /* Implementation-defined */
 ```
 
 #### Functions
