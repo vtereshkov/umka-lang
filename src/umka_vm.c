@@ -1398,7 +1398,8 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
         if (needRealloc)
         {
             char *newStream = chunkAlloc(pages, 2 * (prevLen + len) + 1, NULL, NULL, error);
-            memcpy(newStream, stream, prevLen);
+            if (stream)
+                memcpy(newStream, stream, prevLen);
             newStream[prevLen] = 0;
 
             // Decrease old string ref count
