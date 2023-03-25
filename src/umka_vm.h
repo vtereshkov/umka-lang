@@ -22,6 +22,8 @@ enum
     VM_MIN_HEAP_CHUNK    = 64,                      // Bytes
     VM_MIN_HEAP_PAGE     = 1024 * 1024,             // Bytes
 
+    VM_STRLEN_CACHE_SIZE = 3,
+
     VM_FIBER_KILL_SIGNAL = -1                       // Used instead of return address in fiber function calls
 };
 
@@ -154,6 +156,20 @@ typedef struct
 typedef void (*ExternFunc)(Slot *params, Slot *result);
 
 
+typedef struct
+{
+    const char *str;
+    int len;
+} CachedStrLen;
+
+
+typedef struct
+{
+    CachedStrLen data[VM_STRLEN_CACHE_SIZE];
+    int pos;
+} StrLenCache;
+
+
 typedef struct tagHeapPage
 {
     int id;
@@ -168,6 +184,7 @@ typedef struct
 {
     HeapPage *first, *last;
     int freeId;
+    StrLenCache *strLenCache;
     Error *error;
 } HeapPages;
 
@@ -218,6 +235,7 @@ typedef struct
     Slot reg[VM_NUM_REGS];
     DebugInfo *debugPerInstr;
     RefCntChangeCandidates *refCntChangeCandidates;
+    StrLenCache *strLenCache;
     bool alive;
     bool fileSystemEnabled;
 } Fiber;
@@ -228,6 +246,7 @@ typedef struct
     Fiber *fiber, *mainFiber;
     HeapPages pages;
     RefCntChangeCandidates refCntChangeCandidates;
+    StrLenCache strLenCache;
     HookFunc hooks[NUM_HOOKS];
     bool terminatedNormally;
     Error *error;
