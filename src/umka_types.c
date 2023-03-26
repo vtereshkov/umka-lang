@@ -631,7 +631,7 @@ Field *typeAddField(Types *types, Type *structType, Type *fieldType, const char 
 
     field = malloc(sizeof(Field));
 
-    strncpy(field->name, name, MAX_IDENT_LEN + 1);
+    strncpy(field->name, name, MAX_IDENT_LEN);
     field->name[MAX_IDENT_LEN] = 0;
 
     field->hash = hash(name);
@@ -665,7 +665,7 @@ Param *typeAddParam(Types *types, Signature *sig, Type *type, const char *name)
 
     param = malloc(sizeof(Param));
 
-    strncpy(param->name, name, MAX_IDENT_LEN + 1);
+    strncpy(param->name, name, MAX_IDENT_LEN);
     param->name[MAX_IDENT_LEN] = 0;
 
     param->hash = hash(name);
