@@ -164,7 +164,7 @@ static Ident *identAdd(Idents *idents, Modules *modules, Blocks *blocks, IdentKi
     ident = malloc(sizeof(Ident));
     ident->kind = kind;
 
-    strncpy(ident->name, name, MAX_IDENT_LEN);
+    strncpy(ident->name, name, MAX_IDENT_LEN + 1);
     ident->name[MAX_IDENT_LEN] = 0;
 
     ident->hash = hash(name);

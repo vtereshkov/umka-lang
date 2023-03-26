@@ -163,8 +163,8 @@ void moduleNameFromPath(Modules *modules, const char *path, char *folder, char *
     if (stop <= start)
         modules->error->handler(modules->error->context, "Illegal module path %s", path);
 
-    strncpy(folder, path, (start - path < size - 1) ? (start - path) : (size - 1));
-    strncpy(name, start,  (stop - start < size - 1) ? (stop - start) : (size - 1));
+    strncpy(folder, path, (start - path < size) ? (start - path) : size);
+    strncpy(name, start,  (stop - start < size) ? (stop - start) : size);
 
     folder[size - 1] = 0;
     name[size - 1] = 0;
@@ -209,13 +209,13 @@ int moduleAdd(Modules *modules, const char *path)
 
     Module *module = malloc(sizeof(Module));
 
-    strncpy(module->path, path, DEFAULT_STR_LEN);
+    strncpy(module->path, path, DEFAULT_STR_LEN + 1);
     module->path[DEFAULT_STR_LEN] = 0;
 
-    strncpy(module->folder, folder, DEFAULT_STR_LEN);
+    strncpy(module->folder, folder, DEFAULT_STR_LEN + 1);
     module->folder[DEFAULT_STR_LEN] = 0;
 
-    strncpy(module->name, name, DEFAULT_STR_LEN);
+    strncpy(module->name, name, DEFAULT_STR_LEN + 1);
     module->name[DEFAULT_STR_LEN] = 0;
 
     module->pathHash = hash(path);
@@ -273,13 +273,13 @@ void moduleAddSource(Modules *modules, const char *path, const char *source)
 
     ModuleSource *moduleSource = malloc(sizeof(ModuleSource));
 
-    strncpy(moduleSource->path, path, DEFAULT_STR_LEN);
+    strncpy(moduleSource->path, path, DEFAULT_STR_LEN + 1);
     moduleSource->path[DEFAULT_STR_LEN] = 0;
 
-    strncpy(moduleSource->folder, folder, DEFAULT_STR_LEN);
+    strncpy(moduleSource->folder, folder, DEFAULT_STR_LEN + 1);
     moduleSource->folder[DEFAULT_STR_LEN] = 0;
 
-    strncpy(moduleSource->name, name, DEFAULT_STR_LEN);
+    strncpy(moduleSource->name, name, DEFAULT_STR_LEN + 1);
     moduleSource->name[DEFAULT_STR_LEN] = 0;
 
     int sourceLen = strlen(source);
@@ -515,7 +515,7 @@ External *externalAdd(Externals *externals, const char *name, void *entry)
     external->entry = entry;
     external->resolved = false;
 
-    strncpy(external->name, name, DEFAULT_STR_LEN);
+    strncpy(external->name, name, DEFAULT_STR_LEN + 1);
     external->name[DEFAULT_STR_LEN] = 0;
 
     external->hash = hash(name);
