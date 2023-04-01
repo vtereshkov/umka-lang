@@ -3061,6 +3061,9 @@ void vmRun(VM *vm, int entryOffset, int numParamSlots, Slot *params, Slot *resul
     if (entryOffset < 0)
         vm->error->runtimeHandler(vm->error->context, "Called function is not defined");
 
+    if (!vm->fiber->alive)
+        vm->error->runtimeHandler(vm->error->context, "Cannot run a dead fiber");
+
     // Individual function call
     if (entryOffset > 0)
     {
