@@ -6,8 +6,8 @@
     #define FORCE_INLINE __attribute__((always_inline)) inline
 #endif
 
-//#define DEBUG_REF_CNT
-//#define DETAILED_LEAK_INFO
+//#define UMKA_REF_CNT_DEBUG
+//#define UMKA_DETAILED_LEAK_INFO
 
 
 #include <stdio.h>
@@ -176,7 +176,7 @@ static void pageFree(HeapPages *pages, bool warnLeak)
             {
                 fprintf(stderr, "Warning: Memory leak at %p (%d refs)\n", page->ptr, page->refCnt);
 
-#ifdef DETAILED_LEAK_INFO
+#ifdef UMKA_DETAILED_LEAK_INFO
                 for (int i = 0; i < page->numOccupiedChunks; i++)
                 {
                     HeapChunkHeader *chunk = (HeapChunkHeader *)((char *)page->ptr + i * page->chunkSize);
@@ -224,7 +224,7 @@ static FORCE_INLINE HeapPage *pageAdd(HeapPages *pages, int numChunks, int chunk
         pages->last = page;
     }
 
-#ifdef DEBUG_REF_CNT
+#ifdef UMKA_REF_CNT_DEBUG
     printf("Add page at %p\n", page->ptr);
 #endif
 
@@ -234,7 +234,7 @@ static FORCE_INLINE HeapPage *pageAdd(HeapPages *pages, int numChunks, int chunk
 
 static FORCE_INLINE void pageRemove(HeapPages *pages, HeapPage *page)
 {
-#ifdef DEBUG_REF_CNT
+#ifdef UMKA_REF_CNT_DEBUG
     printf("Remove page at %p\n", page->ptr);
 #endif
 
@@ -336,7 +336,7 @@ static FORCE_INLINE void *chunkAlloc(HeapPages *pages, int64_t size, Type *type,
     page->numOccupiedChunks++;
     page->refCnt++;
 
-#ifdef DEBUG_REF_CNT
+#ifdef UMKA_REF_CNT_DEBUG
     printf("Add chunk at %p\n", (void *)chunk + sizeof(HeapChunkHeader));
 #endif
 
@@ -360,7 +360,7 @@ static FORCE_INLINE int chunkChangeRefCnt(HeapPages *pages, HeapPage *page, void
     chunk->refCnt += delta;
     page->refCnt += delta;
 
-#ifdef DEBUG_REF_CNT
+#ifdef UMKA_REF_CNT_DEBUG
     printf("%p: delta: %d  chunk: %d  page: %d\n", ptr, delta, chunk->refCnt, page->refCnt);
 #endif
 
