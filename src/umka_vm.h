@@ -184,6 +184,7 @@ typedef struct
 {
     HeapPage *first, *last;
     int freeId;
+    struct tagFiber *fiber;
     StrLenCache *strLenCache;
     Error *error;
 } HeapPages;
@@ -195,6 +196,7 @@ typedef struct
     int size;
     struct tagType *type;       // Optional type for garbage collection
     ExternFunc onFree;          // Optional callback called when ref count reaches zero
+    int64_t ip;                 // Optional instruction pointer at which the chunk has been allocated
 } HeapChunkHeader;
 
 
@@ -225,7 +227,7 @@ typedef enum
 typedef void (*HookFunc)(const char *fileName, const char *funcName, int line);
 
 
-typedef struct
+typedef struct tagFiber
 {
     // Must have 8 byte alignment
     Instruction *code;

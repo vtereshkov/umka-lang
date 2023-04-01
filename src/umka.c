@@ -9,8 +9,8 @@
 
 enum
 {
-    DEFAULT_STACK_SIZE      = 1 * 1024 * 1024,  // Slots
-    ASM_BUF_SIZE            = 2 * 1024 * 1024,
+    DEFAULT_STACK_SIZE      =  1 * 1024 * 1024,  // Slots
+    ASM_BUF_SIZE            = 10 * 1024 * 1024,
     MAX_CALL_STACK_DEPTH    = 10
 };
 

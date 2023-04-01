@@ -7,6 +7,7 @@
 #endif
 
 //#define DEBUG_REF_CNT
+//#define DETAILED_LEAK_INFO
 
 
 #include <stdio.h>
@@ -152,10 +153,11 @@ static FORCE_INLINE int strlenCached(StrLenCache* cache, const char *str)
 
 // Memory management
 
-static void pageInit(HeapPages *pages, StrLenCache* cache, Error *error)
+static void pageInit(HeapPages *pages, Fiber *fiber, StrLenCache* cache, Error *error)
 {
     pages->first = pages->last = NULL;
     pages->freeId = 1;
+    pages->fiber = fiber;
     pages->strLenCache = cache;
     pages->error = error;
 }
@@ -169,8 +171,24 @@ static void pageFree(HeapPages *pages, bool warnLeak)
         HeapPage *next = page->next;
         if (page->ptr)
         {
+            // Report memory leaks
             if (warnLeak)
+            {
                 fprintf(stderr, "Warning: Memory leak at %p (%d refs)\n", page->ptr, page->refCnt);
+
+#ifdef DETAILED_LEAK_INFO
+                for (int i = 0; i < page->numOccupiedChunks; i++)
+                {
+                    HeapChunkHeader *chunk = (HeapChunkHeader *)((char *)page->ptr + i * page->chunkSize);
+                    if (chunk->refCnt == 0)
+                        continue;
+
+                    DebugInfo *debug = &pages->fiber->debugPerInstr[chunk->ip];
+                    fprintf(stderr, "    Chunk allocated in %s: %s (%d)\n", debug->fnName, debug->fileName, debug->line);
+                }
+ #endif
+            }
+
             free(page->ptr);
         }
         free(page);
@@ -313,6 +331,7 @@ static FORCE_INLINE void *chunkAlloc(HeapPages *pages, int64_t size, Type *type,
     chunk->size = size;
     chunk->type = type;
     chunk->onFree = onFree;
+    chunk->ip = pages->fiber->ip;
 
     page->numOccupiedChunks++;
     page->refCnt++;
@@ -483,7 +502,7 @@ void vmInit(VM *vm, int stackSize, bool fileSystemEnabled, Error *error)
     vm->fiber->alive = true;
     vm->fiber->fileSystemEnabled = fileSystemEnabled;
 
-    pageInit(&vm->pages, &vm->strLenCache, error);
+    pageInit(&vm->pages, vm->fiber, &vm->strLenCache, error);
     candidateInit(&vm->refCntChangeCandidates);
     cacheReset(&vm->strLenCache);
 
@@ -504,7 +523,7 @@ void vmFree(VM *vm)
 
 void vmReset(VM *vm, Instruction *code, DebugInfo *debugPerInstr)
 {
-    vm->fiber = vm->mainFiber;
+    vm->fiber = vm->pages.fiber = vm->mainFiber;
     vm->fiber->code = code;
     vm->fiber->debugPerInstr = debugPerInstr;
     vm->fiber->ip = 0;
@@ -3026,7 +3045,7 @@ static FORCE_INLINE void vmLoop(VM *vm)
                     return;
 
                 if (newFiber)
-                    fiber = vm->fiber = newFiber;
+                    fiber = vm->fiber = vm->pages.fiber = newFiber;
 
                 break;
             }
@@ -3039,7 +3058,7 @@ static FORCE_INLINE void vmLoop(VM *vm)
                 doReturn(fiber, &newFiber);
 
                 if (newFiber)
-                    fiber = vm->fiber = newFiber;
+                    fiber = vm->fiber = vm->pages.fiber = newFiber;
 
                 if (!fiber->alive)
                     return;
