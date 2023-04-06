@@ -847,7 +847,7 @@ Examples:
 []any{7.2, "Hello", [2]int{3, 5}}
 map[[]int]str{[]int{13, 15}: "First", []int{57, 89}: "Second"}
 Vec{x: 2, y: 8}
-Mat{{1, 2}, {3, 4}}             // Nested literals' types omitted
+Mat{ {1, 2}, {3, 4} }             // Nested literals' types omitted
 fn (x: int) {return 2 * x}
 ```
 
