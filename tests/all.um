@@ -31,6 +31,7 @@ import (
     "vararg.um"
     "defparam.um"
     "datetime.um"
+    "untypedlit.um"
 )
 
 fn main() {
@@ -66,4 +67,5 @@ fn main() {
     printf("\n\n>>> Variadic functions\n\n");       vararg.test()
     printf("\n\n>>> Default parameters\n\n");       defparam.test()
     printf("\n\n>>> Date/time\n\n");                datetime.test()
+    printf("\n\n>>> Untyped literals\n\n");         untypedlit.test()
 }

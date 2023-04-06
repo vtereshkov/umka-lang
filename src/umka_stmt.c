@@ -120,7 +120,7 @@ static bool doShortVarDeclLookahead(Compiler *comp)
 }
 
 
-// singleAssignmentStmt = designator "=" expr.
+// singleAssignmentStmt = designator "=" exprOrLit.
 static void parseSingleAssignmentStmt(Compiler *comp, Type *type, Const *varPtrConst)
 {
     if (!typeStructured(type))
@@ -132,7 +132,7 @@ static void parseSingleAssignmentStmt(Compiler *comp, Type *type, Const *varPtrC
 
     Type *rightType;
     Const rightConstantBuf, *rightConstant = varPtrConst ? &rightConstantBuf : NULL;
-    parseExpr(comp, &rightType, rightConstant);
+    parseExprOrUntypedLiteral(comp, &rightType, type, rightConstant);
 
     doImplicitTypeConv(comp, type, &rightType, rightConstant, false);
     typeAssertCompatible(&comp->types, type, rightType, false);
@@ -144,12 +144,12 @@ static void parseSingleAssignmentStmt(Compiler *comp, Type *type, Const *varPtrC
 }
 
 
-// listAssignmentStmt = designatorList "=" exprList.
+// listAssignmentStmt = designatorList "=" exprOrLitList.
 static void parseListAssignmentStmt(Compiler *comp, Type *type, Const *varPtrConstList)
 {
     Type *rightListType;
     Const rightListConstantBuf, *rightListConstant = varPtrConstList ? &rightListConstantBuf : NULL;
-    parseExprList(comp, &rightListType, NULL, rightListConstant);
+    parseExprOrUntypedLiteralList(comp, &rightListType, type, rightListConstant);
 
     const int numExpr = typeExprListStruct(rightListType) ? rightListType->numItems : 1;
 
@@ -257,12 +257,12 @@ static void parseSingleDeclAssignmentStmt(Compiler *comp, IdentName name, bool e
 }
 
 
-// listDeclAssignmentStmt = identList ":=" exprList.
+// listDeclAssignmentStmt = identList ":=" exprOrLitList.
 static void parseListDeclAssignmentStmt(Compiler *comp, IdentName *names, bool *exported, int num, bool constExpr)
 {
     Type *rightListType;
     Const rightListConstantBuf, *rightListConstant = constExpr ? &rightListConstantBuf : NULL;
-    parseExprList(comp, &rightListType, NULL, rightListConstant);
+    parseExprOrUntypedLiteralList(comp, &rightListType, NULL, rightListConstant);
 
     if (rightListType->numItems < num) comp->error.handler(comp->error.context, "Too few expressions");
     if (rightListType->numItems > num) comp->error.handler(comp->error.context, "Too many expressions");
@@ -823,7 +823,7 @@ static void parseContinueStmt(Compiler *comp)
 }
 
 
-// returnStmt = "return" [exprList].
+// returnStmt = "return" [exprOrLitList].
 static void parseReturnStmt(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_RETURN);
@@ -840,7 +840,7 @@ static void parseReturnStmt(Compiler *comp)
 
     Type *type;
     if (comp->lex.tok.kind != TOK_SEMICOLON && comp->lex.tok.kind != TOK_RBRACE)
-        parseExprList(comp, &type, sig->resultType, NULL);
+        parseExprOrUntypedLiteralList(comp, &type, sig->resultType, NULL);
     else
         type = comp->voidType;
 

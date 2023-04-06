@@ -1190,7 +1190,7 @@ static void parseBuiltinValidkeyCall(Compiler *comp, Type **type, Const *constan
 
     // Map key
     Type *keyType = NULL;
-    parseExpr(comp, &keyType, constant);
+    parseExprOrUntypedLiteral(comp, &keyType, typeMapKey(*type), constant);
     doImplicitTypeConv(comp, typeMapKey(*type), &keyType, NULL, false);
     typeAssertCompatible(&comp->types, typeMapKey(*type), keyType, false);
 
@@ -1375,7 +1375,7 @@ static void parseBuiltinCall(Compiler *comp, Type **type, Const *constant, Built
 }
 
 
-// actualParams = "(" [expr {"," expr}] ")".
+// actualParams = "(" [exprOrLit {"," exprOrLit}] ")".
 static void parseCall(Compiler *comp, Type **type, Const *constant)
 {
     lexEat(&comp->lex, TOK_LPAR);
@@ -1428,7 +1428,7 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
             else
             {
                 // Regular parameter
-                parseExpr(comp, &actualParamType, constant);
+                parseExprOrUntypedLiteral(comp, &actualParamType, formalParamType, constant);
 
                 doImplicitTypeConv(comp, formalParamType, &actualParamType, constant, false);
                 typeAssertCompatibleParam(&comp->types, formalParamType, actualParamType, *type, numExplicitParams + 1);
@@ -1572,8 +1572,8 @@ static void parseTypeCast(Compiler *comp, Type **type, Const *constant)
 }
 
 
-// arrayLiteral     = "{" [expr {"," expr}] "}".
-// structLiteral    = "{" [[ident ":"] expr {"," [ident ":"] expr}] "}".
+// arrayLiteral     = "{" [exprOrLit {"," exprOrLit}] "}".
+// structLiteral    = "{" [[ident ":"] exprOrLit {"," [ident ":"] exprOrLit}] "}".
 static void parseArrayOrStructLiteral(Compiler *comp, Type **type, Const *constant)
 {
     lexEat(&comp->lex, TOK_LBRACE);
@@ -1643,8 +1643,8 @@ static void parseArrayOrStructLiteral(Compiler *comp, Type **type, Const *consta
             Const itemConstantBuf, *itemConstant = constant ? &itemConstantBuf : NULL;
             int itemSize = typeSize(&comp->types, expectedItemType);
 
-            // expr
-            parseExpr(comp, &itemType, itemConstant);
+            // exprOrLit
+            parseExprOrUntypedLiteral(comp, &itemType, expectedItemType, itemConstant);
 
             doImplicitTypeConv(comp, expectedItemType, &itemType, itemConstant, false);
             typeAssertCompatible(&comp->types, expectedItemType, itemType, false);
@@ -1698,7 +1698,7 @@ static void parseDynArrayLiteral(Compiler *comp, Type **type, Const *constant)
         while (1)
         {
             Type *itemType;
-            parseExpr(comp, &itemType, NULL);
+            parseExprOrUntypedLiteral(comp, &itemType, staticArrayType->base, NULL);
 
             // Special case: variadic parameter list's first item is already a dynamic array compatible with the variadic parameter list
             if ((*type)->isVariadicParamList && typeCompatible(*type, itemType, false) && staticArrayType->numItems == 0)
@@ -1738,7 +1738,7 @@ static void parseDynArrayLiteral(Compiler *comp, Type **type, Const *constant)
 }
 
 
-// mapLiteral = "{" expr ":" expr {"," expr ":" expr} "}".
+// mapLiteral = "{" exprOrLit ":" exprOrLit {"," exprOrLit ":" exprOrLit} "}".
 static void parseMapLiteral(Compiler *comp, Type **type, Const *constant)
 {
     lexEat(&comp->lex, TOK_LBRACE);
@@ -1768,7 +1768,7 @@ static void parseMapLiteral(Compiler *comp, Type **type, Const *constant)
 
             // Key
             Type *keyType;
-            parseExpr(comp, &keyType, NULL);
+            parseExprOrUntypedLiteral(comp, &keyType, typeMapKey(*type), NULL);
             doImplicitTypeConv(comp, typeMapKey(*type), &keyType, NULL, false);
             typeAssertCompatible(&comp->types, typeMapKey(*type), keyType, false);
 
@@ -1779,7 +1779,7 @@ static void parseMapLiteral(Compiler *comp, Type **type, Const *constant)
 
             // Item
             Type *itemType;
-            parseExpr(comp, &itemType, NULL);
+            parseExprOrUntypedLiteral(comp, &itemType, typeMapItem(*type), NULL);
             doImplicitTypeConv(comp, typeMapItem(*type), &itemType, NULL, false);
             typeAssertCompatible(&comp->types, typeMapItem(*type), itemType, false);
 
@@ -1792,7 +1792,6 @@ static void parseMapLiteral(Compiler *comp, Type **type, Const *constant)
         }
     }
 
-    //genPop(&comp->gen);
     lexEat(&comp->lex, TOK_RBRACE);
 }
 
@@ -1822,8 +1821,8 @@ static void parseFnLiteral(Compiler *comp, Type **type, Const *constant)
 }
 
 
-// compositeLiteral = arrayLiteral | dynArrayLiteral | mapLiteral | structLiteral | fnLiteral.
-static void parseCompositeLiteral(Compiler *comp, Type **type, Const *constant)
+// untypedLiteral = arrayLiteral | dynArrayLiteral | mapLiteral | structLiteral | fnLiteral.
+static void parseUntypedLiteral(Compiler *comp, Type **type, Const *constant)
 {
     if ((*type)->kind == TYPE_ARRAY || (*type)->kind == TYPE_STRUCT)
         parseArrayOrStructLiteral(comp, type, constant);
@@ -1838,6 +1837,7 @@ static void parseCompositeLiteral(Compiler *comp, Type **type, Const *constant)
 }
 
 
+// compositeLiteral = type untypedLiteral.
 static void parseTypeCastOrCompositeLiteral(Compiler *comp, Ident *ident, Type **type, Const *constant, bool *isVar, bool *isCall)
 {
     *type = parseType(comp, ident);
@@ -1845,7 +1845,7 @@ static void parseTypeCastOrCompositeLiteral(Compiler *comp, Ident *ident, Type *
     if (comp->lex.tok.kind == TOK_LPAR)
         parseTypeCast(comp, type, constant);
     else if (comp->lex.tok.kind == TOK_LBRACE)
-        parseCompositeLiteral(comp, type, constant);
+        parseUntypedLiteral(comp, type, constant);
     else
         comp->error.handler(comp->error.context, "Type cast or composite literal expected");
 
@@ -1884,7 +1884,7 @@ static void parseDerefSelector(Compiler *comp, Type **type, Const *constant, boo
 }
 
 
-// indexSelector = "[" expr "]".
+// indexSelector = "[" exprOrLit "]".
 static void parseIndexSelector(Compiler *comp, Type **type, Const *constant, bool *isVar, bool *isCall)
 {
     // Implicit dereferencing: a^[i] == a[i]
@@ -1907,16 +1907,20 @@ static void parseIndexSelector(Compiler *comp, Type **type, Const *constant, boo
 
     // Index or key
     lexNext(&comp->lex);
-    Type *indexType = NULL;
-    parseExpr(comp, &indexType, NULL);
 
     if ((*type)->kind == TYPE_MAP)
     {
-        doImplicitTypeConv(comp, typeMapKey(*type), &indexType, NULL, false);
-        typeAssertCompatible(&comp->types, typeMapKey(*type), indexType, false);
+        Type *keyType = NULL;
+        parseExprOrUntypedLiteral(comp, &keyType, typeMapKey(*type), NULL);
+        doImplicitTypeConv(comp, typeMapKey(*type), &keyType, NULL, false);
+        typeAssertCompatible(&comp->types, typeMapKey(*type), keyType, false);
     }
     else
+    {
+        Type *indexType = NULL;
+        parseExpr(comp, &indexType, NULL);
         typeAssertCompatible(&comp->types, comp->intType, indexType, false);
+    }
 
     lexEat(&comp->lex, TOK_RBRACKET);
 
@@ -2440,10 +2444,27 @@ void parseExpr(Compiler *comp, Type **type, Const *constant)
 }
 
 
-// exprList = expr {"," expr}.
-void parseExprList(Compiler *comp, Type **type, Type *destType, Const *constant)
+// exprOrLit = expr | untypedLiteral.
+void parseExprOrUntypedLiteral(Compiler *comp, Type **type, Type *untypedLiteralType, Const *constant)
 {
-    parseExpr(comp, type, constant);
+    if (untypedLiteralType && comp->lex.tok.kind == TOK_LBRACE)
+    {
+        *type = untypedLiteralType;
+        parseUntypedLiteral(comp, type, constant);
+    }
+    else
+        parseExpr(comp, type, constant);
+}
+
+
+// exprOrLitList = exprOrLit {"," exprOrLit}.
+void parseExprOrUntypedLiteralList(Compiler *comp, Type **type, Type *destType, Const *constant)
+{
+    Type *untypedLiteralType = destType;
+    if (destType && typeExprListStruct(destType) && destType->numItems > 0)
+        untypedLiteralType = destType->field[0]->type;
+
+    parseExprOrUntypedLiteral(comp, type, untypedLiteralType, constant);
 
     if (comp->lex.tok.kind == TOK_COMMA)
     {
@@ -2479,7 +2500,12 @@ void parseExprList(Compiler *comp, Type **type, Type *destType, Const *constant)
             fieldConstant = constant ? &fieldConstantBuf[(*type)->numItems] : NULL;
 
             lexNext(&comp->lex);
-            parseExpr(comp, &fieldType, fieldConstant);
+
+            untypedLiteralType = NULL;
+            if (destType && typeExprListStruct(destType) && destType->numItems > (*type)->numItems)
+                untypedLiteralType = destType->field[(*type)->numItems]->type;
+
+            parseExprOrUntypedLiteral(comp, &fieldType, untypedLiteralType, fieldConstant);
         }
 
         // Allocate structure

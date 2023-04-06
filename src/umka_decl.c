@@ -99,7 +99,7 @@ static void parseRcvSignature(Compiler *comp, Signature *sig)
 }
 
 
-// signature = "(" [typedIdentList ["=" expr] {"," typedIdentList ["=" expr]}] ")" [":" (type | "(" type {"," type} ")")].
+// signature = "(" [typedIdentList ["=" exprOrLit] {"," typedIdentList ["=" exprOrLit]}] ")" [":" (type | "(" type {"," type} ")")].
 static void parseSignature(Compiler *comp, Signature *sig)
 {
     // Formal parameter list
@@ -122,7 +122,7 @@ static void parseSignature(Compiler *comp, Signature *sig)
 
             variadicParamListFound = paramType->isVariadicParamList;
 
-            // ["=" expr]
+            // ["=" exprOrLit]
             Const defaultConstant;
             if (comp->lex.tok.kind == TOK_EQ)
             {
@@ -135,7 +135,7 @@ static void parseSignature(Compiler *comp, Signature *sig)
                 lexNext(&comp->lex);
 
                 Type *defaultType;
-                parseExpr(comp, &defaultType, &defaultConstant);
+                parseExprOrUntypedLiteral(comp, &defaultType, paramType, &defaultConstant);
 
                 doImplicitTypeConv(comp, paramType, &defaultType, &defaultConstant, false);
                 typeAssertCompatible(&comp->types, paramType, defaultType, false);
@@ -549,7 +549,7 @@ static void parseConstDecl(Compiler *comp)
 }
 
 
-// varDeclItem = typedIdentList "=" exprList.
+// varDeclItem = typedIdentList "=" exprOrLitList.
 static void parseVarDeclItem(Compiler *comp)
 {
     IdentName varNames[MAX_FIELDS];

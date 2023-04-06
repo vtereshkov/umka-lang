@@ -210,7 +210,7 @@ Syntax:
 
 ```
 fnType    = "fn" signature.
-signature = "(" [typedIdentList ["=" expr] {"," typedIdentList ["=" expr]}] ")" 
+signature = "(" [typedIdentList ["=" exprOrLit] {"," typedIdentList ["=" exprOrLit]}] ")" 
             [":" (type | "(" type {"," type} ")")].
 ```
 
@@ -510,7 +510,7 @@ Syntax:
 
 ```
 fullVarDecl    = "var" (varDeclItem | "(" {varDeclItem ";"} ")").
-varDeclItem    = typedIdentList ["=" exprList].
+varDeclItem    = typedIdentList "=" exprOrLitList.
 typedIdentList = identList ":" [".."] type.
 identList      = ident exportMark {"," ident exportMark}.
 ```
@@ -520,6 +520,7 @@ Examples:
 ```
 var e1, e2: int = 2, 3
 var f: String = d + "!"
+var z: []int = {2, 4}   // Literal type omitted
 var (
     g: Arr
     h: []real
@@ -535,7 +536,7 @@ Syntax:
 ```
 shortVarDecl        = declAssignmentStmt.
 singleDeclAssgnStmt = ident ":=" expr.
-listDeclAssgnStmt   = identList ":=" exprList.
+listDeclAssgnStmt   = identList ":=" exprOrLitList.
 declAssignmentStmt  = singleDeclAssgnStmt | listDeclAssgnStmt.
 ```
 
@@ -813,15 +814,29 @@ A composite literal constructs a value for an array, dynamic array, map, structu
 
 The number of array item values or structure field values (if the optional field names are omitted) should match the literal type. The types of array item values, dynamic array item values, map key and item values, or structure field values should be compatible to those of the literal type.
 
+#### Untyped composite literals
+
+In the following special cases the composite literal type may be omitted and inferred from the context:
+
+* Assignments, except short variable declarations
+* Actual parameters
+* Default parameter values
+* The `return` statements
+* Nested composite literals
+* Map keys
+
+Untyped composite literals cannot be used in general expressions. Implicit type conversions are never applied to untyped literals.
+
 Syntax:
 
 ```
-compositeLiteral = arrayLiteral | dynArrayLiteral | mapLiteral | 
+compositeLiteral = type untypedLiteral.
+untypedLiteral   = arrayLiteral | dynArrayLiteral | mapLiteral | 
                    structLiteral | fnLiteral.
-arrayLiteral     = "{" [expr {"," expr}] "}".
+arrayLiteral     = "{" [exprOrLit {"," exprOrLit}] "}".
 dynArrayLiteral  = arrayLiteral.
-mapLiteral       = "{" expr ":" expr {"," expr ":" expr} "}".
-structLiteral    = "{" [[ident ":"] expr {"," [ident ":"] expr}] "}".
+mapLiteral       = "{" exprOrLit ":" exprOrLit {"," exprOrLit ":" exprOrLit} "}".
+structLiteral    = "{" [[ident ":"] exprOrLit {"," [ident ":"] exprOrLit}] "}".
 fnLiteral        = fnBlock.
 ```
 
@@ -832,6 +847,7 @@ Examples:
 []any{7.2, "Hello", [2]int{3, 5}}
 map[[]int]str{[]int{13, 15}: "First", []int{57, 89}: "Second"}
 Vec{x: 2, y: 8}
+Mat{{1, 2}, {3, 4}}             // Nested literals' types omitted
 fn (x: int) {return 2 * x}
 ```
 
@@ -870,7 +886,7 @@ The index selector `[...]` accesses a collection item. It can be applied to an a
 Syntax:
 
 ```
-indexSelector = "[" expr "]".
+indexSelector = "[" exprOrLit "]".
 ```
 
 Examples:
@@ -906,7 +922,7 @@ Syntax:
 
 ```
 callSelector = actualParams.
-actualParams = "(" [expr {"," expr}] ")".
+actualParams = "(" [exprOrLit {"," exprOrLit}] ")".
 ```
 
 Examples:
@@ -923,6 +939,7 @@ Operators combine expressions into other expressions.
 Syntax:
 
 ```
+exprOrLit     = expr | untypedLiteral.
 expr          = logicalTerm {"||" logicalTerm}.
 logicalTerm   = relation {"&&" relation}.
 relation      = relationTerm [("==" | "!=" | "<" | "<=" | ">" | ">=") relationTerm].
@@ -940,6 +957,7 @@ Examples:
 "Hello, " + person.name + '\n'
 p != null && p[i] > 0
 &Vec{2, 5}
+{"Hello", "World"}      // Literal type omitted
 ```
 
 #### Unary operators
@@ -1033,10 +1051,10 @@ Syntax:
 
 ```
 assignmentStmt  = singleAssgnStmt | listAssgnStmt.
-singleAssgnStmt = designator "=" expr.
-listAssgnStmt   = designatorList "=" exprList.
+singleAssgnStmt = designator "=" exprOrLit.
+listAssgnStmt   = designatorList "=" exprOrLitList.
 designatorList  = designator {"," designator}.
-exprList        = expr {"," expr}.
+exprOrLitList   = exprOrLit {"," exprOrLit}.
 ```
 
 Examples:
@@ -1252,7 +1270,7 @@ For functions with non-`void` return value types, the function block should have
 Syntax:
 
 ```
-returnStmt = "return" [exprList].
+returnStmt = "return" [exprOrLitList].
 ```
 
 Examples:
@@ -1528,11 +1546,11 @@ constDecl           = "const" (constDeclItem | "(" {constDeclItem ";"} ")").
 constDeclItem       = ident exportMark "=" expr.
 varDecl             = fullVarDecl | shortVarDecl.
 fullVarDecl         = "var" (varDeclItem | "(" {varDeclItem ";"} ")").
-varDeclItem         = typedIdentList "=" exprList.
+varDeclItem         = typedIdentList "=" exprOrLitList.
 shortVarDecl        = declAssignmentStmt.
 fnDecl              = "fn" [rcvSignature] ident exportMark signature [block].
 rcvSignature        = "(" ident ":" type ")".
-signature           = "(" [typedIdentList ["=" expr] {"," typedIdentList ["=" expr]}] ")" 
+signature           = "(" [typedIdentList ["=" exprOrLit] {"," typedIdentList ["=" exprOrLit]}] ")" 
                       [":" (type | "(" type {"," type} ")")].
 exportMark          = ["*"].
 identList           = ident exportMark {"," ident exportMark}.
@@ -1554,14 +1572,14 @@ stmtList            = Stmt {";" Stmt}.
 stmt                = decl | block | simpleStmt | ifStmt | switchStmt | forStmt |
                       breakStmt | continueStmt | returnStmt.
 simpleStmt          = assignmentStmt | shortAssignmentStmt | incDecStmt | callStmt.
-singleAssgnStmt     = designator "=" expr.
-listAssgnStmt       = designatorList "=" exprList.
+singleAssgnStmt     = designator "=" exprOrLit.
+listAssgnStmt       = designatorList "=" exprOrLitList.
 assignmentStmt      = singleAssgnStmt | listAssgnStmt.
 shortAssignmentStmt = designator 
                       ("+=" | "-=" | "*=" | "/="  | "%=" |
                        "&=" | "|=" | "~=" | "<<=" | ">>=") expr.
 singleDeclAssgnStmt = ident ":=" expr.
-listDeclAssgnStmt   = identList ":=" exprList.
+listDeclAssgnStmt   = identList ":=" exprOrLitList.
 declAssignmentStmt  = singleDeclAssgnStmt | listDeclAssgnStmt.
 incDecStmt          = designator ("++" | "--").
 callStmt            = designator.
@@ -1574,8 +1592,9 @@ forHeader           = [shortVarDecl ";"] expr [";" simpleStmt].
 forInHeader         = ident ["," ident] "in" expr.
 breakStmt           = "break".
 continueStmt        = "continue".
-returnStmt          = "return" [exprList].
-exprList            = expr {"," expr}.
+returnStmt          = "return" [exprOrLitList].
+exprOrLitList       = exprOrLit {"," exprOrLit}.
+exprOrLit           = expr | untypedLiteral.
 expr                = logicalTerm {"||" logicalTerm}.
 logicalTerm         = relation {"&&" relation}.
 relation            = relationTerm 
@@ -1591,16 +1610,17 @@ qualIdent           = [ident "."] ident.
 builtinCall         = qualIdent "(" [expr {"," expr}] ")".
 selectors           = {derefSelector | indexSelector | fieldSelector | callSelector}.
 derefSelector       = "^".
-indexSelector       = "[" expr "]".
+indexSelector       = "[" exprOrLit "]".
 fieldSelector       = "." ident.
 callSelector        = actualParams.
-actualParams        = "(" [expr {"," expr}] ")".
-compositeLiteral    = arrayLiteral | dynArrayLiteral | mapLiteral |
+actualParams        = "(" [exprOrLit {"," exprOrLit}] ")".
+compositeLiteral    = type untypedLiteral.
+untypedLiteral      = arrayLiteral | dynArrayLiteral | mapLiteral | 
                       structLiteral | fnLiteral.
-arrayLiteral        = "{" [expr {"," expr}] "}".
+arrayLiteral        = "{" [exprOrLit {"," exprOrLit}] "}".
 dynArrayLiteral     = arrayLiteral.
-mapLiteral          = "{" expr ":" expr {"," expr ":" expr} "}".
-structLiteral       = "{" [[ident ":"] expr {"," [ident ":"] expr}] "}".
+mapLiteral          = "{" exprOrLit ":" exprOrLit {"," exprOrLit ":" exprOrLit} "}".
+structLiteral       = "{" [[ident ":"] exprOrLit {"," [ident ":"] exprOrLit}] "}".
 fnLiteral           = fnBlock.
 typeCast            = type "(" expr ")".
 ident               = (letter | "_") {letter | "_" | digit}.

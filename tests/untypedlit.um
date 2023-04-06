@@ -1,0 +1,46 @@
+type T = [2]int
+
+fn foo(x: [3]real, y:[]T, z: struct {w, h: int}, v: map[[2]int][]str, w: [3]int = {3, 8, 14}): ([]real, bool, [2]str) {
+	printf(repr(x) + '\n')
+	printf(repr(y) + '\n')
+	printf(repr(z) + '\n')
+	printf(repr(v) + '\n')
+	printf(repr(w) + '\n')
+
+	return {x[0], x[1]}, v[{5, 7}][1] == "World", {"Meow", "Moo"}
+}
+
+fn bar(a: T): [3]int {
+	var b: T = {2, 3}
+	var c: T
+	c = {a[0] + b[0], a[1] + b[1]}
+	return {42, c[0], c[1]}
+}
+
+fn test*() {
+	var (
+		p: []str
+		q, q0: []real
+		r, r0: bool
+		s, s0: []str
+		t: struct {w, h: int}
+	)
+
+	q0, r0, s0 = foo({2, 4, -3.14}, {{12, 13}, {44, 47}, {0, -6}}, {200, 100}, {{3, 7}: {}, {5, 7}: {"Hello", "World"}, {11, 3}: {"Psst!"}})
+
+	p, q, r, s, t = {"Haha", "Hoho"}, q0, r0, s0, {w: 300, h: 400}
+
+	printf(repr(p) + '\n')
+	printf(repr(q) + '\n')
+	printf(repr(r) + '\n')
+	printf(repr(s) + '\n')
+	printf(repr(t) + '\n')
+
+	u := bar({7, 8})
+
+	printf(repr(u) + '\n')	
+}
+
+fn main() {
+	test()
+}
