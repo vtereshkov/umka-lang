@@ -17,6 +17,11 @@ fn bar(a: T): [3]int {
 	return {42, c[0], c[1]}
 }
 
+fn baz(): [][]int {
+	var a, b: [2]int = {3, 6}, {5, 7}
+	return {a, b}
+}
+
 fn test*() {
 	var (
 		p: []str
@@ -39,6 +44,8 @@ fn test*() {
 	u := bar({7, 8})
 
 	printf(repr(u) + '\n')	
+
+	printf(repr(baz()) + '\n')
 }
 
 fn main() {

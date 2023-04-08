@@ -568,9 +568,13 @@ static void parseVarDeclItem(Compiler *comp)
     // Initializer
     if (comp->lex.tok.kind == TOK_EQ)
     {
-        Type *designatorType = typeAddPtrTo(&comp->types, &comp->blocks, var[0]->type);
-        Type *designatorListType;
+        Type *designatorType;
+        if (typeStructured(var[0]->type))
+            designatorType = var[0]->type;
+        else
+            designatorType = typeAddPtrTo(&comp->types, &comp->blocks, var[0]->type);
 
+        Type *designatorListType;
         if (numVars == 1)
             designatorListType = designatorType;
         else
