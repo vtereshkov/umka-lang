@@ -1326,9 +1326,11 @@ fn main() {
 
 ## Embedding API
 
-The Umka interpreter is a shared library that provides the API for embedding into a C/C++ host application.
+The Umka interpreter is a static or shared library that provides the API for embedding into a C/C++ host application.
 
-### API types
+### Basic functionality
+
+#### Types
 
 ```
 typedef union
@@ -1341,75 +1343,66 @@ typedef union
 } UmkaStackSlot;
 ```
 
-Umka fiber stack slot.
+Umka fiber stack slot. Used for passing parameters to functions and returning results from functions. 
+
+Each parameter or result occupies at least one slot. A parameter of a structured type, when passed by value, occupies the minimal number of consecutive slots sufficient to store it. Parameter size is determined by the following rules:
+
+* Array size is the sum of the sizes of its items
+* Dynamic array size is `sizeof(UmkaDynArray)`
+* Structure size is the sum of the padded sizes of its fields. The padding is determined by the natural alignment of the fields, i.e., the address of an `n`-byte field should be a multiple of `n`  
+* Map size is `sizeof(UmkaMap)`
 
 ```
 typedef void (*UmkaExternFunc)(UmkaStackSlot *params, UmkaStackSlot *result);
 ```
 
-Umka external function pointer. When an external C/C++ function is called from Umka, its parameters are stored in `params` in right-to-left order. The returned value should be put to `result`. Upon entry, `result` stores a pointer to the Umka instance.
+Umka external function pointer. When an external C/C++ function is called from Umka, its parameters are stored in `params` in right-to-left order (i.e., the rightmost parameter is `params[0]`). The `params` is the array of slots, not of parameters. Thus, if some of the parameters are of structured types and passed by value, `params[i]` may not represent the `i`-th parameter from the right. 
+
+The returned value should be put to `result`. If the function returns a structured type, it implicitly declares a hidden rightmost parameter that is the pointer to the memory allocated to store the returned value. This pointer should be duplicated in `result`. 
+
+Upon entry, `result` stores a pointer to the Umka interpreter instance handle.
+
+Examples:
 
 ```
-typedef enum
+// lib.um
+fn add*(a, b: real): real
+
+// lib.c
+void add(UmkaStackSlot *params, UmkaStackSlot *result)
 {
-    UMKA_HOOK_CALL,
-    UMKA_HOOK_RETURN,
-} UmkaHookEvent;
-```
-
-Umka debug hook event kind. A `UMKA_HOOK_CALL` hook is called after calling any Umka function, `UMKA_HOOK_RETURN` before returning from any Umka function.
-
-```
-typedef void (*UmkaHookFunc)(const char *fileName, const char *funcName, int line);
-```
-
-Umka debug hook function.
-
-```
-#define UmkaDynArray(T) struct \
-{ \
-    void *internal; \
-    int64_t itemSize; \
-    T *data; \
+    double a = params[1].realVal;
+    double b = params[0].realVal;
+    result->realVal = a + b;
 }
-```
 
-Umka dynamic array containing items of type `T`. Even though the array items pointed to by `data` can be both read and written, the structure itself is considered read-only. It cannot be used for returning a dynamic array from an external C/C++ function.
-
+params:
+    0:  b
+    1:  a
 ```
-typedef struct
+```
+// lib.um
+fn mulVec*(a: real, v: [2]real): [2]real
+
+// lib.c
+void mulVec(UmkaStackSlot *params, UmkaStackSlot *result)
 {
-    void *internal1;
-    void *internal2;
-} UmkaMap;
+    double a = params[3].realVal;
+    double* v = (double *)&params[1];
+    double* out = params[0].ptrVal;   // Hidden result pointer
+    out[0] = a * v[0];
+    out[1] = a * v[1];
+    result->ptrVal = out;
+}
+
+params:
+    0:  out
+    1:  v[0]
+    2:  v[1]
+    3:  a
 ```
 
-Umka map. Can be accessed by `umkaGetMapItem`.
-
-```
-enum
-{
-    UMKA_MSG_LEN = 255
-};
-
-typedef struct
-{
-    char fileName[UMKA_MSG_LEN + 1];
-    char fnName[UMKA_MSG_LEN + 1];
-    int line, pos;
-    char msg[UMKA_MSG_LEN + 1];
-} UmkaError;
-```
-
-Umka error description structure.
-
-```
-typedef void (*UmkaWarningCallback)(UmkaError *warning);
-```
-
-Umka warning callback.
-
-### API functions
+#### Functions
 
 ```
 UMKA_API void *umkaAlloc(void);
@@ -1453,12 +1446,6 @@ UMKA_API void umkaFree(void *umka);
 Deallocates memory allocated for the interpreter. Here, `umka` is the interpreter instance handle.
 
 ```
-UMKA_API void umkaGetError(void *umka, UmkaError *err);
-```
-
-Gets the last compile-time or run-time error. Here, `umka` is the interpreter instance handle, `err` is the pointer to the error description structure to be filled.
-
-```
 UMKA_API void umkaAsm(void *umka, char *buf, int size);
 ```
 
@@ -1483,6 +1470,63 @@ UMKA_API int umkaGetFunc(void *umka, const char *moduleName, const char *funcNam
 Gets an Umka function that can be called from C/C++ using `umkaCall()`.  Here, `umka` is the interpreter instance handle, `moduleName` is the Umka module name, `funcName` is the Umka function name. Returns the function entry point offset.
 
 ```
+UMKA_API const char *umkaGetVersion(void);
+```
+
+Returns Umka interpreter version (build date) string.
+
+### Debugging and profiling
+
+#### Types
+
+```
+enum
+{
+    UMKA_MSG_LEN = 255
+};
+
+typedef struct
+{
+    char fileName[UMKA_MSG_LEN + 1];
+    char fnName[UMKA_MSG_LEN + 1];
+    int line, pos;
+    char msg[UMKA_MSG_LEN + 1];
+} UmkaError;
+```
+
+Umka error description structure.
+
+```
+typedef void (*UmkaWarningCallback)(UmkaError *warning);
+```
+
+Umka warning callback.
+
+```
+typedef enum
+{
+    UMKA_HOOK_CALL,
+    UMKA_HOOK_RETURN,
+} UmkaHookEvent;
+```
+
+Umka debug hook event kind. A `UMKA_HOOK_CALL` hook is called after calling any Umka function, `UMKA_HOOK_RETURN` before returning from any Umka function.
+
+```
+typedef void (*UmkaHookFunc)(const char *fileName, const char *funcName, int line);
+```
+
+Umka debug hook function. A callback that is called each time a hook event occurs.
+
+#### Functions
+
+```
+UMKA_API void umkaGetError(void *umka, UmkaError *err);
+```
+
+Gets the last compile-time or run-time error. Here, `umka` is the interpreter instance handle, `err` is the pointer to the error description structure to be filled.
+
+```
 UMKA_API bool umkaGetCallStack(void *umka, int depth, int nameSize, 
                                int *offset, char *fileName, char *fnName, int *line);
 ```
@@ -1494,6 +1538,33 @@ UMKA_API void umkaSetHook(void *umka, UmkaHookEvent event, UmkaHookFunc hook);
 ```
 
 Sets a debug hook function `hook` that will be called by the Umka virtual machine each time the `event` occurs.
+
+### Accessing Umka variables
+
+#### Types
+
+```
+#define UmkaDynArray(T) struct \
+{ \
+    void *internal; \
+    int64_t itemSize; \
+    T *data; \
+}
+```
+
+Umka dynamic array containing items of type `T`. Even though the array items pointed to by `data` can be both read and written, the structure itself is considered read-only. It cannot be used for returning a dynamic array from an external C/C++ function.
+
+```
+typedef struct
+{
+    void *internal1;
+    void *internal2;
+} UmkaMap;
+```
+
+Umka map. Can be accessed by `umkaGetMapItem`.
+
+#### Functions
 
 ```
 UMKA_API void *umkaAllocData(void *umka, int size, UmkaExternFunc onFree);
@@ -1525,11 +1596,6 @@ UMKA_API int umkaGetDynArrayLen(const void *array);
 
 Returns the length of the dynamic `array` passed as a pointer to `UmkaDynArray(T)`.
 
-```
-UMKA_API const char *umkaGetVersion(void);
-```
-
-Returns Umka interpreter version (build date) string.
 
 ## Appendix: Language grammar
 
