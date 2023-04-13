@@ -1539,7 +1539,7 @@ UMKA_API void umkaSetHook(void *umka, UmkaHookEvent event, UmkaHookFunc hook);
 
 Sets a debug hook function `hook` that will be called by the Umka virtual machine each time the `event` occurs.
 
-### Accessing Umka variables
+### Accessing Umka data types
 
 #### Types
 
