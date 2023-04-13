@@ -10,7 +10,7 @@ Umka is a statically typed embeddable scripting language. It combines the simpli
 * Documentation:
   * [Language](https://github.com/vtereshkov/umka-lang/blob/master/doc/lang.md)
   * [Standard library](https://github.com/vtereshkov/umka-lang/blob/master/doc/lib.md)
-  * [Embedding API](https://github.com/vtereshkov/umka-lang/blob/master/doc/lib.md)
+  * [Embedding API](https://github.com/vtereshkov/umka-lang/blob/master/doc/api.md)
 
 ## Features
 * Clean syntax inspired by Go
