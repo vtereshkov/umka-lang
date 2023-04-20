@@ -2,7 +2,7 @@
 
 type Array* = []any
 
-fn (a: ^Array) map_*(f: fn (x, ctx: any): any, ctx: any): Array {
+fn (a: ^Array) transform*(f: fn (x, ctx: any): any, ctx: any): Array {
     res := make(Array, len(a^))
     for i := 0; i < len(a^); i++ {
         res[i] = f(a[i], ctx)

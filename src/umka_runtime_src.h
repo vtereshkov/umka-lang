@@ -267,7 +267,7 @@ static const char *runtimeModuleSources[] = {
 "\n"
 "type Array* = []any\n"
 "\n"
-"fn (a: ^Array) map_*(f: fn (x, ctx: any): any, ctx: any): Array {\n"
+"fn (a: ^Array) transform*(f: fn (x, ctx: any): any, ctx: any): Array {\n"
 "    res := make(Array, len(a^))\n"
 "    for i := 0; i < len(a^); i++ {\n"
 "        res[i] = f(a[i], ctx)\n"

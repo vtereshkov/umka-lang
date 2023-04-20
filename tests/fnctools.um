@@ -9,7 +9,7 @@ fn test*() {
     sum  := fn (x, y, ctx: any): any {return int(x) + int(y)}     
     
     const max = 30     
-    result := int(fnc.Array(data).map_(sqr, null).filter(less, max).reduce(sum, null))   
+    result := int(fnc.Array(data).transform(sqr, null).filter(less, max).reduce(sum, null))   
     printf("Sum of all squares less than %lld = %lld \n", max, result)     
 }
 

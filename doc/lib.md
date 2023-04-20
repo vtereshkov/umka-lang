@@ -250,7 +250,7 @@ Array of any items.
 #### Functions
 
 ```
-fn (a: ^Array) map_*(f: fn (x, ctx: any): any, ctx: any): Array
+fn (a: ^Array) transform*(f: fn (x, ctx: any): any, ctx: any): Array
 ```
 Computes the function `f` for each item `x` of the array `a^` and returns the array of results. Any context stored in `ctx` will be passed unchanged to `f` on each its call.
 
@@ -277,7 +277,7 @@ fn main() {
     sum  := fn (x, y, ctx: any): any {return int(x) + int(y)}     
     
     const max = 30     
-    result := int(fnc.Array(data).map_(sqr, null).filter(less, max).reduce(sum, null))   
+    result := int(fnc.Array(data).transform(sqr, null).filter(less, max).reduce(sum, null))   
     printf("Sum of all squares less than %lld = %lld \n", max, result)       
 }
 ```
