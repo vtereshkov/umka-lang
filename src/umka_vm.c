@@ -2980,7 +2980,7 @@ static FORCE_INLINE void doReturn(Fiber *fiber, Fiber **newFiber)
 
 static FORCE_INLINE void doEnterFrame(Fiber *fiber, HeapPages *pages, HookFunc *hooks, Error *error)
 {
-    int localVarSlots = fiber->code[fiber->ip].operand.int32Val[0];
+    int localVarSlots = fiber->code[fiber->ip].operand.intVal;
 
     // Allocate stack frame
     if (fiber->top - localVarSlots - fiber->stack < VM_MIN_FREE_STACK)
@@ -3176,6 +3176,7 @@ int vmAsm(int ip, Instruction *code, DebugInfo *debugPerInstr, char *buf, int si
         case OP_GET_FIELD_PTR:
         case OP_GOTO:
         case OP_GOTO_IF:
+        case OP_ENTER_FRAME:
         case OP_CALL_INDIRECT:
         case OP_RETURN:                 chars += snprintf(buf + chars, nonneg(size - chars), " %lld",  (long long int)instr->operand.intVal); break;
         case OP_CALL:
@@ -3184,7 +3185,6 @@ int vmAsm(int ip, Instruction *code, DebugInfo *debugPerInstr, char *buf, int si
             chars += snprintf(buf + chars, nonneg(size - chars), " %s (%lld)", fnName, (long long int)instr->operand.intVal);
             break;
         }
-        case OP_ENTER_FRAME:
         case OP_GET_ARRAY_PTR:          chars += snprintf(buf + chars, nonneg(size - chars), " %d %d", (int)instr->operand.int32Val[0], (int)instr->operand.int32Val[1]); break;
         case OP_CALL_EXTERN:            chars += snprintf(buf + chars, nonneg(size - chars), " %p",    instr->operand.ptrVal); break;
         case OP_CALL_BUILTIN:           chars += snprintf(buf + chars, nonneg(size - chars), " %s",    builtinSpelling[instr->operand.builtinVal]); break;

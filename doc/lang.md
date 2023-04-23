@@ -734,7 +734,7 @@ type FiberFunc = fn(parent: fiber, anyParam: ^T)
 fn fiberspawn(childFunc: FiberFunc, anyParam: ^T): fiber
 ```
 
-Creates a new fiber and assigns `childFunc` as the fiber function. `anyParam` is a pointer to any data buffer that will be passed to `childFunc` .
+Creates a new fiber and assigns `childFunc` as the fiber function. `anyParam` is a pointer to heap-allocated data buffer that will be passed to `childFunc` .
 
 ```
 fn fibercall(child: fiber)

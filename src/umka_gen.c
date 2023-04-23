@@ -640,16 +640,16 @@ void genReturn(CodeGen *gen, int paramSlots)
 }
 
 
-void genEnterFrame(CodeGen *gen, int localVarSlots, int paramSlots, bool inHeap)
+void genEnterFrame(CodeGen *gen, int localVarSlots)
 {
-    const Instruction instr = {.opcode = OP_ENTER_FRAME, .tokKind = TOK_NONE, .typeKind = inHeap ? TYPE_PTR : TYPE_NONE, .operand.int32Val = {localVarSlots, paramSlots}};
+    const Instruction instr = {.opcode = OP_ENTER_FRAME, .tokKind = TOK_NONE, TYPE_NONE, .operand.intVal = localVarSlots};
     genAddInstr(gen, &instr);
 }
 
 
-void genLeaveFrame(CodeGen *gen, bool inHeap)
+void genLeaveFrame(CodeGen *gen)
 {
-    const Instruction instr = {.opcode = OP_LEAVE_FRAME, .tokKind = TOK_NONE, .typeKind = inHeap ? TYPE_PTR : TYPE_NONE, .operand.intVal = 0};
+    const Instruction instr = {.opcode = OP_LEAVE_FRAME, .tokKind = TOK_NONE, TYPE_NONE, .operand.intVal = 0};
     genAddInstr(gen, &instr);
 }
 
@@ -844,16 +844,16 @@ void genEnterFrameStub(CodeGen *gen)
 }
 
 
-void genLeaveFrameFixup(CodeGen *gen, int localVarSlots, int paramSlots)
+void genLeaveFrameFixup(CodeGen *gen, int localVarSlots)
 {
     // Fixup enter stub
     int next = gen->ip;
     gen->ip = genRestorePos(gen);
 
-    genEnterFrame(gen, localVarSlots, paramSlots, false);
+    genEnterFrame(gen, localVarSlots);
     gen->ip = next;
 
-    genLeaveFrame(gen, false);
+    genLeaveFrame(gen);
 }
 
 
