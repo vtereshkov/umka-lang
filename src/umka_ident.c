@@ -35,8 +35,8 @@ void identFree(Idents *idents, int startBlock)
     {
         Ident *next = ident->next;
 
-        // Remove heap-allocated globals
-        if (ident->inHeap)
+        // Remove globals
+        if (ident->globallyAllocated)
             free(ident->ptr);
 
         free(ident);
@@ -169,14 +169,14 @@ static Ident *identAdd(Idents *idents, Modules *modules, Blocks *blocks, IdentKi
 
     ident->hash = hash(name);
 
-    ident->type             = type;
-    ident->module           = blocks->module;
-    ident->block            = blocks->item[blocks->top].block;
-    ident->exported         = exported;
-    ident->inHeap           = false;
-    ident->used             = exported || ident->module == 0 || ident->name[0] == '_' || identIsMain(ident);  // Exported, predefined, temporary identifiers and main() are always treated as used
-    ident->prototypeOffset  = -1;
-    ident->next             = NULL;
+    ident->type              = type;
+    ident->module            = blocks->module;
+    ident->block             = blocks->item[blocks->top].block;
+    ident->exported          = exported;
+    ident->globallyAllocated = false;
+    ident->used              = exported || ident->module == 0 || ident->name[0] == '_' || identIsMain(ident);  // Exported, predefined, temporary identifiers and main() are always treated as used
+    ident->prototypeOffset   = -1;
+    ident->next              = NULL;
 
     // Add to list
     if (!idents->first)
@@ -250,7 +250,7 @@ int identAllocStack(Idents *idents, Types *types, Blocks *blocks, Type *type)
         idents->error->handler(idents->error->context, "No heap frame");
 
     *localVarSize = align(*localVarSize + typeSize(types, type), typeAlignment(types, type));
-    return -(*localVarSize);
+    return -sizeof(Slot) - (*localVarSize);  // One extra slot for the stack frame ref count
 }
 
 
@@ -261,7 +261,7 @@ Ident *identAllocVar(Idents *idents, Types *types, Modules *modules, Blocks *blo
     {
         void *ptr = malloc(typeSize(types, type));
         ident = identAddGlobalVar(idents, modules, blocks, name, type, exported, ptr);
-        ident->inHeap = true;
+        ident->globallyAllocated = true;
     }
     else                        // Local
     {

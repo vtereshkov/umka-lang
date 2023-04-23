@@ -23,7 +23,7 @@ typedef struct tagIdent
     unsigned int hash;
     Type *type;
     int module, block;                  // Place of definition (global identifiers are in block 0)
-    bool exported, inHeap, used;
+    bool exported, globallyAllocated, used;
     int prototypeOffset;                // For function prototypes
     union
     {

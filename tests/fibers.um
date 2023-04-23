@@ -9,8 +9,8 @@ fn childFunc(parent: fiber, buf: ^[2]real) {
 }
 
 fn test*() {
-    buf := [2]real {0, 0}
-    child := fiberspawn(childFunc, &buf)
+    buf := new([2]real)
+    child := fiberspawn(childFunc, buf)
     
     for i := 0; i < 10; i++ {
         std.println("Parent fiber: i = " + std.itoa(i) + "   buf = " + std.ftoa(buf[1], 2))

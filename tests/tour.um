@@ -53,11 +53,11 @@ fn childFunc(parent: fiber, buf: ^int) {
 }
 
 fn parentFunc() {
-    a := 0
-    child := fiberspawn(childFunc, &a)    
+    a := new(int)
+    child := fiberspawn(childFunc, a)    
     for i := 0; i < 10; i++ {
-        std.println("Parent: i=" + std.itoa(i) + " buf=" + std.itoa(a))
-        a = i * 7
+        std.println("Parent: i=" + std.itoa(i) + " buf=" + std.itoa(a^))
+        a^ = i * 7
         if fiberalive(child) {
             fibercall(child)
         }
