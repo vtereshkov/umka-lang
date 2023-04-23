@@ -304,6 +304,39 @@ static FORCE_INLINE HeapPage *pageFindById(HeapPages *pages, int id)
 }
 
 
+static FORCE_INLINE bool stackUnwind(Fiber *fiber, Slot **base, int *ip)
+{
+    if (*base == fiber->stack + fiber->stackSize - 1)
+        return false;
+
+    int returnOffset = (*base + 1)->intVal;
+    if (returnOffset == VM_FIBER_KILL_SIGNAL)
+        return false;
+
+    *base = (Slot *)((*base)->ptrVal);
+    if (ip)
+        *ip = returnOffset;
+    return true;
+}
+
+
+static FORCE_INLINE void stackChangeFrameRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, int delta)
+{
+    if (ptr >= (void *)fiber->top && ptr < (void *)(fiber->stack + fiber->stackSize))
+    {
+        Slot *base = fiber->base;
+        while (ptr > (void *)base)
+        {
+            if (!stackUnwind(fiber, &base, NULL))
+                pages->error->runtimeHandler(pages->error->context, "Illegal stack pointer");
+        }
+
+        int64_t *stackFrameRefCnt = &(base - 1)->intVal;
+        *stackFrameRefCnt += delta;
+    }
+}
+
+
 static FORCE_INLINE void *chunkAlloc(HeapPages *pages, int64_t size, Type *type, ExternFunc onFree, Error *error)
 {
     // Page layout: header, data, footer (char), padding, header, data, footer (char), padding...
@@ -359,6 +392,9 @@ static FORCE_INLINE int chunkChangeRefCnt(HeapPages *pages, HeapPage *page, void
 
     chunk->refCnt += delta;
     page->refCnt += delta;
+
+    // Additional ref counts for a user-defined address interval (used for stack frames to detect escaping refs)
+    stackChangeFrameRefCnt(pages->fiber, pages, ptr, delta);
 
 #ifdef UMKA_REF_CNT_DEBUG
     printf("%p: delta: %d  chunk: %d  page: %d\n", ptr, delta, chunk->refCnt, page->refCnt);
@@ -495,14 +531,16 @@ static FORCE_INLINE char *fsscanfString(bool string, void *stream, int *len)
 void vmInit(VM *vm, int stackSize, bool fileSystemEnabled, Error *error)
 {
     vm->fiber = vm->mainFiber = malloc(sizeof(Fiber));
-    vm->fiber->stack = malloc(stackSize * sizeof(Slot));
-    vm->fiber->stackSize = stackSize;
     vm->fiber->refCntChangeCandidates = &vm->refCntChangeCandidates;
     vm->fiber->strLenCache = &vm->strLenCache;
     vm->fiber->alive = true;
     vm->fiber->fileSystemEnabled = fileSystemEnabled;
 
     pageInit(&vm->pages, vm->fiber, &vm->strLenCache, error);
+
+    vm->fiber->stack = chunkAlloc(&vm->pages, stackSize * sizeof(Slot), NULL, NULL, error);
+    vm->fiber->stackSize = stackSize;
+
     candidateInit(&vm->refCntChangeCandidates);
     cacheReset(&vm->strLenCache);
 
@@ -514,9 +552,15 @@ void vmInit(VM *vm, int stackSize, bool fileSystemEnabled, Error *error)
 
 void vmFree(VM *vm)
 {
+    HeapPage *page = pageFind(&vm->pages, vm->mainFiber->stack, true);
+    if (!page)
+       vm->error->runtimeHandler(vm->error->context, "No fiber stack");
+
+    chunkChangeRefCnt(&vm->pages, page, vm->mainFiber->stack, -1);
+
     candidateFree(&vm->refCntChangeCandidates);
     pageFree(&vm->pages, vm->terminatedNormally);
-    free(vm->mainFiber->stack);
+
     free(vm->mainFiber);
 }
 
@@ -528,6 +572,7 @@ void vmReset(VM *vm, Instruction *code, DebugInfo *debugPerInstr)
     vm->fiber->debugPerInstr = debugPerInstr;
     vm->fiber->ip = 0;
     vm->fiber->top = vm->fiber->base = vm->fiber->stack + vm->fiber->stackSize - 1;
+
     cacheReset(vm->fiber->strLenCache);
 }
 
@@ -827,16 +872,28 @@ static FORCE_INLINE void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, voi
                 if (!page)
                     break;
 
-                // Don't use ref counting for the fiber stack, otherwise every local variable will also be ref-counted
-                HeapChunkHeader *chunk = pageGetChunkHeader(page, ptr);
-                if (chunk->refCnt == 1 && tokKind == TOK_MINUSMINUS)
+                if (tokKind == TOK_PLUSPLUS)
+                    chunkChangeRefCnt(pages, page, ptr, 1);
+                else
                 {
-                    free(((Fiber *)ptr)->stack);
+                    HeapChunkHeader *chunk = pageGetChunkHeader(page, ptr);
+                    if (chunk->refCnt > 1)
+                    {
+                        chunkChangeRefCnt(pages, page, ptr, -1);
+                        break;
+                    }
+
                     if (((Fiber *)ptr)->alive)
                         pages->error->runtimeHandler(pages->error->context, "Cannot destroy a fiber that did not return");
-                }
 
-                chunkChangeRefCnt(pages, page, ptr, (tokKind == TOK_PLUSPLUS) ? 1 : -1);
+                    // Only one ref is left. Defer processing the parent and traverse the children before removing the ref
+                    HeapPage *stackPage = pageFind(pages, ((Fiber *)ptr)->stack, true);
+                    if (!stackPage)
+                        pages->error->runtimeHandler(pages->error->context, "No fiber stack");
+
+                    chunkChangeRefCnt(pages, stackPage, ((Fiber *)ptr)->stack, -1);
+                    chunkChangeRefCnt(pages, page, ptr, -1);
+                }
                 break;
             }
 
@@ -2120,7 +2177,7 @@ static FORCE_INLINE void doBuiltinFiberspawn(Fiber *fiber, HeapPages *pages, Err
     Fiber *child = chunkAlloc(pages, sizeof(Fiber), NULL, NULL, error);
 
     *child = *fiber;
-    child->stack = malloc(child->stackSize * sizeof(Slot));
+    child->stack = chunkAlloc(pages, child->stackSize * sizeof(Slot), NULL, NULL, error);
     child->top = child->base = child->stack + child->stackSize - 1;
 
     // Call child fiber function
@@ -2793,7 +2850,7 @@ static FORCE_INLINE void doCallExtern(Fiber *fiber, Error *error)
 {
     ExternFunc fn = (ExternFunc)fiber->code[fiber->ip].operand.ptrVal;
     fiber->reg[VM_REG_RESULT].ptrVal = error->context;    // Upon entry, the result slot stores the Umka instance
-    fn(fiber->top + 2, &fiber->reg[VM_REG_RESULT]);       // + 2 for old base pointer and return address
+    fn(fiber->base + 2, &fiber->reg[VM_REG_RESULT]);      // + 2 for old base pointer and return address
     fiber->ip++;
 }
 
@@ -2924,36 +2981,23 @@ static FORCE_INLINE void doReturn(Fiber *fiber, Fiber **newFiber)
 static FORCE_INLINE void doEnterFrame(Fiber *fiber, HeapPages *pages, HookFunc *hooks, Error *error)
 {
     int localVarSlots = fiber->code[fiber->ip].operand.int32Val[0];
-    int paramSlots    = fiber->code[fiber->ip].operand.int32Val[1];
 
-    bool inHeap = fiber->code[fiber->ip].typeKind == TYPE_PTR;      // TYPE_PTR for heap frame, TYPE_NONE for stack frame
+    // Allocate stack frame
+    if (fiber->top - localVarSlots - fiber->stack < VM_MIN_FREE_STACK)
+        error->runtimeHandler(error->context, "Stack overflow");
 
-    if (inHeap)     // Heap frame
-    {
-        // Allocate heap frame
-        Slot *heapFrame = chunkAlloc(pages, (localVarSlots + 2 + paramSlots) * sizeof(Slot), NULL, NULL, error);      // + 2 for old base pointer and return address
+    // Push old stack frame base pointer, set new one
+    (--fiber->top)->ptrVal = fiber->base;
+    fiber->base = fiber->top;
 
-        // Push old heap frame base pointer, set new one
-        (--fiber->top)->ptrVal = fiber->base;
-        fiber->base = heapFrame + localVarSlots;
+    // Push stack frame ref count
+    (--fiber->top)->intVal = 0;
 
-        // Copy old base pointer, return address and parameters to heap frame
-        memcpy(heapFrame + localVarSlots, fiber->top, (2 + paramSlots) * sizeof(Slot));
-    }
-    else            // Stack frame
-    {
-        // Allocate stack frame
-        if (fiber->top - localVarSlots - fiber->stack < VM_MIN_FREE_STACK)
-            error->runtimeHandler(error->context, "Stack overflow");
+    // Move stack top
+    fiber->top -= localVarSlots;
 
-        // Push old stack frame base pointer, set new one, move stack top
-        (--fiber->top)->ptrVal = fiber->base;
-        fiber->base = fiber->top;
-        fiber->top -= localVarSlots;
-
-        // Zero the whole stack frame
-        memset(fiber->top, 0, localVarSlots * sizeof(Slot));
-    }
+    // Zero the whole stack frame
+    memset(fiber->top, 0, localVarSlots * sizeof(Slot));
 
     // Call 'call' hook, if any
     doHook(fiber, hooks, HOOK_CALL);
@@ -2964,27 +3008,16 @@ static FORCE_INLINE void doEnterFrame(Fiber *fiber, HeapPages *pages, HookFunc *
 
 static FORCE_INLINE void doLeaveFrame(Fiber *fiber, HeapPages *pages, HookFunc *hooks, Error *error)
 {
+    // Check stack frame ref count
+    int64_t stackFrameRefCnt = (fiber->base - 1)->intVal;
+    if (stackFrameRefCnt != 0)
+        error->runtimeHandler(error->context, "Pointer to a local variable escapes from the function");
+
     // Call 'return' hook, if any
     doHook(fiber, hooks, HOOK_RETURN);
 
-    bool inHeap = fiber->code[fiber->ip].typeKind == TYPE_PTR;      // TYPE_PTR for heap frame, TYPE_NONE for stack frame
-
-    if (inHeap)     // Heap frame
-    {
-        // Decrease heap frame ref count
-        HeapPage *page = pageFind(pages, fiber->base, true);
-        if (!page)
-            error->runtimeHandler(error->context, "Heap frame is not found");
-
-        int refCnt = chunkChangeRefCnt(pages, page, fiber->base, -1);
-        if (refCnt > 0)
-            error->runtimeHandler(error->context, "Pointer to a local variable escapes from the function");
-    }
-    else            // Stack frame
-    {
-        // Restore stack top
-        fiber->top = fiber->base;
-    }
+    // Restore stack top
+    fiber->top = fiber->base;
 
     // Pop old stack/heap frame base pointer
     fiber->base = (Slot *)(fiber->top++)->ptrVal;
@@ -3179,16 +3212,7 @@ int vmAsm(int ip, Instruction *code, DebugInfo *debugPerInstr, char *buf, int si
 
 bool vmUnwindCallStack(VM *vm, Slot **base, int *ip)
 {
-    if (*base == vm->fiber->stack + vm->fiber->stackSize - 1)
-        return false;
-
-    int returnOffset = (*base + 1)->intVal;
-    if (returnOffset == VM_FIBER_KILL_SIGNAL)
-        return false;
-
-    *base = (Slot *)((*base)->ptrVal);
-    *ip = returnOffset;
-    return true;
+    return stackUnwind(vm->fiber, base, ip);
 }
 
 

@@ -49,16 +49,6 @@ static void genAddInstr(CodeGen *gen, const Instruction *instr)
 }
 
 
-static bool genNeedHeapFrame(CodeGen *gen, int ipBegin, int ipEnd)
-{
-    // If any ref count is incremented within a function, it needs a heap frame instead of a stack frame
-    for (int ip = ipBegin; ip < ipEnd; ip++)
-        if ((gen->code[ip].opcode == OP_CHANGE_REF_CNT && gen->code[ip].tokKind == TOK_PLUSPLUS) || gen->code[ip].opcode == OP_CHANGE_REF_CNT_ASSIGN)
-            return true;
-    return false;
-}
-
-
 // Peephole optimizations
 
 static Instruction *getPrevInstr(CodeGen *gen, int depth)
@@ -859,12 +849,11 @@ void genLeaveFrameFixup(CodeGen *gen, int localVarSlots, int paramSlots)
     // Fixup enter stub
     int next = gen->ip;
     gen->ip = genRestorePos(gen);
-    bool inHeap = genNeedHeapFrame(gen, gen->ip, next);
 
-    genEnterFrame(gen, localVarSlots, paramSlots, inHeap);
+    genEnterFrame(gen, localVarSlots, paramSlots, false);
     gen->ip = next;
 
-    genLeaveFrame(gen, inHeap);
+    genLeaveFrame(gen, false);
 }
 
 
