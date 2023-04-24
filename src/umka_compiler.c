@@ -157,6 +157,8 @@ void compilerInit(Compiler *comp, const char *fileName, const char *sourceString
     genInit      (&comp->gen, &comp->debug, &comp->error);
     vmInit       (&comp->vm, stackSize, fileSystemEnabled, &comp->error);
 
+    vmReset(&comp->vm, comp->gen.code, comp->gen.debugPerInstr);
+
     char filePath[DEFAULT_STR_LEN + 1] = "";
     moduleAssertRegularizePath(&comp->modules, fileName, comp->modules.curFolder, filePath, DEFAULT_STR_LEN + 1);
 
