@@ -337,7 +337,7 @@ static FORCE_INLINE void stackChangeFrameRefCnt(Fiber *fiber, HeapPages *pages, 
 }
 
 
-static FORCE_INLINE void *chunkAlloc(HeapPages *pages, int64_t size, Type *type, ExternFunc onFree, Error *error)
+static FORCE_INLINE void *chunkAlloc(HeapPages *pages, int64_t size, Type *type, ExternFunc onFree, bool isStack, Error *error)
 {
     // Page layout: header, data, footer (char), padding, header, data, footer (char), padding...
     int64_t chunkSize = align(sizeof(HeapChunkHeader) + align(size + 1, sizeof(int64_t)), VM_MIN_HEAP_CHUNK);
@@ -365,6 +365,7 @@ static FORCE_INLINE void *chunkAlloc(HeapPages *pages, int64_t size, Type *type,
     chunk->type = type;
     chunk->onFree = onFree;
     chunk->ip = pages->fiber->ip;
+    chunk->isStack = isStack;
 
     page->numOccupiedChunks++;
     page->refCnt++;
@@ -538,7 +539,7 @@ void vmInit(VM *vm, int stackSize, bool fileSystemEnabled, Error *error)
 
     pageInit(&vm->pages, vm->fiber, &vm->strLenCache, error);
 
-    vm->fiber->stack = chunkAlloc(&vm->pages, stackSize * sizeof(Slot), NULL, NULL, error);
+    vm->fiber->stack = chunkAlloc(&vm->pages, stackSize * sizeof(Slot), NULL, NULL, true, error);
     vm->fiber->stackSize = stackSize;
 
     candidateInit(&vm->refCntChangeCandidates);
@@ -910,7 +911,7 @@ static FORCE_INLINE void doAllocDynArray(HeapPages *pages, DynArray *array, Type
 
     DynArrayDimensions dims = {.len = len, .capacity = 2 * (len + 1)};
 
-    char *dimsAndData = chunkAlloc(pages, sizeof(DynArrayDimensions) + dims.capacity * array->itemSize, array->type, NULL, error);
+    char *dimsAndData = chunkAlloc(pages, sizeof(DynArrayDimensions) + dims.capacity * array->itemSize, array->type, NULL, false, error);
     *(DynArrayDimensions *)dimsAndData = dims;
 
     array->data = dimsAndData + sizeof(DynArrayDimensions);
@@ -930,7 +931,7 @@ static FORCE_INLINE void doGetEmptyDynArray(DynArray *array, Type *type)
 static FORCE_INLINE void doAllocMap(HeapPages *pages, Map *map, Type *type, Error *error)
 {
     map->type      = type;
-    map->root      = chunkAlloc(pages, typeSizeNoCheck(type->base), type->base, NULL, error);
+    map->root      = chunkAlloc(pages, typeSizeNoCheck(type->base), type->base, NULL, false, error);
     map->root->len = 0;
 }
 
@@ -1013,7 +1014,7 @@ static FORCE_INLINE MapNode *doGetMapNode(Map *map, Slot key, bool createMissing
                 return NULL;
 
             Type *nodeType = map->type->base;
-            *child = (MapNode *)chunkAlloc(pages, typeSizeNoCheck(nodeType), nodeType, NULL, error);
+            *child = (MapNode *)chunkAlloc(pages, typeSizeNoCheck(nodeType), nodeType, NULL, false, error);
         }
 
         if (nodePtrInParent)
@@ -1032,7 +1033,7 @@ static MapNode *doCopyMapNode(Map *map, MapNode *node, Fiber *fiber, HeapPages *
         return NULL;
 
     Type *nodeType = map->type->base;
-    MapNode *result = (MapNode *)chunkAlloc(pages, typeSizeNoCheck(nodeType), nodeType, NULL, error);
+    MapNode *result = (MapNode *)chunkAlloc(pages, typeSizeNoCheck(nodeType), nodeType, NULL, false, error);
 
     result->len = node->len;
 
@@ -1045,7 +1046,7 @@ static MapNode *doCopyMapNode(Map *map, MapNode *node, Fiber *fiber, HeapPages *
         doBasicDeref(&srcKey, keyType->kind, error);
 
         // When allocating dynamic arrays, we mark with type the data chunk, not the header chunk
-        result->key = chunkAlloc(pages, typeSizeNoCheck(keyType), keyType->kind == TYPE_DYNARRAY ? NULL : keyType, NULL, error);
+        result->key = chunkAlloc(pages, typeSizeNoCheck(keyType), keyType->kind == TYPE_DYNARRAY ? NULL : keyType, NULL, false, error);
 
         if (typeGarbageCollected(keyType))
             doBasicChangeRefCnt(fiber, pages, srcKey.ptrVal, keyType, TOK_PLUSPLUS);
@@ -1062,7 +1063,7 @@ static MapNode *doCopyMapNode(Map *map, MapNode *node, Fiber *fiber, HeapPages *
         doBasicDeref(&srcItem, itemType->kind, error);
 
         // When allocating dynamic arrays, we mark with type the data chunk, not the header chunk
-        result->data = chunkAlloc(pages, typeSizeNoCheck(itemType), itemType->kind == TYPE_DYNARRAY ? NULL : itemType, NULL, error);
+        result->data = chunkAlloc(pages, typeSizeNoCheck(itemType), itemType->kind == TYPE_DYNARRAY ? NULL : itemType, NULL, false, error);
 
         if (typeGarbageCollected(itemType))
             doBasicChangeRefCnt(fiber, pages, srcItem.ptrVal, itemType, TOK_PLUSPLUS);
@@ -1473,7 +1474,7 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
 
         if (needRealloc)
         {
-            char *newStream = chunkAlloc(pages, 2 * (prevLen + len) + 1, NULL, NULL, error);
+            char *newStream = chunkAlloc(pages, 2 * (prevLen + len) + 1, NULL, NULL, false, error);
             if (stream)
                 memcpy(newStream, stream, prevLen);
             newStream[prevLen] = 0;
@@ -1550,7 +1551,7 @@ static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool con
             doBasicChangeRefCnt(fiber, pages, *dest, &destType, TOK_MINUSMINUS);
 
             // Allocate new string
-            *dest = chunkAlloc(pages, strlen(src) + 1, NULL, NULL, error);
+            *dest = chunkAlloc(pages, strlen(src) + 1, NULL, NULL, false, error);
             strcpy(*dest, src);
             free(src);
 
@@ -1580,7 +1581,7 @@ static FORCE_INLINE void doBuiltinNew(Fiber *fiber, HeapPages *pages, Error *err
     if (type && type->kind == TYPE_DYNARRAY)
         type = NULL;
 
-    void *result = chunkAlloc(pages, size, type, NULL, error);
+    void *result = chunkAlloc(pages, size, type, NULL, false, error);
 
     (--fiber->top)->ptrVal = result;
 }
@@ -1676,7 +1677,7 @@ static FORCE_INLINE void doBuiltinMaketostr(Fiber *fiber, HeapPages *pages, Erro
 
     if (src->data)
     {
-        dest = chunkAlloc(pages, getDims(src)->len + 1, NULL, NULL, error);
+        dest = chunkAlloc(pages, getDims(src)->len + 1, NULL, NULL, false, error);
         memcpy(dest, src->data, getDims(src)->len);
         dest[getDims(src)->len] = 0;
     }
@@ -1984,7 +1985,7 @@ static FORCE_INLINE void doBuiltinSlice(Fiber *fiber, HeapPages *pages, Error *e
     else
     {
         // String
-        char *substr = chunkAlloc(pages, endIndex - startIndex + 1, NULL, NULL, error);
+        char *substr = chunkAlloc(pages, endIndex - startIndex + 1, NULL, NULL, false, error);
         memcpy(substr, &str[startIndex], endIndex - startIndex);
         substr[endIndex - startIndex] = 0;
 
@@ -2174,10 +2175,10 @@ static FORCE_INLINE void doBuiltinFiberspawn(Fiber *fiber, HeapPages *pages, Err
     int childEntryOffset = (fiber->top++)->intVal;
 
     // Copy whole fiber context
-    Fiber *child = chunkAlloc(pages, sizeof(Fiber), NULL, NULL, error);
+    Fiber *child = chunkAlloc(pages, sizeof(Fiber), NULL, NULL, false, error);
 
     *child = *fiber;
-    child->stack = chunkAlloc(pages, child->stackSize * sizeof(Slot), NULL, NULL, error);
+    child->stack = chunkAlloc(pages, child->stackSize * sizeof(Slot), NULL, NULL, true, error);
     child->top = child->base = child->stack + child->stackSize - 1;
 
     // Call child fiber function
@@ -2220,7 +2221,7 @@ static FORCE_INLINE void doBuiltinRepr(Fiber *fiber, HeapPages *pages, Error *er
     enum {MAX_REPR_DEPTH = 20};
 
     int len = doFillReprBuf(val, type, NULL, 0, MAX_REPR_DEPTH, fiber->strLenCache, error);  // Predict buffer length
-    char *buf = chunkAlloc(pages, len + 1, NULL, NULL, error);                               // Allocate buffer
+    char *buf = chunkAlloc(pages, len + 1, NULL, NULL, false, error);                        // Allocate buffer
     doFillReprBuf(val, type, buf, INT_MAX, MAX_REPR_DEPTH, fiber->strLenCache, error);       // Fill buffer
 
     fiber->top->ptrVal = buf;
@@ -2488,7 +2489,7 @@ static FORCE_INLINE void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
                 }
                 else
                 {
-                    buf = chunkAlloc(pages, 2 * (lhsLen + rhsLen) + 1, NULL, NULL, error);
+                    buf = chunkAlloc(pages, 2 * (lhsLen + rhsLen) + 1, NULL, NULL, false, error);
                     memmove(buf, lhsStr, lhsLen);
                 }
 
@@ -2707,8 +2708,8 @@ static FORCE_INLINE void doGetMapPtr(Fiber *fiber, HeapPages *pages, Error *erro
     if (!node->data)
     {
         // When allocating dynamic arrays, we mark with type the data chunk, not the header chunk
-        node->key  = chunkAlloc(pages, typeSizeNoCheck(keyType),  keyType->kind  == TYPE_DYNARRAY ? NULL : keyType,  NULL, error);
-        node->data = chunkAlloc(pages, typeSizeNoCheck(itemType), itemType->kind == TYPE_DYNARRAY ? NULL : itemType, NULL, error);
+        node->key  = chunkAlloc(pages, typeSizeNoCheck(keyType),  keyType->kind  == TYPE_DYNARRAY ? NULL : keyType,  NULL, false, error);
+        node->data = chunkAlloc(pages, typeSizeNoCheck(itemType), itemType->kind == TYPE_DYNARRAY ? NULL : itemType, NULL, false, error);
 
         // Increase key ref count
         if (typeGarbageCollected(keyType))
@@ -2772,11 +2773,15 @@ static FORCE_INLINE void doWeakenPtr(Fiber *fiber, HeapPages *pages)
     uint64_t weakPtr = 0;
 
     HeapPage *page = pageFind(pages, ptr, false);
-    if (page && pageGetChunkHeader(page, ptr)->refCnt > 0)
+    if (page)
     {
-        int pageId = page->id;
-        int pageOffset = (char *)ptr - (char *)page->ptr;
-        weakPtr = ((uint64_t)pageId << 32) | pageOffset;
+        HeapChunkHeader *chunk = pageGetChunkHeader(page, ptr);
+        if (chunk->refCnt > 0 && !chunk->isStack)
+        {
+            int pageId = page->id;
+            int pageOffset = (char *)ptr - (char *)page->ptr;
+            weakPtr = ((uint64_t)pageId << 32) | pageOffset;
+        }
     }
 
     fiber->top->weakPtrVal = weakPtr;
@@ -2796,7 +2801,8 @@ static FORCE_INLINE void doStrengthenPtr(Fiber *fiber, HeapPages *pages)
         int pageOffset = weakPtr & 0x7FFFFFFF;
         ptr = (char *)page->ptr + pageOffset;
 
-        if (pageGetChunkHeader(page, ptr)->refCnt == 0)
+        HeapChunkHeader * chunk = pageGetChunkHeader(page, ptr);
+        if (chunk->refCnt == 0 || chunk->isStack)
             ptr = NULL;
     }
 
@@ -3224,7 +3230,7 @@ void vmSetHook(VM *vm, HookEvent event, HookFunc hook)
 
 void *vmAllocData(VM *vm, int size, ExternFunc onFree)
 {
-    return chunkAlloc(&vm->pages, size, NULL, onFree, vm->error);
+    return chunkAlloc(&vm->pages, size, NULL, onFree, false, vm->error);
 }
 
 

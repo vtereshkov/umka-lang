@@ -197,6 +197,8 @@ typedef struct
     struct tagType *type;       // Optional type for garbage collection
     ExternFunc onFree;          // Optional callback called when ref count reaches zero
     int64_t ip;                 // Optional instruction pointer at which the chunk has been allocated
+    bool isStack;
+    bool reserved[7];
 } HeapChunkHeader;
 
 
