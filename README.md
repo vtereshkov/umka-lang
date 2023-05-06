@@ -20,7 +20,7 @@ Umka is a statically typed embeddable scripting language. It combines the simpli
 * Polymorphism via interfaces
 * Multitasking based on fibers
 * Type inference
-* Distribution as a dynamic library with a simple C API
+* Distribution as a static or dynamic library with a simple C API
 * C99 source
 
 ## Performance
@@ -34,21 +34,23 @@ _400 x 400 matrix multiplication (AMD A4-3300M @ 1.9 GHz, Windows 7)_
 * Read the [language](https://github.com/vtereshkov/umka-lang/blob/master/doc/lang.md) and [standard library](https://github.com/vtereshkov/umka-lang/blob/master/doc/lib.md) documentation 
 * Explore the [raytracer](https://github.com/vtereshkov/umka-lang/blob/master/examples/raytracer/raytracer.um) example that demonstrates many language features like fibers, interfaces and dynamic arrays
 * Play with the toy [Lisp interpreter](https://github.com/vtereshkov/umka-lang/blob/master/examples/lisp) written in Umka
-* Try the more realistic [C](https://github.com/vtereshkov/umka-lang/blob/master/examples/3dcam/3dcam.c)+[Umka](https://github.com/vtereshkov/umka-lang/blob/master/examples/3dcam/3dcam.um) embedded scripting example (_Note:_ [raylib](https://www.raylib.com) is required to compile and run it)
+* Try the more realistic [C](https://github.com/vtereshkov/umka-lang/blob/master/examples/3dcam/3dcam.c)+[Umka](https://github.com/vtereshkov/umka-lang/blob/master/examples/3dcam/3dcam.um) embedded scripting example (_Note:_ [raylib](https://www.raylib.com) is required to [compile and run it](https://github.com/vtereshkov/umka-lang/blob/master/examples/3dcam/3dcam.md))
 * See what [real-life projects](https://github.com/vtereshkov/umka-lang/blob/master/README.md#projects-in-umka) successfully use Umka
 * If you are familiar with Go, read about the [differences](https://github.com/vtereshkov/umka-lang/blob/master/README.md#umka-vs-go)
 
-_Raytracer example_
+## Examples
+
+* [Raytracer](https://github.com/vtereshkov/umka-lang/blob/master/examples/raytracer/raytracer.um)
 
 ![](examples/raytracer/raytracer.png)
 
-_C+Umka 3D camera example_
+* [C](https://github.com/vtereshkov/umka-lang/blob/master/examples/3dcam/3dcam.c)+[Umka](https://github.com/vtereshkov/umka-lang/blob/master/examples/3dcam/3dcam.um) 3D camera
 
 ![](examples/3dcam/3dcam.png)
 
 ## Projects in Umka
 
-* [tophat](https://github.com/marekmaskarinec/tophat) - a 2D game engine focused on minimalism
+* [tophat](https://tophat2d.dev/) - a 2D game framework focused on minimalism
 
 ![](resources/tophat.png)
 

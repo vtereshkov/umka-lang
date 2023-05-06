@@ -2,7 +2,7 @@
 
 ## Windows (MinGW)
 
-* Copy the following files to the current folder:
+* Copy the following files to the `examples\3dcam` folder:
   - From Raylib distribution:
     - `raylib.dll`
     - `libraylibdll.a`
