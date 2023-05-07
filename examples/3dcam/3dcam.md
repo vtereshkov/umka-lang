@@ -3,7 +3,7 @@
 ## Windows (MinGW)
 
 * Copy the following files to the `examples\3dcam` folder:
-  - From Raylib distribution:
+  - From raylib distribution:
     - `raylib.dll`
     - `libraylibdll.a`
     - `raylib.h`
@@ -16,7 +16,7 @@
 ## Linux
 
 * Copy the following files to the `examples/3dcam` folder:
-  - From Raylib distribution (assuming the latest raylib version to be 4.5):
+  - From raylib distribution (assuming the latest raylib version to be 4.5):
     - `libraylib.so`
     - `libraylib.so.4.5.0`
     - `libraylib.so.450`
