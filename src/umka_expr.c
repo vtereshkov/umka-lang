@@ -1592,7 +1592,7 @@ static void parseArrayOrStructLiteral(Compiler *comp, Type **type, Const *consta
     }
 
     const int size = typeSize(&comp->types, *type);
-    int bufOffset = 0;
+    Ident *arrayOrStruct = NULL;
 
     if (constant)
     {
@@ -1602,13 +1602,10 @@ static void parseArrayOrStructLiteral(Compiler *comp, Type **type, Const *consta
     }
     else
     {
-        bufOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, *type);
-
-        if (namedFields)
-        {
-            genPushLocalPtr(&comp->gen, bufOffset);
-            genZero(&comp->gen, size);
-        }
+        IdentName arrayOrStructName;
+        identTempVarName(&comp->idents, arrayOrStructName);
+        arrayOrStruct = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, arrayOrStructName, *type, false);
+        doZeroVar(comp, arrayOrStruct);
     }
 
     int numItems = 0, itemOffset = 0;
@@ -1636,7 +1633,7 @@ static void parseArrayOrStructLiteral(Compiler *comp, Type **type, Const *consta
             }
 
             if (!constant)
-                genPushLocalPtr(&comp->gen, bufOffset + itemOffset);
+                genPushLocalPtr(&comp->gen, arrayOrStruct->offset + itemOffset);
 
             Type *expectedItemType = (*type)->kind == TYPE_ARRAY ? (*type)->base : field->type;
             Type *itemType;
@@ -1652,8 +1649,7 @@ static void parseArrayOrStructLiteral(Compiler *comp, Type **type, Const *consta
             if (constant)
                 constAssign(&comp->consts, (char *)constant->ptrVal + itemOffset, itemConstant, expectedItemType->kind, itemSize);
             else
-                // Assignment to an anonymous stack area does not require updating reference counts
-                genAssign(&comp->gen, expectedItemType->kind, itemSize);
+                genChangeRefCntAssign(&comp->gen, expectedItemType);
 
             numItems++;
             if ((*type)->kind == TYPE_ARRAY)
@@ -1668,10 +1664,7 @@ static void parseArrayOrStructLiteral(Compiler *comp, Type **type, Const *consta
         comp->error.handler(comp->error.context, "Too few elements in literal");
 
     if (!constant)
-    {
-        genPushLocalPtr(&comp->gen, bufOffset);
-        doEscapeToHeap(comp, typeAddPtrTo(&comp->types, &comp->blocks, *type), true);
-    }
+        doPushVarPtr(comp, arrayOrStruct);
 
     lexEat(&comp->lex, TOK_RBRACE);
 }
@@ -1719,20 +1712,20 @@ static void parseDynArrayLiteral(Compiler *comp, Type **type, Const *constant)
         lexEat(&comp->lex, TOK_RBRACE);
 
     // Allocate array
-    int bufOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, staticArrayType);
+    IdentName staticArrayName;
+    identTempVarName(&comp->idents, staticArrayName);
+    Ident *staticArray = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, staticArrayName, staticArrayType, false);
+    doZeroVar(comp, staticArray);
 
     // Assign items
     for (int i = staticArrayType->numItems - 1; i >= 0; i--)
     {
-        // Assignment to an anonymous stack area does not require updating reference counts
-        genPushLocalPtr(&comp->gen, bufOffset + i * itemSize);
-        genSwapAssign(&comp->gen, staticArrayType->base->kind, itemSize);
+        genPushLocalPtr(&comp->gen, staticArray->offset + i * itemSize);
+        genSwapChangeRefCntAssign(&comp->gen, staticArrayType->base);
     }
 
     // Convert to dynamic array
-    genPushLocalPtr(&comp->gen, bufOffset);
-    doEscapeToHeap(comp, typeAddPtrTo(&comp->types, &comp->blocks, staticArrayType), true);
-
+    doPushVarPtr(comp, staticArray);
     doImplicitTypeConv(comp, *type, &staticArrayType, NULL, false);
     typeAssertCompatible(&comp->types, *type, staticArrayType, false);
 }
@@ -1756,8 +1749,6 @@ static void parseMapLiteral(Compiler *comp, Type **type, Const *constant)
     genPushIntConst(&comp->gen, 0);
     doPushVarPtr(comp, mapIdent);
     genCallBuiltin(&comp->gen, (*type)->kind, BUILTIN_MAKE);
-
-    doEscapeToHeap(comp, typeAddPtrTo(&comp->types, &comp->blocks, *type), true);
 
     // Parse map
     if (comp->lex.tok.kind != TOK_RBRACE)
@@ -1838,14 +1829,20 @@ static void parseUntypedLiteral(Compiler *comp, Type **type, Const *constant)
 
 
 // compositeLiteral = type untypedLiteral.
-static void parseTypeCastOrCompositeLiteral(Compiler *comp, Ident *ident, Type **type, Const *constant, bool *isVar, bool *isCall)
+static void parseTypeCastOrCompositeLiteral(Compiler *comp, Ident *ident, Type **type, Const *constant, bool *isVar, bool *isCall, bool *isCompLit)
 {
     *type = parseType(comp, ident);
 
     if (comp->lex.tok.kind == TOK_LPAR)
+    {
         parseTypeCast(comp, type, constant);
+        *isCompLit = false;
+    }
     else if (comp->lex.tok.kind == TOK_LBRACE)
+    {
         parseUntypedLiteral(comp, type, constant);
+        *isCompLit = true;
+    }
     else
         comp->error.handler(comp->error.context, "Type cast or composite literal expected");
 
@@ -2075,13 +2072,15 @@ static void parseCallSelector(Compiler *comp, Type **type, Const *constant, bool
 
 
 // selectors = {derefSelector | indexSelector | fieldSelector | callSelector}.
-static void parseSelectors(Compiler *comp, Type **type, Const *constant, bool *isVar, bool *isCall)
+static void parseSelectors(Compiler *comp, Type **type, Const *constant, bool *isVar, bool *isCall, bool *isCompLit)
 {
     while (comp->lex.tok.kind == TOK_CARET  || comp->lex.tok.kind == TOK_LBRACKET ||
            comp->lex.tok.kind == TOK_PERIOD || comp->lex.tok.kind == TOK_LPAR)
     {
         if (constant)
             comp->error.handler(comp->error.context, "%s is not allowed for constants", lexSpelling(comp->lex.tok.kind));
+
+        *isCompLit = false;
 
         switch (comp->lex.tok.kind)
         {
@@ -2096,15 +2095,18 @@ static void parseSelectors(Compiler *comp, Type **type, Const *constant, bool *i
 
 
 // designator = (primary | typeCast | compositeLiteral) selectors.
-void parseDesignator(Compiler *comp, Type **type, Const *constant, bool *isVar, bool *isCall)
+static void parseDesignator(Compiler *comp, Type **type, Const *constant, bool *isVar, bool *isCall, bool *isCompLit)
 {
     Ident *ident = NULL;
     if (comp->lex.tok.kind == TOK_IDENT && (ident = parseQualIdent(comp)) && ident->kind != IDENT_TYPE)
+    {
         parsePrimary(comp, ident, type, constant, isVar, isCall);
+        *isCompLit = false;
+    }
     else
-        parseTypeCastOrCompositeLiteral(comp, ident, type, constant, isVar, isCall);
+        parseTypeCastOrCompositeLiteral(comp, ident, type, constant, isVar, isCall, isCompLit);
 
-    parseSelectors(comp, type, constant, isVar, isCall);
+    parseSelectors(comp, type, constant, isVar, isCall, isCompLit);
 
     if ((*type)->kind == TYPE_FN && (*type)->sig.method)
         comp->error.handler(comp->error.context, "Method must be called");
@@ -2114,7 +2116,8 @@ void parseDesignator(Compiler *comp, Type **type, Const *constant, bool *isVar, 
 // designatorList = designator {"," designator}.
 void parseDesignatorList(Compiler *comp, Type **type, Const *constant, bool *isVar, bool *isCall)
 {
-    parseDesignator(comp, type, constant, isVar, isCall);
+    bool isCompLit = false;
+    parseDesignator(comp, type, constant, isVar, isCall, &isCompLit);
 
     if (comp->lex.tok.kind == TOK_COMMA && (*isVar) && !(*isCall))
     {
@@ -2135,8 +2138,8 @@ void parseDesignatorList(Compiler *comp, Type **type, Const *constant, bool *isV
 
             lexNext(&comp->lex);
 
-            bool fieldIsVar, fieldIsCall;
-            parseDesignator(comp, &fieldType, NULL, &fieldIsVar, &fieldIsCall);
+            bool fieldIsVar, fieldIsCall, fieldIsCompLit;
+            parseDesignator(comp, &fieldType, NULL, &fieldIsVar, &fieldIsCall, &fieldIsCompLit);
 
             if (!fieldIsVar || fieldIsCall)
                 comp->error.handler(comp->error.context, "Inconsistent designator list");
@@ -2162,8 +2165,8 @@ static void parseFactor(Compiler *comp, Type **type, Const *constant)
         case TOK_FN:
         {
             // A designator that isVar is always an addressable quantity (a structured type or a pointer to a value type)
-            bool isVar, isCall;
-            parseDesignator(comp, type, constant, &isVar, &isCall);
+            bool isVar, isCall, isCompLit;
+            parseDesignator(comp, type, constant, &isVar, &isCall, &isCompLit);
             if (isVar)
             {
                 if (!typeStructured(*type))
@@ -2256,11 +2259,14 @@ static void parseFactor(Compiler *comp, Type **type, Const *constant)
 
             lexNext(&comp->lex);
 
-            bool isVar, isCall;
-            parseDesignator(comp, type, constant, &isVar, &isCall);
+            bool isVar, isCall, isCompLit;
+            parseDesignator(comp, type, constant, &isVar, &isCall, &isCompLit);
 
             if (!isVar)
                 comp->error.handler(comp->error.context, "Unable to take address");
+
+            if (isCompLit)
+                doEscapeToHeap(comp, typeAddPtrTo(&comp->types, &comp->blocks, *type), true);
 
             // A value type is already a pointer, a structured type needs to have it added
             if (typeStructured(*type))
@@ -2509,11 +2515,16 @@ void parseExprOrUntypedLiteralList(Compiler *comp, Type **type, Type *destType, 
         }
 
         // Allocate structure
-        int bufOffset = 0;
+        Ident *exprList = NULL;
         if (constant)
             constant->ptrVal = storageAdd(&comp->storage, typeSize(&comp->types, *type));
         else
-            bufOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, *type);
+        {
+            IdentName exprListName;
+            identTempVarName(&comp->idents, exprListName);
+            exprList = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, exprListName, *type, false);
+            doZeroVar(comp, exprList);
+        }
 
         // Assign expressions
         for (int i = (*type)->numItems - 1; i >= 0; i--)
@@ -2525,17 +2536,13 @@ void parseExprOrUntypedLiteralList(Compiler *comp, Type **type, Type *destType, 
                 constAssign(&comp->consts, (char *)constant->ptrVal + field->offset, &fieldConstantBuf[i], field->type->kind, fieldSize);
             else
             {
-                // Assignment to an anonymous stack area does not require updating reference counts
-                genPushLocalPtr(&comp->gen, bufOffset + field->offset);
-                genSwapAssign(&comp->gen, field->type->kind, fieldSize);
+                genPushLocalPtr(&comp->gen, exprList->offset + field->offset);
+                genSwapChangeRefCntAssign(&comp->gen, field->type);
             }
         }
 
         if (!constant)
-        {
-            genPushLocalPtr(&comp->gen, bufOffset);
-            doEscapeToHeap(comp, typeAddPtrTo(&comp->types, &comp->blocks, *type), true);
-        }
+            doPushVarPtr(comp, exprList);
     }
 }
 
