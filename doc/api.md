@@ -212,10 +212,10 @@ UMKA_API void umkaSetHook(void *umka, UmkaHookEvent event, UmkaHookFunc hook);
 Sets a debug hook function `hook` that will be called by the Umka virtual machine each time the `event` occurs.
 
 ```
-UMKA_API void umkaAsm(void *umka, char *buf, int size);
+UMKA_API char *umkaAsm(void *umka);
 ```
 
-Generates the Umka assembly listing for the Umka program previously compiled to bytecode. Here, `umka` is the interpreter instance handle, `buf` is the pointer to the string buffer to be filled, `size` is the buffer size.
+Generates the Umka assembly listing for the Umka program previously compiled to bytecode. Here, `umka` is the interpreter instance handle. The string buffer returned by `umkaAsm` should be deallocated by calling `free` on the caller side.
 
 ## Accessing Umka data types
 

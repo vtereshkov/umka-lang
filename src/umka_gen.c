@@ -902,7 +902,7 @@ void genGotosEpilog(CodeGen *gen, Gotos *gotos)
 
 // Assembly output
 
-char *genAsm(CodeGen *gen, char *buf, int size)
+int genAsm(CodeGen *gen, char *buf, int size)
 {
     int ip = 0, chars = 0;
     do
@@ -921,6 +921,6 @@ char *genAsm(CodeGen *gen, char *buf, int size)
 
     } while (gen->code[ip++].opcode != OP_HALT);
 
-    return buf;
+    return chars;
 }
 

@@ -94,7 +94,7 @@ UMKA_API bool umkaRun               (void *umka);
 UMKA_API bool umkaCall              (void *umka, int entryOffset, int numParamSlots, UmkaStackSlot *params, UmkaStackSlot *result);
 UMKA_API void umkaFree              (void *umka);
 UMKA_API void umkaGetError          (void *umka, UmkaError *err);
-UMKA_API void umkaAsm               (void *umka, char *buf, int size);
+UMKA_API char *umkaAsm              (void *umka);
 UMKA_API bool umkaAddModule         (void *umka, const char *fileName, const char *sourceString);
 UMKA_API bool umkaAddFunc           (void *umka, const char *name, UmkaExternFunc func);
 UMKA_API int  umkaGetFunc           (void *umka, const char *moduleName, const char *funcName);

@@ -10,7 +10,6 @@
 enum
 {
     DEFAULT_STACK_SIZE      =  1 * 1024 * 1024,  // Slots
-    ASM_BUF_SIZE            = 10 * 1024 * 1024,
     MAX_CALL_STACK_DEPTH    = 10
 };
 
@@ -174,9 +173,12 @@ int main(int argc, char **argv)
         {
             char *asmFileName = malloc(strlen(argv[i]) + 4 + 1);
             sprintf(asmFileName, "%s.asm", argv[i]);
-            char *asmBuf = malloc(ASM_BUF_SIZE);
-            umkaAsm(umka, asmBuf, ASM_BUF_SIZE);
-
+            char *asmBuf = umkaAsm(umka);
+            if (!asmBuf)
+            {
+                fprintf(stderr, "Cannot output assembly listing\n");
+                return 1;
+            }
             FILE *asmFile = fopen(asmFileName, "w");
             if (!asmFile)
             {

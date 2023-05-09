@@ -1,5 +1,6 @@
 #define __USE_MINGW_ANSI_STDIO 1
 
+#include <stdlib.h>
 #include <stddef.h>
 #include <string.h>
 #include <stdio.h>
@@ -239,9 +240,16 @@ void compilerCall(Compiler *comp, int entryOffset, int numParamSlots, Slot *para
 }
 
 
-void compilerAsm(Compiler *comp, char *buf, int size)
+char *compilerAsm(Compiler *comp)
 {
-    genAsm(&comp->gen, buf, size);
+    const int chars = genAsm(&comp->gen, NULL, 0);
+    if (chars < 0)
+        return NULL;
+
+    char *buf = malloc(chars + 1);
+    genAsm(&comp->gen, buf, chars);
+    buf[chars] = 0;
+    return buf;
 }
 
 

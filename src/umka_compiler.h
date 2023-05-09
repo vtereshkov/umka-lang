@@ -51,7 +51,7 @@ void compilerFree       (Compiler *comp);
 void compilerCompile    (Compiler *comp);
 void compilerRun        (Compiler *comp);
 void compilerCall       (Compiler *comp, int entryOffset, int numParamSlots, Slot *params, Slot *result);
-void compilerAsm        (Compiler *comp, char *buf, int size);
+char *compilerAsm       (Compiler *comp);
 bool compilerAddModule  (Compiler *comp, const char *fileName, const char *sourceString);
 bool compilerAddFunc    (Compiler *comp, const char *name, ExternFunc func);
 int  compilerGetFunc    (Compiler *comp, const char *moduleName, const char *funcName);

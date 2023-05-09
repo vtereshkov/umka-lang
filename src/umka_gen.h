@@ -122,6 +122,6 @@ void genGotosProlog (CodeGen *gen, Gotos *gotos, int block);
 void genGotosAddStub(CodeGen *gen, Gotos *gotos);
 void genGotosEpilog (CodeGen *gen, Gotos *gotos);
 
-char *genAsm(CodeGen *gen, char *buf, int size);
+int genAsm(CodeGen *gen, char *buf, int size);
 
 #endif // UMKA_GEN_H_INCLUDED

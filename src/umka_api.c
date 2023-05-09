@@ -156,10 +156,10 @@ UMKA_API void umkaGetError(void *umka, UmkaError *err)
 }
 
 
-UMKA_API void umkaAsm(void *umka, char *buf, int size)
+UMKA_API char *umkaAsm(void *umka)
 {
     Compiler *comp = umka;
-    compilerAsm(comp, buf, size);
+    return compilerAsm(comp);
 }
 
 
