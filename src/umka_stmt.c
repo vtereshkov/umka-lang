@@ -242,7 +242,6 @@ static void parseSingleDeclAssignmentStmt(Compiler *comp, IdentName name, bool e
     parseExpr(comp, &rightType, rightConstant);
 
     Ident *ident = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, name, rightType, exported);
-    doZeroVar(comp, ident);
 
     if (constExpr)              // Initialize global variable
         constAssign(&comp->consts, ident->ptr, rightConstant, rightType->kind, typeSize(&comp->types, rightType));
@@ -271,7 +270,6 @@ static void parseListDeclAssignmentStmt(Compiler *comp, IdentName *names, bool *
     {
         Type *rightType = rightListType->field[i]->type;
         Ident *ident = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, names[i], rightType, exported[i]);
-        doZeroVar(comp, ident);
 
         if (constExpr)              // Initialize global variable
         {
