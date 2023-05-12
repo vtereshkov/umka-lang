@@ -612,9 +612,8 @@ static void parseForInHeader(Compiler *comp)
     }
 
     Ident *lenIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "__len", comp->intType, false);
-    doZeroVar(comp, lenIdent);
     doPushVarPtr(comp, lenIdent);
-    genSwapChangeRefCntAssign(&comp->gen, comp->intType);
+    genSwapAssign(&comp->gen, lenIdent->type->kind, typeSize(&comp->types, lenIdent->type));
 
     Ident *collectionIdent = NULL;
     if (itemName[0] != '\0' || collectionType->kind == TYPE_MAP)
