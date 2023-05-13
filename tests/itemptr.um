@@ -5,7 +5,7 @@ fn test1() {
 	a^ = [2]^int{new(int), new(int)}
 	a[1]^ = 15
 	p = &a[1]
-	printf(repr(p^^) + '\n')
+	printf("%v\n", p^^)
 }
 
 type ent = []int	
@@ -19,10 +19,10 @@ fn test2() {
 		s = append(s, &t[len(t) - 1])
 	}
 
-	printf(repr(t) + '\n')
+	printf("%v\n", t)
 	
 	for _, x in s {
-		printf(repr(x^) + '\n')
+		printf("%v\n", x^)
 	}
 }
 

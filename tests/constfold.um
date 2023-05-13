@@ -5,7 +5,7 @@ fn test*() {
 	b := 'b' >= 'a' 
 	c := fabs(sqrt(3) - 1.7) < 0.1
 
-	printf(repr(x) + repr(y) + repr(b) + repr(c) + '\n')
+	printf("%v %v %v %v\n", x, y, b, c)
 }
 
 fn main() {

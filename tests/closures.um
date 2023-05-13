@@ -11,8 +11,7 @@ type Closure = struct {
 }
 
 fn (c: ^Closure) call(person: Person): bool {
-	printf("running by_name_eq with name : " + repr(c.data) + 
-		" and person : " + repr(person) + '\n')
+	printf("running by_name_eq with name : %v and person : %v\n", c.data, person)
 	return person.name == str(c.data)
 }
 
@@ -33,7 +32,7 @@ fn test*() {
 			return Closure(closure).call(Person(person))
 		}, named_foo))
 
-	printf(repr(mapped) + '\n')
+	printf("%v\n", mapped)
 }
 
 fn main() {

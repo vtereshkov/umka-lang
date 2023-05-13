@@ -270,7 +270,7 @@ import "fnc.um"
 
 fn main() {
     data := []int{3, 7, 1, -4, 2, 5}
-    printf("Array = %s\n", repr(data))
+    printf("Array = %v\n", data)
      
     sqr  := fn (x, ctx: any): any    {return int(x) * int(x)}
     less := fn (x, ctx: any): bool   {return int(x) < int(ctx)} 

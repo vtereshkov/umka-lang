@@ -108,7 +108,6 @@ static const char *builtinSpelling [] =
     "fiberspawn",
     "fibercall",
     "fiberalive",
-    "repr",
     "exit",
     "error"
 };
@@ -1118,37 +1117,37 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int maxD
     int len = 0;
     if (maxDepth == 0)
     {
-        len = snprintf(buf, maxLen, "... ");
+        len = snprintf(buf, maxLen, "...");
         return len;
     }
 
     switch (type->kind)
     {
-        case TYPE_VOID:     len = snprintf(buf, maxLen, "void ");                                                             break;
+        case TYPE_VOID:     len = snprintf(buf, maxLen, "void");                                                             break;
         case TYPE_INT8:
         case TYPE_INT16:
         case TYPE_INT32:
         case TYPE_INT:
         case TYPE_UINT8:
         case TYPE_UINT16:
-        case TYPE_UINT32:   len = snprintf(buf, maxLen, "%lld ", (long long int)slot->intVal);                                break;
-        case TYPE_UINT:     len = snprintf(buf, maxLen, "%llu ", (unsigned long long int)slot->uintVal);                      break;
-        case TYPE_BOOL:     len = snprintf(buf, maxLen, slot->intVal ? "true " : "false ");                                   break;
+        case TYPE_UINT32:   len = snprintf(buf, maxLen, "%lld", (long long int)slot->intVal);                                break;
+        case TYPE_UINT:     len = snprintf(buf, maxLen, "%llu", (unsigned long long int)slot->uintVal);                      break;
+        case TYPE_BOOL:     len = snprintf(buf, maxLen, slot->intVal ? "true" : "false");                                    break;
         case TYPE_CHAR:
         {
-            const char *format = (unsigned char)slot->intVal >= ' ' ? "'%c' " : "0x%02X ";
+            const char *format = (unsigned char)slot->intVal >= ' ' ? "'%c'" : "0x%02X";
             len = snprintf(buf, maxLen, format, (unsigned char)slot->intVal);
             break;
         }
         case TYPE_REAL32:
-        case TYPE_REAL:     len = snprintf(buf, maxLen, "%lf ", slot->realVal);                                               break;
-        case TYPE_PTR:      len = snprintf(buf, maxLen, "%p ", slot->ptrVal);                                                 break;
-        case TYPE_WEAKPTR:  len = snprintf(buf, maxLen, "%llx ", (unsigned long long int)slot->weakPtrVal);                   break;
-        case TYPE_STR:      len = snprintf(buf, maxLen, "\"%s\" ", slot->ptrVal ? (char *)slot->ptrVal : "");                 break;
+        case TYPE_REAL:     len = snprintf(buf, maxLen, "%lf", slot->realVal);                                               break;
+        case TYPE_PTR:      len = snprintf(buf, maxLen, "%p", slot->ptrVal);                                                 break;
+        case TYPE_WEAKPTR:  len = snprintf(buf, maxLen, "%llx", (unsigned long long int)slot->weakPtrVal);                   break;
+        case TYPE_STR:      len = snprintf(buf, maxLen, "\"%s\"", slot->ptrVal ? (char *)slot->ptrVal : "");                 break;
 
         case TYPE_ARRAY:
         {
-            len += snprintf(buf, maxLen, "{ ");
+            len += snprintf(buf, maxLen, "{");
 
             char *itemPtr = (char *)slot->ptrVal;
             int itemSize = typeSizeNoCheck(type->base);
@@ -1158,16 +1157,18 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int maxD
                 Slot itemSlot = {.ptrVal = itemPtr};
                 doBasicDeref(&itemSlot, type->base->kind, error);
                 len += doFillReprBuf(&itemSlot, type->base, buf + len, maxLen, maxDepth - 1, cache, error);
+                if (i < type->numItems - 1)
+                    len += snprintf(buf + len, maxLen, " ");
                 itemPtr += itemSize;
             }
 
-            len += snprintf(buf + len, maxLen, "} ");
+            len += snprintf(buf + len, maxLen, "}");
             break;
         }
 
         case TYPE_DYNARRAY:
         {
-            len += snprintf(buf, maxLen, "{ ");
+            len += snprintf(buf, maxLen, "{");
 
             DynArray *array = (DynArray *)slot->ptrVal;
             if (array && array->data)
@@ -1178,17 +1179,19 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int maxD
                     Slot itemSlot = {.ptrVal = itemPtr};
                     doBasicDeref(&itemSlot, type->base->kind, error);
                     len += doFillReprBuf(&itemSlot, type->base, buf + len, maxLen, maxDepth - 1, cache, error);
+                    if (i < getDims(array)->len - 1)
+                        len += snprintf(buf + len, maxLen, " ");
                     itemPtr += array->itemSize;
                 }
             }
 
-            len += snprintf(buf + len, maxLen, "} ");
+            len += snprintf(buf + len, maxLen, "}");
             break;
         }
 
         case TYPE_MAP:
         {
-            len += snprintf(buf, maxLen, "{ ");
+            len += snprintf(buf, maxLen, "{");
 
             Map *map = (Map *)slot->ptrVal;
             if (map && map->root)
@@ -1218,20 +1221,23 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int maxD
                     doBasicDeref(&itemSlot, itemType->kind, error);
                     len += doFillReprBuf(&itemSlot, itemType, buf + len, maxLen, maxDepth - 1, cache, error);
 
+                    if (i < map->root->len - 1)
+                        len += snprintf(buf + len, maxLen, " ");
+
                     keyPtr += keySize;
                 }
 
                 free(keys);
             }
 
-            len += snprintf(buf + len, maxLen, "} ");
+            len += snprintf(buf + len, maxLen, "}");
             break;
         }
 
 
         case TYPE_STRUCT:
         {
-            len += snprintf(buf, maxLen, "{ ");
+            len += snprintf(buf, maxLen, "{");
             bool skipNames = typeExprListStruct(type);
 
             for (int i = 0; i < type->numItems; i++)
@@ -1241,9 +1247,11 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int maxD
                 if (!skipNames)
                     len += snprintf(buf + len, maxLen, "%s: ", type->field[i]->name);
                 len += doFillReprBuf(&fieldSlot, type->field[i]->type, buf + len, maxLen, maxDepth - 1, cache, error);
+                if (i < type->numItems - 1)
+                    len += snprintf(buf + len, maxLen, " ");
             }
 
-            len += snprintf(buf + len, maxLen, "} ");
+            len += snprintf(buf + len, maxLen, "}");
             break;
         }
 
@@ -1257,12 +1265,12 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int maxD
                 len += doFillReprBuf(&selfSlot, interface->selfType->base, buf + len, maxLen, maxDepth - 1, cache, error);
             }
             else
-                len += snprintf(buf, maxLen, "null ");
+                len += snprintf(buf, maxLen, "null");
             break;
         }
 
-        case TYPE_FIBER:    len = snprintf(buf, maxLen, "fiber @ %p ", slot->ptrVal);                break;
-        case TYPE_FN:       len = snprintf(buf, maxLen, "fn @ %lld ", (long long int)slot->intVal);  break;
+        case TYPE_FIBER:    len = snprintf(buf, maxLen, "fiber @ %p", slot->ptrVal);                break;
+        case TYPE_FN:       len = snprintf(buf, maxLen, "fn @ %lld", (long long int)slot->intVal);  break;
         default:            break;
     }
 
@@ -1270,7 +1278,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int maxD
 }
 
 
-static FORCE_INLINE void doCheckFormatString(const char *format, int *formatLen, TypeKind *typeKind, Error *error)
+static FORCE_INLINE void doCheckFormatString(const char *format, int *formatLen, int *typeLetterPos, TypeKind *typeKind, Error *error)
 {
     enum {SIZE_SHORT_SHORT, SIZE_SHORT, SIZE_NORMAL, SIZE_LONG, SIZE_LONG_LONG} size;
     *typeKind = TYPE_VOID;
@@ -1332,6 +1340,7 @@ static FORCE_INLINE void doCheckFormatString(const char *format, int *formatLen,
             }
 
             // type
+            *typeLetterPos = i;
             switch (format[i])
             {
                 case '%': i++; continue;
@@ -1370,6 +1379,7 @@ static FORCE_INLINE void doCheckFormatString(const char *format, int *formatLen,
                 case 'G': *typeKind = (size == SIZE_NORMAL) ? TYPE_REAL32 : TYPE_REAL;      break;
                 case 's': *typeKind = TYPE_STR;                                             break;
                 case 'c': *typeKind = TYPE_CHAR;                                            break;
+                case 'v': *typeKind = TYPE_INTERFACE;  /* Actually any type */              break;
 
                 default : error->runtimeHandler(error->context, "Illegal type character %c in format string", format[i]);
             }
@@ -1411,12 +1421,15 @@ static FORCE_INLINE int doPrintSlot(bool string, void *stream, int maxLen, const
 
 static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool console, bool string, Error *error)
 {
-    enum {STACK_OFFSET_COUNT = 3, STACK_OFFSET_STREAM = 2, STACK_OFFSET_FORMAT = 1, STACK_OFFSET_VALUE = 0};
+    enum {STACK_OFFSET_COUNT = 4, STACK_OFFSET_STREAM = 3, STACK_OFFSET_FORMAT = 2, STACK_OFFSET_VALUE = 1, STACK_OFFSET_TYPE = 0};
 
+    const int prevLen  = fiber->top[STACK_OFFSET_COUNT].intVal;
     void *stream       = console ? stdout : fiber->top[STACK_OFFSET_STREAM].ptrVal;
     const char *format = (const char *)fiber->top[STACK_OFFSET_FORMAT].ptrVal;
-    const int prevLen  = fiber->top[STACK_OFFSET_COUNT].intVal;
-    TypeKind typeKind  = fiber->code[fiber->ip].typeKind;
+    Slot value         = fiber->top[STACK_OFFSET_VALUE];
+    Type *type         = (Type *)fiber->top[STACK_OFFSET_TYPE].ptrVal;
+
+    TypeKind typeKind  = type->kind;
 
     if (!string && (!stream || (!fiber->fileSystemEnabled && !console)))
         error->runtimeHandler(error->context, "printf() destination is null");
@@ -1424,22 +1437,28 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
     if (!format)
         format = "";
 
-    int formatLen;
-    TypeKind expectedTypeKind;
-    doCheckFormatString(format, &formatLen, &expectedTypeKind, error);
+    int formatLen = -1, typeLetterPos = -1;
+    TypeKind expectedTypeKind = TYPE_NONE;
+    doCheckFormatString(format, &formatLen, &typeLetterPos, &expectedTypeKind, error);
 
-    if (typeKind != expectedTypeKind && !(typeKindInteger(typeKind) && typeKindInteger(expectedTypeKind)) &&
-                                        !(typeKindReal(typeKind)    && typeKindReal(expectedTypeKind)))
-        error->runtimeHandler(error->context, "Incompatible types %s and %s in printf()", typeKindSpelling(expectedTypeKind), typeKindSpelling(typeKind));
+    const bool hasAnyTypeFormatter = expectedTypeKind == TYPE_INTERFACE && typeLetterPos >= 0 && typeLetterPos < formatLen;     // %v
+
+    if (type->kind != expectedTypeKind &&
+        !(type->kind != TYPE_VOID && expectedTypeKind == TYPE_INTERFACE) &&
+        !(typeKindInteger(type->kind) && typeKindInteger(expectedTypeKind)) &&
+        !(typeKindReal(type->kind)    && typeKindReal(expectedTypeKind)))
+    {
+        error->runtimeHandler(error->context, "Incompatible types %s and %s in printf()", typeKindSpelling(expectedTypeKind), typeKindSpelling(type->kind));
+    }
 
     // Check overflow
     if (expectedTypeKind != TYPE_VOID)
     {
         Const arg;
         if (typeKindReal(expectedTypeKind))
-            arg.realVal = fiber->top->realVal;
+            arg.realVal = value.realVal;
         else
-            arg.intVal = fiber->top->intVal;
+            arg.intVal = value.intVal;
 
         if (typeOverflow(expectedTypeKind, arg))
             error->runtimeHandler(error->context, "Overflow of %s", typeKindSpelling(expectedTypeKind));
@@ -1453,11 +1472,24 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
     memcpy(curFormat, format, formatLen);
     curFormat[formatLen] = 0;
 
+    // Special case: %v formatter - convert argument of any type to its string representation
+    if (hasAnyTypeFormatter)
+    {
+        curFormat[typeLetterPos] = 's';
+
+        enum {MAX_NESTING = 20};
+        const int len = doFillReprBuf(&value, type, NULL, 0, MAX_NESTING, fiber->strLenCache, error);  // Predict buffer length
+        char *buf = malloc(len + 1);
+        doFillReprBuf(&value, type, buf, len + 1, MAX_NESTING, fiber->strLenCache, error);             // Fill buffer
+        value.ptrVal = buf;
+        typeKind = TYPE_STR;
+    }
+
     // Predict buffer length for sprintf() and reallocate it if needed
     int len = 0;
     if (string)
     {
-        len = doPrintSlot(true, NULL, 0, curFormat, *fiber->top, typeKind, error);
+        len = doPrintSlot(true, NULL, 0, curFormat, value, typeKind, error);
 
         bool needRealloc = true;
         if (stream)
@@ -1486,10 +1518,10 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
             stream = newStream;
         }
 
-        len = doPrintSlot(true, (char *)stream + prevLen, len + 1, curFormat, *fiber->top, typeKind, error);
+        len = doPrintSlot(true, (char *)stream + prevLen, len + 1, curFormat, value, typeKind, error);
     }
     else
-        len = doPrintSlot(false, stream, INT_MAX, curFormat, *fiber->top, typeKind, error);
+        len = doPrintSlot(false, stream, INT_MAX, curFormat, value, typeKind, error);
 
     fiber->top[STACK_OFFSET_FORMAT].ptrVal = (char *)fiber->top[STACK_OFFSET_FORMAT].ptrVal + formatLen;
     fiber->top[STACK_OFFSET_COUNT].intVal += len;
@@ -1497,6 +1529,9 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
 
     if (formatLen + 1 > sizeof(curFormatBuf))
         free(curFormat);
+
+    if (hasAnyTypeFormatter)
+        free(value.ptrVal);
 }
 
 
@@ -1514,12 +1549,14 @@ static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool con
     if (!format)
         format = "";
 
-    int formatLen;
-    TypeKind expectedTypeKind;
-    doCheckFormatString(format, &formatLen, &expectedTypeKind, error);
+    int formatLen = -1, typeLetterPos = -1;
+    TypeKind expectedTypeKind = TYPE_NONE;
+    doCheckFormatString(format, &formatLen, &typeLetterPos, &expectedTypeKind, error);
 
-    if (typeKind != expectedTypeKind)
+    if (typeKind != expectedTypeKind || expectedTypeKind == TYPE_INTERFACE)
+    {
         error->runtimeHandler(error->context, "Incompatible types %s and %s in scanf()", typeKindSpelling(expectedTypeKind), typeKindSpelling(typeKind));
+    }
 
     char curFormatBuf[DEFAULT_STR_LEN + 1];
     char *curFormat = curFormatBuf;
@@ -2209,22 +2246,6 @@ static FORCE_INLINE void doBuiltinFiberalive(Fiber *fiber, HeapPages *pages, Err
         error->runtimeHandler(error->context, "Fiber is null");
 
     fiber->top->intVal = child->alive;
-}
-
-
-// fn repr(val: type, type): str
-static FORCE_INLINE void doBuiltinRepr(Fiber *fiber, HeapPages *pages, Error *error)
-{
-    Type *type = (Type *)(fiber->top++)->ptrVal;
-    Slot *val = fiber->top;
-
-    enum {MAX_REPR_DEPTH = 20};
-
-    int len = doFillReprBuf(val, type, NULL, 0, MAX_REPR_DEPTH, fiber->strLenCache, error);  // Predict buffer length
-    char *buf = chunkAlloc(pages, len + 1, NULL, NULL, false, error);                        // Allocate buffer
-    doFillReprBuf(val, type, buf, INT_MAX, MAX_REPR_DEPTH, fiber->strLenCache, error);       // Fill buffer
-
-    fiber->top->ptrVal = buf;
 }
 
 
@@ -2956,7 +2977,6 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         case BUILTIN_FIBERALIVE:    doBuiltinFiberalive(fiber, pages, error); break;
 
         // Misc
-        case BUILTIN_REPR:          doBuiltinRepr(fiber, pages, error); break;
         case BUILTIN_EXIT:          fiber->alive = false; break;
         case BUILTIN_ERROR:         error->runtimeHandler(error->context, "%s", (char *)fiber->top->ptrVal); return;
     }

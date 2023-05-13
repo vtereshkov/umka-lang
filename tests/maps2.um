@@ -6,20 +6,20 @@ fn test1() {
 	m["Hello" + " World"] = "English" + " EN"
 	m["Salut" + " le Monde"] = "French" + " FR"
 
-	printf(repr(validkey(m, "Salut le Monde")) + '\n')
+	printf("%v\n", validkey(m, "Salut le Monde"))
 
 	m = delete(m, "Salut le Monde")
 
-	printf(repr(validkey(m, "Salut le Monde")) + '\n')
+	printf("%v\n", validkey(m, "Salut le Monde"))
 
 	a := m["Hello" + " World"]
 	b := m["Privet" + " Mir"]
 	c := m["Salut" + " le Monde"]
 	
-	printf(repr(a) + repr(b) + repr(c) + '\n')
-	printf(repr(keys(m)) + '\n')
-	printf(repr(valid(m)) + '\n')
-	printf(repr(m) + '\n')	
+	printf("%v %v %v\n", a, b, c)
+	printf("%v\n", keys(m))
+	printf("%v\n", valid(m))
+	printf("%v\n", m)	
 }
 
 
@@ -38,16 +38,16 @@ fn test2() {
 		m2[Pt{5, 7}] = "Good"
 		m2[Pt{42, 23}] = "Better"
 
-		printf(repr(m2[Pt{42, 23}]) + repr(m2[Pt{11, 12}]) + repr(m2[Pt{5, 7}]) + '\n')
+		printf("%v %v %v\n", m2[Pt{42, 23}], m2[Pt{11, 12}], m2[Pt{5, 7}])
 
 		k := keys(m2)
-		printf(repr(len(m2)) + repr(k) + '\n')
-		printf(repr(m2) + '\n')
+		printf("%d %v\n", len(m2), k)
+		printf("%v\n", m2)
 
 		p = &m2[Pt{42, 23}]
 	}
 
-	printf(repr(p^) + '\n')	
+	printf("%v\n", p^)	
 }
 
 
@@ -55,11 +55,11 @@ fn test3() {
 	printf("\nTest 3\n")
 
 	var m3: map[int]int
-	printf(repr(valid(m3)) + '\n')
+	printf("%v\n", valid(m3))
 
 	m3[1915] = 20
-	printf(repr(valid(m3)) + repr(m3[1915]) + '\n')
-	printf(repr(m3) + '\n')
+	printf("%v %v\n", valid(m3), m3[1915])
+	printf("%v\n", m3)
 }
 
 
@@ -78,11 +78,11 @@ fn test4() {
 	m4[[2]int{2, 5}] = "OK"
 	m4[[2]int{7, 9}] = "Also OK"
 
-	printf(repr(m4[[2]int{2, 5}]) + '\n')
-	printf(repr(m4^) + '\n')
+	printf("%v\n", m4[[2]int{2, 5}])
+	printf("%v\n", m4^)
 
 	for key, item in m4 {
-		printf(repr(key) + repr(item) + '\n')
+		printf("%v %v\n", key, item)
 	}	
 }
 
@@ -95,7 +95,7 @@ fn test5() {
   m[17] = 42
   m[19] = 53
   
-  printf(repr(m) + '\n')
+  printf("%v\n", m)
 }
 
 
@@ -108,9 +108,9 @@ fn test6() {
 	m["one"] = []real{1.0, 2.0}
 	o := delete(copy(m), "pi")
 
-	printf(repr(m) + '\n')
-	printf(repr(n) + '\n')
-	printf(repr(o) + '\n')
+	printf("%v\n", m)
+	printf("%v\n", n)
+	printf("%v\n", o)
 }
 
 

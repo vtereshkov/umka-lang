@@ -119,7 +119,6 @@ static void compilerDeclareBuiltinIdents(Compiler *comp)
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "fiberalive", comp->boolType,    BUILTIN_FIBERALIVE);
 
     // Misc
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "repr",       comp->strType,     BUILTIN_REPR);
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "exit",       comp->voidType,    BUILTIN_EXIT);
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "error",      comp->voidType,    BUILTIN_ERROR);
 }

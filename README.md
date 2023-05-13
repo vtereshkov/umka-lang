@@ -116,7 +116,7 @@ fn getValue(): (int, bool) {return 42, true}
 #### Methods
 ```
 fn (a: ^Arr) print(): int {
-    printf("Arr: %s\n", repr(a^))
+    printf("Arr: %v\n", a^)
     return 0
 }
 ```
@@ -144,7 +144,7 @@ g.print()
 #### Conditional
 ```
 if x, ok := getValue(); ok {
-    std.println("Got " + repr(x))
+    printf("Got %v\n", x)
 }
 ```
 #### Switch
@@ -158,7 +158,7 @@ switch a {
 #### Loop
 ```
     for k := 1; k <= 128; k *= 2 {
-        std.println(repr(k))
+        printf("%v\n", k)
     }
     
     for i, x in g {

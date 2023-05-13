@@ -3,16 +3,16 @@ import "std.um"
 fn test*() {
 	type Pt = struct {x, y: int16}
 	p := Pt{23, -6}
-	printf(repr(p) + '\n')
+	printf("%v\n", p)
 
 	bytes := std.tobytes(&p)
-	printf(repr(bytes) + '\n')
+	printf("%v\n", bytes)
 
 	bytes[2]++
-	printf(repr(bytes) + '\n')
+	printf("%v\n", bytes)
 	
 	std.frombytes(&p, bytes)
-	printf(repr(p) + '\n')
+	printf("%v\n", p)
 }
 
 fn main() {

@@ -10,20 +10,20 @@ var l, m, n: real = 12, -3, 17
 
 fn test*() {
     if a, b, c := f(3, false); a < 3 {
-        printf(repr(a) + " " + repr(b) + " " + repr(c) + "\n")
+        printf("%v %v %v\n", a, b, c)
 
         a, b, c = f(4, true)
-        printf(repr(a) + " " + repr(b) + " " + repr(c) + "\n")
+        printf("%v %v %v\n", a, b, c)
     }
 
     a, b, c := [2]int{3, 2}, [2]int{7, 6}, [2]int{9, 8}
-    printf(repr(a) + " " + repr(b) + " " + repr(c) + "\n")
+    printf("%v %v %v\n", a, b, c)
 
     a, b, c = c, a, b   
-    printf(repr(a) + " " + repr(b) + " " + repr(c) + "\n")
+    printf("%v %v %v\n", a, b, c)
 
     var x, y, z: any = a, b, c
-    printf(repr(x) + " " + repr(y) + " " + repr(z) + "\n")    
+    printf("%v %v %v\n", a, b, c)
 
     s, t := "Hello", "World"
     printf(s + " " + t + "\n")
@@ -31,9 +31,9 @@ fn test*() {
     s, t = t, s
     printf(s + " " + t + "\n")
 
-    printf(repr(u) + " " + repr(v) + " " + repr(w) + " " + repr(p) + "\n")     
-    printf(repr(i) + " " + repr(j) + " " + repr(k) + "\n")
-    printf(repr(l) + " " + repr(m) + " " + repr(n) + "\n")
+    printf("%v %v %v %v\n", u, v, w, p)     
+    printf("%v %v %v\n", i, j, k)
+    printf("%v %v %v\n", l, m, n)
 }
 
 fn main() {

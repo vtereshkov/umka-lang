@@ -574,7 +574,7 @@ fn getValue(): (int, bool) {
 }
 
 fn (a: ^Arr) print(): int {
-    printf("Arr: %s\n", repr(a^))
+    printf("Arr: %v\n", a^)
     return 0
 }
 ```
@@ -591,7 +591,7 @@ fn fprintf(f: ^std.File, format: str, a1: T1, a2: T2...): int
 fn sprintf(format: str, a1: T1, a2: T2...): str
 ```
 
-Write `a1`, `a2`... to the console, or to the file `f`, or to a string, according to the `format` string. `T1`, `T2`... should be ordinal, or real, or string types. Additional run-time type checking is performed to match the `format` string. `printf` and `fprintf` return the number of bytes written, `sprintf` returns the resulting string.
+Write `a1`, `a2`... to the console, or to the file `f`, or to a string, according to the `format` string. `printf` and `fprintf` return the number of bytes written, `sprintf` returns the resulting string.
 
 ```
 fn scanf(format: str, a1: ^T1, a2: ^T2...): int
@@ -599,7 +599,31 @@ fn fscanf(f: ^std.File, format: str, a1: ^T1, a2: ^T2...): int
 fn sscanf(buf, format: str, a1: ^T1, a2: ^T2...): int
 ```
 
-Read `a1`, `a2`... from the console, or from the file `f`, or from the string `buf`, according to the `format` string. `T1`, `T2`... should be ordinal, or real, or string types. Additional run-time type checking is performed to match the `format` string. Return the number of values read.
+Read `a1`, `a2`... from the console, or from the file `f`, or from the string `buf`, according to the `format` string. `T1`, `T2`... should be ordinal, or real, or string types. Return the number of values read.
+
+The `format` string used by the input/output functions may contain format specifiers of the following form:
+
+```
+%[flags][width][.precision][length]type
+
+Length:
+
+hh                  Very short
+h                   Short
+l                   Long
+ll                  Very long
+
+Type:
+
+d, i                Integer
+u                   Unsigned integer
+x, X                Hexadecimal integer
+f, F, e, E, g, G    Real
+s                   String
+c                   Character
+v                   Any (only in printf, fprintf, sprintf)
+```
+The number of the format specifiers and the data types encoded by them should match the number and types of `a1`, `a2`... Otherwise, a runtime error is triggered.
 
 ##### Mathematical functions
 
@@ -749,12 +773,6 @@ fn fiberalive(child: fiber)
 Checks whether the `child` fiber function has not yet returned.  
 
 ##### Miscellaneous functions
-
-```
-fn repr(a: T): str
-```
-
-Returns the string representation of `a`.
 
 ```
 fn exit()
@@ -1134,7 +1152,7 @@ Examples:
 if a > max {max = a}
 
 if x, ok := getValue(); ok {
-    printf("Got " + repr(x) + "\n")
+    printf("Got %v\n", x)
 } else {
     printf("Error\n")
 }
@@ -1156,8 +1174,8 @@ Examples:
 
 ```
 switch a {
-    case 1, 3, 5, 7: printf(repr(a) + " is odd\n")
-    case 2, 4, 6, 8: printf(repr(a) + " is even\n")
+    case 1, 3, 5, 7: printf("%d is odd\n", a)
+    case 2, 4, 6, 8: printf("%d is even\n", a)
     default:         printf("I don't know")
 }
 ```
@@ -1194,7 +1212,7 @@ for a > 1 {
 }
 
 for k := 1; k <= 128; k *= 2 {
-    printf(repr(k) + '\n')
+    printf("%v\n", k)
 }
 ```
 

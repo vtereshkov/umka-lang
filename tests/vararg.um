@@ -1,7 +1,7 @@
 fn printMsg(msg: str, values: ..any) {
 	valStr := ""
 	for _, value in values {
-		valStr += repr(value)
+		valStr += sprintf("%v ", value)
 	}
     printf(msg + " " + valStr + '\n')
 }

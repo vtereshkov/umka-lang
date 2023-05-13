@@ -653,7 +653,8 @@ static void parseBuiltinIOCall(Compiler *comp, Type **type, Const *constant, Bui
     if (constant)
         comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
 
-    // Parameters: count, stream, format, value
+    // printf() parameters: count, stream, format, value, type
+    // scanf() parameters:  count, stream, format, value
 
     // Count (number of characters for printf(), number of items for scanf())
     genPushIntConst(&comp->gen, 0);
@@ -681,8 +682,10 @@ static void parseBuiltinIOCall(Compiler *comp, Type **type, Const *constant, Bui
 
         if (builtin == BUILTIN_PRINTF || builtin == BUILTIN_FPRINTF || builtin == BUILTIN_SPRINTF)
         {
-            typeAssertCompatibleBuiltin(&comp->types, *type, builtin, typeOrdinal(*type) || typeReal(*type) || (*type)->kind == TYPE_STR);
+            typeAssertCompatibleBuiltin(&comp->types, *type, builtin, (*type)->kind != TYPE_VOID);
+            genPushGlobalPtr(&comp->gen, *type);                    // Push type
             genCallBuiltin(&comp->gen, (*type)->kind, builtin);
+            genPop(&comp->gen);                                     // Remove type
         }
         else  // BUILTIN_SCANF, BUILTIN_FSCANF, BUILTIN_SSCANF
         {
@@ -695,7 +698,15 @@ static void parseBuiltinIOCall(Compiler *comp, Type **type, Const *constant, Bui
 
     // The rest of format string
     genPushIntConst(&comp->gen, 0);
-    genCallBuiltin(&comp->gen, TYPE_VOID, builtin);
+    if (builtin == BUILTIN_PRINTF || builtin == BUILTIN_FPRINTF || builtin == BUILTIN_SPRINTF)
+    {
+        genPushGlobalPtr(&comp->gen, comp->voidType);           // Push type
+        genCallBuiltin(&comp->gen, TYPE_VOID, builtin);
+        genPop(&comp->gen);                                     // Remove type
+    }
+    else
+        genCallBuiltin(&comp->gen, TYPE_VOID, builtin);
+
     genPop(&comp->gen);  // Remove parameter
 
     genPop(&comp->gen);  // Remove format string
@@ -1269,22 +1280,6 @@ static void parseBuiltinFiberCall(Compiler *comp, Type **type, Const *constant, 
 }
 
 
-// fn repr(val: type, type): str
-static void parseBuiltinReprCall(Compiler *comp, Type **type, Const *constant)
-{
-    if (constant)
-        comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
-
-    parseExpr(comp, type, constant);
-    typeAssertCompatibleBuiltin(&comp->types, *type, BUILTIN_REPR, (*type)->kind != TYPE_VOID);
-
-    genPushGlobalPtr(&comp->gen, *type);
-
-    genCallBuiltin(&comp->gen, TYPE_STR, BUILTIN_REPR);
-    *type = comp->strType;
-}
-
-
 static void parseBuiltinExitCall(Compiler *comp, Type **type, Const *constant)
 {
     if (constant)
@@ -1363,7 +1358,6 @@ static void parseBuiltinCall(Compiler *comp, Type **type, Const *constant, Built
         case BUILTIN_FIBERALIVE:    parseBuiltinFiberCall(comp, type, constant, builtin);   break;
 
         // Misc
-        case BUILTIN_REPR:          parseBuiltinReprCall(comp, type, constant);             break;
         case BUILTIN_EXIT:          parseBuiltinExitCall(comp, type, constant);             break;
         case BUILTIN_ERROR:         parseBuiltinErrorCall(comp, type, constant);            break;
 

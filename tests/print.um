@@ -1,0 +1,25 @@
+import "std.um"
+
+fn test*() {
+	printf("%d %v %f %v\n", 7, []int{42, 43}, 6.0, map[str]real{"Hello": 3.14, "World": 1 / 3.0})
+
+	s := sprintf("%d %v %f %v\n", 7, []int{42, 43}, 6.0, map[str]real{"Hello": 3.14, "World": 1 / 3.0})
+	printf("%s", s)
+
+	f := std.fopen("test.txt", "w")
+	fprintf(f, "%d %v %f %v\n", 7, []int{42, 43}, 6.0, map[str]real{"Hello": 3.14, "World": 1 / 3.0})
+	std.fclose(f)
+
+	f2 := std.fopen("test.txt", "rb")
+	std.fseek(f2, 0, std.seekEnd)
+	size := std.ftell(f2)
+	std.fseek(f2, 0, std.seekBegin)
+	chars := make([]char, size)
+	std.fread(f2, &chars)
+	std.fclose(f2)
+	printf("%s", str(chars))	
+}
+
+fn main() {
+	test()
+}

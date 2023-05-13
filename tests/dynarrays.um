@@ -9,35 +9,35 @@ fn f(b: [11][2]^int) {
 fn slices() {
     a := []str{"Hello " + "World", "Hallo " + "Welt", "Salut " + "le Monde", "Privet " + "Mir"}
 
-    printf(repr(slice(a, 0, 4)) + '\n')
-    printf(repr(slice(a, 0, 3)) + '\n')
-    printf(repr(slice(a, 0, 2)) + '\n')
-    printf(repr(slice(a, 0, 1)) + '\n')
-    printf(repr(slice(a, 0, 0)) + '\n' + '\n')
+    printf("%v\n", slice(a, 0, 4))
+    printf("%v\n", slice(a, 0, 3))
+    printf("%v\n", slice(a, 0, 2))
+    printf("%v\n", slice(a, 0, 1))
+    printf("%v\n\n", slice(a, 0, 0))
 
-    printf(repr(slice(a, 1, 4)) + '\n')
-    printf(repr(slice(a, 2, 4)) + '\n')
-    printf(repr(slice(a, 3, 4)) + '\n')
-    printf(repr(slice(a, 4, 4)) + '\n' + '\n')
+    printf("%v\n", slice(a, 1, 4))
+    printf("%v\n", slice(a, 2, 4))
+    printf("%v\n", slice(a, 3, 4))
+    printf("%v\n\n", slice(a, 4, 4))
 
-    printf(repr(slice(a, 1, 2)) + '\n')
-    printf(repr(slice(a, 1, 3)) + '\n')
-    printf(repr(slice(a, 1, 4)) + '\n' + '\n')
+    printf("%v\n", slice(a, 1, 2))
+    printf("%v\n", slice(a, 1, 3))
+    printf("%v\n\n", slice(a, 1, 4))
 
-    printf(repr(slice(a, 2, 3)) + '\n')
-    printf(repr(slice(a, 2, 4)) + '\n' + '\n')
+    printf("%v\n", slice(a, 2, 3))
+    printf("%v\n\n", slice(a, 2, 4))
 
-    printf(repr(slice(a, 1, -1)) + '\n')
-    printf(repr(slice(a, 1, -2)) + '\n')
-    printf(repr(slice(a, 1, -3)) + '\n' + '\n')
+    printf("%v\n", slice(a, 1, -1))
+    printf("%v\n", slice(a, 1, -2))
+    printf("%v\n\n", slice(a, 1, -3))
 
-    printf(repr(slice(a, 0)) + '\n')
-    printf(repr(slice(a, 1)) + '\n')
-    printf(repr(slice(a, 2)) + '\n')
-    printf(repr(slice(a, 3)) + '\n')    
-    printf(repr(slice(a, 4)) + '\n' + '\n')
+    printf("%v\n", slice(a, 0))
+    printf("%v\n", slice(a, 1))
+    printf("%v\n", slice(a, 2))
+    printf("%v\n", slice(a, 3))
+    printf("%v\n\n", slice(a, 4))
 
-    printf(repr(slice(a, 2, -2)) + '\n')
+    printf("%v\n", slice(a, 2, -2))
 }
 
 fn insertions() {
@@ -47,20 +47,20 @@ fn insertions() {
     d := insert(copy(c), 0, "Oh" + ',' + " ")
     e := insert(copy(d), len(d), "!")
 
-    printf(repr(a) + '\n')        
-    printf(repr(b) + '\n')
-    printf(repr(c) + '\n')
-    printf(repr(d) + '\n')
-    printf(repr(e) + '\n')
+    printf("%v\n", a)
+    printf("%v\n", b)
+    printf("%v\n", c)
+    printf("%v\n", d)
+    printf("%v\n", e)
 
-    printf(repr(insert(insert([]int{}, 0, 42), 1, 43)) + '\n')  
+    printf("%v\n", insert(insert([]int{}, 0, 42), 1, 43))
 } 
 
 fn copies() {
     a := [][]int{[]int{5, 7}, []int{9, 11}}
     b := copy(a)
     a[1] = []int{10, 12}
-    printf(repr(a) + repr(b) + '\n')
+    printf("%v %v\n", a, b)
 }     
 
 fn test*() {    
@@ -111,18 +111,18 @@ fn test*() {
     }       
     
     c := []int{3, 4, 5}
-    std.println("c: " + repr(c))
+    printf("c: %v\n", c)
     
     std.println("Appending...")
     c = append(c, []int{6, 7})
-    std.println("c: " + repr(c))
+    printf("c: %v\n", c)
 
     d := [][]int{[]int{666, 777}, [2]int{888, 999}}
-    std.println("d: " + repr(d))    
+    printf("d: %v\n", d)   
     
     std.println("Appending...")    
     d = append(d, [2]int {444, 555})
-    std.println("d: " + repr(d))
+    printf("d: %v\n", d)
 
     std.println("Inserting...") 
     insertions()       

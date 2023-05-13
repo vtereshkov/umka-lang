@@ -1,11 +1,11 @@
 type T = [2]int
 
 fn foo(x: [3]real, y:[]T, z: struct {w, h: int}, v: map[[2]int][]str, w: [3]int = {3, 8, 14}): ([]real, bool, [2]str) {
-	printf(repr(x) + '\n')
-	printf(repr(y) + '\n')
-	printf(repr(z) + '\n')
-	printf(repr(v) + '\n')
-	printf(repr(w) + '\n')
+	printf("%v\n", x)
+	printf("%v\n", y)
+	printf("%v\n", z)
+	printf("%v\n", v)
+	printf("%v\n", w)
 
 	return {x[0], x[1]}, v[{5, 7}][1] == "World", {"Meow", "Moo"}
 }
@@ -35,17 +35,17 @@ fn test*() {
 
 	p, q, r, s, t = {"Haha", "Hoho"}, q0, r0, s0, {w: 300, h: 400}
 
-	printf(repr(p) + '\n')
-	printf(repr(q) + '\n')
-	printf(repr(r) + '\n')
-	printf(repr(s) + '\n')
-	printf(repr(t) + '\n')
+	printf("%v\n", p)
+	printf("%v\n", q)
+	printf("%v\n", r)
+	printf("%v\n", s)
+	printf("%v\n", t)
 
 	u := bar({7, 8})
 
-	printf(repr(u) + '\n')	
+	printf("%v\n", u)
 
-	printf(repr(baz()) + '\n')
+	printf("%v\n", baz())
 }
 
 fn main() {

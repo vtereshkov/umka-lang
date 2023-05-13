@@ -8,10 +8,10 @@ fn test*() {
 		a = append(a, 10)
 		a[1] = 5
 
-		printf(repr(a) + '\n')
+		printf("%v\n", a)
 	}
 
-	printf(repr(p) + '\n')
+	printf("%v\n", p)
 
 	// Strings
 	pc := []char{}
@@ -28,7 +28,7 @@ fn test*() {
 
 	var s2: str = pc
 	
-	printf(repr(pc) + s2 + '\n')
+	printf(sprintf("%v ", pc) + s2 + '\n')
 	printf(str(pc) + s2 + '\n')
 	printf(s2 + str(pc) + '\n')
 }

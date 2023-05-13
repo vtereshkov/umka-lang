@@ -1,6 +1,6 @@
 fn printw(w: weak ^int) {
     if q := ^int(w); q != null {
-        printf(repr(q^) + '\n')
+        printf("%v\n", q^)
     } else {
         printf("it's null\n")
     }    
@@ -35,8 +35,8 @@ fn test2() {
     q.s = p
     q.x = 13
 
-    printf(repr(p.t.x) + repr(^S(q.s).x) + '\n')
-    printf(repr(p.t.s == p) + repr(p == p.t.s) + '\n')
+    printf("%v %v\n", p.t.x, ^S(q.s).x)
+    printf("%v %v\n", p.t.s == p, p == p.t.s)
 }
 
 fn test*() {

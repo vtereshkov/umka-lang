@@ -1,11 +1,11 @@
 fn foo(s: [3]str) {
-    printf("foo: " + repr(s) + '\n')
+    printf("foo: %v\n", s)
 
     s1 := str([]char([100]char([]char(s[1]))))
     s2 := str([]char(s[2]))
 
-    printf("foo: " + s[1] + " = " + s1 + " : " + repr(s[1] == s1) + '\n')
-    printf("foo: " + s[2] + " = " + s2 + " : " + repr(s[2] == s2) + '\n')
+    printf("foo: " + s[1] + " = " + s1 + " : " + sprintf("%v", s[1] == s1) + '\n')
+    printf("foo: " + s[2] + " = " + s2 + " : " + sprintf("%v", s[2] == s2) + '\n')
 }
 
 fn bar() {
@@ -18,7 +18,7 @@ fn bar() {
 
     b2 := [5][]int([][]int(b))
 
-    printf("bar: " + repr(b) + " = " + repr(b2) + '\n')
+    printf("bar: %v = %v\n", b, b2)
 }
 
 fn test1() {
@@ -28,13 +28,13 @@ fn test1() {
 
 fn test2() {
     a := []real([]int([]any([]int{5, 7, 9, 11, 13, 15, 17})))
-    printf(repr(a) + '\n')
+    printf("%v\n", a)
 
     b := []any([]int{42, 43, 44})
-    printf(repr([]^int(b)[1] != null) + repr([]^real(b)[1] != null) + '\n')
+    printf("%v %v\n", []^int(b)[1] != null, []^real(b)[1] != null)
 
     c := []str([][]char([]str{"Hello " + "World", "Privet " + "Mir", "Ha-" + "ha", "Ho-" + "ho"}))
-    printf(repr(c) + '\n')
+    printf("%v\n", c)
 }
 
 

@@ -39,7 +39,7 @@ fn getValue(): (int, bool) {return 42, true}
 
 // Methods
 fn (a: ^Arr) print(): int {
-    printf("Arr: %s\n", repr(a^))
+    printf("Arr: %v\n", a^)
     return 0
 }
 
@@ -82,7 +82,7 @@ fn test*() {
     
     // Conditional
     if x, ok := getValue(); ok {
-        std.println("Got " + repr(x))
+        printf("Got %v\n", x)
     }
     
     // Switch
@@ -94,7 +94,7 @@ fn test*() {
 
     // Loop
     for k := 1; k <= 128; k *= 2 {
-        std.println(repr(k))
+        printf("%v\n", k)
     }
     
     for i, x in g {
@@ -115,21 +115,21 @@ fn test*() {
     // Fibers
     parentFunc()
 
-    // Repr
-    printf("\nrepr():\n")
-    printf("%s\n", repr(a))
-    printf("%s\n", repr(b))
-    printf("%s\n", repr(c))
-    printf("%s\n", repr(d))
-    printf("%s\n", repr(e))
-    printf("%s\n", repr(f))
-    printf("%s\n", repr(g))
-    printf("%s\n", repr(h))
-    printf("%s\n", repr(m))
-    printf("%s\n", repr(q))
-    printf("%s\n", repr(sum))
-    printf("%s\n", repr('a'))
-    printf("%s\n", repr(printable))
+    // String representation
+    printf("\nString representation:\n")
+    printf("%v\n", a)
+    printf("%v\n", b)
+    printf("%v\n", c)
+    printf("%v\n", d)
+    printf("%v\n", e)
+    printf("%v\n", f)
+    printf("%v\n", g)
+    printf("%v\n", h)
+    printf("%v\n", m)
+    printf("%v\n", q)
+    printf("%v\n", sum)
+    printf("%v\n", 'a')
+    printf("%v\n", printable)
     
 }
 

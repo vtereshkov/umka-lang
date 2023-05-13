@@ -6,26 +6,26 @@ fn testStr() {
 	scanf(s1)
 
 	printf("s2 = %s\n", s2)
-	printf(repr(s1) + repr(s2) + repr(s3) + repr(s4) + '\n')
+	printf("%v %v %v %v\n", s1, s2, s3, s4)
 
 	chars := []char(s2)
-	printf(repr(chars) + '\n')
+	printf("%v\n", chars)
 
 	printf("len = %d, %d\n", len(s2), len(s4))
 
 	s5 := s1 + s2 + s4 + s3
 	printf(s5 + '\n')
 
-	printf(repr(s1 == s2) + repr(s1 < s2) + repr(s1 >= s2) + '\n')
-	printf(repr(s1 == s4) + repr(s1 < s4) + repr(s1 >= s4) + '\n')
+	printf("%v %v %v\n", s1 == s2, s1 < s2, s1 >= s2)
+	printf("%v %v %v\n", s1 == s4, s1 < s4, s1 >= s4)
 }
 
 fn checkArr(a: []str) {
-	printf('\n' + repr(a) + '\n')
+	printf('\n' + "%v" + '\n', a)
 	for i, x in a {
-		printf("    Item #" + repr(i) + " = " + repr(x) + '\n')
+		printf("    Item #%v = %v\n", i, x)
 	}
-	printf("len = " + repr(len(a)) + "  cap = " + repr(cap(a)) + '\n')
+	printf("len = %d  cap = %d\n", len(a), cap(a))
 }
 
 fn testArr() {
@@ -41,18 +41,18 @@ fn testArr() {
 	checkArr(insert(copy(a), 0, c[1]))
 	checkArr(slice(a, 0, 0))
 
-	printf('\n' + repr([2]str(a)) + repr([2]str(c)) + '\n')
+	printf("\n%v %v\n", [2]str(a), [2]str(c))
 
 	var d: []char
-	printf(repr(str(d)) + '\n')
+	printf("%v\n", str(d))
 }
 
 fn checkMap(a: map[str]str) {
-	printf('\n' + repr(a) + '\n')
+	printf('\n' + "%v" + '\n', a)
 	for i, x in a {
-		printf("    Item " + repr(i) + " = " + repr(x) + '\n')
+		printf("    Item %v = %v\n", i, x)
 	}
-	printf("len = " + repr(len(a)) + '\n')
+	printf("len = %d\n", len(a))
 }
 
 fn mk(): map[str]str {
@@ -76,7 +76,7 @@ fn testMap() {
 	checkMap(c)
 	checkMap(d)
 
-	printf(repr(validkey(a, "Haha")) + repr(validkey(b, "Haha")) + '\n')
+	printf("%v %v\n", validkey(a, "Haha"), validkey(b, "Haha"))
 }
 
 fn test*() {
