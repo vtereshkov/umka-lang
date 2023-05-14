@@ -85,6 +85,13 @@ static bool optimizePop(CodeGen *gen)
 {
     Instruction *prev = getPrevInstr(gen, 1);
 
+    // Optimization: POP (n) + POP -> POP (n + 1)
+    if (prev && prev->opcode == OP_POP)
+    {
+        prev->operand.intVal++;
+        return true;
+    }
+
     // Optimization: CHANGE_REF_CNT + POP -> CHANGE_REF_CNT; POP
     if (prev && prev->opcode == OP_CHANGE_REF_CNT && prev->inlineOpcode == OP_NOP)
     {
@@ -411,7 +418,7 @@ void genPop(CodeGen *gen)
 {
     if (!optimizePop(gen))
     {
-        const Instruction instr = {.opcode = OP_POP, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = 0};
+        const Instruction instr = {.opcode = OP_POP, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = 1};
         genAddInstr(gen, &instr);
     }
 }

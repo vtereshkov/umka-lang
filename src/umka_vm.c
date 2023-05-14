@@ -1465,23 +1465,29 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
     }
 
     char curFormatBuf[DEFAULT_STR_LEN + 1];
-    char *curFormat = curFormatBuf;
-    if (formatLen + 1 > sizeof(curFormatBuf))
-        curFormat = malloc(formatLen + 1);
+    bool isCurFormatBufInHeap = formatLen + 1 > sizeof(curFormatBuf);
+    char *curFormat = isCurFormatBufInHeap ? malloc(formatLen + 1) : &curFormatBuf;
 
     memcpy(curFormat, format, formatLen);
     curFormat[formatLen] = 0;
 
     // Special case: %v formatter - convert argument of any type to its string representation
+    char reprBuf[DEFAULT_STR_LEN + 1];
+    bool isReprBufInHeap = false;
+
     if (hasAnyTypeFormatter)
     {
         curFormat[typeLetterPos] = 's';
 
         enum {MAX_NESTING = 20};
-        const int len = doFillReprBuf(&value, type, NULL, 0, MAX_NESTING, fiber->strLenCache, error);  // Predict buffer length
-        char *buf = malloc(len + 1);
-        doFillReprBuf(&value, type, buf, len + 1, MAX_NESTING, fiber->strLenCache, error);             // Fill buffer
-        value.ptrVal = buf;
+        const int reprLen = doFillReprBuf(&value, type, NULL, 0, MAX_NESTING, fiber->strLenCache, error);  // Predict buffer length
+
+        isReprBufInHeap = reprLen + 1 > sizeof(reprBuf);
+        char *repr = isReprBufInHeap ? malloc(reprLen + 1) : &reprBuf;
+
+        doFillReprBuf(&value, type, repr, reprLen + 1, MAX_NESTING, fiber->strLenCache, error);            // Fill buffer
+
+        value.ptrVal = repr;
         typeKind = TYPE_STR;
     }
 
@@ -1527,10 +1533,10 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
     fiber->top[STACK_OFFSET_COUNT].intVal += len;
     fiber->top[STACK_OFFSET_STREAM].ptrVal = stream;
 
-    if (formatLen + 1 > sizeof(curFormatBuf))
+    if (isCurFormatBufInHeap)
         free(curFormat);
 
-    if (hasAnyTypeFormatter)
+    if (isReprBufInHeap)
         free(value.ptrVal);
 }
 
@@ -1559,9 +1565,8 @@ static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool con
     }
 
     char curFormatBuf[DEFAULT_STR_LEN + 1];
-    char *curFormat = curFormatBuf;
-    if (formatLen + 2 + 1 > sizeof(curFormatBuf))   // + 2 for "%n"
-        curFormat = malloc(formatLen + 2 + 1);
+    bool isCurFormatBufInHeap = formatLen + 2 + 1 > sizeof(curFormatBuf);                   // + 2 for "%n"
+    char *curFormat = isCurFormatBufInHeap ? malloc(formatLen + 2 + 1) : &curFormatBuf;
 
     memcpy(curFormat, format, formatLen);
     curFormat[formatLen + 0] = '%';
@@ -1603,7 +1608,7 @@ static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool con
     if (string)
         fiber->top[STACK_OFFSET_STREAM].ptrVal = (char *)fiber->top[STACK_OFFSET_STREAM].ptrVal + len;
 
-    if (formatLen + 2 + 1 > sizeof(curFormatBuf))
+    if (isCurFormatBufInHeap)
         free(curFormat);
 }
 
@@ -2302,7 +2307,7 @@ static FORCE_INLINE void doPushStruct(Fiber *fiber, Error *error)
 
 static FORCE_INLINE void doPop(Fiber *fiber)
 {
-    fiber->top++;
+    fiber->top += fiber->code[fiber->ip].operand.intVal;
     fiber->ip++;
 }
 
@@ -3195,6 +3200,7 @@ int vmAsm(int ip, Instruction *code, DebugInfo *debugPerInstr, char *buf, int si
         case OP_PUSH_LOCAL:
         case OP_PUSH_REG:
         case OP_PUSH_STRUCT:
+        case OP_POP:
         case OP_POP_REG:
         case OP_ZERO:
         case OP_ASSIGN:
