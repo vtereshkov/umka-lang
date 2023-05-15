@@ -1140,7 +1140,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int maxD
             break;
         }
         case TYPE_REAL32:
-        case TYPE_REAL:     len = snprintf(buf, maxLen, "%lf", slot->realVal);                                               break;
+        case TYPE_REAL:     len = snprintf(buf, maxLen, "%lg", slot->realVal);                                               break;
         case TYPE_PTR:      len = snprintf(buf, maxLen, "%p", slot->ptrVal);                                                 break;
         case TYPE_WEAKPTR:  len = snprintf(buf, maxLen, "%llx", (unsigned long long int)slot->weakPtrVal);                   break;
         case TYPE_STR:      len = snprintf(buf, maxLen, "\"%s\"", slot->ptrVal ? (char *)slot->ptrVal : "");                 break;
@@ -3189,7 +3189,7 @@ int vmAsm(int ip, Instruction *code, DebugInfo *debugPerInstr, char *buf, int si
         case OP_PUSH:
         {
             if (instr->typeKind == TYPE_REAL)
-                chars += snprintf(buf + chars, nonneg(size - chars), " %.8lf", instr->operand.realVal);
+                chars += snprintf(buf + chars, nonneg(size - chars), " %lg", instr->operand.realVal);
             else if (instr->typeKind == TYPE_PTR)
                 chars += snprintf(buf + chars, nonneg(size - chars), " %p", instr->operand.ptrVal);
             else
