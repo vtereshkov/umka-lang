@@ -2,9 +2,9 @@
 
 >>> Printing
 
-7 {42 43} 6.000000 {"World": 0.333333 "Hello": 3.140000}
-7 {42 43} 6.000000 {"World": 0.333333 "Hello": 3.140000}
-7 {42 43} 6.000000 {"World": 0.333333 "Hello": 3.140000}
+7 [42 43] 6.000000 {"World": 0.333333 "Hello": 3.140000}
+7 [42 43] 6.000000 {"World": 0.333333 "Hello": 3.140000}
+7 [42 43] 6.000000 {"World": 0.333333 "Hello": 3.140000}
 
 
 
@@ -85,62 +85,62 @@ f: 40 56
 f: 45 63
 f: 666 777
 f: 876 765
-c: {3 4 5}
+c: [3 4 5]
 Appending...
-c: {3 4 5 6 7}
-d: {{666 777} {888 999}}
+c: [3 4 5 6 7]
+d: [[666 777] [888 999]]
 Appending...
-d: {{666 777} {888 999} {444 555}}
+d: [[666 777] [888 999] [444 555]]
 Inserting...
-{"Hello " "World"}
-{"Hello " "My Wonderful" "World"}
-{"Hello " ", " "My Wonderful" "World"}
-{"Oh, " "Hello " ", " "My Wonderful" "World"}
-{"Oh, " "Hello " ", " "My Wonderful" "World" "!"}
-{42 43}
+["Hello " "World"]
+["Hello " "My Wonderful" "World"]
+["Hello " ", " "My Wonderful" "World"]
+["Oh, " "Hello " ", " "My Wonderful" "World"]
+["Oh, " "Hello " ", " "My Wonderful" "World" "!"]
+[42 43]
 Slicing...
-{"Hello World" "Hallo Welt" "Salut le Monde" "Privet Mir"}
-{"Hello World" "Hallo Welt" "Salut le Monde"}
-{"Hello World" "Hallo Welt"}
-{"Hello World"}
-{}
+["Hello World" "Hallo Welt" "Salut le Monde" "Privet Mir"]
+["Hello World" "Hallo Welt" "Salut le Monde"]
+["Hello World" "Hallo Welt"]
+["Hello World"]
+[]
 
-{"Hallo Welt" "Salut le Monde" "Privet Mir"}
-{"Salut le Monde" "Privet Mir"}
-{"Privet Mir"}
-{}
+["Hallo Welt" "Salut le Monde" "Privet Mir"]
+["Salut le Monde" "Privet Mir"]
+["Privet Mir"]
+[]
 
-{"Hallo Welt"}
-{"Hallo Welt" "Salut le Monde"}
-{"Hallo Welt" "Salut le Monde" "Privet Mir"}
+["Hallo Welt"]
+["Hallo Welt" "Salut le Monde"]
+["Hallo Welt" "Salut le Monde" "Privet Mir"]
 
-{"Salut le Monde"}
-{"Salut le Monde" "Privet Mir"}
+["Salut le Monde"]
+["Salut le Monde" "Privet Mir"]
 
-{"Hallo Welt" "Salut le Monde"}
-{"Hallo Welt"}
-{}
+["Hallo Welt" "Salut le Monde"]
+["Hallo Welt"]
+[]
 
-{"Hello World" "Hallo Welt" "Salut le Monde" "Privet Mir"}
-{"Hallo Welt" "Salut le Monde" "Privet Mir"}
-{"Salut le Monde" "Privet Mir"}
-{"Privet Mir"}
-{}
+["Hello World" "Hallo Welt" "Salut le Monde" "Privet Mir"]
+["Hallo Welt" "Salut le Monde" "Privet Mir"]
+["Salut le Monde" "Privet Mir"]
+["Privet Mir"]
+[]
 
-{}
+[]
 Copying...
-{{5 7} {10 12}} {{5 7} {9 11}}
+[[5 7] [10 12]] [[5 7] [9 11]]
 
 
 >>> Dynamic arrays - 2
 
-foo: {"Hello World" "Hallo Welt" "Salut le Monde"}
+foo: ["Hello World" "Hallo Welt" "Salut le Monde"]
 foo: Hallo Welt = Hallo Welt : true
 foo: Salut le Monde = Salut le Monde : true
-bar: {{3 5} {4 6 -8} {9} {} {}} = {{3 5} {4 6 -8} {9} {} {}}
-{5.000000 7.000000 9.000000 11.000000 13.000000 15.000000 17.000000}
+bar: [[3 5] [4 6 -8] [9] [] []] = [[3 5] [4 6 -8] [9] [] []]
+[5.000000 7.000000 9.000000 11.000000 13.000000 15.000000 17.000000]
 true false
-{"Hello World" "Privet Mir" "Ha-ha" "Ho-ho"}
+["Hello World" "Privet Mir" "Ha-ha" "Ho-ho"]
 
 
 >>> Strings
@@ -189,7 +189,7 @@ Parent fiber: i = 9   buf = 12.00
 
 >>> Functional tools
 
-Array = {3 7 1 -4 2 5}
+Array = [3 7 1 -4 2 5]
 Sum of all squares less than 30 = 55 
 
 
@@ -215,8 +215,8 @@ proc_fooable:
 
 >>> Interfaces - 2
 
-{"red" "green" "blue" "yellow" "gray" "brown" "black" "cyan" "magenta" "white"}
-{"black" "blue" "brown" "cyan" "gray" "green" "magenta" "red" "white" "yellow"}
+["red" "green" "blue" "yellow" "gray" "brown" "black" "cyan" "magenta" "white"]
+["black" "blue" "brown" "cyan" "gray" "green" "magenta" "red" "white" "yellow"]
 
 
 >>> Interfaces - 3
@@ -277,7 +277,7 @@ Pushkin
 Goethe
 Shakespeare
 Tolstoy
-{{1749 1832}: "Goethe" {1564 1616}: "Shakespeare" {1828 1910}: "Tolstoy"}
+{[1749 1832]: "Goethe" [1564 1616]: "Shakespeare" [1828 1910]: "Tolstoy"}
 
 Test 3
 Test passed
@@ -290,13 +290,13 @@ Test 1
 true
 false
 "English EN" "" ""
-{"Salut le Monde" "Hello World" "Privet Mir"}
+["Salut le Monde" "Hello World" "Privet Mir"]
 true
 {"Salut le Monde": "" "Hello World": "English EN" "Privet Mir": ""}
 
 Test 2
 "Better" "" "Good"
-3 {{x: 11 y: 12} {x: 5 y: 7} {x: 42 y: 23}}
+3 [{x: 11 y: 12} {x: 5 y: 7} {x: 42 y: 23}]
 {{x: 11 y: 12}: "" {x: 5 y: 7}: "Good" {x: 42 y: 23}: "Better"}
 "Better"
 
@@ -307,38 +307,38 @@ true 20
 
 Test 4
 "OK"
-{{7 9}: "Also OK" {13 15}: "So-so" {57 89}: "Nice" {2 5}: "OK"}
-{7 9} "Also OK"
-{13 15} "So-so"
-{57 89} "Nice"
-{2 5} "OK"
+{[7 9]: "Also OK" [13 15]: "So-so" [57 89]: "Nice" [2 5]: "OK"}
+[7 9] "Also OK"
+[13 15] "So-so"
+[57 89] "Nice"
+[2 5] "OK"
 
 Test 5
 {19: 53 17: 42}
 
 Test 6
-{"one": {1.000000 2.000000} "e": {2.720000 5.440000} "ten": {10.000000 20.000000} "pi": {3.140000 6.280000}}
-{"e": {2.720000 5.440000} "ten": {10.000000 20.000000} "pi": {3.140000 6.280000}}
-{"one": {1.000000 2.000000} "e": {2.720000 5.440000} "ten": {10.000000 20.000000}}
+{"one": [1.000000 2.000000] "e": [2.720000 5.440000] "ten": [10.000000 20.000000] "pi": [3.140000 6.280000]}
+{"e": [2.720000 5.440000] "ten": [10.000000 20.000000] "pi": [3.140000 6.280000]}
+{"one": [1.000000 2.000000] "e": [2.720000 5.440000] "ten": [10.000000 20.000000]}
 
 
 >>> Multiple returns
 
--3 {6.000000 9.000000} true
--4 {8.000000 12.000000} false
-{3 2} {7 6} {9 8}
-{9 8} {3 2} {7 6}
-{9 8} {3 2} {7 6}
+-3 [6.000000 9.000000] true
+-4 [8.000000 12.000000] false
+[3 2] [7 6] [9 8]
+[9 8] [3 2] [7 6]
+[9 8] [3 2] [7 6]
 Hello World
 World Hello
 23 45.600000 "Hello" 'z'
-{'a' 'b'} {'c' 'd'} {'e' 'f'}
+['a' 'b'] ['c' 'd'] ['e' 'f']
 12.000000 -3.000000 17.000000
 
 
 >>> Language tour
 
-Arr: {2.300000 -2.050000 2.380000}
+Arr: [2.300000 -2.050000 2.380000]
 Got 42
 3 is odd
 1
@@ -351,7 +351,7 @@ Got 42
 128
 len = 4
 4.680
-Arr: {0.500000 0.700000 0.900000}
+Arr: [0.500000 0.700000 0.900000]
 Parent: i=0 buf=0
 Child : i=0 buf=0
 Parent: i=1 buf=0
@@ -375,13 +375,13 @@ String representation:
 "Hello World"
 0
 "Hello World!"
-{2.300000 -2.050000 2.380000}
-{{0 0 0 0 0} {0 0 0 0 0} {0 0 0 0 0} {10 20 30 40 50}}
+[2.300000 -2.050000 2.380000]
+[[0 0 0 0 0] [0 0 0 0 0] [0 0 0 0 0] [10 20 30 40 50]]
 {"Hello Umka": 3.140000}
-{q: {1.000000 0.000000 0.000000 0.000000} normalized: true}
+{q: [1.000000 0.000000 0.000000 0.000000] normalized: true}
 4.680000
 'a'
-{0.500000 0.700000 0.900000}
+[0.500000 0.700000 0.900000]
 
 
 >>> Type equivalence
@@ -397,21 +397,21 @@ String representation:
 >>> Item pointers
 
 15
-{{0 0} {1 2} {2 4} {3 6} {4 8} {5 10}}
-{0 0}
-{1 2}
-{2 4}
-{3 6}
-{4 8}
-{5 10}
+[[0 0] [1 2] [2 4] [3 6] [4 8] [5 10]]
+[0 0]
+[1 2]
+[2 4]
+[3 6]
+[4 8]
+[5 10]
 
 
 >>> Safe type casts
 
-{1 5 7 10}
-{1 4 7}
+[1 5 7 10]
+[1 4 7]
 Hey Hello
-{'H' 'e' 'l' 'l' 0x00} Hell
+['H' 'e' 'l' 'l' 0x00] Hell
 HellHell
 HellHell
 
@@ -434,8 +434,8 @@ true true
 >>> Byte conversions
 
 {x: 23 y: -6}
-{23 0 250 255}
-{23 0 251 255}
+[23 0 250 255]
+[23 0 251 255]
 {x: 23 y: -5}
 
 
@@ -511,51 +511,51 @@ running by_name_eq with name : Foo
 running by_name_eq with name : "Foo" and person : {name: "Foo" age: 24 sex: "M"}
 running by_name_eq with name : "Foo" and person : {name: "Bar" age: 23 sex: "M"}
 running by_name_eq with name : "Foo" and person : {name: "FooBar" age: 23 sex: "F"}
-{true false false}
+[true false false]
 
 
 >>> Null strings
 
 s2 = 
 "" "" "" "Hello "
-{}
+[]
 len = 0, 6
 Hello 
 true false true
 false true false
 
-{}
+[]
 len = 0  cap = 0
 
-{}
+[]
 len = 0  cap = 0
 
-{"Hello" "World"}
+["Hello" "World"]
     Item #0 = "Hello"
     Item #1 = "World"
 len = 2  cap = 6
 
-{}
+[]
 len = 0  cap = 0
 
-{"Hello" "World"}
+["Hello" "World"]
     Item #0 = "Hello"
     Item #1 = "World"
 len = 2  cap = 6
 
-{"Hello" "World"}
+["Hello" "World"]
     Item #0 = "Hello"
     Item #1 = "World"
 len = 2  cap = 6
 
-{"World"}
+["World"]
     Item #0 = "World"
 len = 1  cap = 2
 
-{}
+[]
 len = 0  cap = 2
 
-{"" ""} {"Hello" "World"}
+["" ""] ["Hello" "World"]
 ""
 
 {}
@@ -578,7 +578,7 @@ false true
 
 >>> Variadic functions
 
->> expected  12 "Hello World" {true false true true} 
+>> expected  12 "Hello World" [true false true true] 
 >> should work with no values 
 Four averages: 5.233333 3.140000 0.000000 -1.000000 
 Greeting {data: " Hello World"} {data: " Hello World Salut le Monde"} 
@@ -588,12 +588,12 @@ Greeting {data: " Hello World"} {data: " Hello World Salut le Monde"}
 
 foo: Hello
 foo: World
-2 3.140000 true {x: 5 y: 7} {7 8} "foo: Hello"
-2 6.280000 true {x: 5 y: 7} {7 8} "foo: Hello"
-2 6.280000 false {x: 5 y: 7} {7 8} "foo: Hello"
-2 6.280000 false {x: 42 y: 43} {7 8} "foo: Hello"
-2 6.280000 false {x: 42 y: 43} {9 10} "foo: Hello"
-2 6.280000 false {x: 42 y: 43} {9 10} "foo: Hello"
+2 3.140000 true {x: 5 y: 7} [7 8] "foo: Hello"
+2 6.280000 true {x: 5 y: 7} [7 8] "foo: Hello"
+2 6.280000 false {x: 5 y: 7} [7 8] "foo: Hello"
+2 6.280000 false {x: 42 y: 43} [7 8] "foo: Hello"
+2 6.280000 false {x: 42 y: 43} [9 10] "foo: Hello"
+2 6.280000 false {x: 42 y: 43} [9 10] "foo: Hello"
 
 
 >>> Date/time
@@ -604,15 +604,15 @@ foo: World
 
 >>> Untyped literals
 
-{2.000000 4.000000 -3.140000}
-{{12 13} {44 47} {0 -6}}
+[2.000000 4.000000 -3.140000]
+[[12 13] [44 47] [0 -6]]
 {w: 200 h: 100}
-{{11 3}: {"Psst!"} {3 7}: {} {5 7}: {"Hello" "World"}}
-{3 8 14}
-{"Haha" "Hoho"}
-{2.000000 4.000000}
+{[11 3]: ["Psst!"] [3 7]: [] [5 7]: ["Hello" "World"]}
+[3 8 14]
+["Haha" "Hoho"]
+[2.000000 4.000000]
 true
-{"Meow" "Moo"}
+["Meow" "Moo"]
 {w: 300 h: 400}
-{42 9 11}
-{{3 6} {5 7}}
+[42 9 11]
+[[3 6] [5 7]]

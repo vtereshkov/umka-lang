@@ -1147,7 +1147,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int maxD
 
         case TYPE_ARRAY:
         {
-            len += snprintf(buf, maxLen, "{");
+            len += snprintf(buf, maxLen, "[");
 
             char *itemPtr = (char *)slot->ptrVal;
             int itemSize = typeSizeNoCheck(type->base);
@@ -1162,13 +1162,13 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int maxD
                 itemPtr += itemSize;
             }
 
-            len += snprintf(buf + len, maxLen, "}");
+            len += snprintf(buf + len, maxLen, "]");
             break;
         }
 
         case TYPE_DYNARRAY:
         {
-            len += snprintf(buf, maxLen, "{");
+            len += snprintf(buf, maxLen, "[");
 
             DynArray *array = (DynArray *)slot->ptrVal;
             if (array && array->data)
@@ -1185,7 +1185,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int maxD
                 }
             }
 
-            len += snprintf(buf + len, maxLen, "}");
+            len += snprintf(buf + len, maxLen, "]");
             break;
         }
 
