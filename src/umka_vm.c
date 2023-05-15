@@ -3188,10 +3188,10 @@ int vmAsm(int ip, Instruction *code, DebugInfo *debugPerInstr, char *buf, int si
     {
         case OP_PUSH:
         {
-            if (instr->typeKind == TYPE_REAL)
-                chars += snprintf(buf + chars, nonneg(size - chars), " %lg", instr->operand.realVal);
-            else if (instr->typeKind == TYPE_PTR)
+            if (instr->typeKind == TYPE_PTR || instr->inlineOpcode == OP_DEREF)
                 chars += snprintf(buf + chars, nonneg(size - chars), " %p", instr->operand.ptrVal);
+            else if (instr->typeKind == TYPE_REAL)
+                chars += snprintf(buf + chars, nonneg(size - chars), " %lg", instr->operand.realVal);
             else
                 chars += snprintf(buf + chars, nonneg(size - chars), " %lld", (long long int)instr->operand.intVal);
             break;
