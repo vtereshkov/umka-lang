@@ -172,6 +172,10 @@ int main(int argc, char **argv)
         if (writeAsm)
         {
             char *asmFileName = malloc(strlen(argv[i]) + 4 + 1);
+            if (!asmFileName) {
+                fprintf(stderr, "Cannot allocate memory\n");
+                return 1;
+            }
             sprintf(asmFileName, "%s.asm", argv[i]);
             char *asmBuf = umkaAsm(umka);
             if (!asmBuf)
