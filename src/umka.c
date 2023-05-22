@@ -181,17 +181,23 @@ int main(int argc, char **argv)
             if (!asmBuf)
             {
                 fprintf(stderr, "Cannot output assembly listing\n");
+                free(asmFileName);
                 return 1;
             }
             FILE *asmFile = fopen(asmFileName, "w");
             if (!asmFile)
             {
                 fprintf(stderr, "Cannot open file %s\n", asmFileName);
+                free(asmBuf);
+                free(asmFileName);
                 return 1;
             }
             if (fwrite(asmBuf, strlen(asmBuf), 1, asmFile) != 1)
             {
                 fprintf(stderr, "Cannot write file %s\n", asmFileName);
+                fclose(asmFile);
+                free(asmBuf);
+                free(asmFileName);
                 return 1;
             }
 
