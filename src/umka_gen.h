@@ -14,6 +14,20 @@ typedef struct
 } Gotos;
 
 
+typedef enum
+{
+    GEN_NOTIFICATION_NONE,
+    GEN_NOTIFICATION_COPY_RESULT_TO_TEMP_VAR
+} GenNotificationKind;
+
+
+typedef struct
+{
+    GenNotificationKind kind;
+    int ip;
+} GenNotification;
+
+
 typedef struct
 {
     Instruction *code;
@@ -22,6 +36,7 @@ typedef struct
     int top;
     Gotos *breaks, *continues, *returns;
     DebugInfo *debug, *debugPerInstr;
+    GenNotification lastNotification;
     Error *error;
 } CodeGen;
 
@@ -55,6 +70,7 @@ void genSwapAssign   (CodeGen *gen, TypeKind typeKind, int structSize);
 void genChangeRefCnt            (CodeGen *gen, TokenKind tokKind, Type *type);
 void genChangeRefCntAssign      (CodeGen *gen, Type *type);
 void genSwapChangeRefCntAssign  (CodeGen *gen, Type *type);
+void genChangeLeftRefCntAssign  (CodeGen *gen, Type *type);
 
 void genUnary (CodeGen *gen, TokenKind tokKind, TypeKind typeKind);
 void genBinary(CodeGen *gen, TokenKind tokKind, TypeKind typeKind, int structSize);
@@ -121,6 +137,9 @@ int  genTryRemoveImmediateEntryPoint(CodeGen *gen);
 void genGotosProlog (CodeGen *gen, Gotos *gotos, int block);
 void genGotosAddStub(CodeGen *gen, Gotos *gotos);
 void genGotosEpilog (CodeGen *gen, Gotos *gotos);
+
+void genCopyResultToTempVar(CodeGen *gen, Type *type, int offset);
+int  genTryRemoveCopyResultToTempVar(CodeGen *gen);
 
 int genAsm(CodeGen *gen, char *buf, int size);
 

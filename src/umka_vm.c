@@ -2388,7 +2388,8 @@ static FORCE_INLINE void doChangeRefCntAssign(Fiber *fiber, HeapPages *pages, Er
     Type *type = (Type *)fiber->code[fiber->ip].operand.ptrVal;
 
     // Increase right-hand side ref count
-    doBasicChangeRefCnt(fiber, pages, rhs.ptrVal, type, TOK_PLUSPLUS);
+    if (fiber->code[fiber->ip].tokKind != TOK_MINUSMINUS)      // "--" means that the right-hand side ref count should not be increased
+        doBasicChangeRefCnt(fiber, pages, rhs.ptrVal, type, TOK_PLUSPLUS);
 
     // Decrease left-hand side ref count
     Slot lhsDeref = {.ptrVal = lhs};

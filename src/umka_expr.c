@@ -42,8 +42,16 @@ static void doPassParam(Compiler *comp, Type *formalParamType)
         genCallBuiltin(&comp->gen, formalParamType->kind, BUILTIN_NARROW);      // Convert 64-bit slot to narrower representation
     }
 
-    // Increase parameter's reference count
-    genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, formalParamType);
+    if (doTryRemoveCopyResultToTempVar(comp))
+    {
+        // Optimization: if the actual parameter is a function call, assume its reference count to be already increased before return
+        // The formal parameter variable will hold this additional reference, so we can remove the temporary "reference holder" variable
+    }
+    else
+    {
+        // General case: increase parameter's reference count
+        genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, formalParamType);
+    }
 
     // Copy structured parameter if passed by value
     if (typeStructured(formalParamType))
@@ -53,13 +61,25 @@ static void doPassParam(Compiler *comp, Type *formalParamType)
 
 void doCopyResultToTempVar(Compiler *comp, Type *type)
 {
-    IdentName tempName;
-    identTempVarName(&comp->idents, tempName);
-    Ident *temp = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, tempName, type, false);
+    Ident *resultCopy = identAllocTempVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, type, true);
+    genCopyResultToTempVar(&comp->gen, type, resultCopy->offset);
+}
 
-    genDup(&comp->gen);
-    doPushVarPtr(comp, temp);
-    genSwapAssign(&comp->gen, type->kind, typeSize(&comp->types, type));
+
+bool doTryRemoveCopyResultToTempVar(Compiler *comp)
+{
+    if (!comp->idents.lastTempVarForResult)
+        return false;
+
+    const int resultCopyOffset = genTryRemoveCopyResultToTempVar(&comp->gen);
+    if (resultCopyOffset == 0)
+        return false;
+
+    if (resultCopyOffset != comp->idents.lastTempVarForResult->offset)
+        comp->error.handler(comp->error.context, "Result copy optimization failed");
+
+    comp->idents.lastTempVarForResult->used = false;
+    return true;
 }
 
 
@@ -241,10 +261,7 @@ static void doDynArrayToDynArrayConv(Compiler *comp, Type *dest, Type **src, Con
     genSwapAssign(&comp->gen, TYPE_INT, 0);
 
     // Allocate destination array: destArray = make(dest, length)
-    IdentName destArrayName;
-    identTempVarName(&comp->idents, destArrayName);
-
-    Ident *destArray = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, destArrayName, dest, false);
+    Ident *destArray = identAllocTempVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, dest, false);
     doZeroVar(comp, destArray);
 
     genPushGlobalPtr(&comp->gen, dest);
@@ -1594,9 +1611,7 @@ static void parseArrayOrStructLiteral(Compiler *comp, Type **type, Const *consta
     }
     else
     {
-        IdentName arrayOrStructName;
-        identTempVarName(&comp->idents, arrayOrStructName);
-        arrayOrStruct = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, arrayOrStructName, *type, false);
+        arrayOrStruct = identAllocTempVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, *type, false);
         doZeroVar(comp, arrayOrStruct);
     }
 
@@ -1704,9 +1719,7 @@ static void parseDynArrayLiteral(Compiler *comp, Type **type, Const *constant)
         lexEat(&comp->lex, TOK_RBRACE);
 
     // Allocate array
-    IdentName staticArrayName;
-    identTempVarName(&comp->idents, staticArrayName);
-    Ident *staticArray = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, staticArrayName, staticArrayType, false);
+    Ident *staticArray = identAllocTempVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, staticArrayType, false);
     doZeroVar(comp, staticArray);
 
     // Assign items
@@ -1732,9 +1745,7 @@ static void parseMapLiteral(Compiler *comp, Type **type, Const *constant)
         comp->error.handler(comp->error.context, "Map literals are not allowed for constants");
 
     // Allocate map
-    IdentName mapName;
-    identTempVarName(&comp->idents, mapName);
-    Ident *mapIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, mapName, *type, false);
+    Ident *mapIdent = identAllocTempVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, *type, false);
     doZeroVar(comp, mapIdent);
 
     genPushGlobalPtr(&comp->gen, *type);
@@ -1787,11 +1798,8 @@ static void parseFnLiteral(Compiler *comp, Type **type, Const *constant)
     if (comp->blocks.top != 0)
         genNop(&comp->gen);                                     // Jump over the nested function block (stub)
 
-    IdentName tempName;
-    identTempVarName(&comp->idents, tempName);
-
     Const fnConstant = {.intVal = comp->gen.ip};
-    Ident *fn = identAddConst(&comp->idents, &comp->modules, &comp->blocks, tempName, *type, false, fnConstant);
+    Ident *fn = identAddTempConst(&comp->idents, &comp->modules, &comp->blocks, *type, fnConstant);
     parseFnBlock(comp, fn);
 
     if (comp->blocks.top != 0)
@@ -2512,9 +2520,7 @@ void parseExprOrUntypedLiteralList(Compiler *comp, Type **type, Type *destType, 
             constant->ptrVal = storageAdd(&comp->storage, typeSize(&comp->types, *type));
         else
         {
-            IdentName exprListName;
-            identTempVarName(&comp->idents, exprListName);
-            exprList = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, exprListName, *type, false);
+            exprList = identAllocTempVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, *type, false);
             doZeroVar(comp, exprList);
         }
 

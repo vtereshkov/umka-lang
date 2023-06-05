@@ -15,7 +15,7 @@ static void parseBlock(Compiler *comp);
 void doGarbageCollection(Compiler *comp, int block)
 {
     for (Ident *ident = comp->idents.first; ident; ident = ident->next)
-        if (ident->kind == IDENT_VAR && typeGarbageCollected(ident->type) && ident->block == block && strcmp(ident->name, "__result") != 0)
+        if (ident->kind == IDENT_VAR && typeGarbageCollected(ident->type) && ident->block == block && !(ident->temporary && !ident->used) && strcmp(ident->name, "__result") != 0)
         {
             doPushVarPtr(comp, ident);
             genDeref(&comp->gen, ident->type->kind);
@@ -140,7 +140,20 @@ static void parseSingleAssignmentStmt(Compiler *comp, Type *type, Const *varPtrC
     if (varPtrConst)                                // Initialize global variable
         constAssign(&comp->consts, varPtrConst->ptrVal, rightConstant, type->kind, typeSize(&comp->types, type));
     else                                            // Assign to variable
-        genChangeRefCntAssign(&comp->gen, type);
+    {
+        if (doTryRemoveCopyResultToTempVar(comp))
+        {
+            // Optimization: if the right-hand side is a function call, assume its reference count to be already increased before return
+            // The left-hand side will hold this additional reference, so we can remove the temporary "reference holder" variable
+            genChangeLeftRefCntAssign(&comp->gen, type);
+
+        }
+        else
+        {
+            // General case: update reference counts for both sides
+            genChangeRefCntAssign(&comp->gen, type);
+        }
+    }
 }
 
 
@@ -247,8 +260,16 @@ static void parseSingleDeclAssignmentStmt(Compiler *comp, IdentName name, bool e
         constAssign(&comp->consts, ident->ptr, rightConstant, rightType->kind, typeSize(&comp->types, rightType));
     else                        // Assign to variable
     {
-        // Increase right-hand side reference count
-        genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, rightType);
+        if (doTryRemoveCopyResultToTempVar(comp))
+        {
+            // Optimization: if the right-hand side is a function call, assume its reference count to be already increased before return
+            // The left-hand side will hold this additional reference, so we can remove the temporary "reference holder" variable
+        }
+        else
+        {
+            // General case: increase right-hand side reference count
+            genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, rightType);
+        }
 
         doPushVarPtr(comp, ident);
         genSwapAssign(&comp->gen, rightType->kind, typeSize(&comp->types, rightType));
@@ -861,8 +882,16 @@ static void parseReturnStmt(Compiler *comp)
 
     if (sig->resultType->kind != TYPE_VOID)
     {
-        // Increase result reference count
-        genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, sig->resultType);
+        if (doTryRemoveCopyResultToTempVar(comp))
+        {
+            // Optimization: if the result expression is a function call, assume its reference count to be already increased before the inner return
+            // The outer caller will hold this additional reference, so we can remove the temporary "reference holder" variable
+        }
+        else
+        {
+            // General case: increase result reference count
+            genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, sig->resultType);
+        }
         genPopReg(&comp->gen, VM_REG_RESULT);
     }
 
