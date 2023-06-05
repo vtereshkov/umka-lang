@@ -7,9 +7,16 @@
 #include "umka_ident.h"
 
 
+static void identTempName(Idents *idents, char *buf)
+{
+    snprintf(buf, DEFAULT_STR_LEN + 1, "__temp%d", idents->tempVarNameSuffix++);
+}
+
+
 void identInit(Idents *idents, Error *error)
 {
     idents->first = idents->last = NULL;
+    idents->lastTempVarForResult = NULL;
     idents->tempVarNameSuffix = 0;
     idents->error = error;
 }
@@ -174,6 +181,7 @@ static Ident *identAdd(Idents *idents, Modules *modules, Blocks *blocks, IdentKi
     ident->block             = blocks->item[blocks->top].block;
     ident->exported          = exported;
     ident->globallyAllocated = false;
+    ident->temporary         = false;
     ident->used              = exported || ident->module == 0 || ident->name[0] == '_' || identIsMain(ident);  // Exported, predefined, temporary identifiers and main() are always treated as used
     ident->prototypeOffset   = -1;
     ident->next              = NULL;
@@ -195,6 +203,17 @@ Ident *identAddConst(Idents *idents, Modules *modules, Blocks *blocks, const cha
 {
     Ident *ident = identAdd(idents, modules, blocks, IDENT_CONST, name, type, exported);
     ident->constant = constant;
+    return ident;
+}
+
+
+Ident *identAddTempConst(Idents *idents, Modules *modules, Blocks *blocks, Type *type, Const constant)
+{
+    IdentName tempName;
+    identTempName(idents, tempName);
+
+    Ident *ident = identAddConst(idents, modules, blocks, tempName, type, false, constant);
+    ident->temporary = true;
     return ident;
 }
 
@@ -272,6 +291,25 @@ Ident *identAllocVar(Idents *idents, Types *types, Modules *modules, Blocks *blo
 }
 
 
+Ident *identAllocTempVar(Idents *idents, Types *types, Modules *modules, Blocks *blocks, Type *type, bool isFuncResult)
+{
+    IdentName tempName;
+    identTempName(idents, tempName);
+
+    Ident *ident = identAllocVar(idents, types, modules, blocks, tempName, type, false);
+    ident->temporary = true;
+
+    if (isFuncResult)
+    {
+        if (blocks->top == 0)
+            idents->error->handler(idents->error->context, "Temporary variable must be local");
+        idents->lastTempVarForResult = ident;
+    }
+
+    return ident;
+}
+
+
 Ident *identAllocParam(Idents *idents, Types *types, Modules *modules, Blocks *blocks, Signature *sig, int index)
 {
     int paramSizeUpToIndex = typeParamSizeUpTo(types, sig, index);
@@ -281,13 +319,6 @@ Ident *identAllocParam(Idents *idents, Types *types, Modules *modules, Blocks *b
     Ident *ident = identAddLocalVar(idents, modules, blocks, sig->param[index]->name, sig->param[index]->type, false, offset);
     ident->used = true;                                                     // Do not warn about unused parameters
     return ident;
-}
-
-
-char *identTempVarName(Idents *idents, char *buf)
-{
-    snprintf(buf, DEFAULT_STR_LEN + 1, "__temp%d", idents->tempVarNameSuffix++);
-    return buf;
 }
 
 
@@ -302,7 +333,7 @@ char *identMethodNameWithRcv(Ident *method, char *buf, int size)
 
 void identWarnIfUnused(Idents *idents, Ident *ident)
 {
-    if (!ident->used)
+    if (!ident->temporary && !ident->used)
     {
         idents->error->warningHandler(idents->error->context, "%s %s is not used", (ident->kind == IDENT_MODULE ? "Module" : "Identifier"), ident->name);
         ident->used = true;
