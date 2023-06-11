@@ -470,6 +470,12 @@ void blocksLeave(Blocks *blocks)
 }
 
 
+void blocksReenter(Blocks *blocks)
+{
+    blocks->top++;
+}
+
+
 int blocksCurrent(Blocks *blocks)
 {
     return blocks->item[blocks->top].block;

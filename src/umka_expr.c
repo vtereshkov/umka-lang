@@ -2406,8 +2406,8 @@ static void parseLogicalTerm(Compiler *comp, Type **type, Const *constant)
 }
 
 
-// expr = logicalTerm {"||" logicalTerm}.
-void parseExpr(Compiler *comp, Type **type, Const *constant)
+// logicalExpr = logicalTerm {"||" logicalTerm}.
+static void parseLogicalExpr(Compiler *comp, Type **type, Const *constant)
 {
     parseLogicalTerm(comp, type, constant);
 
@@ -2446,6 +2446,102 @@ void parseExpr(Compiler *comp, Type **type, Const *constant)
 
             genShortCircuitEpilog(&comp->gen);
         }
+    }
+}
+
+
+// expr = logicalExpr ["?" expr ":" expr].
+void parseExpr(Compiler *comp, Type **type, Const *constant)
+{
+    parseLogicalExpr(comp, type, constant);
+
+    // "?"
+    if (comp->lex.tok.kind == TOK_QUESTION)
+    {
+        typeAssertCompatible(&comp->types, comp->boolType, *type, false);
+        lexNext(&comp->lex);
+
+        Type *leftType = NULL, *rightType = NULL;
+
+        if (constant)
+        {
+            Const leftConstantBuf, *leftConstant = &leftConstantBuf;
+            parseExpr(comp, &leftType, leftConstant);
+
+            // ":"
+            lexEat(&comp->lex, TOK_COLON);
+
+            Const rightConstantBuf, *rightConstant = &rightConstantBuf;
+            parseExpr(comp, &rightType, rightConstant);
+
+            // Convert to left-hand side's type
+            doImplicitTypeConv(comp, leftType, &rightType, rightConstant, false);
+            typeAssertCompatible(&comp->types, leftType, rightType, false);
+
+            *constant = constant->intVal ? (*leftConstant) : (*rightConstant);
+        }
+        else
+        {
+            genIfCondEpilog(&comp->gen);
+
+            // Left-hand side expression
+            blocksEnter(&comp->blocks, NULL);
+
+            parseExpr(comp, &leftType, NULL);
+
+            Ident *result = NULL;
+            if (typeGarbageCollected(leftType))
+            {
+                // Create a temporary result variable in the outer block, so that it could outlive both left- and right-hand side expression blocks
+                blocksLeave(&comp->blocks);
+                result = identAllocTempVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, leftType, false);
+                blocksReenter(&comp->blocks);
+
+                // Assign to result variable
+                genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, leftType);
+                doPushVarPtr(comp, result);
+                genSwapAssign(&comp->gen, result->type->kind, typeSize(&comp->types, result->type));
+            }
+
+            doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+            identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
+            blocksLeave(&comp->blocks);
+
+            // ":"
+            lexEat(&comp->lex, TOK_COLON);
+            genElseProlog(&comp->gen);
+
+            // Right-hand side expression
+            blocksEnter(&comp->blocks, NULL);
+
+            parseExpr(comp, &rightType, NULL);
+
+            // Convert to left-hand side's type
+            doImplicitTypeConv(comp, leftType, &rightType, NULL, false);
+            typeAssertCompatible(&comp->types, leftType, rightType, false);
+
+            if (typeGarbageCollected(leftType))
+            {
+                // Assign to result variable
+                genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, leftType);
+                doPushVarPtr(comp, result);
+                genSwapAssign(&comp->gen, result->type->kind, typeSize(&comp->types, result->type));
+            }
+
+            doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+            identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
+            blocksLeave(&comp->blocks);
+
+            genIfElseEpilog(&comp->gen);
+
+            if (typeGarbageCollected(leftType))
+            {
+                doPushVarPtr(comp, result);
+                genDeref(&comp->gen, result->type->kind);
+            }
+        }
+
+        *type = leftType;
     }
 }
 
