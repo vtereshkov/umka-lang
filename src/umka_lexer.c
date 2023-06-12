@@ -65,6 +65,7 @@ static const char *spelling [] =
     "<",
     ">",
     "=",
+    "?",
     "!",
     "!=",
     "<=",
@@ -529,6 +530,13 @@ static void lexOperator(Lexer *lex)
             }
             else
                 lex->tok.kind = TOK_EQ;
+            break;
+        }
+
+        case '?':
+        {
+            lex->tok.kind = TOK_QUESTION;
+            ch = lexChar(lex);
             break;
         }
 

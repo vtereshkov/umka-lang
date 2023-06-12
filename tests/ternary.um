@@ -1,0 +1,49 @@
+fn f(x: int): real {
+	return x < 3 ? 42.0 : 17
+}
+
+g1 := 2 < 3 ? 42.0 : 17
+g2 := 4 < 3 ? 42.0 : 17
+
+const (
+	gexc = '!'
+	garg = 'T'
+	gvehicle = (garg == 'B') ? "bus" + gexc : 
+	           (garg == 'A') ? "airplane" + gexc : 
+	           (garg == 'T') ? "train" + gexc : 
+	           (garg == 'C') ? "car" + gexc : 
+	           (garg == 'H') ? "horse" + gexc : 
+	                           "feet" + gexc
+)
+
+fn test*() {
+	printf("%v %v\n", f(2), f(4))
+	printf("%v %v\n", g1, g2)  
+
+	for i := 0; i < 10; i++ {
+		s := "Hello" + "World"
+		s = i % 2 == 0 ? sprintf("%d %d ", 5, 6) + sprintf("%f %f ", 7.0, 8.0) + sprintf("%v %v ", 9, 10) : sprintf("%d %d ", 15, 16) + "and nothing more"
+		printf("%d: %s\n", i, s)
+	}
+
+	for i := 0; i < 10; i++ {
+			p := i > 3 && i < 7 ? []real{3, 5.5, 7} : []real([]int{-4, 12})
+			printf("%d: %v\n", i, p)	
+	}
+
+
+	exc := '!'
+	arg := 'T'
+	vehicle := (arg == 'B') ? "bus" + exc : 
+	           (arg == 'A') ? "airplane" + exc : 
+	           (arg == 'T') ? "train" + exc : 
+	           (arg == 'C') ? "car" + exc : 
+	           (arg == 'H') ? "horse" + exc : 
+	                          "feet" + exc
+
+	printf("%s %s\n", vehicle, gvehicle)
+}
+
+fn main() {
+	test()
+}

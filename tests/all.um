@@ -33,6 +33,7 @@ import (
     "defparam.um"
     "datetime.um"
     "untypedlit.um"
+    "ternary.um"
 )
 
 fn main() {
@@ -70,4 +71,5 @@ fn main() {
     printf("\n\n>>> Default parameters\n\n");       defparam.test()
     printf("\n\n>>> Date/time\n\n");                datetime.test()
     printf("\n\n>>> Untyped literals\n\n");         untypedlit.test()
+    printf("\n\n>>> Ternary operator\n\n");         ternary.test()
 }

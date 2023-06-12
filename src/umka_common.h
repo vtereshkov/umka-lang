@@ -193,6 +193,7 @@ void  moduleAssertRegularizePath(Modules *modules, const char *path, const char 
 void blocksInit   (Blocks *blocks, Error *error);
 void blocksFree   (Blocks *blocks);
 void blocksEnter  (Blocks *blocks, struct tagIdent *fn);
+void blocksReenter(Blocks *blocks);
 void blocksLeave  (Blocks *blocks);
 int  blocksCurrent(Blocks *blocks);
 

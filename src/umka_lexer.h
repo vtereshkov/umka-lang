@@ -59,6 +59,7 @@ typedef enum
     TOK_LESS,
     TOK_GREATER,
     TOK_EQ,
+    TOK_QUESTION,
     TOK_NOT,
     TOK_NOTEQ,
     TOK_LESSEQ,
