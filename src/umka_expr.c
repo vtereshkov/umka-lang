@@ -2497,7 +2497,8 @@ void parseExpr(Compiler *comp, Type **type, Const *constant)
                 result = identAllocTempVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, leftType, false);
                 blocksReenter(&comp->blocks);
 
-                // Assign to result variable
+                // Copy result to temporary variable
+                genDup(&comp->gen);
                 genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, leftType);
                 doPushVarPtr(comp, result);
                 genSwapAssign(&comp->gen, result->type->kind, typeSize(&comp->types, result->type));
@@ -2522,7 +2523,8 @@ void parseExpr(Compiler *comp, Type **type, Const *constant)
 
             if (typeGarbageCollected(leftType))
             {
-                // Assign to result variable
+                // Copy result to temporary variable
+                genDup(&comp->gen);
                 genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, leftType);
                 doPushVarPtr(comp, result);
                 genSwapAssign(&comp->gen, result->type->kind, typeSize(&comp->types, result->type));
@@ -2533,12 +2535,6 @@ void parseExpr(Compiler *comp, Type **type, Const *constant)
             blocksLeave(&comp->blocks);
 
             genIfElseEpilog(&comp->gen);
-
-            if (typeGarbageCollected(leftType))
-            {
-                doPushVarPtr(comp, result);
-                genDeref(&comp->gen, result->type->kind);
-            }
         }
 
         *type = leftType;

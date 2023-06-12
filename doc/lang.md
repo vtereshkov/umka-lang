@@ -111,7 +111,7 @@ Umka has a set of arithmetical, bitwise, logical, relation operators, as well as
 ```
 +    -    *    /    %    &    |    ~    <<    >>
 +=   -=   *=   /=   %=   &=   |=   ~=   <<=   >>=
-&&   ||   !    ++   --
+&&   ||   ?    !    ++   --
 ==   <    >    !=   <=   >=
 =    :=   (    )    [    ]    {    }    
 ^    ;    :    .    ..
@@ -958,7 +958,8 @@ Syntax:
 
 ```
 exprOrLit     = expr | untypedLiteral.
-expr          = logicalTerm {"||" logicalTerm}.
+expr          = logicalExpr ["?" expr ":" expr].
+logicalExpr   = logicalTerm {"||" logicalTerm}.
 logicalTerm   = relation {"&&" relation}.
 relation      = relationTerm [("==" | "!=" | "<" | "<=" | ">" | ">=") relationTerm].
 relationTerm  = term {("+" | "-" | "|" | "~") term}.
@@ -975,7 +976,7 @@ Examples:
 "Hello, " + person.name + '\n'
 p != null && p[i] > 0
 &Vec{2, 5}
-{"Hello", "World"}      // Literal type omitted
+x < 3 ? 42.5 : 60
 ```
 
 #### Unary operators
@@ -1024,14 +1025,23 @@ Operand types are implicitly converted in two steps:
 * The right operand type is converted to the left operand type
 * The left operand type is converted to the right operand type
 
-##### Operator precedence
+#### Ternary operator
+
+```
+a ? b : c
+```
+
+The `? :` operator performs the conditional evaluation. For any expressions `a`, `b` and `c`, if `a` is `true`, it evaluates to `b` and skips `c`, otherwise it evaluates to `c` and skips `b`. The type of `a` must be compatible with `bool`. The operator result has the same type as `b`. The type of `c` is implicitly converted to the type of `b`. The expression `a` cannot be a ternary operator itself.
+
+#### Operator precedence
 
 ```
 *   /   %   <<   >>   &          Highest
 +   -   |   ~
 ==  !=  <   <=   >   >=
 &&
-||                               Lowest
+||
+? :                              Lowest
 ```
 
 ## Statements
@@ -1406,7 +1416,8 @@ continueStmt        = "continue".
 returnStmt          = "return" [exprOrLitList].
 exprOrLitList       = exprOrLit {"," exprOrLit}.
 exprOrLit           = expr | untypedLiteral.
-expr                = logicalTerm {"||" logicalTerm}.
+expr                = logicalExpr ["?" expr ":" expr].
+logicalExpr         = logicalTerm {"||" logicalTerm}.
 logicalTerm         = relation {"&&" relation}.
 relation            = relationTerm 
                       [("==" | "!=" | "<" | "<=" | ">" | ">=") relationTerm].
