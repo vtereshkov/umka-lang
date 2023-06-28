@@ -746,7 +746,7 @@ static void lexStrLiteral(Lexer *lex)
     lookaheadLex.tok.strVal = NULL;
     const int size = lexStrLiteralAndGetSize(&lookaheadLex);
 
-    lex->tok.strVal = storageAdd(lex->storage, size);
+    lex->tok.strVal = storageAddStr(lex->storage, size - 1);
     lexStrLiteralAndGetSize(lex);
 }
 

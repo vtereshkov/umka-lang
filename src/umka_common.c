@@ -55,6 +55,20 @@ char *storageAdd(Storage *storage, int size)
 }
 
 
+char *storageAddStr(Storage *storage, int len)
+{
+    StrDimensions dims = {.len = len, .capacity = len + 1};
+
+    char *dimsAndData = storageAdd(storage, sizeof(StrDimensions) + dims.capacity);
+    *(StrDimensions *)dimsAndData = dims;
+
+    char *data = dimsAndData + sizeof(StrDimensions);
+    data[len] = 0;
+
+    return data;
+}
+
+
 // Modules
 
 static const char *moduleImplLibSuffix()

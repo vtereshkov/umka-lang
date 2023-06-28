@@ -6,6 +6,7 @@
     #define FORCE_INLINE __attribute__((always_inline)) inline
 #endif
 
+#define UMKA_STR_DEBUG
 //#define UMKA_REF_CNT_DEBUG
 //#define UMKA_DETAILED_LEAK_INFO
 
@@ -113,51 +114,13 @@ static const char *builtinSpelling [] =
 };
 
 
-// Strings
-
-static FORCE_INLINE void cacheReset(StrLenCache* cache)
-{
-    memset(cache, 0, sizeof(StrLenCache));
-}
-
-
-static FORCE_INLINE void cacheAdd(StrLenCache* cache, const char *str, int len)
-{
-    cache->data[cache->pos].str = str;
-    cache->data[cache->pos].len = len;
-    cache->pos = (cache->pos + 1) % VM_STRLEN_CACHE_SIZE;
-}
-
-
-static FORCE_INLINE int cacheFind(StrLenCache* cache, const char *str)
-{
-    for (int i = 0; i < VM_STRLEN_CACHE_SIZE; i++)
-        if (str == cache->data[i].str)
-            return cache->data[i].len;
-    return -1;
-}
-
-
-static FORCE_INLINE int strlenCached(StrLenCache* cache, const char *str)
-{
-    int len = cacheFind(cache, str);
-    if (len >= 0)
-        return len;
-
-    len = strlen(str);
-    cacheAdd(cache, str, len);
-    return len;
-}
-
-
 // Memory management
 
-static void pageInit(HeapPages *pages, Fiber *fiber, StrLenCache* cache, Error *error)
+static void pageInit(HeapPages *pages, Fiber *fiber, Error *error)
 {
     pages->first = pages->last = NULL;
     pages->freeId = 1;
     pages->fiber = fiber;
-    pages->strLenCache = cache;
     pages->error = error;
 }
 
@@ -403,7 +366,6 @@ static FORCE_INLINE int chunkChangeRefCnt(HeapPages *pages, HeapPage *page, void
     if (page->refCnt == 0)
     {
         pageRemove(pages, page);
-        cacheReset(pages->strLenCache);
         return 0;
     }
 
@@ -532,17 +494,15 @@ void vmInit(VM *vm, int stackSize, bool fileSystemEnabled, Error *error)
 {
     vm->fiber = vm->mainFiber = malloc(sizeof(Fiber));
     vm->fiber->refCntChangeCandidates = &vm->refCntChangeCandidates;
-    vm->fiber->strLenCache = &vm->strLenCache;
     vm->fiber->alive = true;
     vm->fiber->fileSystemEnabled = fileSystemEnabled;
 
-    pageInit(&vm->pages, vm->fiber, &vm->strLenCache, error);
+    pageInit(&vm->pages, vm->fiber, error);
 
     vm->fiber->stack = chunkAlloc(&vm->pages, stackSize * sizeof(Slot), NULL, NULL, true, error);
     vm->fiber->stackSize = stackSize;
 
     candidateInit(&vm->refCntChangeCandidates);
-    cacheReset(&vm->strLenCache);
 
     memset(&vm->hooks, 0, sizeof(vm->hooks));
     vm->terminatedNormally = false;
@@ -572,8 +532,19 @@ void vmReset(VM *vm, Instruction *code, DebugInfo *debugPerInstr)
     vm->fiber->debugPerInstr = debugPerInstr;
     vm->fiber->ip = 0;
     vm->fiber->top = vm->fiber->base = vm->fiber->stack + vm->fiber->stackSize - 1;
+}
 
-    cacheReset(vm->fiber->strLenCache);
+
+static FORCE_INLINE void doCheckStr(const char *str, Error *error)
+{
+#ifdef UMKA_STR_DEBUG
+    if (!str)
+        return;
+
+    const StrDimensions *dims = getStrDims(str);
+    if (dims->len != strlen(str) || dims->capacity < dims->len + 1)
+        error->runtimeHandler(error->context, "Invalid string: %s", str);
+#endif
 }
 
 
@@ -616,7 +587,12 @@ static FORCE_INLINE void doBasicDeref(Slot *slot, TypeKind typeKind, Error *erro
         case TYPE_REAL:         slot->realVal    = *(double         *)slot->ptrVal; break;
         case TYPE_PTR:          slot->ptrVal     = *(void *         *)slot->ptrVal; break;
         case TYPE_WEAKPTR:      slot->weakPtrVal = *(uint64_t       *)slot->ptrVal; break;
-        case TYPE_STR:          slot->ptrVal     = *(void *         *)slot->ptrVal; break;
+        case TYPE_STR:
+        {
+            slot->ptrVal = *(void **)slot->ptrVal;
+            doCheckStr((char *)slot->ptrVal, error);
+            break;
+        }
         case TYPE_ARRAY:
         case TYPE_DYNARRAY:
         case TYPE_MAP:
@@ -655,7 +631,12 @@ static FORCE_INLINE void doBasicAssign(void *lhs, Slot rhs, TypeKind typeKind, i
         case TYPE_REAL:         *(double        *)lhs = rhs.realVal; break;
         case TYPE_PTR:          *(void *        *)lhs = rhs.ptrVal;  break;
         case TYPE_WEAKPTR:      *(uint64_t      *)lhs = rhs.weakPtrVal; break;
-        case TYPE_STR:          *(void *        *)lhs = rhs.ptrVal;  break;
+        case TYPE_STR:
+        {
+            doCheckStr((char *)rhs.ptrVal, error);
+            *(void **)lhs = rhs.ptrVal;
+            break;
+        }
         case TYPE_ARRAY:
         case TYPE_DYNARRAY:
         case TYPE_MAP:
@@ -806,6 +787,8 @@ static FORCE_INLINE void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, voi
 
             case TYPE_STR:
             {
+                doCheckStr((char *)ptr, pages->error);
+
                 HeapPage *page = pageFind(pages, ptr, true);
                 if (!page)
                     break;
@@ -903,6 +886,34 @@ static FORCE_INLINE void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, voi
 }
 
 
+static FORCE_INLINE char *doAllocStr(HeapPages *pages, int64_t len, Error *error)
+{
+    StrDimensions dims = {.len = len, .capacity = 2 * (len + 1)};
+
+    char *dimsAndData = chunkAlloc(pages, sizeof(StrDimensions) + dims.capacity, NULL, NULL, false, error);
+    *(StrDimensions *)dimsAndData = dims;
+
+    char *data = dimsAndData + sizeof(StrDimensions);
+    data[len] = 0;
+
+    return data;
+}
+
+
+static FORCE_INLINE char *doGetEmptyStr()
+{
+    StrDimensions dims = {.len = 0, .capacity = 1};
+
+    static char dimsAndData[sizeof(StrDimensions) + 1];
+    *(DynArrayDimensions *)dimsAndData = dims;
+
+    char *data = dimsAndData + sizeof(StrDimensions);
+    data[0] = 0;
+
+    return data;
+}
+
+
 static FORCE_INLINE void doAllocDynArray(HeapPages *pages, DynArray *array, Type *type, int64_t len, Error *error)
 {
     array->type     = type;
@@ -935,7 +946,7 @@ static FORCE_INLINE void doAllocMap(HeapPages *pages, Map *map, Type *type, Erro
 }
 
 
-static void doGetMapKeyBytes(Slot key, Type *keyType, StrLenCache* cache, Error *error, char **keyBytes, int *keySize)
+static void doGetMapKeyBytes(Slot key, Type *keyType, Error *error, char **keyBytes, int *keySize)
 {
     switch (keyType->kind)
     {
@@ -962,8 +973,9 @@ static void doGetMapKeyBytes(Slot key, Type *keyType, StrLenCache* cache, Error 
         }
         case TYPE_STR:
         {
-            *keyBytes = key.ptrVal ? (char *)key.ptrVal : "";
-            *keySize = strlenCached(cache, *keyBytes) + 1;
+            doCheckStr((char *)key.ptrVal, error);
+            *keyBytes = key.ptrVal ? (char *)key.ptrVal : doGetEmptyStr();
+            *keySize = getStrDims(*keyBytes)->len + 1;
             break;
         }
         case TYPE_ARRAY:
@@ -983,7 +995,7 @@ static void doGetMapKeyBytes(Slot key, Type *keyType, StrLenCache* cache, Error 
 }
 
 
-static FORCE_INLINE MapNode *doGetMapNode(Map *map, Slot key, bool createMissingNodes, HeapPages *pages, StrLenCache* cache, Error *error, MapNode ***nodePtrInParent)
+static FORCE_INLINE MapNode *doGetMapNode(Map *map, Slot key, bool createMissingNodes, HeapPages *pages, Error *error, MapNode ***nodePtrInParent)
 {
     if (!map || !map->root)
         error->runtimeHandler(error->context, "Map is null");
@@ -992,7 +1004,7 @@ static FORCE_INLINE MapNode *doGetMapNode(Map *map, Slot key, bool createMissing
     char *keyBytes = (char *)&keyBytesBuffer;
     int keySize = 0;
 
-    doGetMapKeyBytes(key, typeMapKey(map->type), cache, error, &keyBytes, &keySize);
+    doGetMapKeyBytes(key, typeMapKey(map->type), error, &keyBytes, &keySize);
 
     if (!keyBytes)
         error->runtimeHandler(error->context, "Map key is null");
@@ -1112,7 +1124,7 @@ static FORCE_INLINE void doGetMapKeys(Map *map, void *keys, Error *error)
 }
 
 
-static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int maxDepth, StrLenCache* cache, Error *error)
+static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int maxDepth, Error *error)
 {
     int len = 0;
     if (maxDepth == 0)
@@ -1143,8 +1155,12 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int maxD
         case TYPE_REAL:     len = snprintf(buf, maxLen, "%lg", slot->realVal);                                               break;
         case TYPE_PTR:      len = snprintf(buf, maxLen, "%p", slot->ptrVal);                                                 break;
         case TYPE_WEAKPTR:  len = snprintf(buf, maxLen, "%llx", (unsigned long long int)slot->weakPtrVal);                   break;
-        case TYPE_STR:      len = snprintf(buf, maxLen, "\"%s\"", slot->ptrVal ? (char *)slot->ptrVal : "");                 break;
-
+        case TYPE_STR:
+        {
+            doCheckStr((char *)slot->ptrVal, error);
+            len = snprintf(buf, maxLen, "\"%s\"", slot->ptrVal ? (char *)slot->ptrVal : "");
+            break;
+        }
         case TYPE_ARRAY:
         {
             len += snprintf(buf, maxLen, "[");
@@ -1156,7 +1172,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int maxD
             {
                 Slot itemSlot = {.ptrVal = itemPtr};
                 doBasicDeref(&itemSlot, type->base->kind, error);
-                len += doFillReprBuf(&itemSlot, type->base, buf + len, maxLen, maxDepth - 1, cache, error);
+                len += doFillReprBuf(&itemSlot, type->base, buf + len, maxLen, maxDepth - 1, error);
                 if (i < type->numItems - 1)
                     len += snprintf(buf + len, maxLen, " ");
                 itemPtr += itemSize;
@@ -1178,7 +1194,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int maxD
                 {
                     Slot itemSlot = {.ptrVal = itemPtr};
                     doBasicDeref(&itemSlot, type->base->kind, error);
-                    len += doFillReprBuf(&itemSlot, type->base, buf + len, maxLen, maxDepth - 1, cache, error);
+                    len += doFillReprBuf(&itemSlot, type->base, buf + len, maxLen, maxDepth - 1, error);
                     if (i < getDims(array)->len - 1)
                         len += snprintf(buf + len, maxLen, " ");
                     itemPtr += array->itemSize;
@@ -1209,17 +1225,17 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int maxD
                 {
                     Slot keySlot = {.ptrVal = keyPtr};
                     doBasicDeref(&keySlot, keyType->kind, error);
-                    len += doFillReprBuf(&keySlot, keyType, buf + len, maxLen, maxDepth - 1, cache, error);
+                    len += doFillReprBuf(&keySlot, keyType, buf + len, maxLen, maxDepth - 1, error);
 
                     len += snprintf(buf + len, maxLen, ": ");
 
-                    MapNode *node = doGetMapNode(map, keySlot, false, NULL, cache, error, NULL);
+                    MapNode *node = doGetMapNode(map, keySlot, false, NULL, error, NULL);
                     if (!node)
                         error->runtimeHandler(error->context, "Map node is null");
 
                     Slot itemSlot = {.ptrVal = node->data};
                     doBasicDeref(&itemSlot, itemType->kind, error);
-                    len += doFillReprBuf(&itemSlot, itemType, buf + len, maxLen, maxDepth - 1, cache, error);
+                    len += doFillReprBuf(&itemSlot, itemType, buf + len, maxLen, maxDepth - 1, error);
 
                     if (i < map->root->len - 1)
                         len += snprintf(buf + len, maxLen, " ");
@@ -1246,7 +1262,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int maxD
                 doBasicDeref(&fieldSlot, type->field[i]->type->kind, error);
                 if (!skipNames)
                     len += snprintf(buf + len, maxLen, "%s: ", type->field[i]->name);
-                len += doFillReprBuf(&fieldSlot, type->field[i]->type, buf + len, maxLen, maxDepth - 1, cache, error);
+                len += doFillReprBuf(&fieldSlot, type->field[i]->type, buf + len, maxLen, maxDepth - 1, error);
                 if (i < type->numItems - 1)
                     len += snprintf(buf + len, maxLen, " ");
             }
@@ -1262,7 +1278,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int maxD
             {
                 Slot selfSlot = {.ptrVal = interface->self};
                 doBasicDeref(&selfSlot, interface->selfType->base->kind, error);
-                len += doFillReprBuf(&selfSlot, interface->selfType->base, buf + len, maxLen, maxDepth - 1, cache, error);
+                len += doFillReprBuf(&selfSlot, interface->selfType->base, buf + len, maxLen, maxDepth - 1, error);
             }
             else
                 len += snprintf(buf, maxLen, "null");
@@ -1410,8 +1426,12 @@ static FORCE_INLINE int doPrintSlot(bool string, void *stream, int maxLen, const
         case TYPE_CHAR:         len = fsnprintf(string, stream, maxLen, format, (unsigned char )slot.intVal);  break;
         case TYPE_REAL32:
         case TYPE_REAL:         len = fsnprintf(string, stream, maxLen, format,                 slot.realVal); break;
-        case TYPE_STR:          len = fsnprintf(string, stream, maxLen, format,                 slot.ptrVal ? (char *)slot.ptrVal : "");  break;
-
+        case TYPE_STR:
+        {
+            doCheckStr((char *)slot.ptrVal, error);
+            len = fsnprintf(string, stream, maxLen, format, slot.ptrVal ? (char *)slot.ptrVal : "");
+            break;
+        }
         default:                error->runtimeHandler(error->context, "Illegal type"); break;
     }
 
@@ -1435,7 +1455,7 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
         error->runtimeHandler(error->context, "printf() destination is null");
 
     if (!format)
-        format = "";
+        format = doGetEmptyStr();
 
     int formatLen = -1, typeLetterPos = -1;
     TypeKind expectedTypeKind = TYPE_NONE;
@@ -1472,20 +1492,27 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
     curFormat[formatLen] = 0;
 
     // Special case: %v formatter - convert argument of any type to its string representation
-    char reprBuf[DEFAULT_STR_LEN + 1];
-    bool isReprBufInHeap = false;
+    char reprBuf[sizeof(StrDimensions) + DEFAULT_STR_LEN + 1];
+    char isReprBufInHeap = false;
+    char *dimsAndRepr = NULL;
 
     if (hasAnyTypeFormatter)
     {
         curFormat[typeLetterPos] = 's';
 
         enum {MAX_NESTING = 20};
-        const int reprLen = doFillReprBuf(&value, type, NULL, 0, MAX_NESTING, fiber->strLenCache, error);  // Predict buffer length
+        const int reprLen = doFillReprBuf(&value, type, NULL, 0, MAX_NESTING, error);  // Predict buffer length
 
-        isReprBufInHeap = reprLen + 1 > sizeof(reprBuf);
-        char *repr = isReprBufInHeap ? malloc(reprLen + 1) : &reprBuf;
+        isReprBufInHeap = sizeof(StrDimensions) + reprLen + 1 > sizeof(reprBuf);
+        dimsAndRepr = isReprBufInHeap ? malloc(sizeof(StrDimensions) + reprLen + 1) : &reprBuf;
 
-        doFillReprBuf(&value, type, repr, reprLen + 1, MAX_NESTING, fiber->strLenCache, error);            // Fill buffer
+        StrDimensions dims = {.len = reprLen, .capacity = reprLen + 1};
+        *(StrDimensions *)dimsAndRepr = dims;
+
+        char *repr = dimsAndRepr + sizeof(StrDimensions);
+        repr[reprLen] = 0;
+
+        doFillReprBuf(&value, type, repr, reprLen + 1, MAX_NESTING, error);            // Fill buffer
 
         value.ptrVal = repr;
         typeKind = TYPE_STR;
@@ -1497,22 +1524,14 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
     {
         len = doPrintSlot(true, NULL, 0, curFormat, value, typeKind, error);
 
-        bool needRealloc = true;
-        if (stream)
+        const bool inPlace = stream && getStrDims(stream)->capacity >= prevLen + len + 1;
+        if (inPlace)
         {
-            HeapPage *page = pageFind(pages, stream, true);
-            if (page)
-            {
-                HeapChunkHeader *chunk = pageGetChunkHeader(page, stream);
-                const int availableLen = chunk->size - prevLen - 1;
-                if (availableLen >= len)
-                    needRealloc = false;
-            }
+            getStrDims(stream)->len = prevLen + len;
         }
-
-        if (needRealloc)
+        else
         {
-            char *newStream = chunkAlloc(pages, 2 * (prevLen + len) + 1, NULL, NULL, false, error);
+            char *newStream = doAllocStr(pages, prevLen + len, error);
             if (stream)
                 memcpy(newStream, stream, prevLen);
             newStream[prevLen] = 0;
@@ -1537,7 +1556,7 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
         free(curFormat);
 
     if (isReprBufInHeap)
-        free(value.ptrVal);
+        free(dimsAndRepr);
 }
 
 
@@ -1553,7 +1572,7 @@ static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool con
         error->runtimeHandler(error->context, "scanf() source is null");
 
     if (!format)
-        format = "";
+        format = doGetEmptyStr();
 
     int formatLen = -1, typeLetterPos = -1;
     TypeKind expectedTypeKind = TYPE_NONE;
@@ -1593,7 +1612,7 @@ static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool con
             doBasicChangeRefCnt(fiber, pages, *dest, &destType, TOK_MINUSMINUS);
 
             // Allocate new string
-            *dest = chunkAlloc(pages, strlen(src) + 1, NULL, NULL, false, error);
+            *dest = doAllocStr(pages, strlen(src), error);
             strcpy(*dest, src);
             free(src);
 
@@ -1671,9 +1690,9 @@ static FORCE_INLINE void doBuiltinMakefromstr(Fiber *fiber, HeapPages *pages, Er
     const char *src  = (const char *)(fiber->top++)->ptrVal;
 
     if (!src)
-        src = "";
+        src = doGetEmptyStr();
 
-    doAllocDynArray(pages, dest, destType, strlenCached(fiber->strLenCache, src), error);
+    doAllocDynArray(pages, dest, destType, getStrDims(src)->len, error);
     memcpy(dest->data, src, getDims(dest)->len);
 
     (--fiber->top)->ptrVal = dest;
@@ -1707,21 +1726,34 @@ static FORCE_INLINE void doBuiltinMaketoarr(Fiber *fiber, HeapPages *pages, Erro
 }
 
 
-// fn maketostr(src: []ItemType): str
-static FORCE_INLINE void doBuiltinMaketostr(Fiber *fiber, HeapPages *pages, Error *error)
+// fn maketostr(src: char | []char): str
+static FORCE_INLINE void doBuiltinMaketostr(Fiber *fiber, HeapPages *pages, TypeKind typeKind, Error *error)
 {
-    DynArray *src  = (DynArray *)(fiber->top++)->ptrVal;
+    char *dest = doGetEmptyStr();
 
-    if (!src)
-        error->runtimeHandler(error->context, "Dynamic array is null");
-
-    char *dest = "";
-
-    if (src->data)
+    if (typeKind == TYPE_CHAR)
     {
-        dest = chunkAlloc(pages, getDims(src)->len + 1, NULL, NULL, false, error);
-        memcpy(dest, src->data, getDims(src)->len);
-        dest[getDims(src)->len] = 0;
+        // Character to string
+        const char src = (char)((fiber->top++)->intVal);
+
+        dest = doAllocStr(pages, 1, error);
+        dest[0] = src;
+        dest[1] = 0;
+    }
+    else
+    {
+        // Dynamic array to string
+        DynArray *src  = (DynArray *)(fiber->top++)->ptrVal;
+
+        if (!src)
+            error->runtimeHandler(error->context, "Dynamic array is null");
+
+        if (src->data)
+        {
+            const int len = strlen((const char *)src->data);
+            dest = doAllocStr(pages, len, error);
+            memcpy(dest, src->data, len);
+        }
     }
 
     (--fiber->top)->ptrVal = dest;
@@ -1934,7 +1966,7 @@ static FORCE_INLINE void doBuiltinDeleteMap(Fiber *fiber, HeapPages *pages, Erro
         error->runtimeHandler(error->context, "Map is null");
 
     MapNode **nodePtrInParent = NULL;
-    MapNode *node = doGetMapNode(map, key, false, pages, pages->strLenCache, error, &nodePtrInParent);
+    MapNode *node = doGetMapNode(map, key, false, pages, error, &nodePtrInParent);
 
     if (node)
     {
@@ -1992,9 +2024,9 @@ static FORCE_INLINE void doBuiltinSlice(Fiber *fiber, HeapPages *pages, Error *e
         // String
         str = (const char *)arg;
         if (!str)
-            str = "";
+            str = doGetEmptyStr();
 
-        len = strlenCached(fiber->strLenCache, str);
+        len = getStrDims(str)->len;
     }
 
     // Missing end index means the end of the array
@@ -2027,7 +2059,7 @@ static FORCE_INLINE void doBuiltinSlice(Fiber *fiber, HeapPages *pages, Error *e
     else
     {
         // String
-        char *substr = chunkAlloc(pages, endIndex - startIndex + 1, NULL, NULL, false, error);
+        char *substr = doAllocStr(pages, endIndex - startIndex, error);
         memcpy(substr, &str[startIndex], endIndex - startIndex);
         substr[endIndex - startIndex] = 0;
 
@@ -2053,7 +2085,8 @@ static FORCE_INLINE void doBuiltinLen(Fiber *fiber, Error *error)
         case TYPE_STR:
         {
             const char *str = (const char *)fiber->top->ptrVal;
-            fiber->top->intVal = str ? strlenCached(fiber->strLenCache, str) : 0;
+            doCheckStr(str, error);
+            fiber->top->intVal = str ? getStrDims(str)->len : 0;
             break;
         }
         case TYPE_MAP:
@@ -2175,7 +2208,7 @@ static FORCE_INLINE void doBuiltinValidkey(Fiber *fiber, HeapPages *pages, Error
 
     if (map->root)
     {
-        MapNode *node = doGetMapNode(map, key, false, pages, pages->strLenCache, error, NULL);
+        MapNode *node = doGetMapNode(map, key, false, pages, error, NULL);
         isValid = node && node->data;
     }
 
@@ -2480,31 +2513,24 @@ static FORCE_INLINE void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
     {
         char *lhsStr = (char *)fiber->top->ptrVal;
         if (!lhsStr)
-            lhsStr = "";
+            lhsStr = doGetEmptyStr();
 
         char *rhsStr = (char *)rhs.ptrVal;
         if (!rhsStr)
-            rhsStr = "";
+            rhsStr = doGetEmptyStr();
+
+        doCheckStr(lhsStr, error);
+        doCheckStr(rhsStr, error);
 
         switch (fiber->code[fiber->ip].tokKind)
         {
             case TOK_PLUS:
             case TOK_PLUSEQ:
             {
-                const int lhsLen = strlenCached(fiber->strLenCache, lhsStr);
-                const int rhsLen = strlenCached(fiber->strLenCache, rhsStr);
-                bool inPlace = false;
+                const int lhsLen = getStrDims(lhsStr)->len;
+                const int rhsLen = getStrDims(rhsStr)->len;
 
-                if (fiber->code[fiber->ip].tokKind == TOK_PLUSEQ)
-                {
-                    HeapPage *page = pageFind(pages, lhsStr, true);
-                    if (page)
-                    {
-                        HeapChunkHeader *chunk = pageGetChunkHeader(page, lhsStr);
-                        if (lhsStr == (char *)chunk + sizeof(HeapChunkHeader) && lhsLen + rhsLen + 1 <= chunk->size)
-                            inPlace = true;
-                    }
-                }
+                const bool inPlace = fiber->code[fiber->ip].tokKind == TOK_PLUSEQ && getStrDims(lhsStr)->capacity >= lhsLen + rhsLen + 1;
 
                 char *buf = NULL;
                 if (inPlace)
@@ -2512,15 +2538,16 @@ static FORCE_INLINE void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
                     buf = lhsStr;
                     Type strType = {.kind = TYPE_STR};
                     doBasicChangeRefCnt(fiber, pages, buf, &strType, TOK_PLUSPLUS);
-                    cacheReset(fiber->strLenCache);
                 }
                 else
                 {
-                    buf = chunkAlloc(pages, 2 * (lhsLen + rhsLen) + 1, NULL, NULL, false, error);
+                    buf = doAllocStr(pages, lhsLen + rhsLen, error);
                     memmove(buf, lhsStr, lhsLen);
                 }
 
                 memmove(buf + lhsLen, rhsStr, rhsLen + 1);
+                getStrDims(buf)->len = lhsLen + rhsLen;
+
                 fiber->top->ptrVal = buf;
                 break;
             }
@@ -2676,8 +2703,9 @@ static FORCE_INLINE void doGetArrayPtr(Fiber *fiber, Error *error)
     else            // For strings, negative length means that the actual string length is to be used
     {
         if (!data)
-            data = "";
-        len = strlenCached(fiber->strLenCache, data);
+            data = doGetEmptyStr();
+        doCheckStr(data, error);
+        len = getStrDims(data)->len;
     }
 
     if (index < 0 || index > len - 1)
@@ -2731,7 +2759,7 @@ static FORCE_INLINE void doGetMapPtr(Fiber *fiber, HeapPages *pages, Error *erro
     Type *keyType = typeMapKey(map->type);
     Type *itemType = typeMapItem(map->type);
 
-    MapNode *node = doGetMapNode(map, key, true, pages, fiber->strLenCache, error, NULL);
+    MapNode *node = doGetMapNode(map, key, true, pages, error, NULL);
     if (!node->data)
     {
         // When allocating dynamic arrays, we mark with type the data chunk, not the header chunk
@@ -2959,7 +2987,7 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         case BUILTIN_MAKEFROMARR:   doBuiltinMakefromarr(fiber, pages, error); break;
         case BUILTIN_MAKEFROMSTR:   doBuiltinMakefromstr(fiber, pages, error); break;
         case BUILTIN_MAKETOARR:     doBuiltinMaketoarr(fiber, pages, error); break;
-        case BUILTIN_MAKETOSTR:     doBuiltinMaketostr(fiber, pages, error); break;
+        case BUILTIN_MAKETOSTR:     doBuiltinMaketostr(fiber, pages, typeKind, error); break;
         case BUILTIN_COPY:          doBuiltinCopy(fiber, pages, typeKind, error); break;
         case BUILTIN_APPEND:        doBuiltinAppend(fiber, pages, error); break;
         case BUILTIN_INSERT:        doBuiltinInsert(fiber, pages, error); break;
@@ -3282,7 +3310,7 @@ void *vmGetMapNodeData(VM *vm, Map *map, Slot key)
     if (!map || !map->root)
         return NULL;
 
-    const MapNode *node = doGetMapNode(map, key, false, NULL, &vm->strLenCache, vm->error, NULL);
+    const MapNode *node = doGetMapNode(map, key, false, NULL, vm->error, NULL);
     return node ? node->data : NULL;
 }
 

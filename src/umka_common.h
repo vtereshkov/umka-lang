@@ -31,7 +31,10 @@ enum
 typedef struct
 {
     int64_t len, capacity;
-} DynArrayDimensions;
+} StrDimensions;
+
+
+typedef StrDimensions DynArrayDimensions;
 
 
 typedef struct
@@ -172,9 +175,10 @@ typedef struct
 } DebugInfo;
 
 
-void  storageInit(Storage *storage);
-void  storageFree(Storage *storage);
-char *storageAdd (Storage *storage, int size);
+void  storageInit  (Storage *storage);
+void  storageFree  (Storage *storage);
+char *storageAdd   (Storage *storage, int size);
+char *storageAddStr(Storage *storage, int len);
 
 void  moduleInit                (Modules *modules, bool implLibsEnabled, Error *error);
 void  moduleFree                (Modules *modules);
@@ -231,6 +235,12 @@ static inline int64_t align(int64_t size, int64_t alignment)
 static inline bool getBit(const char *buf, int64_t bitPos)
 {
     return (buf[bitPos / 8] >> (bitPos % 8)) & 1;
+}
+
+
+static inline StrDimensions *getStrDims(const char *str)
+{
+    return (StrDimensions *)(str - sizeof(StrDimensions));
 }
 
 

@@ -101,7 +101,7 @@ typedef enum
     BUILTIN_MAKEFROMARR,    // Array to dynamic array - implicit calls only
     BUILTIN_MAKEFROMSTR,    // String to dynamic array - implicit calls only
     BUILTIN_MAKETOARR,      // Dynamic array to array - implicit calls only
-    BUILTIN_MAKETOSTR,      // Dynamic array to string - implicit calls only
+    BUILTIN_MAKETOSTR,      // Character or dynamic array to string - implicit calls only
     BUILTIN_COPY,
     BUILTIN_APPEND,
     BUILTIN_INSERT,
@@ -155,20 +155,6 @@ typedef struct
 typedef void (*ExternFunc)(Slot *params, Slot *result);
 
 
-typedef struct
-{
-    const char *str;
-    int len;
-} CachedStrLen;
-
-
-typedef struct
-{
-    CachedStrLen data[VM_STRLEN_CACHE_SIZE];
-    int pos;
-} StrLenCache;
-
-
 typedef struct tagHeapPage
 {
     int id;
@@ -184,7 +170,6 @@ typedef struct
     HeapPage *first, *last;
     int freeId;
     struct tagFiber *fiber;
-    StrLenCache *strLenCache;
     Error *error;
 } HeapPages;
 
@@ -238,7 +223,6 @@ typedef struct tagFiber
     Slot reg[VM_NUM_REGS];
     DebugInfo *debugPerInstr;
     RefCntChangeCandidates *refCntChangeCandidates;
-    StrLenCache *strLenCache;
     bool alive;
     bool fileSystemEnabled;
 } Fiber;
@@ -249,7 +233,6 @@ typedef struct
     Fiber *fiber, *mainFiber;
     HeapPages pages;
     RefCntChangeCandidates refCntChangeCandidates;
-    StrLenCache strLenCache;
     HookFunc hooks[NUM_HOOKS];
     bool terminatedNormally;
     Error *error;

@@ -232,19 +232,19 @@ fn timestr*(d: DateTime): str {
 
 // Command line and environment
 
-fn argc*(): int {return rtlargc}
+fn rtlargc(): int
+fn argc*(): int {return rtlargc()}
 
+fn rtlargv(i: int): str 
 fn argv*(i: int): str {
-    if i < 0 || i >= rtlargc {
+    if i < 0 || i >= rtlargc() {
         error("Command line parameter not found")
     }
-    return rtlargv[i]
+    return rtlargv(i)
 }
 
 fn rtlgetenv(name: str): str
-fn getenv*(name: str): str {
-    return "" + rtlgetenv(name)
-}
+fn getenv*(name: str): str {return "" + rtlgetenv(name)}
 
 fn rtlsystem(command: str): int
 fn system*(command: str): int {return rtlsystem(command)}

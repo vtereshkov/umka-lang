@@ -135,7 +135,7 @@ static void doCharToStrConv(Compiler *comp, Type *dest, Type **src, Const *const
 {
     if (constant)
     {
-        char *buf = storageAdd(&comp->storage, 2 * typeSize(&comp->types, *src));
+        char *buf = storageAddStr(&comp->storage, 1);
         buf[0] = constant->intVal;
         buf[1] = 0;
         constant->ptrVal = buf;
@@ -145,19 +145,8 @@ static void doCharToStrConv(Compiler *comp, Type *dest, Type **src, Const *const
         if (lhs)
             genSwap(&comp->gen);
 
-        // Allocate heap for two chars
-        genPushGlobalPtr(&comp->gen, NULL);
-        genPushIntConst(&comp->gen, 2 * typeSize(&comp->types, *src));
-        genCallBuiltin(&comp->gen, TYPE_PTR, BUILTIN_NEW);
-        doCopyResultToTempVar(comp, comp->strType);
-
-        // Save heap pointer
-        genDup(&comp->gen);
-        genPopReg(&comp->gen, VM_REG_COMMON_0);
-
-        // Copy to heap and use heap pointer
-        genSwapAssign(&comp->gen, (*src)->kind, typeSize(&comp->types, *src));
-        genPushReg(&comp->gen, VM_REG_COMMON_0);
+        genCallBuiltin(&comp->gen, TYPE_CHAR, BUILTIN_MAKETOSTR);
+        doCopyResultToTempVar(comp, dest);
 
         if (lhs)
             genSwap(&comp->gen);
@@ -172,7 +161,7 @@ static void doDynArrayToStrConv(Compiler *comp, Type *dest, Type **src, Const *c
     if (constant)
         comp->error.handler(comp->error.context, "Conversion to string is not allowed in constant expressions");
 
-    // fn maketostr(src: []ItemType): str
+    // fn maketostr(src: char | []char): str
 
     genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_MAKETOSTR);
 
@@ -601,8 +590,8 @@ static void doApplyStrCat(Compiler *comp, Const *constant, Const *rightConstant,
         if (op == TOK_PLUSEQ)
             comp->error.handler(comp->error.context, "Operator is not allowed in constant expressions");
 
-        int bufLen = strlen((char *)constant->ptrVal) + strlen((char *)rightConstant->ptrVal) + 1;
-        char *buf = storageAdd(&comp->storage, bufLen);
+        int len = getStrDims((char *)constant->ptrVal)->len + getStrDims((char *)rightConstant->ptrVal)->len;
+        char *buf = storageAddStr(&comp->storage, len);
         strcpy(buf, (char *)constant->ptrVal);
 
         constant->ptrVal = buf;

@@ -140,6 +140,8 @@ static void compilerDeclareExternalFuncs(Compiler *comp, bool fileSystemEnabled)
     externalAdd(&comp->externals, "rtllocaltime",   &rtllocaltime);
     externalAdd(&comp->externals, "rtlgmtime",      &rtlgmtime);
     externalAdd(&comp->externals, "rtlmktime",      &rtlmktime);
+    externalAdd(&comp->externals, "rtlargc",        fileSystemEnabled ? &rtlargc   : &rtlargcSandbox);
+    externalAdd(&comp->externals, "rtlargv",        fileSystemEnabled ? &rtlargv   : &rtlargvSandbox);
     externalAdd(&comp->externals, "rtlgetenv",      fileSystemEnabled ? &rtlgetenv : &rtlgetenvSandbox);
     externalAdd(&comp->externals, "rtlsystem",      fileSystemEnabled ? &rtlsystem : &rtlsystemSandbox);
 }
