@@ -6,6 +6,7 @@
 #include <time.h>
 
 #include "umka_runtime.h"
+#include "umka_api.h"
 
 
 static void convToRTLDateTime(RTLDateTime *dest, const struct tm *src)
@@ -226,12 +227,10 @@ void rtlmktime(Slot *params, Slot *result)
 void rtlgetenv(Slot *params, Slot *result)
 {
     const char *name = (const char *)params[0].ptrVal;
-    static char empty[] = "";
+    void *umka = result->ptrVal;
 
-    char *val = getenv(name);
-    if (!val)
-        val = empty;
-    result->ptrVal = val;
+    const char *env = getenv(name);
+    result->ptrVal = umkaMakeStr(umka, env);
 }
 
 

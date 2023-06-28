@@ -3315,7 +3315,7 @@ void *vmGetMapNodeData(VM *vm, Map *map, Slot key)
 }
 
 
-const char *vmMakeStr(VM *vm, const char *str)
+char *vmMakeStr(VM *vm, const char *str)
 {
     if (!str)
         return NULL;
