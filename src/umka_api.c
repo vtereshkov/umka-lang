@@ -245,6 +245,13 @@ UMKA_API void *umkaGetMapItem(void *umka, UmkaMap *map, UmkaStackSlot key)
 }
 
 
+UMKA_API const char *umkaMakeStr(void *umka, const char *str)
+{
+    Compiler *comp = umka;
+    return vmMakeStr(&comp->vm, str);
+}
+
+
 UMKA_API int umkaGetStrLen(const char *str)
 {
     if (!str)

@@ -250,6 +250,7 @@ void *vmAllocData               (VM *vm, int size, ExternFunc onFree);
 void vmIncRef                   (VM *vm, void *ptr);
 void vmDecRef                   (VM *vm, void *ptr);
 void *vmGetMapNodeData          (VM *vm, Map *map, Slot key);
+const char *vmMakeStr           (VM *vm, const char *str);
 const char *vmBuiltinSpelling   (BuiltinFunc builtin);
 
 #endif // UMKA_VM_H_INCLUDED

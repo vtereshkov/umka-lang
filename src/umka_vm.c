@@ -3315,6 +3315,17 @@ void *vmGetMapNodeData(VM *vm, Map *map, Slot key)
 }
 
 
+const char *vmMakeStr(VM *vm, const char *str)
+{
+    if (!str)
+        return NULL;
+
+    char *buf = doAllocStr(&vm->pages, strlen(str), vm->error);
+    strcpy(buf, str);
+    return buf;
+}
+
+
 const char *vmBuiltinSpelling(BuiltinFunc builtin)
 {
     return builtinSpelling[builtin];
