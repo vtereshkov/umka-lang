@@ -8,7 +8,7 @@
 #include "umka_compiler.h"
 #include "umka_api.h"
 
-#define UMKA_VERSION    "1.1"
+#define UMKA_VERSION    "1.2"
 
 
 static void compileWarning(void *context, const char *format, ...)
@@ -242,6 +242,21 @@ UMKA_API void *umkaGetMapItem(void *umka, UmkaMap *map, UmkaStackSlot key)
 {
     Compiler *comp = umka;
     return vmGetMapNodeData(&comp->vm, (Map *)map, *(Slot *)&key);
+}
+
+
+UMKA_API char *umkaMakeStr(void *umka, const char *str)
+{
+    Compiler *comp = umka;
+    return vmMakeStr(&comp->vm, str);
+}
+
+
+UMKA_API int umkaGetStrLen(const char *str)
+{
+    if (!str)
+        return 0;
+    return getStrDims(str)->len;
 }
 
 

@@ -22,8 +22,6 @@ enum
     VM_MIN_HEAP_CHUNK    = 64,                      // Bytes
     VM_MIN_HEAP_PAGE     = 1024 * 1024,             // Bytes
 
-    VM_STRLEN_CACHE_SIZE = 8,
-
     VM_FIBER_KILL_SIGNAL = -1                       // Used instead of return address in fiber function calls
 };
 
@@ -101,7 +99,7 @@ typedef enum
     BUILTIN_MAKEFROMARR,    // Array to dynamic array - implicit calls only
     BUILTIN_MAKEFROMSTR,    // String to dynamic array - implicit calls only
     BUILTIN_MAKETOARR,      // Dynamic array to array - implicit calls only
-    BUILTIN_MAKETOSTR,      // Dynamic array to string - implicit calls only
+    BUILTIN_MAKETOSTR,      // Character or dynamic array to string - implicit calls only
     BUILTIN_COPY,
     BUILTIN_APPEND,
     BUILTIN_INSERT,
@@ -155,20 +153,6 @@ typedef struct
 typedef void (*ExternFunc)(Slot *params, Slot *result);
 
 
-typedef struct
-{
-    const char *str;
-    int len;
-} CachedStrLen;
-
-
-typedef struct
-{
-    CachedStrLen data[VM_STRLEN_CACHE_SIZE];
-    int pos;
-} StrLenCache;
-
-
 typedef struct tagHeapPage
 {
     int id;
@@ -184,7 +168,6 @@ typedef struct
     HeapPage *first, *last;
     int freeId;
     struct tagFiber *fiber;
-    StrLenCache *strLenCache;
     Error *error;
 } HeapPages;
 
@@ -238,7 +221,6 @@ typedef struct tagFiber
     Slot reg[VM_NUM_REGS];
     DebugInfo *debugPerInstr;
     RefCntChangeCandidates *refCntChangeCandidates;
-    StrLenCache *strLenCache;
     bool alive;
     bool fileSystemEnabled;
 } Fiber;
@@ -249,7 +231,6 @@ typedef struct
     Fiber *fiber, *mainFiber;
     HeapPages pages;
     RefCntChangeCandidates refCntChangeCandidates;
-    StrLenCache strLenCache;
     HookFunc hooks[NUM_HOOKS];
     bool terminatedNormally;
     Error *error;
@@ -267,6 +248,7 @@ void *vmAllocData               (VM *vm, int size, ExternFunc onFree);
 void vmIncRef                   (VM *vm, void *ptr);
 void vmDecRef                   (VM *vm, void *ptr);
 void *vmGetMapNodeData          (VM *vm, Map *map, Slot key);
+char *vmMakeStr                 (VM *vm, const char *str);
 const char *vmBuiltinSpelling   (BuiltinFunc builtin);
 
 #endif // UMKA_VM_H_INCLUDED

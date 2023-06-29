@@ -185,13 +185,15 @@ void compilerInit(Compiler *comp, const char *fileName, const char *sourceString
     Type *argvType     = typeAdd(&comp->types, &comp->blocks, TYPE_ARRAY);
     argvType->base     = comp->strType;
     argvType->numItems = comp->argc;
-    argvType           = typeAddPtrTo(&comp->types, &comp->blocks, argvType);
 
-    Ident *rtlargc = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "rtlargc", comp->intType, true);
     Ident *rtlargv = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "rtlargv", argvType, true);
-
-    *(int64_t *)(rtlargc->ptr) = comp->argc;
-    *(void *  *)(rtlargv->ptr) = comp->argv;
+    char **argArray = (char **)rtlargv->ptr;
+    
+    for (int i = 0; i < comp->argc; i++)
+    {
+        argArray[i] = storageAddStr(&comp->storage, strlen(comp->argv[i]));
+        strcpy(argArray[i], comp->argv[i]);
+    }
 
     // Embedded standard library modules
     const int numRuntimeModules = sizeof(runtimeModuleSources) / sizeof(runtimeModuleSources[0]);

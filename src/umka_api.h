@@ -104,6 +104,8 @@ UMKA_API void *umkaAllocData        (void *umka, int size, UmkaExternFunc onFree
 UMKA_API void umkaIncRef            (void *umka, void *ptr);
 UMKA_API void umkaDecRef            (void *umka, void *ptr);
 UMKA_API void *umkaGetMapItem       (void *umka, UmkaMap *map, UmkaStackSlot key);
+UMKA_API char *umkaMakeStr          (void *umka, const char *str);
+UMKA_API int  umkaGetStrLen         (const char *str);
 UMKA_API int  umkaGetDynArrayLen    (const void *array);
 UMKA_API const char *umkaGetVersion (void);
 
