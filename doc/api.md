@@ -269,8 +269,20 @@ UMKA_API void *umkaGetMapItem(void *umka, UmkaMap *map, UmkaStackSlot key);
 Gets the pointer to the `map` item indexed by `key`. Returns `NULL` if the item does not exist.
 
 ```
+UMKA_API char *umkaMakeStr(void *umka, const char *str);
+```
+
+Creates an Umka string from a C string. Every string passed from the host C/C++ application to Umka should be created with this function.
+
+```
+UMKA_API int umkaGetStrLen(const char *str);
+```
+
+Returns the length of an Umka string. The result is always identical to that of `strlen`, but does not imply searching for the terminating null character.
+
+```
 UMKA_API int umkaGetDynArrayLen(const void *array);
 ```
 
-Returns the length of the dynamic `array` passed as a pointer to `UmkaDynArray(T)`.
+Returns the length of the dynamic `array`, which is treated as a pointer to `UmkaDynArray(T)`.
 

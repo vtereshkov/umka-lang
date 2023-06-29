@@ -6,7 +6,7 @@
     #define FORCE_INLINE __attribute__((always_inline)) inline
 #endif
 
-#define UMKA_STR_DEBUG
+//#define UMKA_STR_DEBUG
 //#define UMKA_REF_CNT_DEBUG
 //#define UMKA_DETAILED_LEAK_INFO
 

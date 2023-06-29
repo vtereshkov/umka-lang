@@ -186,12 +186,9 @@ void compilerInit(Compiler *comp, const char *fileName, const char *sourceString
     argvType->base     = comp->strType;
     argvType->numItems = comp->argc;
 
-    Ident *rtlargc = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "rtlargc", comp->intType, true);
     Ident *rtlargv = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "rtlargv", argvType, true);
-
-    *(int64_t *)(rtlargc->ptr) = comp->argc;
-
     char **argArray = (char **)rtlargv->ptr;
+    
     for (int i = 0; i < comp->argc; i++)
     {
         argArray[i] = storageAddStr(&comp->storage, strlen(comp->argv[i]));
