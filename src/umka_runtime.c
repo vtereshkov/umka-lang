@@ -236,7 +236,7 @@ void rtlgetenv(Slot *params, Slot *result)
 
 void rtlgetenvSandbox(Slot *params, Slot *result)
 {
-    result->ptrVal = "";
+    result->ptrVal = NULL;
 }
 
 
