@@ -427,17 +427,31 @@ static Type *parseInterfaceType(Compiler *comp)
 }
 
 
-// fnType = "fn" signature.
-static Type *parseFnType(Compiler *comp)
+// closureType = "fn" signature.
+static Type *parseClosureType(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_FN);
-    Type *type = typeAdd(&comp->types, &comp->blocks, TYPE_FN);
-    parseSignature(comp, &(type->sig));
+
+    Type *type = typeAdd(&comp->types, &comp->blocks, TYPE_CLOSURE);
+
+    // Function field
+    Type *fnType = typeAdd(&comp->types, &comp->blocks, TYPE_FN);
+
+    typeAddParam(&comp->types, &fnType->sig, comp->ptrVoidType, "__self");
+    parseSignature(comp, &fnType->sig);
+
+    Field *fn = typeAddField(&comp->types, type, fnType, "__fn");
+    fnType->sig.method = true;
+    fnType->sig.offsetFromSelf = -typeSize(&comp->types, fn->type);
+
+    // Upvalue field
+    typeAddField(&comp->types, type, comp->anyType, "__upvalue");
+
     return type;
 }
 
 
-// type = qualIdent | ptrType | arrayType | dynArrayType | strType | mapType | structType | interfaceType | fnType.
+// type = qualIdent | ptrType | arrayType | dynArrayType | strType | mapType | structType | interfaceType | closureType.
 Type *parseType(Compiler *comp, Ident *ident)
 {
     if (ident)
@@ -458,7 +472,7 @@ Type *parseType(Compiler *comp, Ident *ident)
         case TOK_MAP:       return parseMapType(comp);
         case TOK_STRUCT:    return parseStructType(comp);
         case TOK_INTERFACE: return parseInterfaceType(comp);
-        case TOK_FN:        return parseFnType(comp);
+        case TOK_FN:        return parseClosureType(comp);
 
         default:            comp->error.handler(comp->error.context, "Type expected"); return NULL;
     }

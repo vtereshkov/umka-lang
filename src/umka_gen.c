@@ -436,6 +436,13 @@ void genPushStruct(CodeGen *gen, int size)
 }
 
 
+void genPushUpvalue(CodeGen *gen)
+{
+    const Instruction instr = {.opcode = OP_PUSH_UPVALUE, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = 0};
+    genAddInstr(gen, &instr);
+}
+
+
 void genPop(CodeGen *gen)
 {
     if (!optimizePop(gen))

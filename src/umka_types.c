@@ -36,6 +36,7 @@ static const char *spelling [] =
     "map",
     "struct",
     "interface",
+    "fn |..|",
     "fiber",
     "fn"
 };
@@ -127,7 +128,7 @@ void typeDeepCopy(Type *dest, Type *src)
     *dest = *src;
     dest->next = next;
 
-    if (dest->kind == TYPE_STRUCT || dest->kind == TYPE_INTERFACE)
+    if (dest->kind == TYPE_STRUCT || dest->kind == TYPE_INTERFACE || dest->kind == TYPE_CLOSURE)
         for (int i = 0; i < dest->numItems; i++)
         {
             dest->field[i] = malloc(sizeof(Field));
@@ -176,6 +177,7 @@ int typeSizeNoCheck(Type *type)
         case TYPE_MAP:      return sizeof(Map);
         case TYPE_STRUCT:
         case TYPE_INTERFACE:
+        case TYPE_CLOSURE:
         {
             int size = 0;
             for (int i = 0; i < type->numItems; i++)
@@ -230,6 +232,7 @@ int typeAlignmentNoCheck(Type *type)
         case TYPE_MAP:      return sizeof(int64_t);
         case TYPE_STRUCT:
         case TYPE_INTERFACE:
+        case TYPE_CLOSURE:
         {
             int alignment = 1;
             for (int i = 0; i < type->numItems; i++)
@@ -261,8 +264,8 @@ int typeAlignment(Types *types, Type *type)
 
 bool typeGarbageCollected(Type *type)
 {
-    if (type->kind == TYPE_PTR || type->kind == TYPE_WEAKPTR || type->kind == TYPE_STR || type->kind == TYPE_MAP ||
-        type->kind == TYPE_DYNARRAY || type->kind == TYPE_INTERFACE || type->kind == TYPE_FIBER)
+    if (type->kind == TYPE_PTR      || type->kind == TYPE_WEAKPTR   || type->kind == TYPE_STR     || type->kind == TYPE_MAP  ||
+        type->kind == TYPE_DYNARRAY || type->kind == TYPE_INTERFACE || type->kind == TYPE_CLOSURE || type->kind == TYPE_FIBER)
         return true;
 
     if (type->kind == TYPE_ARRAY)
@@ -359,7 +362,7 @@ static bool typeEquivalentRecursive(Type *left, Type *right, bool checkTypeIdent
         }
 
         // Structures or interfaces
-        else if (left->kind == TYPE_STRUCT || left->kind == TYPE_INTERFACE)
+        else if (left->kind == TYPE_STRUCT || left->kind == TYPE_INTERFACE || left->kind == TYPE_CLOSURE)
         {
             // Number of fields
             if (left->numItems != right->numItems)
@@ -572,7 +575,7 @@ void typeAssertForwardResolved(Types *types)
 
 Field *typeFindField(Type *structType, const char *name)
 {
-    if (structType->kind == TYPE_STRUCT || structType->kind == TYPE_INTERFACE)
+    if (structType->kind == TYPE_STRUCT || structType->kind == TYPE_INTERFACE || structType->kind == TYPE_CLOSURE)
     {
         unsigned int nameHash = hash(name);
         for (int i = 0; i < structType->numItems; i++)

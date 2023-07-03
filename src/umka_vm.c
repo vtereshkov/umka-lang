@@ -31,6 +31,7 @@ static const char *opcodeSpelling [] =
     "PUSH_LOCAL",
     "PUSH_REG",
     "PUSH_STRUCT",
+    "PUSH_UPVALUE",
     "POP",
     "POP_REG",
     "DUP",
@@ -83,7 +84,7 @@ static const char *builtinSpelling [] =
     "sin",
     "cos",
     "atan",
-    "atan2",
+        "atan2",
     "exp",
     "log",
     "new",
@@ -597,7 +598,8 @@ static FORCE_INLINE void doBasicDeref(Slot *slot, TypeKind typeKind, Error *erro
         case TYPE_DYNARRAY:
         case TYPE_MAP:
         case TYPE_STRUCT:
-        case TYPE_INTERFACE:    break;  // Always represented by pointer, not dereferenced
+        case TYPE_INTERFACE:
+        case TYPE_CLOSURE:      break;  // Always represented by pointer, not dereferenced
         case TYPE_FIBER:        slot->ptrVal     = *(void *         *)slot->ptrVal; break;
         case TYPE_FN:           slot->intVal     = *(int64_t        *)slot->ptrVal; break;
 
@@ -641,7 +643,8 @@ static FORCE_INLINE void doBasicAssign(void *lhs, Slot rhs, TypeKind typeKind, i
         case TYPE_DYNARRAY:
         case TYPE_MAP:
         case TYPE_STRUCT:
-        case TYPE_INTERFACE:    memcpy(lhs, rhs.ptrVal, structSize); break;
+        case TYPE_INTERFACE:
+        case TYPE_CLOSURE:      memcpy(lhs, rhs.ptrVal, structSize); break;
         case TYPE_FIBER:        *(void *        *)lhs = rhs.ptrVal;  break;
         case TYPE_FN:           *(int64_t       *)lhs = rhs.intVal;  break;
 
@@ -846,6 +849,12 @@ static FORCE_INLINE void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, voi
                 Interface *interface = (Interface *)ptr;
                 if (interface->self)
                     candidatePush(candidates, interface->self, interface->selfType);
+                break;
+            }
+
+            case TYPE_CLOSURE:
+            {
+                doAddStructFieldsRefCntCandidates(candidates, ptr, type);
                 break;
             }
 
@@ -1252,6 +1261,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int maxD
 
 
         case TYPE_STRUCT:
+        case TYPE_CLOSURE:
         {
             len += snprintf(buf, maxLen, "{");
             bool skipNames = typeExprListStruct(type);
@@ -2181,6 +2191,12 @@ static FORCE_INLINE void doBuiltinValid(Fiber *fiber, Error *error)
             isValid = entryOffset > 0;
             break;
         }
+        case TYPE_CLOSURE:
+        {
+            // TODO: Check validity
+            isValid = true;
+            break;
+        }
         case TYPE_FIBER:
         {
             Fiber *child = (Fiber *)fiber->top->ptrVal;
@@ -2322,10 +2338,9 @@ static FORCE_INLINE void doPushReg(Fiber *fiber)
 }
 
 
-static FORCE_INLINE void doPushStruct(Fiber *fiber, Error *error)
+static FORCE_INLINE void doBasicPushStruct(Fiber *fiber, int size, Error *error)
 {
     void *src = (fiber->top++)->ptrVal;
-    int size  = fiber->code[fiber->ip].operand.intVal;
     int slots = align(size, sizeof(Slot)) / sizeof(Slot);
 
     if (fiber->top - slots - fiber->stack < VM_MIN_FREE_STACK)
@@ -2333,6 +2348,34 @@ static FORCE_INLINE void doPushStruct(Fiber *fiber, Error *error)
 
     fiber->top -= slots;
     memcpy(fiber->top, src, size);
+}
+
+
+static FORCE_INLINE void doPushStruct(Fiber *fiber, Error *error)
+{
+    int size = fiber->code[fiber->ip].operand.intVal;
+    doBasicPushStruct(fiber, size, error);
+    fiber->ip++;
+}
+
+
+static FORCE_INLINE void doPushUpvalue(Fiber *fiber, HeapPages *pages, Error *error)
+{
+    Closure closure = *(Closure *)(fiber->top++)->ptrVal;
+
+    (--fiber->top)->intVal = closure.entryOffset;
+    (--fiber->top)->ptrVal = closure.upvalue.self;
+
+    if (closure.upvalue.self)
+    {
+        Type *upvalueType = closure.upvalue.selfType->base;
+
+        doBasicDeref(fiber->top, upvalueType->kind, error);
+        doBasicChangeRefCnt(fiber, pages, fiber->top, upvalueType, TOK_PLUSPLUS);
+
+        if (typeStructured(upvalueType))
+            doBasicPushStruct(fiber, typeSizeNoCheck(upvalueType), error);
+    }
 
     fiber->ip++;
 }
@@ -3105,6 +3148,7 @@ static FORCE_INLINE void vmLoop(VM *vm)
             case OP_PUSH_LOCAL:                     doPushLocal(fiber, error);                    break;
             case OP_PUSH_REG:                       doPushReg(fiber);                             break;
             case OP_PUSH_STRUCT:                    doPushStruct(fiber, error);                   break;
+            case OP_PUSH_UPVALUE:                   doPushUpvalue(fiber, pages, error);           break;
             case OP_POP:                            doPop(fiber);                                 break;
             case OP_POP_REG:                        doPopReg(fiber);                              break;
             case OP_DUP:                            doDup(fiber);                                 break;

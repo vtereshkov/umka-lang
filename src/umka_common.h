@@ -55,6 +55,14 @@ typedef struct
 } Interface;
 
 
+typedef struct
+{
+    // The C equivalent of the Umka closure type
+    int64_t entryOffset;
+    Interface upvalue;      // No methods - equivalent to "any"
+} Closure;
+
+
 typedef struct tagMapNode
 {
     // The C equivalent of the Umka map base type

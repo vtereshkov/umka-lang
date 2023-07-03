@@ -34,6 +34,7 @@ typedef enum
     OP_PUSH_LOCAL,
     OP_PUSH_REG,
     OP_PUSH_STRUCT,
+    OP_PUSH_UPVALUE,
     OP_POP,
     OP_POP_REG,
     OP_DUP,
