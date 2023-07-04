@@ -440,9 +440,7 @@ static Type *parseClosureType(Compiler *comp)
     typeAddParam(&comp->types, &fnType->sig, comp->anyType, "__upvalues");
     parseSignature(comp, &fnType->sig);
 
-    Field *fn = typeAddField(&comp->types, type, fnType, "__fn");
-    fnType->sig.method = true;
-    fnType->sig.offsetFromSelf = -typeSize(&comp->types, fn->type);
+    typeAddField(&comp->types, type, fnType, "__fn");
 
     // Upvalues field
     typeAddField(&comp->types, type, comp->anyType, "__upvalues");

@@ -729,8 +729,12 @@ static char *typeSpellingRecursive(Type *type, char *buf, int size, int depth)
             }
             len += snprintf(buf + len, nonneg(size - len), "}");
         }
-        else if (type->kind == TYPE_FN)
+        else if (type->kind == TYPE_FN || type->kind == TYPE_CLOSURE)
         {
+            const bool isClosure = type->kind == TYPE_CLOSURE;
+            if (isClosure)
+                type = type->field[0]->type;
+
             len += snprintf(buf + len, nonneg(size - len), "fn (");
 
             if (type->sig.method)
@@ -739,7 +743,7 @@ static char *typeSpellingRecursive(Type *type, char *buf, int size, int depth)
                 len += snprintf(buf + len, nonneg(size - len), "%s) (", typeSpellingRecursive(type->sig.param[0]->type, paramBuf, DEFAULT_STR_LEN + 1, depth - 1));
             }
 
-            int numPreHiddenParams = type->sig.method ? 1 : 0;                          // __self
+            int numPreHiddenParams = type->sig.method || isClosure ? 1 : 0;             // __self or __upvalues
             int numPostHiddenParams = typeStructured(type->sig.resultType) ? 1 : 0;     // __result
 
             for (int i = numPreHiddenParams; i < type->sig.numParams - numPostHiddenParams; i++)
@@ -758,6 +762,9 @@ static char *typeSpellingRecursive(Type *type, char *buf, int size, int depth)
                 char resultBuf[DEFAULT_STR_LEN + 1];
                 len += snprintf(buf + len, nonneg(size - len), ": %s", typeSpellingRecursive(type->sig.resultType, resultBuf, DEFAULT_STR_LEN + 1, depth - 1));
             }
+
+            if (isClosure)
+                len += snprintf(buf + len, nonneg(size - len), " |...|");
         }
         else
         {
