@@ -1,0 +1,50 @@
+fn bar(f: fn (x: int): int) {
+	y := f(2)
+	printf("%v\n", y)
+}
+
+sqr := fn (x: int): int {
+	return x * x
+}
+
+fn foo(a: int): []fn (x: int): int {
+	s := []str{"Hello", "World", '!'}
+
+	f := fn (x: int): int |a| {
+		return a * x
+	}
+
+	g := fn (x: int): int |s, a| {
+		printf("   g: s = %v\n", s)
+		return len(s) + a
+	}
+
+	h := fn (x: int): int {
+		return 10 * x
+	}
+
+	const i = fn (x: int): int {
+		return 15 * x
+	}	
+
+	return {f, g, h, i, sqr}
+}
+
+fn add(y: int): fn (x: int): int {
+	return |y| {
+		return x + y
+	}
+}
+
+fn test*() {
+	printf("%v\n", add(3)(5))
+	
+	funcs := foo(42)
+	for _, f in funcs {
+		bar(f)
+	} 
+}
+
+fn main() {
+	test()
+}

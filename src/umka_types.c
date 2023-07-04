@@ -300,7 +300,7 @@ static bool typeDefaultParamEqual(Const *left, Const *right, Type *type)
     if (type->kind == TYPE_STR)
         return strcmp((char *)left->ptrVal, (char *)right->ptrVal) == 0;
 
-    if (type->kind == TYPE_ARRAY || type->kind == TYPE_STRUCT)
+    if (type->kind == TYPE_ARRAY || type->kind == TYPE_STRUCT || type->kind == TYPE_CLOSURE)
         return memcmp(left->ptrVal, right->ptrVal, typeSizeNoCheck(type)) == 0;
 
     return false;

@@ -41,6 +41,7 @@ char *storageAdd(Storage *storage, int size)
     StorageChunk *chunk = malloc(sizeof(StorageChunk));
 
     chunk->data = malloc(size);
+    memset(chunk->data, 0, size);
     chunk->next = NULL;
 
     // Add to list

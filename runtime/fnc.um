@@ -2,28 +2,28 @@
 
 type Array* = []any
 
-fn (a: ^Array) transform*(f: fn (x, ctx: any): any, ctx: any): Array {
+fn (a: ^Array) transform*(f: fn (x: any): any): Array {
     res := make(Array, len(a^))
     for i := 0; i < len(a^); i++ {
-        res[i] = f(a[i], ctx)
+        res[i] = f(a[i])
     }
     return res
 }
 
-fn (a: ^Array) filter*(f: fn (x, ctx: any): bool, ctx: any): Array {
+fn (a: ^Array) filter*(f: fn (x: any): bool): Array {
     res := make(Array, 0)
     for i := 0; i < len(a^); i++ {
-        if f(a[i], ctx) {
+        if f(a[i]) {
             res = append(res, a[i])
         }
     }
     return res
 }
 
-fn (a: ^Array) reduce*(f: fn (x, y, ctx: any): any, ctx: any): any {
+fn (a: ^Array) reduce*(f: fn (x, y: any): any): any {
     res := a[0]
     for i := 1; i < len(a^); i++ {
-        res = f(res, a[i], ctx)
+        res = f(res, a[i])
     }
     return res
 }

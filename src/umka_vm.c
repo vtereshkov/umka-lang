@@ -2193,8 +2193,8 @@ static FORCE_INLINE void doBuiltinValid(Fiber *fiber, Error *error)
         }
         case TYPE_CLOSURE:
         {
-            // TODO: Check validity
-            isValid = true;
+            Closure *closure = (Closure *)fiber->top->ptrVal;
+            isValid = closure->entryOffset > 0;
             break;
         }
         case TYPE_FIBER:

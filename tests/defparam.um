@@ -1,6 +1,6 @@
 type F = fn (s: str = "Hello"): str
 
-fn foo(s: str = "Hello"): str {
+const foo = fn (s: str = "Hello"): str {
    return "foo: " + s
 }
 
