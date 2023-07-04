@@ -12,7 +12,7 @@ void doResolveExtern(Compiler *comp);
 void parseAssignmentStmt(Compiler *comp, Type *type, Const *varPtrConstList);
 void parseDeclAssignmentStmt(Compiler *comp, IdentName *names, bool *exported, int num, bool constExpr);
 
-void parseFnBlock(Compiler *comp, Ident *fn, Ident *captured);
+void parseFnBlock(Compiler *comp, Ident *fn, Type *upvaluesStructType);
 void parseFnPrototype(Compiler *comp, Ident *fn);
 
 

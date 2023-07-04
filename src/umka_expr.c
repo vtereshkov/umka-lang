@@ -1790,7 +1790,7 @@ static void parseMapLiteral(Compiler *comp, Type **type, Const *constant)
 }
 
 
-// closureLiteral = ["|" ident "|"] fnBlock.
+// closureLiteral = ["|" ident {"," ident} "|"] fnBlock.
 static void parseClosureLiteral(Compiler *comp, Type **type, Const *constant)
 {
     if (constant)
@@ -1800,33 +1800,65 @@ static void parseClosureLiteral(Compiler *comp, Type **type, Const *constant)
     Ident *closureIdent = identAllocTempVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, *type, false);
     doZeroVar(comp, closureIdent);
 
-    // ["|" ident "|"]
-    Ident *capturedIdent = NULL;
+    Type *upvaluesStructType = NULL;
+
+    // ["|" ident {"," ident} "|"]
     if (comp->lex.tok.kind == TOK_OR)
     {
         lexNext(&comp->lex);
-        if (comp->lex.tok.kind != TOK_IDENT)
-            comp->error.handler(comp->error.context, "Captured variable name expected");
 
-        capturedIdent = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, comp->lex.tok.name, NULL);
+        // Determine upvalues structure type
+        upvaluesStructType = typeAdd(&comp->types, &comp->blocks, TYPE_STRUCT);
+        while (1)
+        {
+            lexCheck(&comp->lex, TOK_IDENT);
 
-        if (capturedIdent->kind != IDENT_VAR)
-            comp->error.handler(comp->error.context, "%s is not a variable", capturedIdent->name);
+            Ident *capturedIdent = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, comp->lex.tok.name, NULL);
+            if (capturedIdent->kind != IDENT_VAR)
+                comp->error.handler(comp->error.context, "%s is not a variable", capturedIdent->name);
 
-        Field *upvalue = typeAssertFindField(&comp->types, closureIdent->type, "__upvalue");
-        Type *upvalueType = capturedIdent->type;
+            typeAddField(&comp->types, upvaluesStructType, capturedIdent->type, capturedIdent->name);
 
-        // Assign closure upvalue
-        doPushVarPtr(comp, capturedIdent);
-        genDeref(&comp->gen, capturedIdent->type->kind);
-        doImplicitTypeConv(comp, upvalue->type, &upvalueType, NULL, false);
+            lexNext(&comp->lex);
+
+            if (comp->lex.tok.kind != TOK_COMMA)
+                break;
+            lexNext(&comp->lex);
+        }
+
+        lexEat(&comp->lex, TOK_OR);
+
+        // Allocate upvalues structure
+        Ident *upvaluesStructIdent = identAllocTempVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, upvaluesStructType, false);
+        doZeroVar(comp, upvaluesStructIdent);
+
+        // Assign upvalues structure fields
+        for (int i = 0; i < upvaluesStructType->numItems; i++)
+        {
+            Field *upvalue = upvaluesStructType->field[i];
+            Ident *capturedIdent = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, upvalue->name, NULL);
+
+            doPushVarPtr(comp, upvaluesStructIdent);
+            genGetFieldPtr(&comp->gen, upvalue->offset);
+
+            doPushVarPtr(comp, capturedIdent);
+            genDeref(&comp->gen, capturedIdent->type->kind);
+
+            genChangeRefCntAssign(&comp->gen, upvalue->type);
+        }
+
+        // Assign closure upvalues
+        Field *upvalues = typeAssertFindField(&comp->types, closureIdent->type, "__upvalues");
+        Type *upvaluesType = upvaluesStructIdent->type;
 
         doPushVarPtr(comp, closureIdent);
-        genGetFieldPtr(&comp->gen, upvalue->offset);
-        genSwapChangeRefCntAssign(&comp->gen, upvalue->type);
+        genGetFieldPtr(&comp->gen, upvalues->offset);
 
-        lexNext(&comp->lex);
-        lexEat(&comp->lex, TOK_OR);
+        doPushVarPtr(comp, upvaluesStructIdent);
+        genDeref(&comp->gen, upvaluesStructIdent->type->kind);
+        doImplicitTypeConv(comp, upvalues->type, &upvaluesType, NULL, false);
+
+        genChangeRefCntAssign(&comp->gen, upvalues->type);
     }
 
     // fnBlock
@@ -1838,16 +1870,17 @@ static void parseClosureLiteral(Compiler *comp, Type **type, Const *constant)
 
     Const fnConstant = {.intVal = comp->gen.ip};
     Ident *fnConstantIdent = identAddTempConst(&comp->idents, &comp->modules, &comp->blocks, fn->type, fnConstant);
-    parseFnBlock(comp, fnConstantIdent, capturedIdent);
+    parseFnBlock(comp, fnConstantIdent, upvaluesStructType);
 
     genGoFromTo(&comp->gen, beforeEntry, comp->gen.ip);     // Jump over the nested function block (fixup)
 
-     // Assign closure function
-    doPushConst(comp, fn->type, &fnConstant);
-
+    // Assign closure function
     doPushVarPtr(comp, closureIdent);
     genGetFieldPtr(&comp->gen, fn->offset);
-    genSwapChangeRefCntAssign(&comp->gen, fn->type);
+
+    doPushConst(comp, fn->type, &fnConstant);
+
+    genChangeRefCntAssign(&comp->gen, fn->type);
 
     doPushVarPtr(comp, closureIdent);
 }

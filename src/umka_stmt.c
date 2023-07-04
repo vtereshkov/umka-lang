@@ -960,7 +960,7 @@ static void parseBlock(Compiler *comp)
 
 
 // fnBlock = block.
-void parseFnBlock(Compiler *comp, Ident *fn, Ident *captured)
+void parseFnBlock(Compiler *comp, Ident *fn, Type *upvaluesStructType)
 {
     lexEat(&comp->lex, TOK_LBRACE);
     blocksEnter(&comp->blocks, fn);
@@ -993,21 +993,33 @@ void parseFnBlock(Compiler *comp, Ident *fn, Ident *captured)
         identAllocParam(&comp->idents, &comp->types, &comp->modules, &comp->blocks, &fn->type->sig, i);
 
     // Upvalues
-    if (captured)
+    if (upvaluesStructType)
     {
-        Ident *upvalueCopy = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, captured->name, captured->type, false);
-        doZeroVar(comp, upvalueCopy);
+        // Extract upvalues structure from the "any" interface
+        Ident *upvaluesParamIdent = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, "__upvalues", NULL);
+        Type *upvaluesParamType = upvaluesParamIdent->type;
 
-        doPushVarPtr(comp, upvalueCopy);
+        doPushVarPtr(comp, upvaluesParamIdent);
+        genDeref(&comp->gen, upvaluesParamIdent->type->kind);
+        doExplicitTypeConv(comp, upvaluesStructType, &upvaluesParamType, NULL, false);
 
-        Ident *upvalue = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, "__upvalue", NULL);
-        Type *upvalueType = upvalue->type;
+        // Copy upvalue structure fields to new local variables
+        for (int i = 0; i < upvaluesStructType->numItems; i++)
+        {
+            Field *upvalue = upvaluesStructType->field[i];
 
-        doPushVarPtr(comp, upvalue);
-        genDeref(&comp->gen, TYPE_INTERFACE);
-        doExplicitTypeConv(comp, upvalueCopy->type, &upvalueType, NULL, false);
+            genDup(&comp->gen);
+            genGetFieldPtr(&comp->gen, upvalue->offset);
+            genDeref(&comp->gen, upvalue->type->kind);
 
-        genChangeRefCntAssign(&comp->gen, upvalueCopy->type);
+            Ident *upvalueIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, upvalue->name, upvalue->type, NULL);
+            doZeroVar(comp, upvalueIdent);
+            doPushVarPtr(comp, upvalueIdent);
+
+            genSwapChangeRefCntAssign(&comp->gen, upvalue->type);
+        }
+
+        genPop(&comp->gen);
     }
 
     // 'return' prolog
