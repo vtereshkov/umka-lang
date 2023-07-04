@@ -2338,9 +2338,10 @@ static FORCE_INLINE void doPushReg(Fiber *fiber)
 }
 
 
-static FORCE_INLINE void doBasicPushStruct(Fiber *fiber, int size, Error *error)
+static FORCE_INLINE void doPushStruct(Fiber *fiber, Error *error)
 {
     void *src = (fiber->top++)->ptrVal;
+    int size = fiber->code[fiber->ip].operand.intVal;
     int slots = align(size, sizeof(Slot)) / sizeof(Slot);
 
     if (fiber->top - slots - fiber->stack < VM_MIN_FREE_STACK)
@@ -2348,34 +2349,17 @@ static FORCE_INLINE void doBasicPushStruct(Fiber *fiber, int size, Error *error)
 
     fiber->top -= slots;
     memcpy(fiber->top, src, size);
-}
 
-
-static FORCE_INLINE void doPushStruct(Fiber *fiber, Error *error)
-{
-    int size = fiber->code[fiber->ip].operand.intVal;
-    doBasicPushStruct(fiber, size, error);
     fiber->ip++;
 }
 
 
 static FORCE_INLINE void doPushUpvalue(Fiber *fiber, HeapPages *pages, Error *error)
 {
-    Closure closure = *(Closure *)(fiber->top++)->ptrVal;
+    Closure *closure = (Closure *)(fiber->top++)->ptrVal;
 
-    (--fiber->top)->intVal = closure.entryOffset;
-    (--fiber->top)->ptrVal = closure.upvalue.self;
-
-    if (closure.upvalue.self)
-    {
-        Type *upvalueType = closure.upvalue.selfType->base;
-
-        doBasicDeref(fiber->top, upvalueType->kind, error);
-        doBasicChangeRefCnt(fiber, pages, fiber->top, upvalueType, TOK_PLUSPLUS);
-
-        if (typeStructured(upvalueType))
-            doBasicPushStruct(fiber, typeSizeNoCheck(upvalueType), error);
-    }
+    (--fiber->top)->intVal = closure->entryOffset;
+    (--fiber->top)->ptrVal = &closure->upvalue;
 
     fiber->ip++;
 }

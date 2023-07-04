@@ -12,7 +12,6 @@
 
 
 static void parseDynArrayLiteral(Compiler *comp, Type **type, Const *constant);
-static void doExplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant, bool lhs);
 
 
 void doPushConst(Compiler *comp, Type *type, Const *constant)
@@ -538,7 +537,7 @@ void doImplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant,
 }
 
 
-static void doExplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant, bool lhs)
+void doExplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant, bool lhs)
 {
     doImplicitTypeConv(comp, dest, src, constant, lhs);
 
@@ -1391,10 +1390,11 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
     if ((*type)->kind == TYPE_CLOSURE)
     {
         // Closure upvalue
-        genPushUpvalue(&comp->gen);
-
         Field *fn = typeAssertFindField(&comp->types, *type, "__fn");
         *type = fn->type;
+
+        genPushUpvalue(&comp->gen);
+        doPassParam(comp, (*type)->sig.param[0]->type);
 
         numPreHiddenParams++;
         i++;
@@ -1800,8 +1800,6 @@ static void parseClosureLiteral(Compiler *comp, Type **type, Const *constant)
     Ident *closureIdent = identAllocTempVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, *type, false);
     doZeroVar(comp, closureIdent);
 
-    Field *fn = typeAssertFindField(&comp->types, closureIdent->type, "__fn");
-
     // ["|" ident "|"]
     Ident *capturedIdent = NULL;
     if (comp->lex.tok.kind == TOK_OR)
@@ -1814,11 +1812,6 @@ static void parseClosureLiteral(Compiler *comp, Type **type, Const *constant)
 
         if (capturedIdent->kind != IDENT_VAR)
             comp->error.handler(comp->error.context, "%s is not a variable", capturedIdent->name);
-
-        // Modify closure function's first parameter
-        strcpy(fn->type->sig.param[0]->name, capturedIdent->name);
-        fn->type->sig.param[0]->hash = hash(capturedIdent->name);
-        fn->type->sig.param[0]->type = capturedIdent->type;
 
         Field *upvalue = typeAssertFindField(&comp->types, closureIdent->type, "__upvalue");
         Type *upvalueType = capturedIdent->type;
@@ -1841,13 +1834,15 @@ static void parseClosureLiteral(Compiler *comp, Type **type, Const *constant)
 
     genNop(&comp->gen);                                     // Jump over the nested function block (stub)
 
+    Field *fn = typeAssertFindField(&comp->types, closureIdent->type, "__fn");
+
     Const fnConstant = {.intVal = comp->gen.ip};
     Ident *fnConstantIdent = identAddTempConst(&comp->idents, &comp->modules, &comp->blocks, fn->type, fnConstant);
-    parseFnBlock(comp, fnConstantIdent);
+    parseFnBlock(comp, fnConstantIdent, capturedIdent);
 
     genGoFromTo(&comp->gen, beforeEntry, comp->gen.ip);     // Jump over the nested function block (fixup)
 
-    // Assign closure function
+     // Assign closure function
     doPushConst(comp, fn->type, &fnConstant);
 
     doPushVarPtr(comp, closureIdent);

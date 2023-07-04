@@ -960,7 +960,7 @@ static void parseBlock(Compiler *comp)
 
 
 // fnBlock = block.
-void parseFnBlock(Compiler *comp, Ident *fn)
+void parseFnBlock(Compiler *comp, Ident *fn, Ident *captured)
 {
     lexEat(&comp->lex, TOK_LBRACE);
     blocksEnter(&comp->blocks, fn);
@@ -987,8 +987,28 @@ void parseFnBlock(Compiler *comp, Ident *fn)
     }
 
     genEnterFrameStub(&comp->gen);
+
+    // Formal parameters
     for (int i = 0; i < fn->type->sig.numParams; i++)
         identAllocParam(&comp->idents, &comp->types, &comp->modules, &comp->blocks, &fn->type->sig, i);
+
+    // Upvalues
+    if (captured)
+    {
+        Ident *upvalueCopy = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, captured->name, captured->type, false);
+        doZeroVar(comp, upvalueCopy);
+
+        doPushVarPtr(comp, upvalueCopy);
+
+        Ident *upvalue = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, "__upvalue", NULL);
+        Type *upvalueType = upvalue->type;
+
+        doPushVarPtr(comp, upvalue);
+        genDeref(&comp->gen, TYPE_INTERFACE);
+        doExplicitTypeConv(comp, upvalueCopy->type, &upvalueType, NULL, false);
+
+        genChangeRefCntAssign(&comp->gen, upvalueCopy->type);
+    }
 
     // 'return' prolog
     Gotos returns, *outerReturns = comp->gen.returns;

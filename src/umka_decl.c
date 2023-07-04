@@ -437,7 +437,7 @@ static Type *parseClosureType(Compiler *comp)
     // Function field
     Type *fnType = typeAdd(&comp->types, &comp->blocks, TYPE_FN);
 
-    typeAddParam(&comp->types, &fnType->sig, comp->ptrVoidType, "__self");
+    typeAddParam(&comp->types, &fnType->sig, comp->anyType, "__upvalue");
     parseSignature(comp, &fnType->sig);
 
     Field *fn = typeAddField(&comp->types, type, fnType, "__fn");
@@ -684,7 +684,7 @@ static void parseFnDecl(Compiler *comp)
     Ident *fn = identAddConst(&comp->idents, &comp->modules, &comp->blocks, name, fnType, exported, constant);
 
     if (comp->lex.tok.kind == TOK_LBRACE)
-        parseFnBlock(comp, fn);
+        parseFnBlock(comp, fn, NULL);
     else
         parseFnPrototype(comp, fn);
 }
