@@ -250,19 +250,19 @@ Array of any items.
 #### Functions
 
 ```
-fn (a: ^Array) transform*(f: fn (x, ctx: any): any, ctx: any): Array
+fn (a: ^Array) transform*(f: fn (x: any): any): Array
 ```
-Computes the function `f` for each item `x` of the array `a^` and returns the array of results. Any context stored in `ctx` will be passed unchanged to `f` on each its call.
+Computes the function `f` for each item `x` of the array `a^` and returns the array of results.
 
 ```
-fn (a: ^Array) filter*(f: fn (x, ctx: any): bool, ctx: any): Array 
+fn (a: ^Array) filter*(f: fn (x: any): bool): Array 
 ```
-Computes the function `f` for each item `x` of the array `a^` and returns the array of all the items of `a^` for which `f` evaluates to `true`. Any context stored in `ctx` will be passed unchanged to `f` on each its call.
+Computes the function `f` for each item `x` of the array `a^` and returns the array of all the items of `a^` for which `f` evaluates to `true`.
 
 ```
-fn (a: ^Array) reduce*(f: fn (x, y, ctx: any): any, ctx: any): any
+fn (a: ^Array) reduce*(f: fn (x, y: any): any): any
 ```
-Computes the function `f` for each item `y` of the array `a^` starting from index `i = 1` to `len(a^) - 1`. The previous result of `f` computed for items 1 to `i - 1` is passed as `x`. For `i = 1` it is assumed that `x = a[0]`. Returns the result of `f` computed for the last item of `a^`. Any context stored in `ctx` will be passed unchanged to `f` on each its call.
+Computes the function `f` for each item `y` of the array `a^` starting from index `i = 1` to `len(a^) - 1`. The previous result of `f` computed for items 1 to `i - 1` is passed as `x`. For `i = 1` it is assumed that `x = a[0]`. Returns the result of `f` computed for the last item of `a^`.
 
 Example:
 ```
@@ -271,14 +271,15 @@ import "fnc.um"
 fn main() {
     data := []int{3, 7, 1, -4, 2, 5}
     printf("Array = %v\n", data)
+
+    max := 30
      
-    sqr  := fn (x, ctx: any): any    {return int(x) * int(x)}
-    less := fn (x, ctx: any): bool   {return int(x) < int(ctx)} 
-    sum  := fn (x, y, ctx: any): any {return int(x) + int(y)}     
+    sqr  := fn (x: any): any        {return int(x) * int(x)}
+    less := fn (x: any): bool |max| {return int(x) < max} 
+    sum  := fn (x, y: any): any     {return int(x) + int(y)}     
     
-    const max = 30     
-    result := int(fnc.Array(data).transform(sqr, null).filter(less, max).reduce(sum, null))   
-    printf("Sum of all squares less than %lld = %lld \n", max, result)       
+    result := int(fnc.Array(data).transform(sqr).filter(less).reduce(sum))   
+    printf("Sum of all squares less than %lld = %lld \n", max, result)     
 }
 ```
 

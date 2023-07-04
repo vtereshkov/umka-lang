@@ -960,7 +960,7 @@ static void parseBlock(Compiler *comp)
 
 
 // fnBlock = block.
-void parseFnBlock(Compiler *comp, Ident *fn)
+void parseFnBlock(Compiler *comp, Ident *fn, Type *upvaluesStructType)
 {
     lexEat(&comp->lex, TOK_LBRACE);
     blocksEnter(&comp->blocks, fn);
@@ -987,8 +987,40 @@ void parseFnBlock(Compiler *comp, Ident *fn)
     }
 
     genEnterFrameStub(&comp->gen);
+
+    // Formal parameters
     for (int i = 0; i < fn->type->sig.numParams; i++)
         identAllocParam(&comp->idents, &comp->types, &comp->modules, &comp->blocks, &fn->type->sig, i);
+
+    // Upvalues
+    if (upvaluesStructType)
+    {
+        // Extract upvalues structure from the "any" interface
+        Ident *upvaluesParamIdent = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, "__upvalues", NULL);
+        Type *upvaluesParamType = upvaluesParamIdent->type;
+
+        doPushVarPtr(comp, upvaluesParamIdent);
+        genDeref(&comp->gen, upvaluesParamIdent->type->kind);
+        doExplicitTypeConv(comp, upvaluesStructType, &upvaluesParamType, NULL, false);
+
+        // Copy upvalue structure fields to new local variables
+        for (int i = 0; i < upvaluesStructType->numItems; i++)
+        {
+            Field *upvalue = upvaluesStructType->field[i];
+
+            genDup(&comp->gen);
+            genGetFieldPtr(&comp->gen, upvalue->offset);
+            genDeref(&comp->gen, upvalue->type->kind);
+
+            Ident *upvalueIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, upvalue->name, upvalue->type, NULL);
+            doZeroVar(comp, upvalueIdent);
+            doPushVarPtr(comp, upvalueIdent);
+
+            genSwapChangeRefCntAssign(&comp->gen, upvalue->type);
+        }
+
+        genPop(&comp->gen);
+    }
 
     // 'return' prolog
     Gotos returns, *outerReturns = comp->gen.returns;

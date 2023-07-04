@@ -6,32 +6,23 @@ type Person = struct {
 	sex: str
 }
 
-type Closure = struct {
-	data: any
-}
-
-fn (c: ^Closure) call(person: Person): bool {
-	printf("running by_name_eq with name : %v and person : %v\n", c.data, person)
-	return person.name == str(c.data)
-}
-
-fn by_name_eq(n: str): Closure {
-	printf("running by_name_eq with name : " + n + '\n')
-	return Closure{n}
+fn by_name_eq(n: str): fn (person: any): any {
+	printf("running by_name_eq with name : %s\n", n)
+	return fn (person: any): any |n| {
+		printf("running by_name_eq with name : %v and person : %v\n", n, Person(person))
+		return Person(person).name == n
+	}
 }
 
 fn test*() {
 	named_foo := by_name_eq("Foo")
 
 	persons := []Person{
-		Person{"Foo", 24, "M"},
-		Person{"Bar", 23, "M"},
-		Person{"FooBar", 23, "F"}}
+		{"Foo", 24, "M"},
+		{"Bar", 23, "M"},
+		{"FooBar", 23, "F"}}
 
-	mapped := []bool(fnc.Array(persons).transform(fn (person, closure: any): any {
-			return Closure(closure).call(Person(person))
-		}, named_foo))
-
+	mapped := fnc.Array(persons).transform(named_foo)
 	printf("%v\n", mapped)
 }
 

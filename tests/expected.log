@@ -505,13 +505,24 @@ Utils from lib 2
 42 43 1
 
 
->>> Simulated closures
+>>> Closures - 1
 
 running by_name_eq with name : Foo
 running by_name_eq with name : "Foo" and person : {name: "Foo" age: 24 sex: "M"}
 running by_name_eq with name : "Foo" and person : {name: "Bar" age: 23 sex: "M"}
 running by_name_eq with name : "Foo" and person : {name: "FooBar" age: 23 sex: "F"}
 [true false false]
+
+
+>>> Closures - 2
+
+8
+84
+   g: s = ["Hello" "World" "!"]
+45
+20
+30
+4
 
 
 >>> Null strings

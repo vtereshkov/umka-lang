@@ -12,7 +12,6 @@
 
 
 static void parseDynArrayLiteral(Compiler *comp, Type **type, Const *constant);
-static void doExplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant, bool lhs);
 
 
 void doPushConst(Compiler *comp, Type *type, Const *constant)
@@ -538,7 +537,7 @@ void doImplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant,
 }
 
 
-static void doExplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant, bool lhs)
+void doExplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant, bool lhs)
 {
     doImplicitTypeConv(comp, dest, src, constant, lhs);
 
@@ -648,7 +647,7 @@ Ident *parseQualIdent(Compiler *comp)
     }
 
     if (identIsOuterLocalVar(&comp->blocks, ident))
-        comp->error.handler(comp->error.context, "Closures are not supported, cannot close over %s", ident->name);
+        comp->error.handler(comp->error.context, "%s is not specified as a captured variable", ident->name);
 
     return ident;
 }
@@ -1382,15 +1381,27 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
         comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
 
     // Decide whether a (default) indirect call can be replaced with a direct call
-    int immediateEntryPoint = genTryRemoveImmediateEntryPoint(&comp->gen);
+    int immediateEntryPoint = (*type)->kind == TYPE_FN ? genTryRemoveImmediateEntryPoint(&comp->gen) : -1;
 
     // Actual parameters: [__self,] param1, param2 ...[__result]
     int numExplicitParams = 0, numPreHiddenParams = 0, numPostHiddenParams = 0;
     int i = 0;
 
-    // Method receiver
-    if ((*type)->sig.method)
+    if ((*type)->kind == TYPE_CLOSURE)
     {
+        // Closure upvalue
+        Field *fn = typeAssertFindField(&comp->types, *type, "__fn");
+        *type = fn->type;
+
+        genPushUpvalue(&comp->gen);
+        doPassParam(comp, (*type)->sig.param[0]->type);
+
+        numPreHiddenParams++;
+        i++;
+    }
+    else if ((*type)->sig.method)
+    {
+        // Method receiver
         genPushReg(&comp->gen, VM_REG_SELF);
 
         // Increase receiver's reference count
@@ -1779,29 +1790,131 @@ static void parseMapLiteral(Compiler *comp, Type **type, Const *constant)
 }
 
 
-// fnLiteral = fnBlock.
-static void parseFnLiteral(Compiler *comp, Type **type, Const *constant)
+// closureLiteral = ["|" ident {"," ident} "|"] fnBlock.
+static void parseClosureLiteral(Compiler *comp, Type **type, Const *constant)
 {
-    int beforeEntry = comp->gen.ip;
+    if (constant)
+    {
+        // Allocate closure
+        Closure *closure = (Closure *)storageAdd(&comp->storage, typeSize(&comp->types, *type));
 
-    if (comp->blocks.top != 0)
+        // ["|" ident {"," ident} "|"]
+        if (comp->lex.tok.kind == TOK_OR)
+            comp->error.handler(comp->error.context, "Cannot capture variables in a constant closure literal");
+
+        // fnBlock
+        int beforeEntry = comp->gen.ip;
+
+        if (comp->blocks.top != 0)
+            genNop(&comp->gen);                                     // Jump over the nested function block (stub)
+
+        Field *fn = typeAssertFindField(&comp->types, *type, "__fn");
+
+        Const fnConstant = {.intVal = comp->gen.ip};
+        Ident *fnConstantIdent = identAddTempConst(&comp->idents, &comp->modules, &comp->blocks, fn->type, fnConstant);
+        parseFnBlock(comp, fnConstantIdent, NULL);
+
+        if (comp->blocks.top != 0)
+            genGoFromTo(&comp->gen, beforeEntry, comp->gen.ip);     // Jump over the nested function block (fixup)
+
+        // Assign closure function
+        closure->entryOffset = fnConstant.intVal;
+        constant->ptrVal = closure;
+    }
+    else
+    {
+        // Allocate closure
+        Ident *closureIdent = identAllocTempVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, *type, false);
+        doZeroVar(comp, closureIdent);
+
+        Type *upvaluesStructType = NULL;
+
+        // ["|" ident {"," ident} "|"]
+        if (comp->lex.tok.kind == TOK_OR)
+        {
+            lexNext(&comp->lex);
+
+            // Determine upvalues structure type
+            upvaluesStructType = typeAdd(&comp->types, &comp->blocks, TYPE_STRUCT);
+            while (1)
+            {
+                lexCheck(&comp->lex, TOK_IDENT);
+
+                Ident *capturedIdent = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, comp->lex.tok.name, NULL);
+                if (capturedIdent->kind != IDENT_VAR)
+                    comp->error.handler(comp->error.context, "%s is not a variable", capturedIdent->name);
+
+                typeAddField(&comp->types, upvaluesStructType, capturedIdent->type, capturedIdent->name);
+
+                lexNext(&comp->lex);
+
+                if (comp->lex.tok.kind != TOK_COMMA)
+                    break;
+                lexNext(&comp->lex);
+            }
+
+            lexEat(&comp->lex, TOK_OR);
+
+            // Allocate upvalues structure
+            Ident *upvaluesStructIdent = identAllocTempVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, upvaluesStructType, false);
+            doZeroVar(comp, upvaluesStructIdent);
+
+            // Assign upvalues structure fields
+            for (int i = 0; i < upvaluesStructType->numItems; i++)
+            {
+                Field *upvalue = upvaluesStructType->field[i];
+                Ident *capturedIdent = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, upvalue->name, NULL);
+
+                doPushVarPtr(comp, upvaluesStructIdent);
+                genGetFieldPtr(&comp->gen, upvalue->offset);
+
+                doPushVarPtr(comp, capturedIdent);
+                genDeref(&comp->gen, capturedIdent->type->kind);
+
+                genChangeRefCntAssign(&comp->gen, upvalue->type);
+            }
+
+            // Assign closure upvalues
+            Field *upvalues = typeAssertFindField(&comp->types, closureIdent->type, "__upvalues");
+            Type *upvaluesType = upvaluesStructIdent->type;
+
+            doPushVarPtr(comp, closureIdent);
+            genGetFieldPtr(&comp->gen, upvalues->offset);
+
+            doPushVarPtr(comp, upvaluesStructIdent);
+            genDeref(&comp->gen, upvaluesStructIdent->type->kind);
+            doImplicitTypeConv(comp, upvalues->type, &upvaluesType, NULL, false);
+
+            genChangeRefCntAssign(&comp->gen, upvalues->type);
+        }
+
+        // fnBlock
+        int beforeEntry = comp->gen.ip;
+
         genNop(&comp->gen);                                     // Jump over the nested function block (stub)
 
-    Const fnConstant = {.intVal = comp->gen.ip};
-    Ident *fn = identAddTempConst(&comp->idents, &comp->modules, &comp->blocks, *type, fnConstant);
-    parseFnBlock(comp, fn);
+        Field *fn = typeAssertFindField(&comp->types, closureIdent->type, "__fn");
 
-    if (comp->blocks.top != 0)
+        Const fnConstant = {.intVal = comp->gen.ip};
+        Ident *fnConstantIdent = identAddTempConst(&comp->idents, &comp->modules, &comp->blocks, fn->type, fnConstant);
+        parseFnBlock(comp, fnConstantIdent, upvaluesStructType);
+
         genGoFromTo(&comp->gen, beforeEntry, comp->gen.ip);     // Jump over the nested function block (fixup)
 
-    if (constant)
-        *constant = fnConstant;
-    else
-        doPushConst(comp, fn->type, &fn->constant);
+        // Assign closure function
+        doPushVarPtr(comp, closureIdent);
+        genGetFieldPtr(&comp->gen, fn->offset);
+
+        doPushConst(comp, fn->type, &fnConstant);
+
+        genChangeRefCntAssign(&comp->gen, fn->type);
+
+        doPushVarPtr(comp, closureIdent);
+    }
 }
 
 
-// untypedLiteral = arrayLiteral | dynArrayLiteral | mapLiteral | structLiteral | fnLiteral.
+// untypedLiteral = arrayLiteral | dynArrayLiteral | mapLiteral | structLiteral | closureLiteral.
 static void parseUntypedLiteral(Compiler *comp, Type **type, Const *constant)
 {
     if ((*type)->kind == TYPE_ARRAY || (*type)->kind == TYPE_STRUCT)
@@ -1810,10 +1923,10 @@ static void parseUntypedLiteral(Compiler *comp, Type **type, Const *constant)
         parseDynArrayLiteral(comp, type, constant);
     else if ((*type)->kind == TYPE_MAP)
         parseMapLiteral(comp, type, constant);
-    else if ((*type)->kind == TYPE_FN)
-        parseFnLiteral(comp, type, constant);
+    else if ((*type)->kind == TYPE_CLOSURE)
+        parseClosureLiteral(comp, type, constant);
     else
-        comp->error.handler(comp->error.context, "Composite literals are only allowed for arrays, maps, structures and functions");
+        comp->error.handler(comp->error.context, "Composite literals are only allowed for arrays, maps, structures and closures");
 }
 
 
@@ -1827,7 +1940,7 @@ static void parseTypeCastOrCompositeLiteral(Compiler *comp, Ident *ident, Type *
         parseTypeCast(comp, type, constant);
         *isCompLit = false;
     }
-    else if (comp->lex.tok.kind == TOK_LBRACE)
+    else if (comp->lex.tok.kind == TOK_LBRACE || comp->lex.tok.kind == TOK_OR)
     {
         parseUntypedLiteral(comp, type, constant);
         *isCompLit = true;
@@ -2036,14 +2149,14 @@ static void parseFieldSelector(Compiler *comp, Type **type, Const *constant, boo
 static void parseCallSelector(Compiler *comp, Type **type, Const *constant, bool *isVar, bool *isCall)
 {
     // Implicit dereferencing
-    if ((*type)->kind == TYPE_PTR && (*type)->base->kind == TYPE_FN)
+    if ((*type)->kind == TYPE_PTR && ((*type)->base->kind == TYPE_FN || (*type)->base->kind == TYPE_CLOSURE))
     {
-        genDeref(&comp->gen, TYPE_FN);
+        genDeref(&comp->gen, (*type)->base->kind);
         *type = (*type)->base;
     }
 
-    if ((*type)->kind != TYPE_FN)
-        comp->error.handler(comp->error.context, "Function expected");
+    if ((*type)->kind != TYPE_FN && (*type)->kind != TYPE_CLOSURE)
+        comp->error.handler(comp->error.context, "Function or closure expected");
 
     parseCall(comp, type, constant);
 
@@ -2534,7 +2647,7 @@ void parseExpr(Compiler *comp, Type **type, Const *constant)
 // exprOrLit = expr | untypedLiteral.
 void parseExprOrUntypedLiteral(Compiler *comp, Type **type, Type *untypedLiteralType, Const *constant)
 {
-    if (untypedLiteralType && comp->lex.tok.kind == TOK_LBRACE)
+    if (untypedLiteralType && (comp->lex.tok.kind == TOK_LBRACE || comp->lex.tok.kind == TOK_OR))
     {
         *type = untypedLiteralType;
         parseUntypedLiteral(comp, type, constant);

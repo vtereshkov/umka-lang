@@ -36,6 +36,7 @@ static const char *spelling [] =
     "map",
     "struct",
     "interface",
+    "fn |..|",
     "fiber",
     "fn"
 };
@@ -127,7 +128,7 @@ void typeDeepCopy(Type *dest, Type *src)
     *dest = *src;
     dest->next = next;
 
-    if (dest->kind == TYPE_STRUCT || dest->kind == TYPE_INTERFACE)
+    if (dest->kind == TYPE_STRUCT || dest->kind == TYPE_INTERFACE || dest->kind == TYPE_CLOSURE)
         for (int i = 0; i < dest->numItems; i++)
         {
             dest->field[i] = malloc(sizeof(Field));
@@ -176,6 +177,7 @@ int typeSizeNoCheck(Type *type)
         case TYPE_MAP:      return sizeof(Map);
         case TYPE_STRUCT:
         case TYPE_INTERFACE:
+        case TYPE_CLOSURE:
         {
             int size = 0;
             for (int i = 0; i < type->numItems; i++)
@@ -230,6 +232,7 @@ int typeAlignmentNoCheck(Type *type)
         case TYPE_MAP:      return sizeof(int64_t);
         case TYPE_STRUCT:
         case TYPE_INTERFACE:
+        case TYPE_CLOSURE:
         {
             int alignment = 1;
             for (int i = 0; i < type->numItems; i++)
@@ -261,8 +264,8 @@ int typeAlignment(Types *types, Type *type)
 
 bool typeGarbageCollected(Type *type)
 {
-    if (type->kind == TYPE_PTR || type->kind == TYPE_WEAKPTR || type->kind == TYPE_STR || type->kind == TYPE_MAP ||
-        type->kind == TYPE_DYNARRAY || type->kind == TYPE_INTERFACE || type->kind == TYPE_FIBER)
+    if (type->kind == TYPE_PTR      || type->kind == TYPE_WEAKPTR   || type->kind == TYPE_STR     || type->kind == TYPE_MAP  ||
+        type->kind == TYPE_DYNARRAY || type->kind == TYPE_INTERFACE || type->kind == TYPE_CLOSURE || type->kind == TYPE_FIBER)
         return true;
 
     if (type->kind == TYPE_ARRAY)
@@ -297,7 +300,7 @@ static bool typeDefaultParamEqual(Const *left, Const *right, Type *type)
     if (type->kind == TYPE_STR)
         return strcmp((char *)left->ptrVal, (char *)right->ptrVal) == 0;
 
-    if (type->kind == TYPE_ARRAY || type->kind == TYPE_STRUCT)
+    if (type->kind == TYPE_ARRAY || type->kind == TYPE_STRUCT || type->kind == TYPE_CLOSURE)
         return memcmp(left->ptrVal, right->ptrVal, typeSizeNoCheck(type)) == 0;
 
     return false;
@@ -359,7 +362,7 @@ static bool typeEquivalentRecursive(Type *left, Type *right, bool checkTypeIdent
         }
 
         // Structures or interfaces
-        else if (left->kind == TYPE_STRUCT || left->kind == TYPE_INTERFACE)
+        else if (left->kind == TYPE_STRUCT || left->kind == TYPE_INTERFACE || left->kind == TYPE_CLOSURE)
         {
             // Number of fields
             if (left->numItems != right->numItems)
@@ -572,7 +575,7 @@ void typeAssertForwardResolved(Types *types)
 
 Field *typeFindField(Type *structType, const char *name)
 {
-    if (structType->kind == TYPE_STRUCT || structType->kind == TYPE_INTERFACE)
+    if (structType->kind == TYPE_STRUCT || structType->kind == TYPE_INTERFACE || structType->kind == TYPE_CLOSURE)
     {
         unsigned int nameHash = hash(name);
         for (int i = 0; i < structType->numItems; i++)
@@ -726,8 +729,12 @@ static char *typeSpellingRecursive(Type *type, char *buf, int size, int depth)
             }
             len += snprintf(buf + len, nonneg(size - len), "}");
         }
-        else if (type->kind == TYPE_FN)
+        else if (type->kind == TYPE_FN || type->kind == TYPE_CLOSURE)
         {
+            const bool isClosure = type->kind == TYPE_CLOSURE;
+            if (isClosure)
+                type = type->field[0]->type;
+
             len += snprintf(buf + len, nonneg(size - len), "fn (");
 
             if (type->sig.method)
@@ -736,7 +743,7 @@ static char *typeSpellingRecursive(Type *type, char *buf, int size, int depth)
                 len += snprintf(buf + len, nonneg(size - len), "%s) (", typeSpellingRecursive(type->sig.param[0]->type, paramBuf, DEFAULT_STR_LEN + 1, depth - 1));
             }
 
-            int numPreHiddenParams = type->sig.method ? 1 : 0;                          // __self
+            int numPreHiddenParams = type->sig.method || isClosure ? 1 : 0;             // __self or __upvalues
             int numPostHiddenParams = typeStructured(type->sig.resultType) ? 1 : 0;     // __result
 
             for (int i = numPreHiddenParams; i < type->sig.numParams - numPostHiddenParams; i++)
@@ -755,6 +762,9 @@ static char *typeSpellingRecursive(Type *type, char *buf, int size, int depth)
                 char resultBuf[DEFAULT_STR_LEN + 1];
                 len += snprintf(buf + len, nonneg(size - len), ": %s", typeSpellingRecursive(type->sig.resultType, resultBuf, DEFAULT_STR_LEN + 1, depth - 1));
             }
+
+            if (isClosure)
+                len += snprintf(buf + len, nonneg(size - len), " |...|");
         }
         else
         {

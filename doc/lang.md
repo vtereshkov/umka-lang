@@ -153,7 +153,7 @@ Syntax:
 
 ```
 type = qualIdent | ptrType | arrayType | dynArrayType | strType | 
-       mapType | structType | interfaceType | fnType.
+       mapType | structType | interfaceType | closureType.
 qualIdent = [ident "."] ident.
 ```
 
@@ -204,25 +204,24 @@ An uninitialized pointer has the value `null`.
 
 #### Function types
 
-A constant or variable that stores an entry point of a function has a function type. A function is characterized by its *signature* that consists of a set of parameter names, types and optional default values, and an optional set of returned value types.
+A constant that stores an entry point of a function has a function type. A function is characterized by its *signature* that consists of a set of parameter names, types and optional default values, and an optional set of returned value types. The type of the last parameter in the function signature may be prefixed with `..`. The type `..T` is equivalent to `[]T` within the function. Such a function is called *variadic*.
 
 Syntax:
 
 ```
-fnType    = "fn" signature.
 signature = "(" [typedIdentList ["=" exprOrLit] {"," typedIdentList ["=" exprOrLit]}] ")" 
             [":" (type | "(" type {"," type} ")")].
 ```
 
+Each function definition in the module scope defines a constant of a function type. A constant or variable of a function type cannot be declared using a `const` or `var` declaration, which produce a closure type instead.   
+
 Examples:
 
 ```
-fn (code: int)
-fn (p: int, x, y: real): (bool, real)
-fn (msg: char, values: ..real)
+fn foo(code: int)
+fn MyFunc(p: int, x, y: real): (bool, real)
+fn printMsg(msg: char, values: ..real)
 ```
-
-The type of the last parameter in the function signature may be prefixed with `..`. The type `..T` is equivalent to `[]T` within the function. Such a function is called *variadic*. 
 
 ### Structured types
 
@@ -350,6 +349,24 @@ Let`T` be a non-pointer type. If a pointer of type `^T` is converted to the inte
 Any type can be converted to the built-in type `any`, which is an alias for `interface{}`.
 
 Interface assignment copies the pointer, but not the contents of the variable that has been converted to the interface.
+
+#### Closure types
+
+A closure stores a function entry point (a value of a function type) and an optional set of variables *captured* from the enclosing function scope. These variables are copied to the closure function, so they can be used as local variables within the closure function even if they no longer exist in the enclosing function. 
+
+Syntax:
+
+```
+closureType = "fn" signature.
+```
+
+Examples:
+
+```
+fn (code: int)
+fn (p: int, x, y: real): (bool, real)
+fn (msg: char, values: ..real)
+```
 
 #### Fiber type
 
@@ -828,7 +845,7 @@ int('b')
 
 ### Composite literals
 
-A composite literal constructs a value for an array, dynamic array, map, structure or function and creates a new value each time it is evaluated. It consists of the type followed by the brace-bound list of item values (for arrays or dynamic arrays), list of key/item pairs (for maps), list of field values with optional field names (for structures) or the function body (for functions). 
+A composite literal constructs a value for an array, dynamic array, map, structure or closure and creates a new value each time it is evaluated. It consists of the type followed by the brace-bound list of item values (for arrays or dynamic arrays), list of key/item pairs (for maps), list of field values with optional field names (for structures) or the function body (for closure). A closure literal can be prepended with a list of captured variables bound by a pair of `|`s.
 
 The number of array item values or structure field values (if the optional field names are omitted) should match the literal type. The types of array item values, dynamic array item values, map key and item values, or structure field values should be compatible to those of the literal type.
 
@@ -850,12 +867,12 @@ Syntax:
 ```
 compositeLiteral = type untypedLiteral.
 untypedLiteral   = arrayLiteral | dynArrayLiteral | mapLiteral | 
-                   structLiteral | fnLiteral.
+                   structLiteral | closureLiteral.
 arrayLiteral     = "{" [exprOrLit {"," exprOrLit}] "}".
 dynArrayLiteral  = arrayLiteral.
 mapLiteral       = "{" exprOrLit ":" exprOrLit {"," exprOrLit ":" exprOrLit} "}".
 structLiteral    = "{" [[ident ":"] exprOrLit {"," [ident ":"] exprOrLit}] "}".
-fnLiteral        = fnBlock.
+closureLiteral   = ["|" ident {"," ident} "|"] fnBlock.
 ```
 
 Examples:
@@ -865,8 +882,8 @@ Examples:
 []any{7.2, "Hello", [2]int{3, 5}}
 map[[]int]str{[]int{13, 15}: "First", []int{57, 89}: "Second"}
 Vec{x: 2, y: 8}
-Mat{ {1, 2}, {3, 4} }             // Nested literals' types omitted
-fn (x: int) {return 2 * x}
+Mat{ {1, 2}, {3, 4} }                   // Nested literals' types omitted
+fn (x: int) |y, z| {return x + y + z}
 ```
 
 ### Designators and selectors
@@ -1377,7 +1394,7 @@ exportMark          = ["*"].
 identList           = ident exportMark {"," ident exportMark}.
 typedIdentList      = identList ":" [".."] type.
 type                = qualIdent | ptrType | arrayType | dynArrayType | strType |
-                      mapType | structType | interfaceType | fnType.
+                      mapType | structType | interfaceType | closureType.
 ptrType             = ["weak"] "^" type.
 arrayType           = "[" expr "]" type.
 dynArrayType        = "[" "]" type.
@@ -1385,7 +1402,7 @@ strType             = "str".
 mapType             = "map" "[" type "]" type.
 structType          = "struct" "{" {typedIdentList ";"} "}".
 interfaceType       = "interface" "{" {(ident signature | qualIdent) ";"} "}".
-fnType              = "fn" signature.
+closureType         = "fn" signature.
 block               = "{" StmtList "}".
 fnBlock             = block.
 fnPrototype         = .
@@ -1438,12 +1455,12 @@ callSelector        = actualParams.
 actualParams        = "(" [exprOrLit {"," exprOrLit}] ")".
 compositeLiteral    = type untypedLiteral.
 untypedLiteral      = arrayLiteral | dynArrayLiteral | mapLiteral | 
-                      structLiteral | fnLiteral.
+                      structLiteral | closureLiteral.
 arrayLiteral        = "{" [exprOrLit {"," exprOrLit}] "}".
 dynArrayLiteral     = arrayLiteral.
 mapLiteral          = "{" exprOrLit ":" exprOrLit {"," exprOrLit ":" exprOrLit} "}".
 structLiteral       = "{" [[ident ":"] exprOrLit {"," [ident ":"] exprOrLit}] "}".
-fnLiteral           = fnBlock.
+closureLiteral      = ["|" ident {"," ident} "|"] fnBlock.
 typeCast            = type "(" expr ")".
 ident               = (letter | "_") {letter | "_" | digit}.
 intNumber           = decNumber | hexHumber.

@@ -35,6 +35,7 @@ typedef enum
     TYPE_MAP,
     TYPE_STRUCT,
     TYPE_INTERFACE,
+    TYPE_CLOSURE,
     TYPE_FIBER,         // Pointer of a special kind
     TYPE_FN
 } TypeKind;
@@ -164,7 +165,7 @@ static inline bool typeReal(Type *type)
 static inline bool typeStructured(Type *type)
 {
     return type->kind == TYPE_ARRAY  || type->kind == TYPE_DYNARRAY  || type->kind == TYPE_MAP ||
-           type->kind == TYPE_STRUCT || type->kind == TYPE_INTERFACE;
+           type->kind == TYPE_STRUCT || type->kind == TYPE_INTERFACE || type->kind == TYPE_CLOSURE;
 }
 
 
@@ -172,7 +173,7 @@ static inline bool typeKindGarbageCollected(TypeKind typeKind)
 {
     return typeKind == TYPE_PTR    || typeKind == TYPE_WEAKPTR   ||
            typeKind == TYPE_STR    || typeKind == TYPE_ARRAY     || typeKind == TYPE_DYNARRAY || typeKind == TYPE_MAP ||
-           typeKind == TYPE_STRUCT || typeKind == TYPE_INTERFACE || typeKind == TYPE_FIBER;
+           typeKind == TYPE_STRUCT || typeKind == TYPE_INTERFACE || typeKind == TYPE_CLOSURE  || typeKind == TYPE_FIBER;
 }
 
 
@@ -253,6 +254,7 @@ static inline bool typeOverflow(TypeKind typeKind, Const val)
         case TYPE_MAP:
         case TYPE_STRUCT:
         case TYPE_INTERFACE:
+        case TYPE_CLOSURE:
         case TYPE_FIBER:
         case TYPE_FN:       return false;
         default:            return true;
