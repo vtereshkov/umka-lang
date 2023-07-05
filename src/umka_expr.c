@@ -1183,7 +1183,7 @@ static void parseBuiltinValidCall(Compiler *comp, Type **type, Const *constant)
         comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
 
     parseExpr(comp, type, constant);
-    typeAssertCompatibleBuiltin(&comp->types, *type, BUILTIN_VALID, (*type)->kind == TYPE_DYNARRAY || (*type)->kind == TYPE_MAP || (*type)->kind == TYPE_INTERFACE || (*type)->kind == TYPE_FN || (*type)->kind == TYPE_FIBER);
+    typeAssertCompatibleBuiltin(&comp->types, *type, BUILTIN_VALID, (*type)->kind == TYPE_DYNARRAY || (*type)->kind == TYPE_MAP || (*type)->kind == TYPE_INTERFACE || (*type)->kind == TYPE_FN || (*type)->kind == TYPE_CLOSURE || (*type)->kind == TYPE_FIBER);
 
     genCallBuiltin(&comp->gen, (*type)->kind, BUILTIN_VALID);
     *type = comp->boolType;
