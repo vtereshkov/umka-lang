@@ -45,6 +45,7 @@ static const char *spelling [] =
 void typeInit(Types *types, Error *error)
 {
     types->first = types->last = NULL;
+    types->forwardTypesEnabled = false;
     types->error = error;
 }
 
@@ -565,11 +566,14 @@ void typeAssertValidOperator(Types *types, Type *type, TokenKind op)
 }
 
 
-void typeAssertForwardResolved(Types *types)
+void typeEnableForward(Types *types, bool enable)
 {
-    for (Type *type = types->first; type; type = type->next)
-        if (type->kind == TYPE_FORWARD)
-            types->error->handler(types->error->context, "Unresolved forward declaration of %s", (Ident *)(type->typeIdent)->name);
+    types->forwardTypesEnabled = enable;
+
+    if (!enable)
+        for (Type *type = types->first; type; type = type->next)
+            if (type->kind == TYPE_FORWARD)
+                types->error->handler(types->error->context, "Unresolved forward declaration of %s", (Ident *)(type->typeIdent)->name);
 }
 
 

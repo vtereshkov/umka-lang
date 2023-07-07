@@ -222,20 +222,16 @@ static Type *parsePtrType(Compiler *comp)
 
     // Forward declaration
     bool forward = false;
-    if (comp->lex.tok.kind == TOK_IDENT)
+    if (comp->types.forwardTypesEnabled && comp->lex.tok.kind == TOK_IDENT)
     {
         Ident *ident = identFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, comp->lex.tok.name, NULL, true);
         if (!ident)
         {
-            IdentName name;
-            strcpy(name, comp->lex.tok.name);
+            type = typeAdd(&comp->types, &comp->blocks, TYPE_FORWARD);
+            type->typeIdent = identAddType(&comp->idents, &comp->modules, &comp->blocks, comp->lex.tok.name, type, false);
+            type->typeIdent->used = true;
 
             lexNext(&comp->lex);
-            bool exported = parseExportMark(comp);
-
-            type = typeAdd(&comp->types, &comp->blocks, TYPE_FORWARD);
-            type->typeIdent = identAddType(&comp->idents, &comp->modules, &comp->blocks, name, type, exported);
-            type->typeIdent->used = true;
 
             forward = true;
         }
@@ -501,6 +497,8 @@ static void parseTypeDecl(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_TYPE);
 
+    typeEnableForward(&comp->types, true);
+
     if (comp->lex.tok.kind == TOK_LPAR)
     {
         lexNext(&comp->lex);
@@ -513,6 +511,8 @@ static void parseTypeDecl(Compiler *comp)
     }
     else
         parseTypeDeclItem(comp);
+
+    typeEnableForward(&comp->types, false);
 }
 
 
@@ -704,8 +704,6 @@ void parseDecl(Compiler *comp)
 
         default: comp->error.handler(comp->error.context, "Declaration expected but %s found", lexSpelling(comp->lex.tok.kind)); break;
     }
-
-    typeAssertForwardResolved(&comp->types);
 }
 
 

@@ -107,6 +107,7 @@ typedef struct tagVisitedTypePair
 typedef struct
 {
     Type *first, *last;
+    bool forwardTypesEnabled;
     Error *error;
 } Types;
 
@@ -226,7 +227,7 @@ static inline bool typeCastablePtrs(Types *types, Type *left, Type *right)
 bool typeValidOperator      (Type *type, TokenKind op);
 void typeAssertValidOperator(Types *types, Type *type, TokenKind op);
 
-void typeAssertForwardResolved(Types *types);
+void typeEnableForward(Types *types, bool enable);
 
 
 static inline bool typeOverflow(TypeKind typeKind, Const val)
