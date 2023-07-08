@@ -92,6 +92,7 @@ static const char *spelling [] =
     "string",
 
     "end of line",
+    "end of line",
     "end of file"
 };
 
@@ -806,7 +807,7 @@ void lexNext(Lexer *lex)
                 lex->prevTok.kind == TOK_CHARLITERAL ||
                 lex->prevTok.kind == TOK_STRLITERAL)
             {
-               lex->tok.kind = TOK_SEMICOLON;
+               lex->tok.kind = TOK_IMPLICIT_SEMICOLON;
             }
 
         lex->prevTok = lex->tok;
@@ -820,7 +821,7 @@ void lexNextForcedSemicolon(Lexer *lex)
 
     // Replace end of line with implicit semicolon
     if (lex->tok.kind == TOK_EOLN)
-        lex->tok.kind = TOK_SEMICOLON;
+        lex->tok.kind = TOK_IMPLICIT_SEMICOLON;
 
     lex->prevTok = lex->tok;
 }
@@ -828,7 +829,7 @@ void lexNextForcedSemicolon(Lexer *lex)
 
 bool lexCheck(Lexer *lex, TokenKind kind)
 {
-    bool res = lex->tok.kind == kind;
+    bool res = lex->tok.kind == kind || (lex->tok.kind == TOK_IMPLICIT_SEMICOLON && kind == TOK_SEMICOLON);
     if (!res)
         lex->error->handler(lex->error->context, "%s expected but %s found", lexSpelling(kind), lexSpelling(lex->tok.kind));
     return res;

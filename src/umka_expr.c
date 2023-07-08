@@ -1627,6 +1627,7 @@ static void parseArrayOrStructLiteral(Compiler *comp, Type **type, Const *consta
             Field *field = NULL;
             if (namedFields)
             {
+                lexCheck(&comp->lex, TOK_IDENT);
                 field = typeAssertFindField(&comp->types, *type, comp->lex.tok.name);
                 itemOffset = field->offset;
 

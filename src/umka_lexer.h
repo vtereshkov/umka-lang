@@ -85,6 +85,7 @@ typedef enum
     TOK_CHARLITERAL,
     TOK_STRLITERAL,
 
+    TOK_IMPLICIT_SEMICOLON,
     TOK_EOLN,
     TOK_EOF
 } TokenKind;

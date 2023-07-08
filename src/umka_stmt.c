@@ -567,7 +567,7 @@ static void parseForHeader(Compiler *comp)
     genForCondEpilog(&comp->gen);
 
     // [";" simpleStmt]
-    if (comp->lex.tok.kind == TOK_SEMICOLON)
+    if (comp->lex.tok.kind == TOK_SEMICOLON || comp->lex.tok.kind == TOK_IMPLICIT_SEMICOLON)
     {
         // Additional scope embracing simpleStmt (needed for timely garbage collection in simpleStmt, since it is executed at each iteration)
         blocksEnter(&comp->blocks, NULL);
@@ -857,7 +857,7 @@ static void parseReturnStmt(Compiler *comp)
         }
 
     Type *type;
-    if (comp->lex.tok.kind != TOK_SEMICOLON && comp->lex.tok.kind != TOK_RBRACE)
+    if (comp->lex.tok.kind != TOK_SEMICOLON && comp->lex.tok.kind != TOK_IMPLICIT_SEMICOLON && comp->lex.tok.kind != TOK_RBRACE)
         parseExprOrUntypedLiteralList(comp, &type, sig->resultType, NULL);
     else
         type = comp->voidType;
@@ -935,7 +935,7 @@ static void parseStmtList(Compiler *comp)
     while (1)
     {
         parseStmt(comp);
-        if (comp->lex.tok.kind != TOK_SEMICOLON)
+        if (comp->lex.tok.kind != TOK_SEMICOLON && comp->lex.tok.kind != TOK_IMPLICIT_SEMICOLON)
             break;
         lexNext(&comp->lex);
     };
