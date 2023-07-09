@@ -2118,7 +2118,7 @@ static void parseFieldSelector(Compiler *comp, Type **type, Const *constant, boo
         if ((*type)->kind != TYPE_STRUCT && (*type)->kind != TYPE_INTERFACE)
         {
             char typeBuf[DEFAULT_STR_LEN + 1];
-            comp->error.handler(comp->error.context, "Method %s is not found, type %s is not a structure and cannot have fields", comp->lex.tok.name, typeSpelling(*type, typeBuf));
+            comp->error.handler(comp->error.context, "Method %s is not defined for %s", comp->lex.tok.name, typeSpelling(*type, typeBuf));
         }
 
         Field *field = typeAssertFindField(&comp->types, *type, comp->lex.tok.name);
