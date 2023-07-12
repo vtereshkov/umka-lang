@@ -29,6 +29,7 @@ import (
     "imports3.um"
     "closures.um"
     "closures2.um"
+    "closures3.um"
     "nullstr.um"
     "vararg.um"
     "defparam.um"
@@ -68,6 +69,7 @@ fn main() {
     printf("\n\n>>> Import disambiguation - 3\n\n");imports3.test()
     printf("\n\n>>> Closures - 1\n\n");             closures.test()
     printf("\n\n>>> Closures - 2\n\n");             closures2.test()
+    printf("\n\n>>> Closures - 3\n\n");             closures3.test()
     printf("\n\n>>> Null strings\n\n");             nullstr.test()
     printf("\n\n>>> Variadic functions\n\n");       vararg.test()
     printf("\n\n>>> Default parameters\n\n");       defparam.test()

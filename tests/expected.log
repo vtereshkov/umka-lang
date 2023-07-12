@@ -525,6 +525,20 @@ running by_name_eq with name : "Foo" and person : {name: "FooBar" age: 23 sex: "
 4
 
 
+>>> Closures - 3
+
+Fibonacci number 1 = 1
+Fibonacci number 2 = 1
+Fibonacci number 3 = 2
+Fibonacci number 4 = 3
+Fibonacci number 5 = 5
+Fibonacci number 6 = 8
+Fibonacci number 7 = 13
+Fibonacci number 8 = 21
+Fibonacci number 9 = 34
+Fibonacci number 10 = 55
+
+
 >>> Null strings
 
 s2 = 
