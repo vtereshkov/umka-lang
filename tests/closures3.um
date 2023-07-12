@@ -1,0 +1,43 @@
+/*
+This example computes Fibonacci numbers by counting the number of derivations of the "Fibonacci grammar":
+
+  fib: "a"; 
+       "a", fib; 
+       "aa", fib.
+
+Original Algol-68 version by Eric Voss and Marcel van der Veer
+*/
+
+type Cont = fn (j: int)
+
+fn terminal(i: int, a, s: str, q: Cont) {
+    if u := i + len(a); u <= len(s) {
+        q(u)
+    }
+}
+
+fn grammar_fib(i: int, s: str, q: Cont) {
+    terminal(i, "a", s, q)
+    terminal(i, "a", s, |s, q| {grammar_fib(j, s, q)})
+    terminal(i, "aa", s, |s, q| {grammar_fib(j, s, q)})
+}
+
+fn test*() {
+    for k := 1; k <= 10; k++ {
+       sentence := ""
+       for len(sentence) < k {sentence += "a"}
+
+       nr_derivations := new(int)
+       grammar_fib(0, sentence, |sentence, nr_derivations| {
+           if j == len(sentence) {
+               nr_derivations^++
+           }
+       })
+       
+       printf("Fibonacci number %v = %v\n", len(sentence), nr_derivations^)        
+    }    
+}
+
+fn main() {
+    test()
+}
