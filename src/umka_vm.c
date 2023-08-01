@@ -3354,6 +3354,15 @@ char *vmMakeStr(VM *vm, const char *str)
 }
 
 
+void vmMakeDynArray(VM *vm, DynArray *array, Type *type, int len)
+{
+    if (!array)
+        return;
+
+    doAllocDynArray(&vm->pages, array, type, len, vm->error);
+}
+
+
 const char *vmBuiltinSpelling(BuiltinFunc builtin)
 {
     return builtinSpelling[builtin];

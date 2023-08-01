@@ -184,6 +184,13 @@ UMKA_API int umkaGetFunc(void *umka, const char *moduleName, const char *funcNam
 }
 
 
+UMKA_API void *umkaGetType(void *umka, const char *moduleName, const char *typeName)
+{
+    Compiler *comp = umka;
+    return compilerGetType(comp, moduleName, typeName);
+}
+
+
 UMKA_API bool umkaGetCallStack(void *umka, int depth, int nameSize, int *offset, char *fileName, char *fnName, int *line)
 {
     Compiler *comp = umka;
@@ -257,6 +264,13 @@ UMKA_API int umkaGetStrLen(const char *str)
     if (!str)
         return 0;
     return getStrDims(str)->len;
+}
+
+
+UMKA_API void umkaMakeDynArray(void *umka, void *array, void *type, int len)
+{
+    Compiler *comp = umka;
+    return vmMakeDynArray(&comp->vm, (DynArray *)array, (Type *)type, len);
 }
 
 

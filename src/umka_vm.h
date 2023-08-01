@@ -250,6 +250,7 @@ void vmIncRef                   (VM *vm, void *ptr);
 void vmDecRef                   (VM *vm, void *ptr);
 void *vmGetMapNodeData          (VM *vm, Map *map, Slot key);
 char *vmMakeStr                 (VM *vm, const char *str);
+void vmMakeDynArray             (VM *vm, DynArray *array, Type *type, int len);
 const char *vmBuiltinSpelling   (BuiltinFunc builtin);
 
 #endif // UMKA_VM_H_INCLUDED

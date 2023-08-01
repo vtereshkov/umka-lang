@@ -98,6 +98,7 @@ UMKA_API char *umkaAsm              (void *umka);
 UMKA_API bool umkaAddModule         (void *umka, const char *fileName, const char *sourceString);
 UMKA_API bool umkaAddFunc           (void *umka, const char *name, UmkaExternFunc func);
 UMKA_API int  umkaGetFunc           (void *umka, const char *moduleName, const char *funcName);
+UMKA_API void *umkaGetType          (void *umka, const char *moduleName, const char *typeName);
 UMKA_API bool umkaGetCallStack      (void *umka, int depth, int nameSize, int *offset, char *fileName, char *fnName, int *line);
 UMKA_API void umkaSetHook           (void *umka, UmkaHookEvent event, UmkaHookFunc hook);
 UMKA_API void *umkaAllocData        (void *umka, int size, UmkaExternFunc onFree);
@@ -106,6 +107,7 @@ UMKA_API void umkaDecRef            (void *umka, void *ptr);
 UMKA_API void *umkaGetMapItem       (void *umka, UmkaMap *map, UmkaStackSlot key);
 UMKA_API char *umkaMakeStr          (void *umka, const char *str);
 UMKA_API int  umkaGetStrLen         (const char *str);
+UMKA_API void umkaMakeDynArray      (void *umka, void *array, void *type, int len);
 UMKA_API int  umkaGetDynArrayLen    (const void *array);
 UMKA_API const char *umkaGetVersion (void);
 
