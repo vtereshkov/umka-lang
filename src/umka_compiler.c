@@ -188,7 +188,7 @@ void compilerInit(Compiler *comp, const char *fileName, const char *sourceString
 
     Ident *rtlargv = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "rtlargv", argvType, true);
     char **argArray = (char **)rtlargv->ptr;
-    
+
     for (int i = 0; i < comp->argc; i++)
     {
         argArray[i] = storageAddStr(&comp->storage, strlen(comp->argv[i]));
@@ -298,4 +298,22 @@ int compilerGetFunc(Compiler *comp, const char *moduleName, const char *funcName
 }
 
 
+void *compilerGetType(Compiler *comp, const char *moduleName, const char *typeName)
+{
+    int module = 1;
+    if (moduleName)
+    {
+        char modulePath[DEFAULT_STR_LEN + 1] = "";
+        moduleAssertRegularizePath(&comp->modules, moduleName, comp->modules.curFolder, modulePath, DEFAULT_STR_LEN + 1);
+        module = moduleFind(&comp->modules, modulePath);
+    }
 
+    Ident *typeIdent = identFind(&comp->idents, &comp->modules, &comp->blocks, module, typeName, NULL, false);
+    if (typeIdent && typeIdent->kind == IDENT_TYPE)
+    {
+        typeIdent->used = true;
+        return typeIdent->type;
+    }
+
+    return NULL;
+}

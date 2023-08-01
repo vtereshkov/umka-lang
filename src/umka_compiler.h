@@ -55,5 +55,6 @@ char *compilerAsm       (Compiler *comp);
 bool compilerAddModule  (Compiler *comp, const char *fileName, const char *sourceString);
 bool compilerAddFunc    (Compiler *comp, const char *name, ExternFunc func);
 int  compilerGetFunc    (Compiler *comp, const char *moduleName, const char *funcName);
+void *compilerGetType   (Compiler *comp, const char *moduleName, const char *typeName);
 
 #endif // UMKA_COMPILER_H_INCLUDED
