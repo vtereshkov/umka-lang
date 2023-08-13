@@ -668,3 +668,19 @@ true
 8: [-4 12]
 9: [-4 12]
 train! train!
+
+
+>>> Type switches
+
+int: 42 + 5 = 47
+str: 42 + 5 = 425
+[]real: [42] + [5] = [42 5]
+unknown: 42
+
+unknown: 42
+
+int: 47 + 5 = 52
+str: 425 + 5 = 4255
+[]real: [42 5] + [5] = [42 5 5]
+unknown: 42
+

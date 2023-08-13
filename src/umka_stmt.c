@@ -120,6 +120,29 @@ static bool doShortVarDeclLookahead(Compiler *comp)
 }
 
 
+static bool doTypeSwitchStmtLookahead(Compiler *comp)
+{
+    // "switch" ident ":=" "type"
+    Lexer lookaheadLex = comp->lex;
+    if (lookaheadLex.tok.kind != TOK_SWITCH)
+        return false;
+
+    lexNext(&lookaheadLex);
+    if (lookaheadLex.tok.kind != TOK_IDENT)
+        return false;
+
+    lexNext(&lookaheadLex);
+    if (lookaheadLex.tok.kind != TOK_COLONEQ)
+        return false;
+
+    lexNext(&lookaheadLex);
+    if (lookaheadLex.tok.kind != TOK_TYPE)
+        return false;
+
+    return true;
+}
+
+
 // singleAssignmentStmt = designator "=" exprOrLit.
 static void parseSingleAssignmentStmt(Compiler *comp, Type *type, Const *varPtrConst)
 {
@@ -434,8 +457,8 @@ static void parseIfStmt(Compiler *comp)
 }
 
 
-// case = "case" expr {"," expr} ":" stmtList.
-static void parseCase(Compiler *comp, Type *selectorType)
+// exprCase = "case" expr {"," expr} ":" stmtList.
+static void parseExprCase(Compiler *comp, Type *selectorType)
 {
     lexEat(&comp->lex, TOK_CASE);
 
@@ -473,6 +496,59 @@ static void parseCase(Compiler *comp, Type *selectorType)
 }
 
 
+// typeCase = "case" type ":" stmtList.
+static void parseTypeCase(Compiler *comp, Type *selectorType, const char *concreteVarName)
+{
+    lexEat(&comp->lex, TOK_CASE);
+
+    // type
+    Type *concreteType = parseType(comp, NULL);
+    if (concreteType->kind == TYPE_INTERFACE)
+        comp->error.handler(comp->error.context, "Non-interface type expected");
+
+    Type *concretePtrType = concreteType;
+    if (concreteType->kind != TYPE_PTR)
+        concretePtrType = typeAddPtrTo(&comp->types, &comp->blocks, concreteType);
+
+    genDup(&comp->gen);                             // Duplicate interface expression
+    genAssertType(&comp->gen, concretePtrType);
+
+    genDup(&comp->gen);                             // Duplicate expression converted to the concrete type
+    genPushGlobalPtr(&comp->gen, NULL);
+    genBinary(&comp->gen, TOK_NOTEQ, TYPE_PTR, 0);
+
+    genIfCondEpilog(&comp->gen);
+
+    // ":" stmtList
+    lexEat(&comp->lex, TOK_COLON);
+
+    // Additional scope embracing stmtList
+    blocksEnter(&comp->blocks, NULL);
+
+    // Allocate and initialize concrete-type variable
+    Ident *concreteIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, concreteVarName, concreteType, false);
+    concreteIdent->used = true;                     // Do not warn about unused concrete variable
+    doZeroVar(comp, concreteIdent);
+
+    if (concreteType->kind != TYPE_PTR)
+        genDeref(&comp->gen, concreteType->kind);
+
+    doPushVarPtr(comp, concreteIdent);
+    genSwapChangeRefCntAssign(&comp->gen, concreteType);
+
+    parseStmtList(comp);
+
+    // Additional scope embracing stmtList
+    doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+    identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
+    blocksLeave(&comp->blocks);
+
+    genElseProlog(&comp->gen);
+
+    genPop(&comp->gen);                 // Remove duplicate interface expression
+}
+
+
 // default = "default" ":" stmtList.
 static void parseDefault(Compiler *comp)
 {
@@ -491,8 +567,8 @@ static void parseDefault(Compiler *comp)
 }
 
 
-// switchStmt = "switch" [shortVarDecl ";"] expr "{" {case} [default] "}".
-static void parseSwitchStmt(Compiler *comp)
+// exprSwitchStmt = "switch" [shortVarDecl ";"] expr "{" {exprCase} [default] "}".
+static void parseExprSwitchStmt(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_SWITCH);
 
@@ -514,13 +590,13 @@ static void parseSwitchStmt(Compiler *comp)
 
     genSwitchCondEpilog(&comp->gen);
 
-    // "{" {case} "}"
+    // "{" {exprCase} "}"
     lexEat(&comp->lex, TOK_LBRACE);
 
     int numCases = 0;
     while (comp->lex.tok.kind == TOK_CASE)
     {
-        parseCase(comp, type);
+        parseExprCase(comp, type);
         numCases++;
     }
 
@@ -536,6 +612,71 @@ static void parseSwitchStmt(Compiler *comp)
     doGarbageCollection(comp, blocksCurrent(&comp->blocks));
     identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
     blocksLeave(&comp->blocks);
+}
+
+
+// typeSwitchStmt = "switch" ident ":=" "type" "(" expr ")" "{" {typeCase} [default] "}".
+static void parseTypeSwitchStmt(Compiler *comp)
+{
+    lexEat(&comp->lex, TOK_SWITCH);
+
+    // Additional scope embracing ident and statement body
+    blocksEnter(&comp->blocks, NULL);
+
+    // ident
+    lexCheck(&comp->lex, TOK_IDENT);
+    IdentName concreteVarName;
+    strcpy(concreteVarName, comp->lex.tok.name);
+    lexNext(&comp->lex);
+
+    // ":=" "type" "("
+    lexEat(&comp->lex, TOK_COLONEQ);
+    lexEat(&comp->lex, TOK_TYPE);
+    lexEat(&comp->lex, TOK_LPAR);
+
+    // expr
+    Type *type;
+    parseExpr(comp, &type, NULL);
+    if (type->kind != TYPE_INTERFACE)
+        comp->error.handler(comp->error.context, "Interface type expected");
+
+    // ")"
+    lexEat(&comp->lex, TOK_RPAR);
+
+    // "{" {typeCase} "}"
+    lexEat(&comp->lex, TOK_LBRACE);
+
+    int numCases = 0;
+    while (comp->lex.tok.kind == TOK_CASE)
+    {
+        parseTypeCase(comp, type, concreteVarName);
+        numCases++;
+    }
+
+    // [default]
+    if (comp->lex.tok.kind == TOK_DEFAULT)
+        parseDefault(comp);
+
+    lexEat(&comp->lex, TOK_RBRACE);
+
+    genSwitchEpilog(&comp->gen, numCases);
+
+    genPop(&comp->gen);     // Remove expr
+
+    // Additional scope embracing ident and statement body
+    doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+    identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
+    blocksLeave(&comp->blocks);
+}
+
+
+// switchStmt = exprSwitchStmt | typeSwitchStmt.
+static void parseSwitchStmt(Compiler *comp)
+{
+    if (doTypeSwitchStmtLookahead(comp))
+        parseTypeSwitchStmt(comp);
+    else
+        parseExprSwitchStmt(comp);
 }
 
 

@@ -344,7 +344,7 @@ interface {
 
 The interface does not implement these methods itself. Instead, any type that implements all the methods declared in the interface can be converted to that interface. Since different types can be converted to the same interface, interfaces provide polymorphic behavior in Umka.
 
-Let`T` be a non-pointer type. If a pointer of type `^T` is converted to the interface, the interface stores that pointer. If a variable of type `T`  is converted to the interface, the variable is first copied to a new memory location, and the interface stores the pointer to that location. In any case, the interface can be converted back to the type `T` or  `^T`. If a conversion of the interface to some non-pointer type `S` not equivalent to `T` is attempted, a runtime error is triggered. If a conversion of the interface to some pointer type `^S` not equivalent to `^T` is attempted, the result is `null`. 
+Let `T` be a non-pointer type. If a pointer of type `^T` is converted to the interface, the interface stores that pointer. If a variable of type `T`  is converted to the interface, the variable is first copied to a new memory location, and the interface stores the pointer to that location. In any case, the interface can be converted back to the type `T` or  `^T`. If a conversion of the interface to some non-pointer type `S` not equivalent to `T` is attempted, a runtime error is triggered. If a conversion of the interface to some pointer type `^S` not equivalent to `^T` is attempted, the result is `null`. 
 
 Any type can be converted to the built-in type `any`, which is an alias for `interface{}`.
 
@@ -1187,23 +1187,54 @@ if x, ok := getValue(); ok {
 
 ### The `switch` statement
 
+Executes one of several statement lists depending on the value of an ordinal expression or on the type of the value stored in an interface.
+
+Syntax:
+
+```
+switchStmt = exprSwitchStmt | typeSwitchStmt.
+```
+
+#### Expression switch
+
 Executes one of several statement lists depending on the value of the given ordinal expression. If the expression is equal to any of the constant expressions attached by a `case` label to a statement list, this statement list is executed and the control is transferred past the end of the `switch` statement. If no statement list is selected, the optional `default` statement list is executed. An optional short variable declaration may precede the ordinal expression. Its scope encloses the expression and all the statement lists.
 
 Syntax:
 
 ```
-switchStmt = "switch" [shortVarDecl ";"] expr "{" {case} [default] "}".
-case       = "case" expr {"," expr} ":" stmtList.
-default    = "default" ":" stmtList.
+exprSwitchStmt = "switch" [shortVarDecl ";"] expr "{" {exprCase} [default] "}".
+exprCase       = "case" expr {"," expr} ":" stmtList.
+default        = "default" ":" stmtList.
 ```
 
-Examples:
+Example:
 
 ```
 switch a {
     case 1, 3, 5, 7: printf("%d is odd\n", a)
     case 2, 4, 6, 8: printf("%d is even\n", a)
     default:         printf("I don't know")
+}
+```
+
+#### Type switch
+
+Executes one of several statement lists depending on the type of the value stored in an interface. If the interface can be explicitly converted to the type attached by a `case` label to a statement list, this statement list is executed and the control is transferred past the end of the `switch` statement. If no statement list is selected, the optional `default` statement list is executed. In each statement list, a variable is implicitly declared to store the result of the type conversion. The variable name must be specified in the `switch` statement header.
+
+Syntax:
+
+```
+typeSwitchStmt = "switch" ident ":=" "type" "(" expr ")" "{" {typeCase} [default] "}".
+typeCase       = "case" type ":" stmtList.
+```
+
+Example:
+
+```
+switch v := type(a) {
+    case int: printf("int: %d + 5 = %d\n", v, v + 5)
+    case str: printf("str: %s + 5 = %s\n", v, v + "5")
+    default:  printf("unknown: %v\n", a)
 }
 ```
 
@@ -1422,8 +1453,11 @@ declAssignmentStmt  = singleDeclAssgnStmt | listDeclAssgnStmt.
 incDecStmt          = designator ("++" | "--").
 callStmt            = designator.
 ifStmt              = "if" [shortVarDecl ";"] expr block ["else" (ifStmt | block)].
-switchStmt          = "switch" [shortVarDecl ";"] expr "{" {case} [default] "}".
-case                = "case" expr {"," expr} ":" stmtList.
+switchStmt          = exprSwitchStmt | typeSwitchStmt.
+exprSwitchStmt      = "switch" [shortVarDecl ";"] expr "{" {exprCase} [default] "}".
+exprCase            = "case" expr {"," expr} ":" stmtList.
+typeSwitchStmt      = "switch" ident ":=" "type" "(" expr ")" "{" {typeCase} [default] "}".
+typeCase            = "case" type ":" stmtList.
 default             = "default" ":" stmtList.
 forStmt             = "for" (forHeader | forInHeader) block.
 forHeader           = [shortVarDecl ";"] expr [";" simpleStmt].
