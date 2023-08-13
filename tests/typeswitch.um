@@ -1,0 +1,41 @@
+fn foo(as: ..any) {
+    for _, a in as {
+        switch v := type(a) {
+            case int: printf("int: %d + 5 = %d\n", v, v + 5)
+            case str: printf("str: %s + 5 = %s\n", v, v + "5")
+            case []real: printf("[]real: %v + [5] = %v\n", v, append(copy(v), 5))
+            default: printf("unknown: %v\n", a)
+        }
+    }
+}
+
+fn bar(as: ..any) {
+    for _, a in as {
+        switch v := type(a) {
+            case ^int: v^ += 5
+            case ^str: v^ += "5"
+            case ^[]real: v^ = append(v^, 5.0)
+            default: printf("unknown: %v\n", a)
+        }
+    }
+}
+
+fn test*() {
+    a := 42
+    b := "42"
+    c := []real{42}
+    d := 42.0
+
+    foo(a, b, c, d)
+    printf("\n")    
+
+    bar(&a, &b, &c, &d)
+    printf("\n")    
+
+    foo(&a, &b, &c, &d)
+    printf("\n") 
+}
+
+fn main() {
+    test()
+}

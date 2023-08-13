@@ -154,18 +154,24 @@ switch a {
     case 2, 4, 6, 8: std.println(std.itoa(a) + " is even")
     default:         std.println("I don't know")
 }
+
+switch v := type(a) {
+    case int: printf("int: %d + 5 = %d\n", v, v + 5)
+    case str: printf("str: %s + 5 = %s\n", v, v + "5")
+    default:  printf("unknown: %v\n", a)
+}
 ```
 #### Loop
 ```
-    for k := 1; k <= 128; k *= 2 {
-        printf("%v\n", k)
-    }
-    
-    for i, x in g {
-        if fabs(x) > 1e12 {break}
-        if x < 0 {continue}
-        sum += x
-    }
+for k := 1; k <= 128; k *= 2 {
+    printf("%v\n", k)
+}
+
+for i, x in g {
+    if fabs(x) > 1e12 {break}
+    if x < 0 {continue}
+    sum += x
+}
 ```
 ### Multitasking
 ```
