@@ -188,9 +188,8 @@ static void parseListAssignmentStmt(Compiler *comp, Type *type, Const *varPtrCon
     parseExprOrUntypedLiteralList(comp, &rightListType, type, rightListConstant);
 
     const int numExpr = typeExprListStruct(rightListType) ? rightListType->numItems : 1;
-
-    if (numExpr < type->numItems) comp->error.handler(comp->error.context, "Too few expressions");
-    if (numExpr > type->numItems) comp->error.handler(comp->error.context, "Too many expressions");
+    if (numExpr != type->numItems)
+        comp->error.handler(comp->error.context, "%d expressions expected but %d found", type->numItems, numExpr);
 
     for (int i = type->numItems - 1; i >= 0; i--)
     {
@@ -277,6 +276,9 @@ static void parseSingleDeclAssignmentStmt(Compiler *comp, IdentName name, bool e
     Const rightConstantBuf, *rightConstant = constExpr ? &rightConstantBuf : NULL;
     parseExpr(comp, &rightType, rightConstant);
 
+    if (typeExprListStruct(rightType))
+        comp->error.handler(comp->error.context, "1 expression expected but %d found", rightType->numItems);
+
     Ident *ident = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, name, rightType, exported);
 
     if (constExpr)              // Initialize global variable
@@ -307,8 +309,9 @@ static void parseListDeclAssignmentStmt(Compiler *comp, IdentName *names, bool *
     Const rightListConstantBuf, *rightListConstant = constExpr ? &rightListConstantBuf : NULL;
     parseExprOrUntypedLiteralList(comp, &rightListType, NULL, rightListConstant);
 
-    if (rightListType->numItems < num) comp->error.handler(comp->error.context, "Too few expressions");
-    if (rightListType->numItems > num) comp->error.handler(comp->error.context, "Too many expressions");
+    const int numExpr = typeExprListStruct(rightListType) ? rightListType->numItems : 1;
+    if (numExpr != num)
+        comp->error.handler(comp->error.context, "%d expressions expected but %d found", num, numExpr);
 
     for (int i = 0; i < num; i++)
     {

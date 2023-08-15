@@ -2693,6 +2693,9 @@ void parseExprOrUntypedLiteralList(Compiler *comp, Type **type, Type *destType, 
                     fieldType = destFieldType;
             }
 
+            if (typeExprListStruct(fieldType))
+                comp->error.handler(comp->error.context, "Nested expression lists are not allowed");
+
             typeAddField(&comp->types, *type, fieldType, NULL);
 
             if (comp->lex.tok.kind != TOK_COMMA)
