@@ -127,7 +127,7 @@ Umka uses semicolons as statement terminators. To reduce the number of semicolon
 * `++`, `--`, `)`, `]`, `}`or `^`
 * `*` as an export mark 
 
-A semicolon may be omitted before a closing `)` or `}`.
+A semicolon may be omitted before a `)` or `}`. An implicit semicolon inserted before a `)` in actual parameter lists or a `}` in composite literals is ignored.
 
 ### Comments
 

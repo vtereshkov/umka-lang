@@ -66,7 +66,8 @@ fn test3() {
 fn foo(): ^map[[2]int]str {
   return &map[[2]int]str{
     [2]int{13, 15}: "So-so",
-    [2]int{57, 89}: "Nice"}
+    [2]int{57, 89}: "Nice"
+  }
 }
 
 
@@ -102,7 +103,11 @@ fn test5() {
 fn test6() {
 	printf("\nTest 6\n")
 
-	m := map[str][]real{"pi": []real{3.14, 6.28}, "e": []real{2.72, 5.44}, "ten": []real{10, 20}}
+	m := map[str][]real{
+		"pi": []real{3.14, 6.28}, 
+		"e": []real{2.72, 5.44}, 
+		"ten": []real{10, 20}
+	}
 
 	n := copy(m)
 	m["one"] = []real{1.0, 2.0}

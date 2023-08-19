@@ -198,32 +198,40 @@ fn main() {
                 center: {500, -100, 1200},
                 color: {0.4, 0.7, 1.0},
                 diffuseness: 0.1,
-                isLamp: false},
-            halfsize: {400 / 2.0, 600 / 2.0, 300 / 2.0}},
+                isLamp: false
+            },
+            halfsize: {400 / 2.0, 600 / 2.0, 300 / 2.0}
+        },
             
         Box {
             body: {
                 center: {550, 210, 1100},
                 color: {0.9, 1.0, 0.6},
                 diffuseness: 0.3,
-                isLamp: false},
-            halfsize: {1000 / 2.0, 20 / 2.0, 1000 / 2.0}},            
+                isLamp: false
+            },
+            halfsize: {1000 / 2.0, 20 / 2.0, 1000 / 2.0}
+        },            
 
         Sphere {
             body: {
                 center: {600, 0, 700},
                 color: {1.0, 0.4, 0.6},
                 diffuseness: 0.2,
-                isLamp: false},
-            radius: 200},
+                isLamp: false
+            },
+            radius: 200
+        },
             
         Sphere {
             body: {
                 center: {330, 150, 700},
                 color: {1.0, 1.0, 0.3},
                 diffuseness: 0.15,
-                isLamp: false},
-            radius: 50},
+                isLamp: false
+            },
+            radius: 50
+        },
             
         // Define light
         Sphere {
@@ -231,8 +239,11 @@ fn main() {
                 center: {500, -1000, -700},
                 color: {1.0, 1.0, 1.0},
                 diffuseness: 1.0,
-                isLamp: true},
-            radius: 800}}
+                isLamp: true
+            },
+            radius: 800
+        }
+    }
             
     scene := Scene{{0.2, 0.2, 0.2}, body}
     
@@ -258,7 +269,8 @@ fn main() {
             antialiasing: 1.0,
             rays:         rays,
             scene:        &scene,
-            pixels:       &pixels}
+            pixels:       &pixels
+        }
         
         // Spawn fiber
         renderer[i] = fiberspawn(render, &renderData[i])

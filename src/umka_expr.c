@@ -1313,6 +1313,7 @@ static void parseBuiltinErrorCall(Compiler *comp, Type **type, Const *constant)
 static void parseBuiltinCall(Compiler *comp, Type **type, Const *constant, BuiltinFunc builtin)
 {
     lexEat(&comp->lex, TOK_LPAR);
+
     switch (builtin)
     {
         // I/O
@@ -1368,6 +1369,11 @@ static void parseBuiltinCall(Compiler *comp, Type **type, Const *constant, Built
 
         default: comp->error.handler(comp->error.context, "Illegal built-in function");
     }
+
+    // Allow closing parenthesis on a new line
+    if (comp->lex.tok.kind == TOK_IMPLICIT_SEMICOLON)
+        lexNext(&comp->lex);
+
     lexEat(&comp->lex, TOK_RPAR);
 }
 
@@ -1500,6 +1506,11 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
         comp->error.handler(comp->error.context, "Called function is not defined");
 
     *type = (*type)->sig.resultType;
+
+    // Allow closing parenthesis on a new line
+    if (comp->lex.tok.kind == TOK_IMPLICIT_SEMICOLON)
+        lexNext(&comp->lex);
+
     lexEat(&comp->lex, TOK_RPAR);
 }
 
@@ -1674,6 +1685,10 @@ static void parseArrayOrStructLiteral(Compiler *comp, Type **type, Const *consta
     if (!constant)
         doPushVarPtr(comp, arrayOrStruct);
 
+    // Allow closing brace on a new line
+    if (comp->lex.tok.kind == TOK_IMPLICIT_SEMICOLON)
+        lexNext(&comp->lex);
+
     lexEat(&comp->lex, TOK_RBRACE);
 }
 
@@ -1717,7 +1732,13 @@ static void parseDynArrayLiteral(Compiler *comp, Type **type, Const *constant)
     }
 
     if (!(*type)->isVariadicParamList)
+    {
+        // Allow closing brace on a new line
+        if (comp->lex.tok.kind == TOK_IMPLICIT_SEMICOLON)
+            lexNext(&comp->lex);
+
         lexEat(&comp->lex, TOK_RBRACE);
+    }
 
     // Allocate array
     Ident *staticArray = identAllocTempVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, staticArrayType, false);
@@ -1786,6 +1807,10 @@ static void parseMapLiteral(Compiler *comp, Type **type, Const *constant)
             lexNext(&comp->lex);
         }
     }
+
+    // Allow closing brace on a new line
+    if (comp->lex.tok.kind == TOK_IMPLICIT_SEMICOLON)
+        lexNext(&comp->lex);
 
     lexEat(&comp->lex, TOK_RBRACE);
 }
