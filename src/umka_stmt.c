@@ -1156,7 +1156,7 @@ void parseFnBlock(Compiler *comp, Ident *fn, Type *upvaluesStructType)
             genGetFieldPtr(&comp->gen, upvalue->offset);
             genDeref(&comp->gen, upvalue->type->kind);
 
-            Ident *upvalueIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, upvalue->name, upvalue->type, NULL);
+            Ident *upvalueIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, upvalue->name, upvalue->type, false);
             doZeroVar(comp, upvalueIdent);
             doPushVarPtr(comp, upvalueIdent);
 
