@@ -270,7 +270,7 @@ UMKA_API int umkaGetStrLen(const char *str)
 UMKA_API void umkaMakeDynArray(void *umka, void *array, void *type, int len)
 {
     Compiler *comp = umka;
-    return vmMakeDynArray(&comp->vm, (DynArray *)array, (Type *)type, len);
+    vmMakeDynArray(&comp->vm, (DynArray *)array, (Type *)type, len);
 }
 
 
