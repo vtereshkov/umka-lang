@@ -77,6 +77,8 @@ static const char *moduleImplLibSuffix()
 #ifdef UMKA_EXT_LIBS
     #ifdef _WIN32
         return "_windows";
+    #elif defined __EMSCRIPTEN__
+        return "_wasm";        
     #else
         return "_linux";
     #endif
