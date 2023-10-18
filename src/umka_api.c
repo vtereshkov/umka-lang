@@ -11,7 +11,7 @@
 #define UMKA_VERSION    "1.2.1"
 
 
-static void compileWarning(void *context, const char *format, ...)
+static void compileWarning(void *context, DebugInfo *debug, const char *format, ...)
 {
     va_list args;
     va_start(args, format);
@@ -19,10 +19,10 @@ static void compileWarning(void *context, const char *format, ...)
     Compiler *comp = context;
 
     UmkaError warning;
-    strcpy(warning.fileName, comp->lex.fileName);
-    strcpy(warning.fnName, comp->debug.fnName);
-    warning.line = comp->lex.tok.line;
-    warning.pos = comp->lex.tok.pos;
+    strcpy(warning.fileName, debug ? debug->fileName : comp->lex.fileName);
+    strcpy(warning.fnName, debug ? debug->fnName : comp->debug.fnName);
+    warning.line = debug ? debug->line : comp->lex.tok.line;
+    warning.pos = debug ? 1 : comp->lex.tok.pos;
     vsnprintf(warning.msg, UMKA_MSG_LEN + 1, format, args);
 
     if (comp->error.warningCallback)
