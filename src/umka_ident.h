@@ -33,6 +33,7 @@ typedef struct tagIdent
         Const constant;                 // For constants
         int64_t moduleVal;              // For modules
     };
+    DebugInfo debug;
     struct tagIdent *next;
 } Ident;
 
@@ -42,11 +43,12 @@ typedef struct
     Ident *first, *last;
     Ident *lastTempVarForResult;
     int tempVarNameSuffix;
+    DebugInfo *debug;
     Error *error;
 } Idents;
 
 
-void identInit(Idents *idents, Error *error);
+void identInit(Idents *idents, DebugInfo *debug, Error *error);
 void identFree(Idents *idents, int startBlock /* < 0 to free in all blocks*/);
 
 Ident *identFind          (Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, Type *rcvType, bool markAsUsed);

@@ -13,11 +13,12 @@ static void identTempName(Idents *idents, char *buf)
 }
 
 
-void identInit(Idents *idents, Error *error)
+void identInit(Idents *idents, DebugInfo *debug, Error *error)
 {
     idents->first = idents->last = NULL;
     idents->lastTempVarForResult = NULL;
     idents->tempVarNameSuffix = 0;
+    idents->debug = debug;
     idents->error = error;
 }
 
@@ -184,6 +185,7 @@ static Ident *identAdd(Idents *idents, Modules *modules, Blocks *blocks, IdentKi
     ident->temporary         = false;
     ident->used              = exported || ident->module == 0 || ident->name[0] == '_' || identIsMain(ident);  // Exported, predefined, temporary identifiers and main() are always treated as used
     ident->prototypeOffset   = -1;
+    ident->debug             = *(idents->debug);
     ident->next              = NULL;
 
     // Add to list
@@ -335,7 +337,7 @@ void identWarnIfUnused(Idents *idents, Ident *ident)
 {
     if (!ident->temporary && !ident->used)
     {
-        idents->error->warningHandler(idents->error->context, "%s %s is not used", (ident->kind == IDENT_MODULE ? "Module" : "Identifier"), ident->name);
+        idents->error->warningHandler(idents->error->context, &ident->debug, "%s %s is not used", (ident->kind == IDENT_MODULE ? "Module" : "Identifier"), ident->name);
         ident->used = true;
     }
 }

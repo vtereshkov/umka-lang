@@ -80,6 +80,14 @@ typedef struct
 } Map;
 
 
+typedef struct
+{
+    char *fileName;
+    char *fnName;
+    int line;
+} DebugInfo;
+
+
 typedef void (*WarningCallback)(void * /*UmkaError*/ warning);
 
 
@@ -87,7 +95,7 @@ typedef struct
 {
     void (*handler)(void *context, const char *format, ...);
     void (*runtimeHandler)(void *context, const char *format, ...);
-    void (*warningHandler)(void *context, const char *format, ...);
+    void (*warningHandler)(void *context, DebugInfo *debug, const char *format, ...);
     WarningCallback warningCallback;
     void *context;
     jmp_buf jumper;
@@ -173,14 +181,6 @@ typedef struct
 {
     External *first, *last;
 } Externals;
-
-
-typedef struct
-{
-    char *fileName;
-    char *fnName;
-    int line;
-} DebugInfo;
 
 
 void  storageInit  (Storage *storage);
