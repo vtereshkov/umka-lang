@@ -52,7 +52,7 @@ void typeInit(Types *types, Error *error)
 
 void typeFreeFieldsAndParams(Type *type)
 {
-    if (type->kind == TYPE_STRUCT || type->kind == TYPE_INTERFACE)
+    if (type->kind == TYPE_STRUCT || type->kind == TYPE_INTERFACE || type->kind == TYPE_CLOSURE)
         for (int i = 0; i < type->numItems; i++)
             free(type->field[i]);
 
