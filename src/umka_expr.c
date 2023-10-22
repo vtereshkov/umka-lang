@@ -343,16 +343,22 @@ static void doPtrToInterfaceConv(Compiler *comp, Type *dest, Type **src, Const *
         const char *name = dest->field[i]->name;
 
         Type *rcvType = (*src)->base;
-        int rcvTypeModule = rcvType->typeIdent ? rcvType->typeIdent->module : -1;
+        if (rcvType->kind == TYPE_NULL)
+            genPushIntConst(&comp->gen, 0);                                 // Allow assigning null to a non-empty interface
+        else
+        {
+            int rcvTypeModule = rcvType->typeIdent ? rcvType->typeIdent->module : -1;
 
-        Ident *srcMethod = identFind(&comp->idents, &comp->modules, &comp->blocks, rcvTypeModule, name, *src, true);
-        if (!srcMethod)
-            comp->error.handler(comp->error.context, "Method %s is not implemented", name);
+            Ident *srcMethod = identFind(&comp->idents, &comp->modules, &comp->blocks, rcvTypeModule, name, *src, true);
+            if (!srcMethod)
+                comp->error.handler(comp->error.context, "Method %s is not implemented", name);
 
-        if (!typeCompatible(dest->field[i]->type, srcMethod->type, false))
-            comp->error.handler(comp->error.context, "Method %s has incompatible signature", name);
+            if (!typeCompatible(dest->field[i]->type, srcMethod->type, false))
+                comp->error.handler(comp->error.context, "Method %s has incompatible signature", name);
 
-        genPushIntConst(&comp->gen, srcMethod->offset);                     // Push src value
+            genPushIntConst(&comp->gen, srcMethod->offset);                 // Push src value
+        }
+
         genPushLocalPtr(&comp->gen, destOffset + dest->field[i]->offset);   // Push dest.method pointer
         genSwapAssign(&comp->gen, TYPE_FN, 0);                              // Assign to dest.method
     }
