@@ -152,6 +152,18 @@ static void pageFree(HeapPages *pages, bool warnLeak)
  #endif
             }
 
+            // Call custom deallocators, if any
+            for (int i = 0; i < page->numOccupiedChunks && page->numChunksWithOnFree > 0; i++)
+            {
+                HeapChunkHeader *chunk = (HeapChunkHeader *)((char *)page->ptr + i * page->chunkSize);
+                if (chunk->refCnt == 0 && !chunk->onFree)
+                    continue;
+
+                Slot param = {.ptrVal = (char *)chunk + sizeof(HeapChunkHeader)};
+                chunk->onFree(&param, NULL);
+                page->numChunksWithOnFree--;
+            }
+
             free(page->ptr);
         }
         free(page);
@@ -173,6 +185,7 @@ static FORCE_INLINE HeapPage *pageAdd(HeapPages *pages, int numChunks, int chunk
 
     page->numChunks = numChunks;
     page->numOccupiedChunks = 0;
+    page->numChunksWithOnFree = 0;
     page->chunkSize = chunkSize;
     page->refCnt = 0;
     page->prev = pages->last;
@@ -331,6 +344,9 @@ static FORCE_INLINE void *chunkAlloc(HeapPages *pages, int64_t size, Type *type,
     chunk->isStack = isStack;
 
     page->numOccupiedChunks++;
+    if (onFree)
+        page->numChunksWithOnFree++;
+
     page->refCnt++;
 
 #ifdef UMKA_REF_CNT_DEBUG
@@ -346,12 +362,13 @@ static FORCE_INLINE int chunkChangeRefCnt(HeapPages *pages, HeapPage *page, void
     HeapChunkHeader *chunk = pageGetChunkHeader(page, ptr);
 
     if (chunk->refCnt <= 0 || page->refCnt < chunk->refCnt)
-        pages->error->runtimeHandler(pages->error->context, "Wrong reference count for pointer at %p\n", ptr);
+        pages->error->runtimeHandler(pages->error->context, "Wrong reference count for pointer at %p", ptr);
 
     if (chunk->onFree && chunk->refCnt == 1 && delta == -1)
     {
         Slot param = {.ptrVal = ptr};
         chunk->onFree(&param, NULL);
+        page->numChunksWithOnFree--;
     }
 
     chunk->refCnt += delta;
