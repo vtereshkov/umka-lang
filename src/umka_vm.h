@@ -158,7 +158,7 @@ typedef struct tagHeapPage
 {
     int id;
     void *ptr;
-    int numChunks, numOccupiedChunks, chunkSize;
+    int numChunks, numOccupiedChunks, numChunksWithOnFree, chunkSize;
     int refCnt;
     struct tagHeapPage *prev, *next;
 } HeapPage;
