@@ -156,7 +156,7 @@ static void pageFree(HeapPages *pages, bool warnLeak)
             for (int i = 0; i < page->numOccupiedChunks && page->numChunksWithOnFree > 0; i++)
             {
                 HeapChunkHeader *chunk = (HeapChunkHeader *)((char *)page->ptr + i * page->chunkSize);
-                if (chunk->refCnt == 0 && !chunk->onFree)
+                if (chunk->refCnt == 0 || !chunk->onFree)
                     continue;
 
                 Slot param = {.ptrVal = (char *)chunk + sizeof(HeapChunkHeader)};
