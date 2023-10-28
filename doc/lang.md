@@ -409,6 +409,7 @@ If a value `s` of type `S` is given where a value `t` of some other type `T` is 
 * `S` and `T` are interface types and `S` declares all the methods of `T`
 * `S` is a weak pointer type and `T` is a strong pointer type and the base types of `S` and `T` are equivalent 
 * `S` is a strong pointer type and `T` is a weak pointer type and the base types of `S` and `T` are equivalent
+* `S` is a function type and `T` is a closure type and `S` and the underlying function type of `T` are equivalent
 
 #### Explicit conversions
 

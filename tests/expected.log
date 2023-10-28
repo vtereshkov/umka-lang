@@ -523,6 +523,7 @@ running by_name_eq with name : "Foo" and person : {name: "FooBar" age: 23 sex: "
 20
 30
 4
+8
 
 
 >>> Closures - 3

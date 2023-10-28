@@ -7,6 +7,10 @@ sqr := fn (x: int): int {
 	return x * x
 }
 
+fn cube(x: int): int {
+	return x * sqr(x)
+}
+
 fn foo(a: int): []fn (x: int): int {
 	s := []str{"Hello", "World", '!'}
 
@@ -27,7 +31,7 @@ fn foo(a: int): []fn (x: int): int {
 		return 15 * x
 	}	
 
-	return {f, g, h, i, sqr}
+	return {f, g, h, i, sqr, cube}
 }
 
 fn add(y: int): fn (x: int): int {
