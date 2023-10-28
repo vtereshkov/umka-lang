@@ -1449,9 +1449,7 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
     else
     {
         // Dummy upvalue
-        const int numDummyUpvaluesSlots = sizeof(Interface) / sizeof(Slot);
-        for (int dummyUpvalueSlotIndex = 0; dummyUpvalueSlotIndex < numDummyUpvaluesSlots; dummyUpvalueSlotIndex++)
-            genPushIntConst(&comp->gen, 0);
+        genPushZero(&comp->gen, sizeof(Interface) / sizeof(Slot));
 
         numPreHiddenParams++;
         i++;

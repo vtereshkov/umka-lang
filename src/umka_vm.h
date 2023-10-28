@@ -30,6 +30,7 @@ typedef enum
 {
     OP_NOP,
     OP_PUSH,
+    OP_PUSH_ZERO,
     OP_PUSH_LOCAL_PTR,
     OP_PUSH_LOCAL,
     OP_PUSH_REG,

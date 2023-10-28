@@ -103,6 +103,21 @@ static bool optimizePushReg(CodeGen *gen, int regIndex)
 }
 
 
+static bool optimizePushZero(CodeGen *gen, int slots)
+{
+    Instruction *prev = getPrevInstr(gen, 1);
+
+    // Optimization: PUSH_ZERO (n) + PUSH_ZERO (m) -> PUSH_ZERO (n + m)
+    if (prev && prev->opcode == OP_PUSH_ZERO)
+    {
+        prev->operand.intVal += slots;
+        return true;
+    }
+
+    return false;
+}
+
+
 static bool optimizePop(CodeGen *gen)
 {
     Instruction *prev = getPrevInstr(gen, 1);
@@ -440,6 +455,16 @@ void genPushUpvalue(CodeGen *gen)
 {
     const Instruction instr = {.opcode = OP_PUSH_UPVALUE, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = 0};
     genAddInstr(gen, &instr);
+}
+
+
+void genPushZero(CodeGen *gen, int slots)
+{
+    if (!optimizePushZero(gen, slots))
+    {
+        const Instruction instr = {.opcode = OP_PUSH_ZERO, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = slots};
+        genAddInstr(gen, &instr);
+    }
 }
 
 

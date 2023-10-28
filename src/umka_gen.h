@@ -57,6 +57,7 @@ void genPushLocal    (CodeGen *gen, TypeKind typeKind, int offset);
 void genPushReg      (CodeGen *gen, int regIndex);
 void genPushStruct   (CodeGen *gen, int size);
 void genPushUpvalue  (CodeGen *gen);
+void genPushZero     (CodeGen *gen, int slots);
 
 void genPop   (CodeGen *gen);
 void genPopReg(CodeGen *gen, int regIndex);

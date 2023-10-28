@@ -842,10 +842,8 @@ void parseProgram(Compiler *comp)
     if (!identIsMain(mainFn))
         comp->error.handler(comp->error.context, "Illegal main() function");
 
-    // Push dummy upvalue
-    const int numDummyUpvaluesSlots = sizeof(Interface) / sizeof(Slot);
-    for (int dummyUpvalueSlotIndex = 0; dummyUpvalueSlotIndex < numDummyUpvaluesSlots; dummyUpvalueSlotIndex++)
-        genPushIntConst(&comp->gen, 0);
+    // Dummy upvalue
+    genPushZero(&comp->gen, sizeof(Interface) / sizeof(Slot));
 
     genCall(&comp->gen, mainFn->offset);
     doGarbageCollection(comp, 0);

@@ -27,6 +27,7 @@ static const char *opcodeSpelling [] =
 {
     "NOP",
     "PUSH",
+    "PUSH_ZERO",
     "PUSH_LOCAL_PTR",
     "PUSH_LOCAL",
     "PUSH_REG",
@@ -2290,8 +2291,7 @@ static FORCE_INLINE void doBuiltinFiberspawn(Fiber *fiber, HeapPages *pages, Err
     child->top = child->base = child->stack + child->stackSize - 1;
 
     // Call child fiber function
-    const int numDummyUpvaluesSlots = sizeof(Interface) / sizeof(Slot);
-    for (int i = 0; i < numDummyUpvaluesSlots; i++)
+    for (int i = 0; i < sizeof(Interface) / sizeof(Slot); i++)
         (--child->top)->intVal = 0;                     // Push dummy upvalues
 
     (--child->top)->ptrVal = fiber;                     // Push parent fiber pointer
@@ -2330,6 +2330,20 @@ static FORCE_INLINE void doPush(Fiber *fiber, Error *error)
 
     if (fiber->code[fiber->ip].inlineOpcode == OP_DEREF)
         doBasicDeref(fiber->top, fiber->code[fiber->ip].typeKind, error);
+
+    fiber->ip++;
+}
+
+
+static FORCE_INLINE void doPushZero(Fiber *fiber, Error *error)
+{
+    int slots = fiber->code[fiber->ip].operand.intVal;
+
+    if (fiber->top - slots - fiber->stack < VM_MIN_FREE_STACK)
+        error->runtimeHandler(error->context, "Stack overflow");
+
+    fiber->top -= slots;
+    memset(fiber->top, 0, slots * sizeof(Slot));
 
     fiber->ip++;
 }
@@ -3149,6 +3163,7 @@ static FORCE_INLINE void vmLoop(VM *vm)
         switch (fiber->code[fiber->ip].opcode)
         {
             case OP_PUSH:                           doPush(fiber, error);                         break;
+            case OP_PUSH_ZERO:                      doPushZero(fiber, error);                     break;
             case OP_PUSH_LOCAL_PTR:                 doPushLocalPtr(fiber);                        break;
             case OP_PUSH_LOCAL:                     doPushLocal(fiber, error);                    break;
             case OP_PUSH_REG:                       doPushReg(fiber);                             break;
@@ -3278,6 +3293,7 @@ int vmAsm(int ip, Instruction *code, DebugInfo *debugPerInstr, char *buf, int si
                 chars += snprintf(buf + chars, nonneg(size - chars), " %lld", (long long int)instr->operand.intVal);
             break;
         }
+        case OP_PUSH_ZERO:
         case OP_PUSH_LOCAL_PTR:
         case OP_PUSH_LOCAL:
         case OP_PUSH_REG:
