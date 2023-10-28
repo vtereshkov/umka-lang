@@ -102,6 +102,10 @@ static void parseRcvSignature(Compiler *comp, Signature *sig)
 // signature = "(" [typedIdentList ["=" exprOrLit] {"," typedIdentList ["=" exprOrLit]}] ")" [":" (type | "(" type {"," type} ")")].
 static void parseSignature(Compiler *comp, Signature *sig)
 {
+    // Dummy hidden parameter that allows any function to be converted to a closure
+    if (!sig->method)
+        typeAddParam(&comp->types, sig, comp->anyType, "__upvalues");
+
     // Formal parameter list
     lexEat(&comp->lex, TOK_LPAR);
     int numDefaultParams = 0;
@@ -389,12 +393,12 @@ static Type *parseInterfaceType(Compiler *comp)
             lexNext(&comp->lex);
 
             Type *methodType = typeAdd(&comp->types, &comp->blocks, TYPE_FN);
+            methodType->sig.method = true;
 
             typeAddParam(&comp->types, &methodType->sig, comp->ptrVoidType, "__self");
             parseSignature(comp, &methodType->sig);
 
             Field *method = typeAddField(&comp->types, type, methodType, methodName);
-            methodType->sig.method = true;
             methodType->sig.offsetFromSelf = method->offset;
         }
         else
@@ -432,10 +436,7 @@ static Type *parseClosureType(Compiler *comp)
 
     // Function field
     Type *fnType = typeAdd(&comp->types, &comp->blocks, TYPE_FN);
-
-    typeAddParam(&comp->types, &fnType->sig, comp->anyType, "__upvalues");
     parseSignature(comp, &fnType->sig);
-
     typeAddField(&comp->types, type, fnType, "__fn");
 
     // Upvalues field
@@ -840,6 +841,11 @@ void parseProgram(Compiler *comp)
     Ident *mainFn = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, mainModule, "main", NULL);
     if (!identIsMain(mainFn))
         comp->error.handler(comp->error.context, "Illegal main() function");
+
+    // Push dummy upvalue
+    const int numDummyUpvaluesSlots = sizeof(Interface) / sizeof(Slot);
+    for (int dummyUpvalueSlotIndex = 0; dummyUpvalueSlotIndex < numDummyUpvaluesSlots; dummyUpvalueSlotIndex++)
+        genPushIntConst(&comp->gen, 0);
 
     genCall(&comp->gen, mainFn->offset);
     doGarbageCollection(comp, 0);

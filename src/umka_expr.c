@@ -467,6 +467,24 @@ static void doWeakPtrToPtrConv(Compiler *comp, Type *dest, Type **src, Const *co
 }
 
 
+static void doFnToClosureConv(Compiler *comp, Type *dest, Type **src, Const *constant)
+{
+    if (constant)
+        comp->error.handler(comp->error.context, "Conversion to closure is not allowed in constant expressions");
+
+    int destOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, dest);
+
+    genPushLocalPtr(&comp->gen, destOffset);
+    genZero(&comp->gen, typeSize(&comp->types, dest));
+
+    genPushLocalPtr(&comp->gen, destOffset + dest->field[0]->offset);   // Push dest.__fn pointer
+    genSwapAssign(&comp->gen, TYPE_FN, 0);                              // Assign to dest.__fn
+
+    genPushLocalPtr(&comp->gen, destOffset);
+    *src = dest;
+}
+
+
 void doImplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant, bool lhs)
 {
     // Integer to real
@@ -539,6 +557,12 @@ void doImplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant,
     else if (dest->kind == TYPE_PTR && (*src)->kind == TYPE_WEAKPTR && typeEquivalent(dest->base, (*src)->base))
     {
         doWeakPtrToPtrConv(comp, dest, src, constant);
+    }
+
+    // Function to closure
+    else if (dest->kind == TYPE_CLOSURE && (*src)->kind == TYPE_FN && typeEquivalent(dest->field[0]->type, *src))
+    {
+        doFnToClosureConv(comp, dest, src, constant);
     }
 }
 
@@ -1264,7 +1288,7 @@ static void parseBuiltinFiberCall(Compiler *comp, Type **type, Const *constant, 
 
         // Arbitrary pointer parameter
         Type *anyParamType = NULL;
-        Type *expectedAnyParamType = fiberFuncType->sig.param[1]->type;
+        Type *expectedAnyParamType = fiberFuncType->sig.param[2]->type;
 
         parseExpr(comp, &anyParamType, constant);
         doImplicitTypeConv(comp, expectedAnyParamType, &anyParamType, constant, false);
@@ -1418,6 +1442,16 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
 
         // Increase receiver's reference count
         genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, (*type)->sig.param[0]->type);
+
+        numPreHiddenParams++;
+        i++;
+    }
+    else
+    {
+        // Dummy upvalue
+        const int numDummyUpvaluesSlots = sizeof(Interface) / sizeof(Slot);
+        for (int dummyUpvalueSlotIndex = 0; dummyUpvalueSlotIndex < numDummyUpvaluesSlots; dummyUpvalueSlotIndex++)
+            genPushIntConst(&comp->gen, 0);
 
         numPreHiddenParams++;
         i++;

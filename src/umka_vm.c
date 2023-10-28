@@ -2290,6 +2290,10 @@ static FORCE_INLINE void doBuiltinFiberspawn(Fiber *fiber, HeapPages *pages, Err
     child->top = child->base = child->stack + child->stackSize - 1;
 
     // Call child fiber function
+    const int numDummyUpvaluesSlots = sizeof(Interface) / sizeof(Slot);
+    for (int i = 0; i < numDummyUpvaluesSlots; i++)
+        (--child->top)->intVal = 0;                     // Push dummy upvalues
+
     (--child->top)->ptrVal = fiber;                     // Push parent fiber pointer
     (--child->top)->ptrVal = anyParam;                  // Push arbitrary pointer parameter
     (--child->top)->intVal = VM_FIBER_KILL_SIGNAL;      // Push fiber kill signal instead of return address
@@ -3225,9 +3229,13 @@ void vmRun(VM *vm, int entryOffset, int numParamSlots, Slot *params, Slot *resul
     if (entryOffset > 0)
     {
         // Push parameters
-        vm->fiber->top -= numParamSlots;
+        const int numDummyUpvaluesSlots = sizeof(Interface) / sizeof(Slot);
+        vm->fiber->top -= numDummyUpvaluesSlots + numParamSlots;
+
         for (int i = 0; i < numParamSlots; i++)
             vm->fiber->top[i] = params[i];
+        for (int i = numParamSlots; i < numDummyUpvaluesSlots + numParamSlots; i++)
+            vm->fiber->top[i].intVal = 0;
 
         // Push null return address and go to the entry point
         (--vm->fiber->top)->intVal = 0;

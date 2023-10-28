@@ -51,7 +51,7 @@ typedef struct
     // The C equivalent of the Umka interface type
     void *self;
     struct tagType *selfType;
-    // Methods are omitted - do not use sizeof()
+    // Methods are omitted - do not use sizeof() for non-empty interfaces
 } Interface;
 
 
