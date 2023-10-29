@@ -1764,9 +1764,12 @@ static FORCE_INLINE void doBuiltinMaketostr(Fiber *fiber, HeapPages *pages, Type
         // Character to string
         const char src = (char)((fiber->top++)->intVal);
 
-        dest = doAllocStr(pages, 1, error);
-        dest[0] = src;
-        dest[1] = 0;
+        if (src)
+        {
+            dest = doAllocStr(pages, 1, error);
+            dest[0] = src;
+            dest[1] = 0;
+        }
     }
     else
     {
