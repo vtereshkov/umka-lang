@@ -134,9 +134,16 @@ static void doCharToStrConv(Compiler *comp, Type *dest, Type **src, Const *const
 {
     if (constant)
     {
-        char *buf = storageAddStr(&comp->storage, 1);
-        buf[0] = constant->intVal;
-        buf[1] = 0;
+        char *buf = NULL;
+        if (constant->intVal)
+        {
+            buf = storageAddStr(&comp->storage, 1);
+            buf[0] = constant->intVal;
+            buf[1] = 0;
+        }
+        else
+            buf = storageAddStr(&comp->storage, 0);
+
         constant->ptrVal = buf;
     }
     else
