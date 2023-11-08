@@ -1214,6 +1214,21 @@ static void parseBuiltinSelftypeeqCall(Compiler *comp, Type **type, Const *const
 }
 
 
+// fn typeptr(T): ^void
+static void parseBuiltinTypeptrCall(Compiler *comp, Type **type, Const *constant)
+{
+    *type = parseType(comp, NULL);
+    typeAssertCompatibleBuiltin(&comp->types, *type, BUILTIN_TYPEPTR, (*type)->kind != TYPE_VOID && (*type)->kind != TYPE_NULL);
+
+    if (constant)
+        constant->ptrVal = *type;
+    else
+        genPushGlobalPtr(&comp->gen, *type);
+
+    *type = comp->ptrVoidType;
+}
+
+
 static void parseBuiltinValidCall(Compiler *comp, Type **type, Const *constant)
 {
     if (constant)
@@ -1389,6 +1404,7 @@ static void parseBuiltinCall(Compiler *comp, Type **type, Const *constant, Built
         case BUILTIN_SIZEOFSELF:    parseBuiltinSizeofselfCall(comp, type, constant);       break;
         case BUILTIN_SELFHASPTR:    parseBuiltinSelfhasptrCall(comp, type, constant);       break;
         case BUILTIN_SELFTYPEEQ:    parseBuiltinSelftypeeqCall(comp, type, constant);       break;
+        case BUILTIN_TYPEPTR:       parseBuiltinTypeptrCall(comp, type, constant);          break;
         case BUILTIN_VALID:         parseBuiltinValidCall(comp, type, constant);            break;
 
         // Maps
@@ -1603,7 +1619,7 @@ static void parsePrimary(Compiler *comp, Ident *ident, Type **type, Const *const
             parseBuiltinCall(comp, type, constant, ident->builtin);
 
             // Copy result to a temporary local variable to collect it as garbage when leaving the block
-            if (typeGarbageCollected(*type))
+            if (typeGarbageCollected(*type) && ident->builtin != BUILTIN_TYPEPTR)
                 doCopyResultToTempVar(comp, *type);
 
             *isVar = false;

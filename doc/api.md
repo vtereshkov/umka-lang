@@ -140,12 +140,6 @@ UMKA_API int umkaGetFunc(void *umka, const char *moduleName, const char *funcNam
 
 Gets an Umka function that can be called from C/C++ using `umkaCall()`.  Here, `umka` is the interpreter instance handle, `moduleName` is the Umka module name, `funcName` is the Umka function name. Returns the function entry point offset.
 
-```
-UMKA_API void *umkaGetType(void *umka, const char *moduleName, const char *typeName);
-```
-
-Gets an Umka data type that can be used for constructing a dynamic array by using `umkaMakeDynArray()`. Here, `umka` is the interpreter instance handle, `moduleName` is the Umka module name, `typeName` is the Umka type name. Returns an opaque type pointer.
-
 ``` 
 UMKA_API bool umkaCall(void *umka, int entryOffset, 
                        int numParamSlots, UmkaStackSlot *params, UmkaStackSlot *result);
@@ -290,7 +284,7 @@ Returns the length of an Umka string. The result is always identical to that of 
 UMKA_API void umkaMakeDynArray(void *umka, void *array, void *type, int len);
 ```
 
-Creates a dynamic `array` (treated as a pointer to `UmkaDynArray(T)`). Here, `type` is the array type that must be declared in the Umka program and obtained by using `umkaGetType()`, `len` is the array length. 
+Creates a dynamic `array` (treated as a pointer to `UmkaDynArray(T)`). Here, `type` is the array type represented as an opaque pointer obtained by the `typeptr()` built-in function, `len` is the array length. 
 
 ```
 UMKA_API int umkaGetDynArrayLen(const void *array);

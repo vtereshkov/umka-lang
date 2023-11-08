@@ -184,13 +184,6 @@ UMKA_API int umkaGetFunc(void *umka, const char *moduleName, const char *funcNam
 }
 
 
-UMKA_API void *umkaGetType(void *umka, const char *moduleName, const char *typeName)
-{
-    Compiler *comp = umka;
-    return compilerGetType(comp, moduleName, typeName);
-}
-
-
 UMKA_API bool umkaGetCallStack(void *umka, int depth, int nameSize, int *offset, char *fileName, char *fnName, int *line)
 {
     Compiler *comp = umka;
