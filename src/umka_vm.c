@@ -85,7 +85,7 @@ static const char *builtinSpelling [] =
     "sin",
     "cos",
     "atan",
-        "atan2",
+    "atan2",
     "exp",
     "log",
     "new",
@@ -105,6 +105,7 @@ static const char *builtinSpelling [] =
     "sizeofself",
     "selfhasptr",
     "selftypeeq",
+    "typeptr",
     "valid",
     "validkey",
     "keys",
@@ -3064,6 +3065,7 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         case BUILTIN_SIZEOFSELF:    doBuiltinSizeofself(fiber, error); break;
         case BUILTIN_SELFHASPTR:    doBuiltinSelfhasptr(fiber, error); break;
         case BUILTIN_SELFTYPEEQ:    doBuiltinSelftypeeq(fiber, error); break;
+        case BUILTIN_TYPEPTR:       error->runtimeHandler(error->context, "Illegal instruction"); return;       // Done at compile time
         case BUILTIN_VALID:         doBuiltinValid(fiber, error); break;
 
         // Maps

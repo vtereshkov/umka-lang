@@ -107,6 +107,7 @@ static void compilerDeclareBuiltinIdents(Compiler *comp)
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "sizeofself", comp->intType,     BUILTIN_SIZEOFSELF);
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "selfhasptr", comp->boolType,    BUILTIN_SELFHASPTR);
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "selftypeeq", comp->boolType,    BUILTIN_SELFTYPEEQ);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "typeptr",    comp->ptrVoidType, BUILTIN_TYPEPTR);
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "valid",      comp->boolType,    BUILTIN_VALID);
 
     // Maps
@@ -295,25 +296,4 @@ int compilerGetFunc(Compiler *comp, const char *moduleName, const char *funcName
     }
 
     return -1;
-}
-
-
-void *compilerGetType(Compiler *comp, const char *moduleName, const char *typeName)
-{
-    int module = 1;
-    if (moduleName)
-    {
-        char modulePath[DEFAULT_STR_LEN + 1] = "";
-        moduleAssertRegularizePath(&comp->modules, moduleName, comp->modules.curFolder, modulePath, DEFAULT_STR_LEN + 1);
-        module = moduleFind(&comp->modules, modulePath);
-    }
-
-    Ident *typeIdent = identFind(&comp->idents, &comp->modules, &comp->blocks, module, typeName, NULL, false);
-    if (typeIdent && typeIdent->kind == IDENT_TYPE)
-    {
-        typeIdent->used = true;
-        return typeIdent->type;
-    }
-
-    return NULL;
 }

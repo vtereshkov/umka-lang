@@ -750,6 +750,12 @@ fn selftypeeq(a, b: interface{...}): bool
 Checks whether the types of the variables that have been converted to the interfaces `a`  and `b` are equivalent.
 
 ```
+fn typeptr(T): ^void
+```
+
+Returns a representation of type `T` as an opaque pointer. This pointer can be passed to the C/C++ host application to be used by the embedding API functions that require Umka types, such as `umkaMakeDynArray()`. 
+
+```
 fn valid(a: ([]T | map[K]T | interface{...} | fn (...): T | fiber)): bool
 ```
 
