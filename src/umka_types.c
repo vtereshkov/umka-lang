@@ -103,7 +103,7 @@ Type *typeAdd(Types *types, Blocks *blocks, TypeKind kind)
 
     if (kind == TYPE_FN)
     {
-        type->sig.method            = false;
+        type->sig.isMethod          = false;
         type->sig.offsetFromSelf    = 0;
         type->sig.numParams         = 0;
         type->sig.numDefaultParams  = 0;
@@ -395,7 +395,7 @@ static bool typeEquivalentRecursive(Type *left, Type *right, bool checkTypeIdent
                 return false;
 
             // Method flag
-            if (left->sig.method != right->sig.method)
+            if (left->sig.isMethod != right->sig.isMethod)
                 return false;
 
             // Parameters (skip interface method receiver)
@@ -741,7 +741,7 @@ static char *typeSpellingRecursive(Type *type, char *buf, int size, int depth)
 
             len += snprintf(buf + len, nonneg(size - len), "fn (");
 
-            if (type->sig.method)
+            if (type->sig.isMethod)
             {
                 char paramBuf[DEFAULT_STR_LEN + 1];
                 len += snprintf(buf + len, nonneg(size - len), "%s) (", typeSpellingRecursive(type->sig.param[0]->type, paramBuf, DEFAULT_STR_LEN + 1, depth - 1));

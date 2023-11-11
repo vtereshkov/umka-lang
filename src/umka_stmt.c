@@ -1113,7 +1113,7 @@ void parseFnBlock(Compiler *comp, Ident *fn, Type *upvaluesStructType)
 
     if (fn && fn->kind == IDENT_CONST && fn->type->kind == TYPE_FN && fn->block == 0)
     {
-        if (fn->type->sig.method)
+        if (fn->type->sig.isMethod)
         {
             comp->lex.debug->fnName = storageAdd(&comp->storage, DEFAULT_STR_LEN + 1);
             identMethodNameWithRcv(fn, comp->lex.debug->fnName, DEFAULT_STR_LEN + 1);

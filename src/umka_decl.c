@@ -92,7 +92,7 @@ static void parseRcvSignature(Compiler *comp, Signature *sig)
     if (rcvType->base->kind == TYPE_PTR || rcvType->base->kind == TYPE_INTERFACE)
     	comp->error.handler(comp->error.context, "Receiver base type cannot be a pointer or an interface");
 
-    sig->method = true;
+    sig->isMethod = true;
     typeAddParam(&comp->types, sig, rcvType, rcvName);
 
     lexEat(&comp->lex, TOK_RPAR);
@@ -103,7 +103,7 @@ static void parseRcvSignature(Compiler *comp, Signature *sig)
 static void parseSignature(Compiler *comp, Signature *sig)
 {
     // Dummy hidden parameter that allows any function to be converted to a closure
-    if (!sig->method)
+    if (!sig->isMethod)
         typeAddParam(&comp->types, sig, comp->anyType, "__upvalues");
 
     // Formal parameter list
@@ -393,7 +393,7 @@ static Type *parseInterfaceType(Compiler *comp)
             lexNext(&comp->lex);
 
             Type *methodType = typeAdd(&comp->types, &comp->blocks, TYPE_FN);
-            methodType->sig.method = true;
+            methodType->sig.isMethod = true;
 
             typeAddParam(&comp->types, &methodType->sig, comp->ptrVoidType, "__self");
             parseSignature(comp, &methodType->sig);
@@ -415,7 +415,7 @@ static Type *parseInterfaceType(Compiler *comp)
                 typeDeepCopy(methodType, embeddedType->field[i]->type);
 
                 Field *method = typeAddField(&comp->types, type, methodType, embeddedType->field[i]->name);
-                methodType->sig.method = true;
+                methodType->sig.isMethod = true;
                 methodType->sig.offsetFromSelf = method->offset;
             }
         }
@@ -666,7 +666,7 @@ static void parseFnDecl(Compiler *comp)
     strcpy(name, comp->lex.tok.name);
 
     // Check for method/field name collision
-    if (fnType->sig.method)
+    if (fnType->sig.isMethod)
     {
         Type *rcvBaseType = fnType->sig.param[0]->type->base;
 

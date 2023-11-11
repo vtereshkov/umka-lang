@@ -72,7 +72,7 @@ typedef struct
 typedef struct
 {
     int numParams, numDefaultParams;
-    bool method;
+    bool isMethod;
     int offsetFromSelf;                     // For interface methods
     Param *param[MAX_PARAMS];
     struct tagType *resultType;
@@ -197,7 +197,7 @@ static inline bool typeFiberFunc(Type *type)
            type->sig.param[2]->type->kind        == TYPE_PTR        &&
            type->sig.param[2]->type->base->kind  != TYPE_VOID       &&
            type->sig.resultType->kind            == TYPE_VOID       &&
-           !type->sig.method;
+           !type->sig.isMethod;
 }
 
 

@@ -1458,7 +1458,7 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
         numPreHiddenParams++;
         i++;
     }
-    else if ((*type)->sig.method)
+    else if ((*type)->sig.isMethod)
     {
         // Method receiver
         genPushReg(&comp->gen, VM_REG_SELF);
@@ -2213,7 +2213,7 @@ static void parseFieldSelector(Compiler *comp, Type **type, Const *constant, boo
         genGetFieldPtr(&comp->gen, field->offset);
 
         // Save interface method's receiver to dedicated register and push method's entry point
-        if (field->type->kind == TYPE_FN && field->type->sig.method && field->type->sig.offsetFromSelf != 0)
+        if (field->type->kind == TYPE_FN && field->type->sig.isMethod && field->type->sig.offsetFromSelf != 0)
         {
             genDup(&comp->gen);
             genGetFieldPtr(&comp->gen, -field->type->sig.offsetFromSelf);
@@ -2297,8 +2297,11 @@ static void parseDesignator(Compiler *comp, Type **type, Const *constant, bool *
 
     parseSelectors(comp, type, constant, isVar, isCall, isCompLit);
 
-    if ((*type)->kind == TYPE_FN && (*type)->sig.method)
+    if (((*type)->kind == TYPE_FN && (*type)->sig.isMethod) ||
+        ((*type)->kind == TYPE_PTR && (*type)->base->kind == TYPE_FN && (*type)->base->sig.isMethod))
+    {
         comp->error.handler(comp->error.context, "Method must be called");
+    }
 }
 
 

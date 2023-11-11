@@ -69,7 +69,7 @@ Ident *identFind(Idents *idents, Modules *modules, Blocks *blocks, int module, c
 
                 if (identModuleValid)
                 {
-                    const bool method = ident->type->kind == TYPE_FN && ident->type->sig.method;
+                    const bool method = ident->type->kind == TYPE_FN && ident->type->sig.isMethod;
 
                     // We don't need a method and what we found is not a method
                     if (!rcvType && !method)
@@ -125,7 +125,7 @@ bool identIsOuterLocalVar(Blocks *blocks, Ident *ident)
 static Ident *identAdd(Idents *idents, Modules *modules, Blocks *blocks, IdentKind kind, const char *name, Type *type, bool exported)
 {
     Type *rcvType = NULL;
-    if (type->kind == TYPE_FN && type->sig.method)
+    if (type->kind == TYPE_FN && type->sig.isMethod)
         rcvType = type->sig.param[0]->type;
 
     Ident *ident = identFind(idents, modules, blocks, blocks->module, name, rcvType, false);
@@ -354,5 +354,5 @@ void identWarnIfUnusedAll(Idents *idents, int block)
 bool identIsMain(Ident *ident)
 {
     return strcmp(ident->name, "main") == 0 && ident->kind == IDENT_CONST &&
-           ident->type->kind == TYPE_FN && !ident->type->sig.method && ident->type->sig.numParams == 1 && ident->type->sig.resultType->kind == TYPE_VOID;   // A dummy "__upvalues" is the only parameter
+           ident->type->kind == TYPE_FN && !ident->type->sig.isMethod && ident->type->sig.numParams == 1 && ident->type->sig.resultType->kind == TYPE_VOID;   // A dummy "__upvalues" is the only parameter
 }
