@@ -3405,6 +3405,7 @@ void vmMakeDynArray(VM *vm, DynArray *array, Type *type, int len)
     if (!array)
         return;
 
+    doBasicChangeRefCnt(vm->fiber, &vm->pages, array, type, TOK_MINUSMINUS);
     doAllocDynArray(&vm->pages, array, type, len, vm->error);
 }
 
