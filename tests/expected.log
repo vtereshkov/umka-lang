@@ -7,7 +7,6 @@
 7 [42 43] 6.000000 {"World": 0.333333 "Hello": 3.14}
 
 
-
 >>> Binary file I/O
 
 Hello World
@@ -320,6 +319,11 @@ Test 6
 {"one": [1 2] "e": [2.72 5.44] "ten": [10 20] "pi": [3.14 6.28]}
 {"e": [2.72 5.44] "ten": [10 20] "pi": [3.14 6.28]}
 {"one": [1 2] "e": [2.72 5.44] "ten": [10 20]}
+
+
+>>> Module spaces
+
+A name: a.um
 
 
 >>> Multiple returns
