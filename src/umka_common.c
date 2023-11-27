@@ -220,6 +220,12 @@ int moduleAdd(Modules *modules, const char *path)
 
     moduleNameFromPath(modules, path, folder, name, DEFAULT_STR_LEN + 1);
 
+    for (int i=0; name[i]; i++) {
+        if (name[i] == ' ' || name[i] == '\t') {
+            modules->error->handler(modules->error->context, "Module name cannot contain spaces or tabs");
+        }
+    }
+
     int res = moduleFind(modules, path);
     if (res >= 0)
         modules->error->handler(modules->error->context, "Duplicate module %s", path);
@@ -373,13 +379,6 @@ bool moduleRegularizePath(const char *path, const char *curFolder, char *regular
     {
         switch (*readCh)
         {
-            case ' ':
-            case '\t':
-            {
-                numDots = 0;
-                break;
-            }
-
             case '/':
             case '\\':
             {
@@ -414,6 +413,11 @@ bool moduleRegularizePath(const char *path, const char *curFolder, char *regular
                 break;
             }
 
+            case ' ':
+            case '\t':
+            {
+                numDots = 0;
+            } /* FALLTHROUGH */
             default:
             {
                 while (numDots > 0)

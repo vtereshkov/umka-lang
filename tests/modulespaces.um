@@ -1,0 +1,15 @@
+
+import (
+    "path with spaces/a.um"
+    // "  path with spaces/b.um     " // This will fail
+    // "        " // This will fail
+    // "path with spaces/module with spaces.um" // This will fail
+)
+
+fn test*() {
+   printf("A name: %s\n", a.Name) 
+}
+
+fn main() {
+    test()
+}
