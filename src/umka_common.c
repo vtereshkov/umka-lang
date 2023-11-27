@@ -220,6 +220,12 @@ int moduleAdd(Modules *modules, const char *path)
 
     moduleNameFromPath(modules, path, folder, name, DEFAULT_STR_LEN + 1);
 
+    for (int i=0; name[i]; i++) {
+        if (name[i] == ' ' || name[i] == '\t') {
+            modules->error->handler(modules->error->context, "Module name cannot contain spaces or tabs");
+        }
+    }
+
     int res = moduleFind(modules, path);
     if (res >= 0)
         modules->error->handler(modules->error->context, "Duplicate module %s", path);
@@ -360,6 +366,11 @@ bool modulePathIsAbsolute(const char *path)
 
 bool moduleRegularizePath(const char *path, const char *curFolder, char *regularizedPath, int size)
 {
+    while (*path == ' ' || *path == '\t')
+    {
+        path++;
+    }
+
     char *absolutePath = malloc(size);
     snprintf(absolutePath, size, "%s%s", modulePathIsAbsolute(path) ? "" : curFolder, path);
 
@@ -373,13 +384,6 @@ bool moduleRegularizePath(const char *path, const char *curFolder, char *regular
     {
         switch (*readCh)
         {
-            case ' ':
-            case '\t':
-            {
-                numDots = 0;
-                break;
-            }
-
             case '/':
             case '\\':
             {
@@ -414,6 +418,11 @@ bool moduleRegularizePath(const char *path, const char *curFolder, char *regular
                 break;
             }
 
+            case ' ':
+            case '\t':
+            {
+                numDots = 0;
+            } /* FALLTHROUGH */
             default:
             {
                 while (numDots > 0)
@@ -428,6 +437,11 @@ bool moduleRegularizePath(const char *path, const char *curFolder, char *regular
         }
 
         readCh++;
+    }
+
+    while (writeCh > absolutePath && (writeCh[-1] == ' ' || writeCh[-1] == '\t'))
+    {
+        writeCh--;
     }
 
     if (numDots > 0)

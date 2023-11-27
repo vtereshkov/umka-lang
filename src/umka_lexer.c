@@ -144,7 +144,7 @@ int lexInit(Lexer *lex, Storage *storage, DebugInfo *debug, const char *fileName
 
         lex->buf = malloc(bufLen + 1);
 
-        if (fread(lex->buf, bufLen, 1, file) != 1)
+        if (fread(lex->buf, 1, bufLen, file) != bufLen)
         {
             lex->error->handler(lex->error->context, "Cannot read file %s", fileName);
             return 0;
