@@ -13,7 +13,6 @@ import (
     "interfaces3.um"
     "maps.um"
     "maps2.um"
-    "modulespaces.um"
     "multret.um"
     "tour.um"
     "typeeq.um"
@@ -28,6 +27,7 @@ import (
     "imports.um"
     "imports2.um"
     "imports3.um"
+    "imports4.um"
     "closures.um"
     "closures2.um"
     "closures3.um"
@@ -54,8 +54,7 @@ fn main() {
     printf("\n\n>>> Interfaces - 2\n\n");           interfaces2.test()
     printf("\n\n>>> Interfaces - 3\n\n");           interfaces3.test()
     printf("\n\n>>> Maps - 1\n\n");                 maps.test()
-    printf("\n\n>>> Maps - 2\n\n");                 maps2.test()    
-    printf("\n\n>>> Module spaces\n\n");            modulespaces.test()
+    printf("\n\n>>> Maps - 2\n\n");                 maps2.test()
     printf("\n\n>>> Multiple returns\n\n");         multret.test()
     printf("\n\n>>> Language tour\n\n");            tour.test()
     printf("\n\n>>> Type equivalence\n\n");         typeeq.test()
@@ -67,9 +66,10 @@ fn main() {
     printf("\n\n>>> Byte conversions\n\n");         byteconv.test()
     printf("\n\n>>> UTF-8 - 1\n\n");                utf8test.test()
     printf("\n\n>>> UTF-8 - 2\n\n");                utf8test2.test()
-    printf("\n\n>>> Import disambiguation - 1\n\n");imports.test()
-    printf("\n\n>>> Import disambiguation - 2\n\n");imports2.test()
-    printf("\n\n>>> Import disambiguation - 3\n\n");imports3.test()
+    printf("\n\n>>> Imports - 1\n\n");              imports.test()
+    printf("\n\n>>> Imports - 2\n\n");              imports2.test()
+    printf("\n\n>>> Imports - 3\n\n");              imports3.test()
+    printf("\n\n>>> Imports - 4\n\n");              imports4.test()    
     printf("\n\n>>> Closures - 1\n\n");             closures.test()
     printf("\n\n>>> Closures - 2\n\n");             closures2.test()
     printf("\n\n>>> Closures - 3\n\n");             closures3.test()

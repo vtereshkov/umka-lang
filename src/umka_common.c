@@ -220,11 +220,9 @@ int moduleAdd(Modules *modules, const char *path)
 
     moduleNameFromPath(modules, path, folder, name, DEFAULT_STR_LEN + 1);
 
-    for (int i=0; name[i]; i++) {
-        if (name[i] == ' ' || name[i] == '\t') {
+    for (int i = 0; name[i]; i++)
+        if (name[i] == ' ' || name[i] == '\t')
             modules->error->handler(modules->error->context, "Module name cannot contain spaces or tabs");
-        }
-    }
 
     int res = moduleFind(modules, path);
     if (res >= 0)
@@ -417,7 +415,9 @@ bool moduleRegularizePath(const char *path, const char *curFolder, char *regular
             case '\t':
             {
                 numDots = 0;
-            } /* FALLTHROUGH */
+                // fallthrough
+            }
+            
             default:
             {
                 while (numDots > 0)

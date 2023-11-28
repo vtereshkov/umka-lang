@@ -1,8 +1,7 @@
-
 import (
     "path with spaces/a.um"
-    // "  path with spaces/b.um     " // This will fail
-    // "        " // This will fail
+    // "  path with spaces/b.um     "           // This will fail
+    // "        "                               // This will fail
     // "path with spaces/module with spaces.um" // This will fail
 )
 

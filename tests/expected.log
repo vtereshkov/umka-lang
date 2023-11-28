@@ -7,6 +7,7 @@
 7 [42 43] 6.000000 {"World": 0.333333 "Hello": 3.14}
 
 
+
 >>> Binary file I/O
 
 Hello World
@@ -321,11 +322,6 @@ Test 6
 {"one": [1 2] "e": [2.72 5.44] "ten": [10 20]}
 
 
->>> Module spaces
-
-A name: a.um
-
-
 >>> Multiple returns
 
 -3 [6 9] true
@@ -492,21 +488,26 @@ reconstructed string: Hello, 世界
 Test passed
 
 
->>> Import disambiguation - 1
+>>> Imports - 1
 
 Utils from lib 1
 Utils from lib 2
 
 
->>> Import disambiguation - 2
+>>> Imports - 2
 
 Utils from lib 1
 Utils from lib 2
 
 
->>> Import disambiguation - 3
+>>> Imports - 3
 
 42 43 1
+
+
+>>> Imports - 4
+
+A name: a.um
 
 
 >>> Closures - 1
