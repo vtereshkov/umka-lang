@@ -34,9 +34,18 @@ const (
     seekBegin* = 0
     seekCur*   = 1
     seekEnd*   = 2
-)    
+)
 
-fn rtlfopen  (name: str, mode: str): File;  
+fn rtlstdin(): File
+fn stdin*(): File {return rtlstdin()}
+
+fn rtlstdout(): File
+fn stdout*(): File {return rtlstdout()}
+
+fn rtlstderr(): File
+fn stderr*(): File {return rtlstderr()}
+
+fn rtlfopen  (name: str, mode: str): File  
 fn fopen*    (name: str, mode: str): File {return rtlfopen(name, mode)}
 
 fn rtlfclose (f: File): int

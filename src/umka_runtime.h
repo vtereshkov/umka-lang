@@ -14,6 +14,9 @@ typedef struct
 
 
 void rtlmemcpy          (Slot *params, Slot *result);
+void rtlstdin           (Slot *params, Slot *result);
+void rtlstdout          (Slot *params, Slot *result);
+void rtlstderr          (Slot *params, Slot *result);
 void rtlfopen           (Slot *params, Slot *result);
 void rtlfopenSandbox    (Slot *params, Slot *result);
 void rtlfclose          (Slot *params, Slot *result);

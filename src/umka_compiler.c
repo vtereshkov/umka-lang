@@ -128,6 +128,9 @@ static void compilerDeclareBuiltinIdents(Compiler *comp)
 static void compilerDeclareExternalFuncs(Compiler *comp, bool fileSystemEnabled)
 {
     externalAdd(&comp->externals, "rtlmemcpy",      &rtlmemcpy);
+    externalAdd(&comp->externals, "rtlstdin",       &rtlstdin);
+    externalAdd(&comp->externals, "rtlstdout",      &rtlstdout);
+    externalAdd(&comp->externals, "rtlstderr",      &rtlstderr);
     externalAdd(&comp->externals, "rtlfopen",       fileSystemEnabled ? &rtlfopen  : &rtlfopenSandbox);
     externalAdd(&comp->externals, "rtlfclose",      fileSystemEnabled ? &rtlfclose : &rtlfcloseSandbox);
     externalAdd(&comp->externals, "rtlfread",       fileSystemEnabled ? &rtlfread  : &rtlfreadSandbox);

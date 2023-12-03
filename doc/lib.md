@@ -45,10 +45,25 @@ Codes defining the offset origins in `fseek()`: the beginning of file, the curre
 #### Functions
 
 ```
+fn stdin* (): File
+fn stdout*(): File
+fn stderr*(): File
+```
+
+Return file handles for standard input, output, and error output devices.
+
+```
 fn fopen*(name: str, mode: str): File
 ```
 
-Opens the file specified by the `name` in the given `mode` (identical to C): `"r"` to read from a text file, `"rb"` to read from a binary file, `"w"` to write to a text file, `"wb"` to write to a binary file, etc. Returns the file handle.
+Opens the file specified by the `name` in the given `mode` (identical to C): 
+```
+"r"   read from a text file
+"rb"  read from a binary file
+"w"   write to a text file
+"wb"  write to a binary file
+```
+Returns the file handle.
 
 ```
 fn fclose*(f: File): int

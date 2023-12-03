@@ -47,6 +47,24 @@ void rtlmemcpy(Slot *params, Slot *result)
 }
 
 
+void rtlstdin(Slot *params, Slot *result)
+{
+    result->ptrVal = stdin;
+}
+
+
+void rtlstdout(Slot *params, Slot *result)
+{
+    result->ptrVal = stdout;
+}
+
+
+void rtlstderr(Slot *params, Slot *result)
+{
+    result->ptrVal = stderr;
+}
+
+
 void rtlfopen(Slot *params, Slot *result)
 {
     const char *name = (const char *)params[1].ptrVal;
