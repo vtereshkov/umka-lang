@@ -119,7 +119,12 @@ fn feof*    (f: File): bool {
 }
 
 fn rtlfflush (f: File): int
-fn fflush*   (f: File): int { return rtlfflush(f) }
+fn fflush*   (f: File): int {
+	if f == null {
+		error("File is null")
+	}
+	return rtlfflush(f)
+}
 
 // I/O utilities
 

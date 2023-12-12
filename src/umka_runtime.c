@@ -195,12 +195,6 @@ void rtlfflush(Slot *params, Slot *result)
 }
 
 
-void rtlfflushSandbox(Slot *params, Slot *result)
-{
-    result->intVal = EOF;
-}
-
-
 void rtltime(Slot *params, Slot *result)
 {
     result->intVal = time(NULL);
