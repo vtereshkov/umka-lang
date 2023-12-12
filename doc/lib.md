@@ -111,7 +111,7 @@ Returns the end-of-file indicator.
 fn fflush*(f: File): bool
 ```
 
-Flushes the file.
+Flushes the file. If `f` is `null`, flushes all files open for writing.
 
 ```
 fn println*(s: str): int
