@@ -118,6 +118,14 @@ fn feof*    (f: File): bool {
     return bool(rtlfeof(f))
 }
 
+fn rtlfflush (f: File): int
+fn fflush*   (f: File): int {
+	if f == null {
+		error("File is null")
+	}
+	return rtlfflush(f)
+}
+
 // I/O utilities
 
 fn println*(s: str): int {return printf("%s\n", s)}

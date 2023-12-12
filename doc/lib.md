@@ -108,6 +108,12 @@ fn feof*(f: File): bool
 Returns the end-of-file indicator.
 
 ```
+fn fflush*(f: File): int
+```
+
+Flushes the file. Returns 0 if successful.
+
+```
 fn println*(s: str): int
 fn fprintln*(f: File, s: str): int
 ```

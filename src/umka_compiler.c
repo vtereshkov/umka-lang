@@ -139,6 +139,7 @@ static void compilerDeclareExternalFuncs(Compiler *comp, bool fileSystemEnabled)
     externalAdd(&comp->externals, "rtlftell",       fileSystemEnabled ? &rtlftell  : &rtlftellSandbox);
     externalAdd(&comp->externals, "rtlremove",      fileSystemEnabled ? &rtlremove : &rtlremoveSandbox);
     externalAdd(&comp->externals, "rtlfeof",        fileSystemEnabled ? &rtlfeof   : &rtlfeofSandbox);
+    externalAdd(&comp->externals, "rtlfflush",      &rtlfflush);
     externalAdd(&comp->externals, "rtltime",        &rtltime);
     externalAdd(&comp->externals, "rtlclock",       &rtlclock);
     externalAdd(&comp->externals, "rtllocaltime",   &rtllocaltime);

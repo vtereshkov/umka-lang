@@ -188,6 +188,13 @@ void rtlfeofSandbox(Slot *params, Slot *result)
 }
 
 
+void rtlfflush(Slot *params, Slot *result)
+{
+    FILE *file = (FILE *)params[0].ptrVal;
+    result->intVal = fflush(file);
+}
+
+
 void rtltime(Slot *params, Slot *result)
 {
     result->intVal = time(NULL);
