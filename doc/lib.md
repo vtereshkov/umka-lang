@@ -108,10 +108,10 @@ fn feof*(f: File): bool
 Returns the end-of-file indicator.
 
 ```
-fn fflush*(f: File): bool
+fn fflush*(f: File): int
 ```
 
-Flushes the file. If `f` is `null`, flushes all files open for writing.
+Flushes the file. If `f` is `null`, flushes all files open for writing. Returns 0 if successful.
 
 ```
 fn println*(s: str): int
