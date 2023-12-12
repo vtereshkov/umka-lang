@@ -130,7 +130,7 @@ static const char *runtimeModuleSources[] = {
 "}\n"
 "\n"
 "fn rtlfflush (f: File): int\n"
-"fn fflush*   (f: File): bool { return bool(rtlfflush(f)) }\n"
+"fn fflush*   (f: File): int { return rtlfflush(f) }\n"
 "\n"
 "// I/O utilities\n"
 "\n"
