@@ -33,6 +33,8 @@ void rtlremove          (Slot *params, Slot *result);
 void rtlremoveSandbox   (Slot *params, Slot *result);
 void rtlfeof            (Slot *params, Slot *result);
 void rtlfeofSandbox     (Slot *params, Slot *result);
+void rtlfflush          (Slot *params, Slot *result);
+void rtlfflushSandbox   (Slot *params, Slot *result);
 void rtltime            (Slot *params, Slot *result);
 void rtlclock           (Slot *params, Slot *result);
 void rtllocaltime       (Slot *params, Slot *result);
