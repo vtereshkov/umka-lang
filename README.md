@@ -7,7 +7,7 @@ Umka is a statically typed embeddable scripting language. It combines the simpli
 
 * [Playground](https://vtereshkov.github.io/umka-lang)
 * [Downloads](https://github.com/vtereshkov/umka-lang/releases)
-* [Packages](https://pak.tophat2d.dev)
+* [Packages](https://umbox.tophat2d.dev)
 * Documentation
   * [Language](https://github.com/vtereshkov/umka-lang/blob/master/doc/lang.md)
   * [Standard library](https://github.com/vtereshkov/umka-lang/blob/master/doc/lib.md)
