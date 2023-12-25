@@ -565,6 +565,8 @@ a := 5
 s, val := "Hello", sin(0.1 * a)
 ```
 
+A short variable declaration may redeclare variables provided they were originally declared earlier in the same block and at least one of the variables in the left-hand side list is new. 
+
 ### Function and method declarations
 
 A function or method declaration can be either a complete definition that includes the function block, or a *prototype* declaration if the function block is omitted. A prototype should be resolved somewhere below in the same module by duplicating the declaration, now with the function block. If a prototype is not resolved, it is considered an external C/C++ function. If such a function has not been registered via the Umka API, it is searched in the shared library (Umka module implementation library, UMI) `mod.umi`, where `mod` is the current module name. If the UMI does not exist or contains no such function, an error is triggered. 
