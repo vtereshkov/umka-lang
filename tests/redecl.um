@@ -1,0 +1,39 @@
+excl := "!"
+
+fn f(): (int, str, bool) {
+	return 42, "OK" + excl, true
+}
+
+fn g(): (int, str, bool) {
+	return 43, "FAIL" + excl, false
+}
+
+fn test1*() {
+	res, err, ok := f()
+	printf("f(): %v %v %v\n", res, err, ok)
+
+	res, err, ok = g()
+	printf("g(): %v %v %v\n", res, err, ok)
+
+	res2, err, ok := f()
+	printf("f(): %v %v %v\n", res2, err, ok)
+}
+
+a, b, c := "Hello " + "World!", true, [2]int{11, 13}
+a, d, c := "Merry " + "Christmas!", 0.333, [2]int{5, 7}
+
+fn test2*() {
+	printf("%v %v %v %v\n", a, b, c, d)
+
+	b, d, e := false, 144, "Hmmm"
+	printf("%v %v %v %v %v\n", a, b, c, d, e)
+}
+
+fn test*() {
+	test1()
+	test2()
+}
+
+fn main() {
+	test()
+}

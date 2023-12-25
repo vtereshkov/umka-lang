@@ -689,3 +689,12 @@ str: 425 + 5 = 4255
 []real: [42 5] + [5] = [42 5 5]
 unknown: 42
 
+
+
+>>> Redeclarations
+
+f(): 42 "OK!" true
+g(): 43 "FAIL!" false
+f(): 42 "OK!" true
+"Merry Christmas!" true [5 7] 0.333
+"Merry Christmas!" false [5 7] 144 "Hmmm"

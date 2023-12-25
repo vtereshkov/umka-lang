@@ -211,7 +211,7 @@ static void parseListAssignmentStmt(Compiler *comp, Type *type, Const *varPtrCon
             doImplicitTypeConv(comp, leftType, &rightType, &rightConstantBuf, false);
             typeAssertCompatible(&comp->types, leftType, rightType, false);
 
-            constAssign(&comp->consts, varPtrConstList[i].ptrVal, &rightConstantBuf, rightType->kind, typeSize(&comp->types, rightType));
+            constAssign(&comp->consts, varPtrConstList[i].ptrVal, &rightConstantBuf, leftType->kind, typeSize(&comp->types, leftType));
         }
         else                                                // Assign to variable
         {
@@ -313,16 +313,39 @@ static void parseListDeclAssignmentStmt(Compiler *comp, IdentName *names, bool *
     if (numExpr != num)
         comp->error.handler(comp->error.context, "%d expressions expected but %d found", num, numExpr);
 
+    bool newVarFound = false;
+
     for (int i = 0; i < num; i++)
     {
         Type *rightType = rightListType->field[i]->type;
-        Ident *ident = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, names[i], rightType, exported[i]);
+
+        bool redecl = false;
+        Ident *ident = identFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, names[i], NULL, false);
+        if (ident && ident->kind == IDENT_VAR && ident->block == comp->blocks.item[comp->blocks.top].block)
+        {
+            // Redeclaration in the same block
+            redecl = true;
+            ident->used = true;
+        }
+        else
+        {
+            // New variable
+            newVarFound = true;
+            ident = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, names[i], rightType, exported[i]);
+        }
 
         if (constExpr)              // Initialize global variable
         {
             Const rightConstantBuf = {.ptrVal = (char *)rightListConstant->ptrVal + rightListType->field[i]->offset};
             constDeref(&comp->consts, &rightConstantBuf, rightType->kind);
-            constAssign(&comp->consts, ident->ptr, &rightConstantBuf, rightType->kind, typeSize(&comp->types, rightType));
+
+            if (redecl)
+            {
+                doImplicitTypeConv(comp, ident->type, &rightType, &rightConstantBuf, false);
+                typeAssertCompatible(&comp->types, ident->type, rightType, false);
+            }
+
+            constAssign(&comp->consts, ident->ptr, &rightConstantBuf, ident->type->kind, typeSize(&comp->types, ident->type));
         }
         else                        // Assign to variable
         {
@@ -330,15 +353,28 @@ static void parseListDeclAssignmentStmt(Compiler *comp, IdentName *names, bool *
             genGetFieldPtr(&comp->gen, rightListType->field[i]->offset);    // Get expression pointer
             genDeref(&comp->gen, rightType->kind);                          // Get expression value
 
-            genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, rightType);           // Increase right-hand side reference count
+            if (redecl)
+            {
+                doImplicitTypeConv(comp, ident->type, &rightType, NULL, false);
+                typeAssertCompatible(&comp->types, ident->type, rightType, false);
 
-            doPushVarPtr(comp, ident);
-            genSwapAssign(&comp->gen, rightType->kind, typeSize(&comp->types, rightType));
+                doPushVarPtr(comp, ident);
+                genSwapChangeRefCntAssign(&comp->gen, ident->type);                                 // Assign expression to variable - both left-hand and right-hand side reference counts modified
+            }
+            else
+            {
+                genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, rightType);                               // Increase right-hand side reference count
+                doPushVarPtr(comp, ident);
+                genSwapAssign(&comp->gen, ident->type->kind, typeSize(&comp->types, ident->type));  // Assign expression to variable
+            }
         }
     }
 
     if (!constExpr)
         genPop(&comp->gen);                                                 // Remove expression list pointer
+
+    if (!newVarFound)
+        comp->error.handler(comp->error.context, "No new variables declared");
 }
 
 
