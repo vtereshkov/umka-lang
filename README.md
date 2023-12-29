@@ -52,6 +52,7 @@ _400 x 400 matrix multiplication (AMD A4-3300M @ 1.9 GHz, Windows 7)_
 ## Projects in Umka
 
 * [tophat](https://tophat2d.dev/) - a 2D game framework focused on minimalism
+* [SaveScum](https://skejeton.itch.io/savescum) - a tophat-based puzzle platformer game 
 
 ![](resources/tophat.png)
 
