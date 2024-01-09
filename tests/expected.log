@@ -333,6 +333,7 @@ World Hello
 23 45.6 "Hello" 'z'
 ['a' 'b'] ['c' 'd'] ['e' 'f']
 12 -3 17
+8.5 "43"
 
 
 >>> Language tour

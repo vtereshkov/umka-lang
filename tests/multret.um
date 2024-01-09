@@ -8,6 +8,10 @@ p := 'z'
 var i, j, k: [2]char = [2]char{'a', 'b'}, [2]char{'c', 'd'}, [2]char{'e', 'f'}
 var l, m, n: real = 12, -3, 17
 
+fn foo(x: int): (real, str) {
+    return x + 1, sprintf("[%v]", x + 1)
+}
+
 fn test*() {
     if a, b, c := f(3, false); a < 3 {
         printf("%v %v %v\n", a, b, c)
@@ -34,6 +38,8 @@ fn test*() {
     printf("%v %v %v %v\n", u, v, w, p)     
     printf("%v %v %v\n", i, j, k)
     printf("%v %v %v\n", l, m, n)
+
+    printf("%v %v\n", foo(7).item0 + 0.5, slice(foo(42).item1, 1, 3))
 }
 
 fn main() {

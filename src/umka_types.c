@@ -609,7 +609,7 @@ Field *typeAddField(Types *types, Type *structType, Type *fieldType, const char 
     else
     {
         // Automatic field naming
-        snprintf(fieldNameBuf, DEFAULT_STR_LEN + 1, "__field%d", structType->numItems);
+        snprintf(fieldNameBuf, DEFAULT_STR_LEN + 1, "item%d", structType->numItems);
         name = fieldNameBuf;
     }
 

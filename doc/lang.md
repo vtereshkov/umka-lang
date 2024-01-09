@@ -943,7 +943,9 @@ m["Hello"]
 
 #### Field or method selector
 
-The field or method selector `.`  accesses a field or method. For accessing a field, it can be applied to a structure that has this field or to a pointer to such a structure. For accessing a method, it can be applied to any declared type `T`  or `^T` such that `^T` is compatible with the type that implements this method. If neither field nor method with the specified name is found, an error is triggered.
+The field or method selector `.` accesses a field or method. For accessing a field, it can be applied to a structure that has this field or to a pointer to such a structure. For accessing a method, it can be applied to any declared type `T`  or `^T` such that `^T` is compatible with the type that implements this method. If neither field nor method with the specified name is found, an error is triggered.
+
+As a special case, the field selector can be applied to the result of a function call that returns an expression list. This expression list is treated as if it were a structure with the fields named `item0`, `item1`, etc.    
 
 Syntax:
 
@@ -956,6 +958,7 @@ Examples:
 ```
 v.x
 data.print
+f().item2
 ```
 
 #### Call selector
