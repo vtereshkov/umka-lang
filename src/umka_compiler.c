@@ -13,6 +13,33 @@
 void parseProgram(Compiler *comp);
 
 
+static void compilerSetAPI(Compiler *comp)
+{
+    comp->api.umkaAlloc             = umkaAlloc;
+    comp->api.umkaInit              = umkaInit;
+    comp->api.umkaCompile           = umkaCompile;
+    comp->api.umkaRun               = umkaRun;
+    comp->api.umkaCall              = umkaCall;
+    comp->api.umkaFree              = umkaFree;
+    comp->api.umkaGetError          = umkaGetError;
+    comp->api.umkaAsm               = umkaAsm;
+    comp->api.umkaAddModule         = umkaAddModule;
+    comp->api.umkaAddFunc           = umkaAddFunc;
+    comp->api.umkaGetFunc           = umkaGetFunc;
+    comp->api.umkaGetCallStack      = umkaGetCallStack;
+    comp->api.umkaSetHook           = umkaSetHook;
+    comp->api.umkaAllocData         = umkaAllocData;
+    comp->api.umkaIncRef            = umkaIncRef;
+    comp->api.umkaDecRef            = umkaDecRef;
+    comp->api.umkaGetMapItem        = umkaGetMapItem;
+    comp->api.umkaMakeStr           = umkaMakeStr;
+    comp->api.umkaGetStrLen         = umkaGetStrLen;
+    comp->api.umkaMakeDynArray      = umkaMakeDynArray;
+    comp->api.umkaGetDynArrayLen    = umkaGetDynArrayLen;
+    comp->api.umkaGetVersion        = umkaGetVersion;
+}
+
+
 static void compilerDeclareBuiltinTypes(Compiler *comp)
 {
     comp->voidType          = typeAdd(&comp->types, &comp->blocks, TYPE_VOID);
@@ -152,6 +179,8 @@ static void compilerDeclareExternalFuncs(Compiler *comp, bool fileSystemEnabled)
 
 void compilerInit(Compiler *comp, const char *fileName, const char *sourceString, int stackSize, const char *locale, int argc, char **argv, bool fileSystemEnabled, bool implLibsEnabled)
 {
+    compilerSetAPI(comp);
+
     storageInit  (&comp->storage);
     moduleInit   (&comp->modules, implLibsEnabled, &comp->error);
     blocksInit   (&comp->blocks, &comp->error);

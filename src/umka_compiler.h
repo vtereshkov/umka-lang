@@ -9,10 +9,13 @@
 #include "umka_ident.h"
 #include "umka_const.h"
 #include "umka_runtime.h"
+#include "umka_api.h"
 
 
 typedef struct
 {
+    UmkaAPI     api;        // Must be the first field
+
     Storage     storage;
     Modules     modules;
     Blocks      blocks;

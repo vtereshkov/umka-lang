@@ -87,6 +87,33 @@ typedef struct
 typedef void (*UmkaWarningCallback)(UmkaError *warning);
 
 
+typedef struct
+{
+    void *(*umkaAlloc)            (void);
+    bool (*umkaInit)              (void *umka, const char *fileName, const char *sourceString, int stackSize, const char *locale, int argc, char **argv, bool fileSystemEnabled, bool implLibsEnabled, UmkaWarningCallback warningCallback);
+    bool (*umkaCompile)           (void *umka);
+    bool (*umkaRun)               (void *umka);
+    bool (*umkaCall)              (void *umka, int entryOffset, int numParamSlots, UmkaStackSlot *params, UmkaStackSlot *result);
+    void (*umkaFree)              (void *umka);
+    void (*umkaGetError)          (void *umka, UmkaError *err);
+    char *(*umkaAsm)              (void *umka);
+    bool (*umkaAddModule)         (void *umka, const char *fileName, const char *sourceString);
+    bool (*umkaAddFunc)           (void *umka, const char *name, UmkaExternFunc func);
+    int  (*umkaGetFunc)           (void *umka, const char *moduleName, const char *funcName);
+    bool (*umkaGetCallStack)      (void *umka, int depth, int nameSize, int *offset, char *fileName, char *fnName, int *line);
+    void (*umkaSetHook)           (void *umka, UmkaHookEvent event, UmkaHookFunc hook);
+    void *(*umkaAllocData)        (void *umka, int size, UmkaExternFunc onFree);
+    void (*umkaIncRef)            (void *umka, void *ptr);
+    void (*umkaDecRef)            (void *umka, void *ptr);
+    void *(*umkaGetMapItem)       (void *umka, UmkaMap *map, UmkaStackSlot key);
+    char *(*umkaMakeStr)          (void *umka, const char *str);
+    int  (*umkaGetStrLen)         (const char *str);
+    void (*umkaMakeDynArray)      (void *umka, void *array, void *type, int len);
+    int  (*umkaGetDynArrayLen)    (const void *array);
+    const char *(*umkaGetVersion) (void);
+} UmkaAPI;
+
+
 UMKA_API void *umkaAlloc            (void);
 UMKA_API bool umkaInit              (void *umka, const char *fileName, const char *sourceString, int stackSize, const char *locale, int argc, char **argv, bool fileSystemEnabled, bool implLibsEnabled, UmkaWarningCallback warningCallback);
 UMKA_API bool umkaCompile           (void *umka);
@@ -109,6 +136,11 @@ UMKA_API int  umkaGetStrLen         (const char *str);
 UMKA_API void umkaMakeDynArray      (void *umka, void *array, void *type, int len);
 UMKA_API int  umkaGetDynArrayLen    (const void *array);
 UMKA_API const char *umkaGetVersion (void);
+
+static inline UmkaAPI *umkaGetAPI   (void *umka)
+{
+    return (UmkaAPI *)umka;
+}
 
 
 #if defined(__cplusplus)

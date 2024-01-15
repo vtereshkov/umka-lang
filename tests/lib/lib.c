@@ -15,3 +15,11 @@ void sub(UmkaStackSlot *params, UmkaStackSlot *result)
     double b = params[0].realVal;
     result->realVal = a - b;
 }
+
+
+void hello(UmkaStackSlot *params, UmkaStackSlot *result)
+{
+    void *umka = result->ptrVal;
+    UmkaAPI *api = umkaGetAPI(umka);
+    result->ptrVal = api->umkaMakeStr(umka, "Hello");
+}

@@ -292,3 +292,33 @@ UMKA_API int umkaGetDynArrayLen(const void *array);
 
 Returns the length of the dynamic `array` (treated as a pointer to `UmkaDynArray(T)`).
 
+## Accessing Umka API dynamically
+
+Using the Umka API functions generally requires linking against the Umka interpreter library. This dependency is undesirable when implementing UMIs. In such cases, the same Umka API functions can be accessed dynamically, through the Umka interpreter instance passed to UMI functions.
+
+### Types
+
+```
+typedef struct
+{
+    // Function pointers
+} UmkaAPI;
+```
+
+A set of pointers to all Umka API functions. For any function `umkaXXXX()`, there is a corresponding field `umkaXXXX` in `UmkaAPI`.
+
+### Functions
+
+```
+static inline UmkaAPI *umkaGetAPI(void *umka);
+
+```
+Returns Umka API function pointers. Here, `umka` is the interpreter instance handle previously initialized by calling `umkaInit()`.
+
+Example:
+
+```
+UmkaAPI *api = umkaGetAPI(umka);
+char *s = api->umkaMakeStr(umka, "Hello");
+
+```
