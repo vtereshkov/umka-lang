@@ -311,7 +311,6 @@ A set of pointers to all Umka API functions. For any function `umkaXXXX()`, ther
 
 ```
 static inline UmkaAPI *umkaGetAPI(void *umka);
-
 ```
 Returns Umka API function pointers. Here, `umka` is the interpreter instance handle previously initialized by calling `umkaInit()`.
 
@@ -320,5 +319,4 @@ Example:
 ```
 UmkaAPI *api = umkaGetAPI(umka);
 char *s = api->umkaMakeStr(umka, "Hello");
-
 ```
