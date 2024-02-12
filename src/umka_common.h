@@ -127,6 +127,7 @@ typedef struct
     unsigned int pathHash;
     void *implLib;
     char *importAlias[MAX_MODULES];
+    bool isCompiled;
 } Module;
 
 

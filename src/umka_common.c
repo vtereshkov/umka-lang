@@ -78,7 +78,7 @@ static const char *moduleImplLibSuffix()
     #ifdef _WIN32
         return "_windows";
     #elif defined __EMSCRIPTEN__
-        return "_wasm";        
+        return "_wasm";
     #else
         return "_linux";
     #endif
@@ -267,6 +267,8 @@ int moduleAdd(Modules *modules, const char *path)
     module->importAlias[modules->numModules] = malloc(DEFAULT_STR_LEN + 1);
     strcpy(module->importAlias[modules->numModules], name);
 
+    module->isCompiled = false;
+
     modules->module[modules->numModules] = module;
     return modules->numModules++;
 }
@@ -417,7 +419,7 @@ bool moduleRegularizePath(const char *path, const char *curFolder, char *regular
                 numDots = 0;
                 // fallthrough
             }
-            
+
             default:
             {
                 while (numDots > 0)

@@ -1232,7 +1232,7 @@ void parseFnBlock(Compiler *comp, Ident *fn, Type *upvaluesStructType)
     lexEat(&comp->lex, TOK_RBRACE);
 
     if (!hasReturn && fn->type->sig.resultType->kind != TYPE_VOID)
-        comp->error.handler(comp->error.context, "Non-void function must have a return statement");
+        comp->error.handler(comp->error.context, "Function must return a value");
 }
 
 

@@ -332,7 +332,7 @@ static FORCE_INLINE void *chunkAlloc(HeapPages *pages, int64_t size, Type *type,
 
         page = pageAdd(pages, numChunks, chunkSize);
         if (!page)
-            error->runtimeHandler(error->context, "No memory");
+            error->runtimeHandler(error->context, "Out of memory");
     }
 
     HeapChunkHeader *chunk = (HeapChunkHeader *)((char *)page->ptr + page->numOccupiedChunks * page->chunkSize);
