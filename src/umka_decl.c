@@ -778,6 +778,10 @@ static void parseImportItem(Compiler *comp)
         comp->blocks.module     = currentModule;
     }
 
+    // Imported module is registered but its body has not been compiled yet - this is only possible if it's imported in a cycle
+    if (!comp->modules.module[importedModule]->isCompiled)
+        comp->modules.error->handler(comp->modules.error->context, "Cyclic import of module %s", alias);
+
     // Module is imported iff it has an import alias (which may coincide with the module name if not specified explicitly)
     char **importAlias = &comp->modules.module[comp->blocks.module]->importAlias[importedModule];
     if (*importAlias)
@@ -822,6 +826,8 @@ static int parseModule(Compiler *comp)
     }
     parseDecls(comp);
     doResolveExtern(comp);
+
+    comp->modules.module[comp->blocks.module]->isCompiled = true;
     return comp->blocks.module;
 }
 
