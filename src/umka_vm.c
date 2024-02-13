@@ -2328,6 +2328,14 @@ static FORCE_INLINE void doBuiltinFiberalive(Fiber *fiber, HeapPages *pages, Err
 }
 
 
+// fn exit(code: int)
+static FORCE_INLINE void doBuiltinExit(Fiber *fiber)
+{
+    fiber->alive = false;
+    fiber->reg[VM_REG_RESULT] = *fiber->top;
+}
+
+
 static FORCE_INLINE void doPush(Fiber *fiber, Error *error)
 {
     (--fiber->top)->intVal = fiber->code[fiber->ip].operand.intVal;
@@ -3078,7 +3086,7 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         case BUILTIN_FIBERALIVE:    doBuiltinFiberalive(fiber, pages, error); break;
 
         // Misc
-        case BUILTIN_EXIT:          fiber->alive = false; fiber->reg[VM_REG_RESULT] = *fiber->top; break;
+        case BUILTIN_EXIT:          doBuiltinExit(fiber); break;
         case BUILTIN_ERROR:         error->runtimeHandler(error->context, "%s", (char *)fiber->top->ptrVal); return;
     }
     fiber->ip++;

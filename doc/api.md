@@ -35,10 +35,10 @@ UMKA_API bool umkaCompile(void *umka);
 Compiles the Umka program into bytecode. Here, `umka` is the interpreter instance handle. Returns `true` if the compilation is successful and no compile-time errors are detected.
 
 ```
-UMKA_API bool umkaRun(void *umka);
+UMKA_API bool umkaRun(void *umka, int *errorCode);
 ```
 
-Runs the Umka program previously compiled to bytecode, i. e., calls its `main()` function. Here, `umka` is the interpreter instance handle. Returns `true` if the program execution finishes successfully and no run-time errors are detected.
+Runs the Umka program previously compiled to bytecode, i. e., calls its `main()` function. Here, `umka` is the interpreter instance handle and `errorCode` is an optional paramter that receives the exit code of the program. Returns `true` if the program execution finishes successfully and no run-time errors were detected.
 
 ```
 UMKA_API void umkaFree(void *umka);

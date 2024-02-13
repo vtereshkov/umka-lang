@@ -111,10 +111,11 @@ UMKA_API bool umkaCompile(void *umka)
 }
 
 
-UMKA_API bool umkaRun(void *umka, int *result)
+UMKA_API bool umkaRun(void *umka, int *errorCode)
 {
-    if (result) {
-        *result = 0;
+    if (errorCode)
+    {
+        *errorCode = 0;
     }
 
     Compiler *comp = umka;
@@ -123,8 +124,9 @@ UMKA_API bool umkaRun(void *umka, int *result)
     {
         compilerRun(comp);
 
-        if (result) {
-            *result = comp->vm.mainFiber->reg[VM_REG_RESULT].intVal;
+        if (errorCode)
+        {
+            *errorCode = comp->vm.mainFiber->reg[VM_REG_RESULT].intVal;
         }
 
         return true;

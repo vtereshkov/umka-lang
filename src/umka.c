@@ -206,9 +206,8 @@ int main(int argc, char **argv)
     else
         printCompileError(umka);
 
-    if (!ok) {
+    if (!ok)
         exitCode = 1;
-    }
 
     umkaFree(umka);
     return exitCode;

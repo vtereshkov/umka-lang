@@ -853,7 +853,8 @@ void parseProgram(Compiler *comp)
 
     genCall(&comp->gen, mainFn->offset);
 
-    if (mainFn->type->sig.resultType->kind == TYPE_VOID) {
+    if (mainFn->type->sig.resultType->kind == TYPE_VOID)
+    {
         genPushZero(&comp->gen, 1);
         genPopReg(&comp->gen, VM_REG_RESULT);
     }
