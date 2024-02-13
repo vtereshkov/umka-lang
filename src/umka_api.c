@@ -111,13 +111,22 @@ UMKA_API bool umkaCompile(void *umka)
 }
 
 
-UMKA_API bool umkaRun(void *umka)
+UMKA_API bool umkaRun(void *umka, int *result)
 {
+    if (result) {
+        *result = 0;
+    }
+
     Compiler *comp = umka;
 
     if (setjmp(comp->error.jumper) == 0)
     {
         compilerRun(comp);
+
+        if (result) {
+            *result = comp->vm.mainFiber->reg[VM_REG_RESULT].intVal;
+        }
+
         return true;
     }
     return false;

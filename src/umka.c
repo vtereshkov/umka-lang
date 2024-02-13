@@ -74,7 +74,7 @@ int runPlayground(const char *fileName, const char *sourceString)
 
     if (ok)
     {
-        ok = umkaRun(umka);
+        ok = umkaRun(umka, NULL);
         if (!ok)
             printRuntimeError(umka);
     }
@@ -163,6 +163,7 @@ int main(int argc, char **argv)
 
     void *umka = umkaAlloc();
     bool ok = umkaInit(umka, argv[i], NULL, stackSize, locale, argc - i, argv + i, !isSandbox, !isSandbox, printWarnings ? printCompileWarning : NULL);
+    int exitCode = 0;
 
     if (ok)
         ok = umkaCompile(umka);
@@ -197,7 +198,7 @@ int main(int argc, char **argv)
         }
 
         if (!compileOnly)
-            ok = umkaRun(umka);
+            ok = umkaRun(umka, &exitCode);
 
         if (!ok)
             printRuntimeError(umka);
@@ -205,8 +206,12 @@ int main(int argc, char **argv)
     else
         printCompileError(umka);
 
+    if (!ok) {
+        exitCode = 1;
+    }
+
     umkaFree(umka);
-    return !ok;
+    return exitCode;
 }
 
 #endif // EMSCRIPTEN
