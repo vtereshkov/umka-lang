@@ -112,8 +112,7 @@ static const char *builtinSpelling [] =
     "fiberspawn",
     "fibercall",
     "fiberalive",
-    "exit",
-    "error"
+    "exit"
 };
 
 

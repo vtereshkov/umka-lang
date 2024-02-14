@@ -43,6 +43,7 @@ static void compileError(void *context, const char *format, ...)
     strcpy(comp->error.fnName, comp->debug.fnName);
     comp->error.line = comp->lex.tok.line;
     comp->error.pos = comp->lex.tok.pos;
+    comp->error.code = 1;
     vsnprintf(comp->error.msg, UMKA_MSG_LEN + 1, format, args);
 
     va_end(args);

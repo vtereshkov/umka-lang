@@ -33,6 +33,12 @@ File handle.
 #### Constants
 
 ```
+const runtimeError* = 1
+```
+
+Default runtime error code for standard library functions.
+
+```
 const (
     seekBegin* = 0
     seekCur*   = 1
