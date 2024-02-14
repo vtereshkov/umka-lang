@@ -1342,10 +1342,6 @@ static void parseBuiltinExitCall(Compiler *comp, Type **type, Const *constant)
     if (constant)
         comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
 
-    parseExpr(comp, type, constant);
-    doImplicitTypeConv(comp, comp->intType, type, constant, false);
-    typeAssertCompatible(&comp->types, comp->intType, *type, false);
-
     genCallBuiltin(&comp->gen, TYPE_VOID, BUILTIN_EXIT);
     *type = comp->voidType;
 }
