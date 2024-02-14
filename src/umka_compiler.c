@@ -261,17 +261,19 @@ void compilerCompile(Compiler *comp)
 }
 
 
-void compilerRun(Compiler *comp)
+int compilerRun(Compiler *comp)
 {
     vmReset(&comp->vm, comp->gen.code, comp->gen.debugPerInstr);
     vmRun(&comp->vm, 0, 0, NULL, NULL);
+    return comp->vm.fiber->exitCode;
 }
 
 
-void compilerCall(Compiler *comp, int entryOffset, int numParamSlots, Slot *params, Slot *result)
+int compilerCall(Compiler *comp, int entryOffset, int numParamSlots, Slot *params, Slot *result)
 {
     vmReset(&comp->vm, comp->gen.code, comp->gen.debugPerInstr);
     vmRun(&comp->vm, entryOffset, numParamSlots, params, result);
+    return comp->vm.fiber->exitCode;
 }
 
 

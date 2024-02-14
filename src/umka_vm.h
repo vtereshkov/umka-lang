@@ -226,6 +226,7 @@ typedef struct tagFiber
     RefCntChangeCandidates *refCntChangeCandidates;
     bool alive;
     bool fileSystemEnabled;
+    int exitCode;
 } Fiber;
 
 

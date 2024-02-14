@@ -93,7 +93,7 @@ typedef struct
     bool (*umkaInit)              (void *umka, const char *fileName, const char *sourceString, int stackSize, const char *locale, int argc, char **argv, bool fileSystemEnabled, bool implLibsEnabled, UmkaWarningCallback warningCallback);
     bool (*umkaCompile)           (void *umka);
     bool (*umkaRun)               (void *umka, int *result);
-    bool (*umkaCall)              (void *umka, int entryOffset, int numParamSlots, UmkaStackSlot *params, UmkaStackSlot *result);
+    bool (*umkaCall)              (void *umka, int entryOffset, int numParamSlots, UmkaStackSlot *params, UmkaStackSlot *result, int *exitCode);
     void (*umkaFree)              (void *umka);
     void (*umkaGetError)          (void *umka, UmkaError *err);
     char *(*umkaAsm)              (void *umka);
@@ -118,7 +118,7 @@ UMKA_API void *umkaAlloc            (void);
 UMKA_API bool umkaInit              (void *umka, const char *fileName, const char *sourceString, int stackSize, const char *locale, int argc, char **argv, bool fileSystemEnabled, bool implLibsEnabled, UmkaWarningCallback warningCallback);
 UMKA_API bool umkaCompile           (void *umka);
 UMKA_API bool umkaRun               (void *umka, int *result);
-UMKA_API bool umkaCall              (void *umka, int entryOffset, int numParamSlots, UmkaStackSlot *params, UmkaStackSlot *result);
+UMKA_API bool umkaCall              (void *umka, int entryOffset, int numParamSlots, UmkaStackSlot *params, UmkaStackSlot *result, int *exitCode);
 UMKA_API void umkaFree              (void *umka);
 UMKA_API void umkaGetError          (void *umka, UmkaError *err);
 UMKA_API char *umkaAsm              (void *umka);

@@ -516,6 +516,7 @@ void vmInit(VM *vm, int stackSize, bool fileSystemEnabled, Error *error)
     vm->fiber->refCntChangeCandidates = &vm->refCntChangeCandidates;
     vm->fiber->alive = true;
     vm->fiber->fileSystemEnabled = fileSystemEnabled;
+    vm->fiber->exitCode = 0;
 
     pageInit(&vm->pages, vm->fiber, error);
 
@@ -2332,7 +2333,7 @@ static FORCE_INLINE void doBuiltinFiberalive(Fiber *fiber, HeapPages *pages, Err
 static FORCE_INLINE void doBuiltinExit(Fiber *fiber)
 {
     fiber->alive = false;
-    fiber->reg[VM_REG_RESULT] = *fiber->top;
+    fiber->exitCode = fiber->top->intVal;
 }
 
 
@@ -3161,6 +3162,14 @@ static FORCE_INLINE void doLeaveFrame(Fiber *fiber, HeapPages *pages, HookFunc *
 }
 
 
+static FORCE_INLINE void doHalt(VM *vm)
+{
+    vm->terminatedNormally = true;
+    vm->fiber->exitCode = vm->fiber->top->intVal;
+    vm->fiber->alive = false;
+}
+
+
 static FORCE_INLINE void vmLoop(VM *vm)
 {
     Fiber *fiber = vm->fiber;
@@ -3237,7 +3246,7 @@ static FORCE_INLINE void vmLoop(VM *vm)
             }
             case OP_ENTER_FRAME:                    doEnterFrame(fiber, pages, hooks, error);     break;
             case OP_LEAVE_FRAME:                    doLeaveFrame(fiber, pages, hooks, error);     break;
-            case OP_HALT:                           vm->terminatedNormally = true;                return;
+            case OP_HALT:                           doHalt(vm);                                   return;
 
             default: error->runtimeHandler(error->context, "Illegal instruction"); return;
         } // switch

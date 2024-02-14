@@ -142,10 +142,10 @@ Gets an Umka function that can be called from C/C++ using `umkaCall()`.  Here, `
 
 ``` 
 UMKA_API bool umkaCall(void *umka, int entryOffset, 
-                       int numParamSlots, UmkaStackSlot *params, UmkaStackSlot *result);
+                       int numParamSlots, UmkaStackSlot *params, UmkaStackSlot *result, int *exitCode);
 ```
 
-Calls the specific Umka function. Here, `umka` is the interpreter instance handle, `entryPoint` is the function entry point offset previously obtained by calling `umkaGetFunc()`,  `numParamSlots` is the number of Umka fiber stack slots occupied by the actual parameters passed to the function (equal to the number of parameters if no structured parameters are passed by value), `params` is the array of stack slots occupied by the actual parameters, `result` is the pointer to the stack slot to be occupied by the returned value. Returns `true` if the Umka function returns successfully and no run-time errors are detected.
+Calls the specific Umka function. Here, `umka` is the interpreter instance handle, `entryPoint` is the function entry point offset previously obtained by calling `umkaGetFunc()`,  `numParamSlots` is the number of Umka fiber stack slots occupied by the actual parameters passed to the function (equal to the number of parameters if no structured parameters are passed by value), `params` is the array of stack slots occupied by the actual parameters, `result` is the pointer to the stack slot to be occupied by the returned value, `exitCode` is the exit code of the call. Returns `true` if the Umka function returns successfully and no run-time errors are detected.
 
 ## Debugging and profiling
 
