@@ -27,7 +27,7 @@ enum
 
 enum
 {
-    VM_RUNTIME_ERROR = 1
+    VM_RUNTIME_ERROR = -1
 };
 
 typedef enum

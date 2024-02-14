@@ -13,7 +13,7 @@ static const char *runtimeModuleSources[] = {
 "\n"
 "// Memory\n"
 "\n"
-"const runtimeError* = 1\n"
+"const runtimeError* = -1\n"
 "\n"
 "fn rtlmemcpy(dest, src: ^void, count: int)\n"
 "\n"

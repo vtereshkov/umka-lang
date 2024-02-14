@@ -2,7 +2,7 @@
 
 // Memory
 
-const runtimeError* = 1
+const runtimeError* = -1
 
 fn rtlmemcpy(dest, src: ^void, count: int)
 

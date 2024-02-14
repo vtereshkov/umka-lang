@@ -33,7 +33,7 @@ File handle.
 #### Constants
 
 ```
-const runtimeError* = 1
+const runtimeError* = -1
 ```
 
 Default runtime error code for standard library functions.
