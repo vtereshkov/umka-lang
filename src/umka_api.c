@@ -50,7 +50,7 @@ static void compileError(void *context, const char *format, ...)
 }
 
 
-static void runtimeError(void *context, const char *format, ...)
+static void runtimeError(void *context, int code, const char *format, ...)
 {
     va_list args;
     va_start(args, format);
@@ -61,6 +61,7 @@ static void runtimeError(void *context, const char *format, ...)
     strcpy(comp->error.fileName, debug->fileName);
     strcpy(comp->error.fnName, debug->fnName);
     comp->error.line = debug->line;
+    comp->error.code = code;
     comp->error.pos = 1;
     vsnprintf(comp->error.msg, UMKA_MSG_LEN + 1, format, args);
 
@@ -122,15 +123,16 @@ UMKA_API bool umkaRun(void *umka, int *exitCode)
 
     if (setjmp(comp->error.jumper) == 0)
     {
-        int code = compilerRun(comp);
+        compilerRun(comp);
 
-        if (exitCode)
-        {
-            *exitCode = code;
-        }
-
-        return code == 0;
+        return true;
     }
+
+    if (exitCode)
+    {
+        *exitCode = comp->error.code;
+    }
+
     return false;
 }
 
@@ -146,15 +148,14 @@ UMKA_API bool umkaCall(void *umka, int entryOffset, int numParamSlots, UmkaStack
 
     if (setjmp(comp->error.jumper) == 0)
     {
-        int code = compilerCall(comp, entryOffset, numParamSlots, (Slot *)params, (Slot *)result);
-
-        if (exitCode)
-        {
-            *exitCode = code;
-        }
-
-        return code == 0;
+        return true;
     }
+
+    if (exitCode)
+    {
+        *exitCode = comp->error.code;
+    }
+
     return false;
 }
 

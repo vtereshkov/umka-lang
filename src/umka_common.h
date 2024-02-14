@@ -94,7 +94,7 @@ typedef void (*WarningCallback)(void * /*UmkaError*/ warning);
 typedef struct
 {
     void (*handler)(void *context, const char *format, ...);
-    void (*runtimeHandler)(void *context, const char *format, ...);
+    void (*runtimeHandler)(void *context, int code, const char *format, ...);
     void (*warningHandler)(void *context, DebugInfo *debug, const char *format, ...);
     WarningCallback warningCallback;
     void *context;
@@ -103,7 +103,7 @@ typedef struct
     // Error report
     char fileName[DEFAULT_STR_LEN + 1];
     char fnName[DEFAULT_STR_LEN + 1];
-    int line, pos;
+    int line, pos, code;
     char msg[DEFAULT_STR_LEN + 1];
 } Error;
 

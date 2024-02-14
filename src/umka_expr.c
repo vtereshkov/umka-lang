@@ -1357,8 +1357,21 @@ static void parseBuiltinErrorCall(Compiler *comp, Type **type, Const *constant)
         comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
 
     parseExpr(comp, type, constant);
-    doImplicitTypeConv(comp, comp->strType, type, constant, false);
-    typeAssertCompatible(&comp->types, comp->strType, *type, false);
+    doImplicitTypeConv(comp, comp->intType, type, constant, false);
+    typeAssertCompatible(&comp->types, comp->intType, *type, false);
+
+    if (comp->lex.tok.kind == TOK_RPAR)
+    {
+        genPushGlobalPtr(&comp->gen, "");
+    }
+    else
+    {
+        lexEat(&comp->lex, TOK_COMMA);
+
+        parseExpr(comp, type, constant);
+        doImplicitTypeConv(comp, comp->strType, type, constant, false);
+        typeAssertCompatible(&comp->types, comp->strType, *type, false);
+    }
 
     genCallBuiltin(&comp->gen, TYPE_VOID, BUILTIN_ERROR);
     *type = comp->voidType;

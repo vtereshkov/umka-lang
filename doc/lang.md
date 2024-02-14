@@ -801,16 +801,16 @@ Checks whether the `child` fiber function has not yet returned.
 ##### Miscellaneous functions
 
 ```
-fn exit(code: int)
+fn exit()
 ```
 
-Terminates the program with the specified exit code.
+Terminates the program.
 
 ```
-fn error(msg: str)
+fn error(code: int, msg: str = "")
 ```
 
-Triggers a run-time error with the message `msg`.
+Triggers a run-time error, exiting with exit code `code`, and an optional message `msg`.
 
 ## Expressions
 

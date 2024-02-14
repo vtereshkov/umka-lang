@@ -52,8 +52,8 @@ typedef struct
 void compilerInit       (Compiler *comp, const char *fileName, const char *sourceString, int stackSize, const char *locale, int argc, char **argv, bool fileSystemEnabled, bool implLibsEnabled);
 void compilerFree       (Compiler *comp);
 void compilerCompile    (Compiler *comp);
-int  compilerRun        (Compiler *comp);
-int  compilerCall       (Compiler *comp, int entryOffset, int numParamSlots, Slot *params, Slot *result);
+void compilerRun        (Compiler *comp);
+void compilerCall       (Compiler *comp, int entryOffset, int numParamSlots, Slot *params, Slot *result);
 char *compilerAsm       (Compiler *comp);
 bool compilerAddModule  (Compiler *comp, const char *fileName, const char *sourceString);
 bool compilerAddFunc    (Compiler *comp, const char *name, ExternFunc func);
