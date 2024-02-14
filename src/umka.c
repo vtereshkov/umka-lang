@@ -78,7 +78,7 @@ int runPlayground(const char *fileName, const char *sourceString)
 
     if (ok)
     {
-        ok = umkaRun(umka, NULL) == 0;
+        ok = umkaRun(umka) == 0;
         if (!ok)
             printRuntimeError(umka);
     }
