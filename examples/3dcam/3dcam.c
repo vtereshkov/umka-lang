@@ -92,7 +92,7 @@ int main(void)
 
                 BeginMode3D(camera);
 
-                bool umkaOk = umkaCall(umka, umkaDrawBodies, 0, NULL, NULL, NULL);
+                bool umkaOk = umkaCall(umka, umkaDrawBodies, 0, NULL, NULL) == 0;
                 if (!umkaOk)
                 {
                     UmkaError error;
