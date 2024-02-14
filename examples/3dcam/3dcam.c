@@ -70,7 +70,7 @@ int main(void)
     camera.fovy = 60.0f;
 
     if (umkaOk)
-        umkaOk = umkaCall(umka, umkaInitBodies, 0, NULL, NULL, NULL);
+        umkaOk = umkaCall(umka, umkaInitBodies, 0, NULL, NULL) == 0;
         
     if (!umkaOk)
     {

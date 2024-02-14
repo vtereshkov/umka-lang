@@ -112,51 +112,31 @@ UMKA_API bool umkaCompile(void *umka)
 }
 
 
-UMKA_API bool umkaRun(void *umka, int *exitCode)
+UMKA_API int umkaRun(void *umka)
 {
-    if (exitCode)
-    {
-        *exitCode = 0;
-    }
-
     Compiler *comp = umka;
 
     if (setjmp(comp->error.jumper) == 0)
     {
         compilerRun(comp);
-
-        return true;
+        return 0;
     }
 
-    if (exitCode)
-    {
-        *exitCode = comp->error.code;
-    }
-
-    return false;
+    return comp->error.code;
 }
 
 
-UMKA_API bool umkaCall(void *umka, int entryOffset, int numParamSlots, UmkaStackSlot *params, UmkaStackSlot *result, int *exitCode)
+UMKA_API int umkaCall(void *umka, int entryOffset, int numParamSlots, UmkaStackSlot *params, UmkaStackSlot *result)
 {
-    if (exitCode)
-    {
-        *exitCode = 0;
-    }
-
     Compiler *comp = umka;
 
     if (setjmp(comp->error.jumper) == 0)
     {
-        return true;
+        compilerCall(comp, entryOffset, numParamSlots, (Slot *)params, (Slot *)result);
+        return 0;
     }
 
-    if (exitCode)
-    {
-        *exitCode = comp->error.code;
-    }
-
-    return false;
+    return comp->error.code;
 }
 
 

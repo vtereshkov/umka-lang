@@ -35,13 +35,13 @@ fn test1() {
     }
 
     if !validkey(populations, "Russia") {
-        error("Test failed")
+        exit(1,"Test failed")
     }     
 
     populations = delete(populations, "Russia")
 
     if validkey(populations, "Russia") {
-        error("Test failed")
+        exit(1, "Test failed")
     }     
 }
 
@@ -60,7 +60,7 @@ fn test2() {
     printf(pushkin + "\n\n")
 
     if !validkey(writers, Pair{1799, 1837}) {
-        error("Test failed")
+        exit(1, "Test failed")
     }    
 
     for dates in writers {
@@ -70,7 +70,7 @@ fn test2() {
     writers = delete(writers, Pair{1799, 1837})
 
     if validkey(writers, Pair{1799, 1837}) {
-        error("Test failed")
+        exit(1, "Test failed")
     }  
 
     printf("%v\n", writers)
@@ -91,7 +91,7 @@ fn test3() {
     b1 := pointers[&b]
 
     if a1 != a || b1 != b {
-        error("Test failed")
+        exit(1, "Test failed")
     }
 
     printf("Test passed\n")

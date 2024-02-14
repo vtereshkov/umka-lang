@@ -87,7 +87,7 @@ fn (l: ^Lexer) next*() {
         ch = l.getch()
         
     } else if ch != '\0' {
-        error("Illegal character " + ch + " (" + std.itoa(int(ch)) + ")")
+        exit(2, "Illegal character " + ch + " (" + std.itoa(int(ch)) + ")")
     }
     
     l.ch = ch
@@ -96,7 +96,7 @@ fn (l: ^Lexer) next*() {
 
 fn (l: ^Lexer) check*(kind: int) {
     if l.tok.kind != kind {
-        error(spelling[kind] + " expected but " + spelling[l.tok.kind] + " found")
+        exit(2, spelling[kind] + " expected but " + spelling[l.tok.kind] + " found")
     }
 }
 

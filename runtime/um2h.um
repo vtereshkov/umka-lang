@@ -2,12 +2,12 @@ import "std.um"
 
 fn main() {
 	if std.argc() < 2 {
-		error("No input file(s)")
+		exit(std.runtimeError, "No input file(s)")
 	}
 
 	fout := std.fopen("umka_runtime_src.h", "w")
 	if fout == null {
-		error("Cannot open output file")
+		exit(std.runtimeError, "Cannot open output file")
 	}	
 
 	fprintf(fout, "#ifndef UMKA_RUNTIME_SRC_H_INCLUDED\n")
@@ -33,7 +33,7 @@ fn main() {
 
 		fin := std.fopen(std.argv(argi), "rb")
 		if fin == null {
-			error("Cannot open input file")
+			exit(std.runtimeError, "Cannot open input file")
 		}	
 
 		for !std.feof(fin) {

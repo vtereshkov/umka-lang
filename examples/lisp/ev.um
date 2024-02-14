@@ -32,7 +32,7 @@ fn (e: ^Expr) toStr*(): str {
 
 fn (e: ^Expr) toInt*(): int {
     if !num(e) {
-        error(e.toStr() + " is non-numeric")
+        exit(1, e.toStr() + " is non-numeric")
     }
     return e.val
 }
@@ -65,7 +65,7 @@ fn car*(x: ^Expr): ^Expr {
     if x == null {
         return null
     } else if x.atom != "" {
-        error("car() is undefined for atom " + x.toStr())
+        exit(1, "car() is undefined for atom " + x.toStr())
     }
     return x.car
 }
@@ -75,7 +75,7 @@ fn cdr*(x: ^Expr): ^Expr {
     if x == null {
         return null
     } else if x.atom != "" {
-        error("cdr() is undefined for atom " + x.toStr())
+        exit(1, "cdr() is undefined for atom " + x.toStr())
     }
     return x.cdr
 }
@@ -96,7 +96,7 @@ fn eq*(x, y: ^Expr): bool {
     if y == null {return x == null}
     
     if !atom(x) || !atom(y) {
-        error("eq() is undefined for non-atom(s) (" + x.toStr() + ", " + y.toStr() + ")")
+        exit(1, "eq() is undefined for non-atom(s) (" + x.toStr() + ", " + y.toStr() + ")")
     }
     
     if num(x) && num(y) {return x.val == y.val}
@@ -146,7 +146,7 @@ fn pairlis(x, y, a: ^Expr): ^Expr {
 
 fn assoc(x, a: ^Expr): ^Expr {   
     if a == null {
-        error("No association for " + x.toStr())
+        exit(1, "No association for " + x.toStr())
     } else if equal(car(car(a)), x) {
         return car(a)
     }
@@ -216,7 +216,7 @@ fn apply(f, x, a: ^Expr): ^Expr {
     } else if eq(car(f), strExpr("label")) {
         return apply(car(cdr(cdr(f))), x, cons(cons(car(cdr(f)), car(cdr(cdr(f)))), a))
     }
-    error("Illegal function call")
+    exit(1, "Illegal function call")
     return null
 }
 
