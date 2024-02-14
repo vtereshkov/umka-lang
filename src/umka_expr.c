@@ -1337,6 +1337,7 @@ static void parseBuiltinFiberCall(Compiler *comp, Type **type, Const *constant, 
 }
 
 
+// fn exit(code: int, msg: str = "")
 static void parseBuiltinExitCall(Compiler *comp, Type **type, Const *constant)
 {
     if (constant)

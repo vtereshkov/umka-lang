@@ -2328,7 +2328,7 @@ static FORCE_INLINE void doBuiltinFiberalive(Fiber *fiber, HeapPages *pages, Err
 }
 
 
-// fn error(code: int, msg: str = "")
+// fn exit(code: int, msg: str = "")
 static FORCE_INLINE void doBuiltinExit(Fiber *fiber, Error *error)
 {
     fiber->alive = false;
