@@ -354,5 +354,5 @@ void identWarnIfUnusedAll(Idents *idents, int block)
 bool identIsMain(Ident *ident)
 {
     return strcmp(ident->name, "main") == 0 && ident->kind == IDENT_CONST &&
-           ident->type->kind == TYPE_FN && !ident->type->sig.isMethod && ident->type->sig.numParams == 1 && ident->type->sig.resultType->kind == TYPE_VOID;   // A dummy "__upvalues" is the only parameter
+           ident->type->kind == TYPE_FN && !ident->type->sig.isMethod && ident->type->sig.numParams == 1 && ident->type->sig.resultType->kind == TYPE_VOID;  // A dummy "__upvalues" is the only parameter
 }

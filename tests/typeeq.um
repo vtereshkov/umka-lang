@@ -43,11 +43,11 @@ fn test*() {
     )
 
     if q1, q2 := P1(p1), P2(p1); q1 == null || q2 != null {
-        error("Test failed")
+        exit(1, "Test failed")
     }
 
     if q3, q4 := P3(p3), P4(p3); q3 == null || q4 != null {
-        error("Test failed")
+        exit(1, "Test failed")
     }     
 
     printf("    ...passed\n");

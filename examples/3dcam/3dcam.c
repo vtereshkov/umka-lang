@@ -70,7 +70,7 @@ int main(void)
     camera.fovy = 60.0f;
 
     if (umkaOk)
-        umkaOk = umkaCall(umka, umkaInitBodies, 0, NULL, NULL);
+        umkaOk = umkaCall(umka, umkaInitBodies, 0, NULL, NULL) == 0;
         
     if (!umkaOk)
     {
@@ -92,7 +92,7 @@ int main(void)
 
                 BeginMode3D(camera);
 
-                bool umkaOk = umkaCall(umka, umkaDrawBodies, 0, NULL, NULL);
+                bool umkaOk = umkaCall(umka, umkaDrawBodies, 0, NULL, NULL) == 0;
                 if (!umkaOk)
                 {
                     UmkaError error;

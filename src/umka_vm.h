@@ -25,6 +25,10 @@ enum
     VM_FIBER_KILL_SIGNAL = -1                       // Used instead of return address in fiber function calls
 };
 
+enum
+{
+    VM_RUNTIME_ERROR = -1
+};
 
 typedef enum
 {
@@ -126,8 +130,7 @@ typedef enum
     BUILTIN_FIBERALIVE,
 
     // Misc
-    BUILTIN_EXIT,
-    BUILTIN_ERROR
+    BUILTIN_EXIT
 } BuiltinFunc;
 
 

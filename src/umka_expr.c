@@ -1337,26 +1337,30 @@ static void parseBuiltinFiberCall(Compiler *comp, Type **type, Const *constant, 
 }
 
 
+// fn exit(code: int, msg: str = "")
 static void parseBuiltinExitCall(Compiler *comp, Type **type, Const *constant)
 {
     if (constant)
         comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
 
-    genCallBuiltin(&comp->gen, TYPE_VOID, BUILTIN_EXIT);
-    *type = comp->voidType;
-}
-
-
-static void parseBuiltinErrorCall(Compiler *comp, Type **type, Const *constant)
-{
-    if (constant)
-        comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
-
     parseExpr(comp, type, constant);
-    doImplicitTypeConv(comp, comp->strType, type, constant, false);
-    typeAssertCompatible(&comp->types, comp->strType, *type, false);
+    doImplicitTypeConv(comp, comp->intType, type, constant, false);
+    typeAssertCompatible(&comp->types, comp->intType, *type, false);
 
-    genCallBuiltin(&comp->gen, TYPE_VOID, BUILTIN_ERROR);
+    if (comp->lex.tok.kind == TOK_RPAR)
+    {
+        genPushGlobalPtr(&comp->gen, storageAddStr(&comp->storage, 0));
+    }
+    else
+    {
+        lexEat(&comp->lex, TOK_COMMA);
+
+        parseExpr(comp, type, constant);
+        doImplicitTypeConv(comp, comp->strType, type, constant, false);
+        typeAssertCompatible(&comp->types, comp->strType, *type, false);
+    }
+
+    genCallBuiltin(&comp->gen, TYPE_VOID, BUILTIN_EXIT);
     *type = comp->voidType;
 }
 
@@ -1418,7 +1422,6 @@ static void parseBuiltinCall(Compiler *comp, Type **type, Const *constant, Built
 
         // Misc
         case BUILTIN_EXIT:          parseBuiltinExitCall(comp, type, constant);             break;
-        case BUILTIN_ERROR:         parseBuiltinErrorCall(comp, type, constant);            break;
 
         default: comp->error.handler(comp->error.context, "Illegal built-in function");
     }

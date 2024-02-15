@@ -11,7 +11,7 @@ fn testStr(s: str) {
 
 	s1 := utf8.encode(runes)
 	if s1 != s {
-		error("UTF-8 encoding failed")
+		exit(1, "UTF-8 encoding failed")
 	}
 
 	printf("reconstructed string: %s\n", s1)

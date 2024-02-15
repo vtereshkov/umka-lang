@@ -35,10 +35,10 @@ UMKA_API bool umkaCompile(void *umka);
 Compiles the Umka program into bytecode. Here, `umka` is the interpreter instance handle. Returns `true` if the compilation is successful and no compile-time errors are detected.
 
 ```
-UMKA_API bool umkaRun(void *umka);
+UMKA_API int umkaRun(void *umka);
 ```
 
-Runs the Umka program previously compiled to bytecode, i. e., calls its `main()` function. Here, `umka` is the interpreter instance handle. Returns `true` if the program execution finishes successfully and no run-time errors are detected.
+Runs the Umka program previously compiled to bytecode, i. e., calls its `main()` function. Here, `umka` is the interpreter instance handle. Returns `0` if the program execution finishes successfully and no run-time errors were detected, otherwise return the error code.
 
 ```
 UMKA_API void umkaFree(void *umka);
@@ -141,11 +141,11 @@ UMKA_API int umkaGetFunc(void *umka, const char *moduleName, const char *funcNam
 Gets an Umka function that can be called from C/C++ using `umkaCall()`.  Here, `umka` is the interpreter instance handle, `moduleName` is the Umka module name, `funcName` is the Umka function name. Returns the function entry point offset.
 
 ``` 
-UMKA_API bool umkaCall(void *umka, int entryOffset, 
-                       int numParamSlots, UmkaStackSlot *params, UmkaStackSlot *result);
+UMKA_API int umkaCall(void *umka, int entryOffset, 
+                      int numParamSlots, UmkaStackSlot *params, UmkaStackSlot *result);
 ```
 
-Calls the specific Umka function. Here, `umka` is the interpreter instance handle, `entryPoint` is the function entry point offset previously obtained by calling `umkaGetFunc()`,  `numParamSlots` is the number of Umka fiber stack slots occupied by the actual parameters passed to the function (equal to the number of parameters if no structured parameters are passed by value), `params` is the array of stack slots occupied by the actual parameters, `result` is the pointer to the stack slot to be occupied by the returned value. Returns `true` if the Umka function returns successfully and no run-time errors are detected.
+Calls the specific Umka function. Here, `umka` is the interpreter instance handle, `entryPoint` is the function entry point offset previously obtained by calling `umkaGetFunc()`,  `numParamSlots` is the number of Umka fiber stack slots occupied by the actual parameters passed to the function (equal to the number of parameters if no structured parameters are passed by value), `params` is the array of stack slots occupied by the actual parameters, `result` is the pointer to the stack slot to be occupied by the returned value. Returns `0` if the Umka function returns successfully and no run-time errors are detected, otherwise returns the error code.
 
 ## Debugging and profiling
 

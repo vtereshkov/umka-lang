@@ -2,11 +2,13 @@
 
 // Memory
 
+const runtimeError* = -1
+
 fn rtlmemcpy(dest, src: ^void, count: int)
 
 fn tobytes*(buf: any): []uint8 {
     if buf.__self == null {
-        error("Buffer is null")
+        exit(runtimeError, "Buffer is null")
     }
     bytes := make([]uint8, sizeofself(buf))
     rtlmemcpy(&bytes[0], buf.__self, sizeofself(buf))
@@ -15,13 +17,13 @@ fn tobytes*(buf: any): []uint8 {
 
 fn frombytes*(buf: any, bytes: []uint8) {
     if buf.__self == null {
-        error("Buffer is null")
+        exit(runtimeError, "Buffer is null")
     }    
     if selfhasptr(buf) {
-        error("Cannot access reference types")
+        exit(runtimeError, "Cannot access reference types")
     }
     if sizeofself(buf) != len(bytes) {
-        error("Illegal buffer size")
+        exit(runtimeError, "Illegal buffer size")
     }
     rtlmemcpy(buf.__self, &bytes[0], sizeofself(buf))    
 }
@@ -54,7 +56,7 @@ fn fclose*   (f: File): int {return rtlfclose(f)}
 fn rtlfread  (buf: ^void, size, cnt: int, f: File): int
 fn fread*    (f: File, buf: any): int {
     if f == null {
-        error("File is null")
+        exit(runtimeError, "File is null")
     }
     if bytes := ^[]int8(buf); bytes != null {
         return rtlfread(&bytes[0], len(bytes^), 1, f)
@@ -66,7 +68,7 @@ fn fread*    (f: File, buf: any): int {
         return rtlfread(&chars[0], len(chars^), 1, f)
     }
     if selfhasptr(buf) {
-        error("Cannot read reference types except ^[]int8, ^[]uint8, ^[]char")
+        exit(runtimeError, "Cannot read reference types except ^[]int8, ^[]uint8, ^[]char")
     }
     return rtlfread(buf.__self, sizeofself(buf), 1, f)
 }
@@ -74,7 +76,7 @@ fn fread*    (f: File, buf: any): int {
 fn rtlfwrite (buf: ^void, size, cnt: int, f: File): int
 fn fwrite*   (f: File, buf: any): int {
     if f == null {
-        error("File is null")
+        exit(runtimeError, "File is null")
     }
     if bytes := ^[]int8(buf); bytes != null {
         return rtlfwrite(&bytes[0], len(bytes^), 1, f)
@@ -86,7 +88,7 @@ fn fwrite*   (f: File, buf: any): int {
         return rtlfwrite(&chars[0], len(chars^), 1, f)
     }             
     if selfhasptr(buf) {
-        error("Cannot write reference types except ^[]int8, ^[]uint8, ^[]char")
+        exit(runtimeError, "Cannot write reference types except ^[]int8, ^[]uint8, ^[]char")
     }
     return rtlfwrite(buf.__self, sizeofself(buf), 1, f)
 }
@@ -94,7 +96,7 @@ fn fwrite*   (f: File, buf: any): int {
 fn rtlfseek  (f: File, offset, origin: int): int
 fn fseek*    (f: File, offset, origin: int): int {
     if f == null {
-        error("File is null")
+        exit(runtimeError, "File is null")
     }
     return rtlfseek(f, offset, origin)
 }
@@ -102,7 +104,7 @@ fn fseek*    (f: File, offset, origin: int): int {
 fn rtlftell (f: File): int
 fn ftell*   (f: File): int {
     if f == null {
-        error("File is null")
+        exit(runtimeError, "File is null")
     }
     return rtlftell(f)
 }
@@ -113,7 +115,7 @@ fn remove*   (name: str): int {return rtlremove(name)}
 fn rtlfeof  (f: File): int
 fn feof*    (f: File): bool {
     if f == null {
-        error("File is null")
+        exit(runtimeError, "File is null")
     }                
     return bool(rtlfeof(f))
 }
@@ -121,7 +123,7 @@ fn feof*    (f: File): bool {
 fn rtlfflush (f: File): int
 fn fflush*   (f: File): int {
 	if f == null {
-		error("File is null")
+		exit(runtimeError, "File is null")
 	}
 	return rtlfflush(f)
 }

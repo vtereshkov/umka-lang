@@ -852,6 +852,7 @@ void parseProgram(Compiler *comp)
     genPushZero(&comp->gen, sizeof(Interface) / sizeof(Slot));
 
     genCall(&comp->gen, mainFn->offset);
+
     doGarbageCollection(comp, 0);
     genHalt(&comp->gen);
 }

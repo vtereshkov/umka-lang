@@ -47,18 +47,22 @@ void printRuntimeError(void *umka)
 {
     UmkaError error;
     umkaGetError(umka, &error);
-    fprintf(stderr, "\nRuntime error %s (%d): %s\n", error.fileName, error.line, error.msg);
-    fprintf(stderr, "Stack trace:\n");
 
-    for (int depth = 0; depth < MAX_CALL_STACK_DEPTH; depth++)
+    if (*error.msg)
     {
-        char fileName[UMKA_MSG_LEN + 1], fnName[UMKA_MSG_LEN + 1];
-        int line;
+        fprintf(stderr, "\nRuntime error %s (%d): %s\n", error.fileName, error.line, error.msg);
+        fprintf(stderr, "Stack trace:\n");
 
-        if (!umkaGetCallStack(umka, depth, UMKA_MSG_LEN + 1, NULL, fileName, fnName, &line))
-            break;
+        for (int depth = 0; depth < MAX_CALL_STACK_DEPTH; depth++)
+        {
+            char fileName[UMKA_MSG_LEN + 1], fnName[UMKA_MSG_LEN + 1];
+            int line;
 
-        fprintf(stderr, "    %s: %s (%d)\n", fnName, fileName, line);
+            if (!umkaGetCallStack(umka, depth, UMKA_MSG_LEN + 1, NULL, fileName, fnName, &line))
+                break;
+
+            fprintf(stderr, "    %s: %s (%d)\n", fnName, fileName, line);
+        }
     }
 }
 
@@ -74,7 +78,7 @@ int runPlayground(const char *fileName, const char *sourceString)
 
     if (ok)
     {
-        ok = umkaRun(umka);
+        ok = umkaRun(umka) == 0;
         if (!ok)
             printRuntimeError(umka);
     }
@@ -163,6 +167,7 @@ int main(int argc, char **argv)
 
     void *umka = umkaAlloc();
     bool ok = umkaInit(umka, argv[i], NULL, stackSize, locale, argc - i, argv + i, !isSandbox, !isSandbox, printWarnings ? printCompileWarning : NULL);
+    int exitCode = 0;
 
     if (ok)
         ok = umkaCompile(umka);
@@ -197,16 +202,19 @@ int main(int argc, char **argv)
         }
 
         if (!compileOnly)
-            ok = umkaRun(umka);
+            exitCode = umkaRun(umka);
 
-        if (!ok)
+        if (exitCode)
             printRuntimeError(umka);
     }
     else
         printCompileError(umka);
 
+    if (!ok)
+        exitCode = 1;
+
     umkaFree(umka);
-    return !ok;
+    return exitCode;
 }
 
 #endif // EMSCRIPTEN

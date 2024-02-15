@@ -8,7 +8,7 @@
 #include "umka_compiler.h"
 #include "umka_api.h"
 
-#define UMKA_VERSION    "1.3.1"
+#define UMKA_VERSION    "1.4"
 
 
 static void compileWarning(void *context, DebugInfo *debug, const char *format, ...)
@@ -43,6 +43,7 @@ static void compileError(void *context, const char *format, ...)
     strcpy(comp->error.fnName, comp->debug.fnName);
     comp->error.line = comp->lex.tok.line;
     comp->error.pos = comp->lex.tok.pos;
+    comp->error.code = 1;
     vsnprintf(comp->error.msg, UMKA_MSG_LEN + 1, format, args);
 
     va_end(args);
@@ -50,7 +51,7 @@ static void compileError(void *context, const char *format, ...)
 }
 
 
-static void runtimeError(void *context, const char *format, ...)
+static void runtimeError(void *context, int code, const char *format, ...)
 {
     va_list args;
     va_start(args, format);
@@ -61,6 +62,7 @@ static void runtimeError(void *context, const char *format, ...)
     strcpy(comp->error.fileName, debug->fileName);
     strcpy(comp->error.fnName, debug->fnName);
     comp->error.line = debug->line;
+    comp->error.code = code;
     comp->error.pos = 1;
     vsnprintf(comp->error.msg, UMKA_MSG_LEN + 1, format, args);
 
@@ -111,29 +113,31 @@ UMKA_API bool umkaCompile(void *umka)
 }
 
 
-UMKA_API bool umkaRun(void *umka)
+UMKA_API int umkaRun(void *umka)
 {
     Compiler *comp = umka;
 
     if (setjmp(comp->error.jumper) == 0)
     {
         compilerRun(comp);
-        return true;
+        return 0;
     }
-    return false;
+
+    return comp->error.code;
 }
 
 
-UMKA_API bool umkaCall(void *umka, int entryOffset, int numParamSlots, UmkaStackSlot *params, UmkaStackSlot *result)
+UMKA_API int umkaCall(void *umka, int entryOffset, int numParamSlots, UmkaStackSlot *params, UmkaStackSlot *result)
 {
     Compiler *comp = umka;
 
     if (setjmp(comp->error.jumper) == 0)
     {
         compilerCall(comp, entryOffset, numParamSlots, (Slot *)params, (Slot *)result);
-        return true;
+        return 0;
     }
-    return false;
+
+    return comp->error.code;
 }
 
 
