@@ -791,7 +791,7 @@ void genIfCondEpilog(CodeGen *gen)
 
 void genIfEpilog(CodeGen *gen)
 {
-    genGoFromToIfNot(gen, genRestorePos(gen), gen->ip + 1); // Goto end of "if" block (fixup)
+    genGoFromToIfNot(gen, genRestorePos(gen), gen->ip);     // Goto end of "if" block (fixup)
 }
 
 
