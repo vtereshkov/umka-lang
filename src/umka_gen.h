@@ -90,7 +90,6 @@ void genStrengthenPtr(CodeGen *gen);
 
 void genGoto  (CodeGen *gen, int dest);
 void genGotoIf(CodeGen *gen, int dest);
-void genGotoIfNot(CodeGen *gen, int dest);
 
 void genCall        (CodeGen *gen, int entry);
 void genCallIndirect(CodeGen *gen, int paramSlots);
@@ -109,7 +108,6 @@ void genGoFromTo(CodeGen *gen, int start, int dest);
 void genGoFromToIf(CodeGen *gen, int start, int dest);
 
 void genIfCondEpilog(CodeGen *gen);
-void genIfEpilog(CodeGen *gen);
 void genElseProlog  (CodeGen *gen);
 void genIfElseEpilog(CodeGen *gen);
 

@@ -54,7 +54,6 @@ static const char *opcodeSpelling [] =
     "STRENGTHEN_PTR",
     "GOTO",
     "GOTO_IF",
-    "GOTO_IF_NOT",
     "CALL",
     "CALL_INDIRECT",
     "CALL_EXTERN",
@@ -2957,15 +2956,6 @@ static FORCE_INLINE void doGotoIf(Fiber *fiber)
 }
 
 
-static FORCE_INLINE void doGotoIfNot(Fiber *fiber)
-{
-    if (!(fiber->top++)->intVal)
-        fiber->ip = fiber->code[fiber->ip].operand.intVal;
-    else
-        fiber->ip++;
-}
-
-
 static FORCE_INLINE void doCall(Fiber *fiber, Error *error)
 {
     // For direct calls, entry point address is stored in the instruction
@@ -3220,7 +3210,6 @@ static FORCE_INLINE void vmLoop(VM *vm)
             case OP_STRENGTHEN_PTR:                 doStrengthenPtr(fiber, pages);                break;
             case OP_GOTO:                           doGoto(fiber);                                break;
             case OP_GOTO_IF:                        doGotoIf(fiber);                              break;
-            case OP_GOTO_IF_NOT:                    doGotoIfNot(fiber);                           break;
             case OP_CALL:                           doCall(fiber, error);                         break;
             case OP_CALL_INDIRECT:                  doCallIndirect(fiber, error);                 break;
             case OP_CALL_EXTERN:                    doCallExtern(fiber, error);                   break;
@@ -3337,7 +3326,6 @@ int vmAsm(int ip, Instruction *code, DebugInfo *debugPerInstr, char *buf, int si
         case OP_GET_FIELD_PTR:
         case OP_GOTO:
         case OP_GOTO_IF:
-        case OP_GOTO_IF_NOT:
         case OP_ENTER_FRAME:
         case OP_CALL_INDIRECT:
         case OP_RETURN:                 chars += snprintf(buf + chars, nonneg(size - chars), " %lld",  (long long int)instr->operand.intVal); break;
