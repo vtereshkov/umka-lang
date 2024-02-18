@@ -675,6 +675,13 @@ void genGotoIf(CodeGen *gen, int dest)
 }
 
 
+void genGotoIfNot(CodeGen *gen, int dest)
+{
+    const Instruction instr = {.opcode = OP_GOTO_IF_NOT, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = dest};
+    genAddInstr(gen, &instr);
+}
+
+
 void genCall(CodeGen *gen, int entry)
 {
     const Instruction instr = {.opcode = OP_CALL, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = entry};
@@ -766,43 +773,57 @@ void genGoFromToIf(CodeGen *gen, int start, int dest)
 }
 
 
+void genGoFromToIfNot(CodeGen *gen, int start, int dest)
+{
+    int next = gen->ip;
+    gen->ip = start;
+    genGotoIfNot(gen, dest);
+    gen->ip = next;
+}
+
+
 void genIfCondEpilog(CodeGen *gen)
 {
-    genGotoIf(gen, gen->ip + 2);                         // Goto "if" block start
     genSavePos(gen);
-    genNop(gen);                                         // Goto "else" block start / statement end (stub)
+    genNop(gen);                                            // Goto "else" block start / statement end (stub)
+}
+
+
+void genIfEpilog(CodeGen *gen)
+{
+    genGoFromToIfNot(gen, genRestorePos(gen), gen->ip + 1); // Goto end of "if" block (fixup)
 }
 
 
 void genElseProlog(CodeGen *gen)
 {
-    genGoFromTo(gen, genRestorePos(gen), gen->ip + 1);   // Goto "else" block start (fixup)
+    genGoFromToIfNot(gen, genRestorePos(gen), gen->ip + 1); // Goto "else" block start (fixup)
     genSavePos(gen);
-    genNop(gen);                                         // Goto statement end (stub)
+    genNop(gen);                                            // Goto statement end (stub)
 }
 
 
 void genIfElseEpilog(CodeGen *gen)
 {
-    genGoFromTo(gen, genRestorePos(gen), gen->ip);       // Goto statement end (fixup)
+    genGoFromTo(gen, genRestorePos(gen), gen->ip);          // Goto statement end (fixup)
 }
 
 
 void genSwitchCondEpilog(CodeGen *gen)
 {
-    genPopReg(gen, VM_REG_COMMON_0);                     // Save switch expression
-    genPushIntConst(gen, 0);                             // Initialize comparison accumulator
+    genPopReg(gen, VM_REG_COMMON_0);                        // Save switch expression
+    genPushIntConst(gen, 0);                                // Initialize comparison accumulator
     genPopReg(gen, VM_REG_COMMON_1);
 }
 
 
 void genCaseExprEpilog(CodeGen *gen, Const *constant)
 {
-    genPushReg(gen, VM_REG_COMMON_0);                    // Compare switch expression with case constant
+    genPushReg(gen, VM_REG_COMMON_0);                       // Compare switch expression with case constant
     genPushIntConst(gen, constant->intVal);
     genBinary(gen, TOK_EQEQ, TYPE_INT, 0);
 
-    genPushReg(gen, VM_REG_COMMON_1);                    // Update comparison accumulator
+    genPushReg(gen, VM_REG_COMMON_1);                       // Update comparison accumulator
     genBinary(gen, TOK_OR, TYPE_BOOL, 0);
     genPopReg(gen, VM_REG_COMMON_1);
 }
@@ -810,25 +831,25 @@ void genCaseExprEpilog(CodeGen *gen, Const *constant)
 
 void genCaseBlockProlog(CodeGen *gen)
 {
-    genPushReg(gen, VM_REG_COMMON_1);                    // Push comparison accumulator
-    genGotoIf(gen, gen->ip + 2);                         // Goto "case" block start
+    genPushReg(gen, VM_REG_COMMON_1);                       // Push comparison accumulator
+    genGotoIf(gen, gen->ip + 2);                            // Goto "case" block start
     genSavePos(gen);
-    genNop(gen);                                         // Goto next "case" or "default" (stub)
+    genNop(gen);                                            // Goto next "case" or "default" (stub)
 }
 
 
 void genCaseBlockEpilog(CodeGen *gen)
 {
-    genGoFromTo(gen, genRestorePos(gen), gen->ip + 1);   // Goto next "case" or "default" (fixup)
+    genGoFromTo(gen, genRestorePos(gen), gen->ip + 1);      // Goto next "case" or "default" (fixup)
     genSavePos(gen);
-    genNop(gen);                                         // Goto "switch" end (stub)
+    genNop(gen);                                            // Goto "switch" end (stub)
 }
 
 
 void genSwitchEpilog(CodeGen *gen, int numCases)
 {
     for (int i = 0; i < numCases; i++)
-        genGoFromTo(gen, genRestorePos(gen), gen->ip);   // Goto "switch" end (fixup)
+        genGoFromTo(gen, genRestorePos(gen), gen->ip);      // Goto "switch" end (fixup)
 }
 
 
@@ -846,8 +867,8 @@ void genWhileCondEpilog(CodeGen *gen)
 
 void genWhileEpilog(CodeGen *gen)
 {
-    genGoFromTo(gen, genRestorePos(gen), gen->ip + 1);   // Goto statement end (fixup)
-    genGoto(gen, genRestorePos(gen));                    // Goto condition
+    genGoFromTo(gen, genRestorePos(gen), gen->ip + 1);      // Goto statement end (fixup)
+    genGoto(gen, genRestorePos(gen));                       // Goto condition
 }
 
 
@@ -870,10 +891,10 @@ void genForPostStmtEpilog(CodeGen *gen)
     int condEpilog = genRestorePos(gen);
     int condProlog = genRestorePos(gen);
 
-    genGoto(gen, condProlog);                            // Goto condition
-    genGoFromToIf(gen, condEpilog, gen->ip);             // Goto post-statement end (fixup)
+    genGoto(gen, condProlog);                               // Goto condition
+    genGoFromToIf(gen, condEpilog, gen->ip);                // Goto post-statement end (fixup)
 
-    gen->stack[++gen->top] = condEpilog;                 // Place to stack again
+    gen->stack[++gen->top] = condEpilog;                    // Place to stack again
 }
 
 
@@ -881,8 +902,8 @@ void genForEpilog(CodeGen *gen)
 {
     int condEpilog = genRestorePos(gen);
 
-    genGoto(gen, condEpilog + 2);                        // Goto post-statement (fixup)
-    genGoFromTo(gen, condEpilog + 1, gen->ip);           // Goto statement end (fixup)
+    genGoto(gen, condEpilog + 2);                           // Goto post-statement (fixup)
+    genGoFromTo(gen, condEpilog + 1, gen->ip);              // Goto statement end (fixup)
 }
 
 
@@ -896,16 +917,16 @@ void genShortCircuitProlog(CodeGen *gen, TokenKind op)
     if (op == TOK_OROR)
         genUnary(gen, TOK_NOT, TYPE_BOOL);
 
-    genGotoIf(gen, gen->ip + 2);                         // Goto "b" evaluation
+    genGotoIf(gen, gen->ip + 2);                            // Goto "b" evaluation
     genSavePos(gen);
-    genNop(gen);                                         // Goto expression end (stub)
+    genNop(gen);                                            // Goto expression end (stub)
 }
 
 
 void genShortCircuitEpilog(CodeGen *gen)
 {
     genPopReg(gen, VM_REG_COMMON_0);
-    genGoFromTo(gen, genRestorePos(gen), gen->ip);       // Goto expression end (fixup)
+    genGoFromTo(gen, genRestorePos(gen), gen->ip);          // Goto expression end (fixup)
     genPushReg(gen, VM_REG_COMMON_0);
 }
 
@@ -962,14 +983,14 @@ void genGotosAddStub(CodeGen *gen, Gotos *gotos)
         gen->error->handler(gen->error->context, "To many break/continue/return statements");
 
     gotos->start[gotos->numGotos++] = gen->ip;
-    genNop(gen);                                        // Goto block/function end (stub)
+    genNop(gen);                                            // Goto block/function end (stub)
 }
 
 
 void genGotosEpilog(CodeGen *gen, Gotos *gotos)
 {
     for (int i = 0; i < gotos->numGotos; i++)
-        genGoFromTo(gen, gotos->start[i], gen->ip);     // Goto block/function end (fixup)
+        genGoFromTo(gen, gotos->start[i], gen->ip);         // Goto block/function end (fixup)
 }
 
 

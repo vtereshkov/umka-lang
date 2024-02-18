@@ -485,9 +485,13 @@ static void parseIfStmt(Compiler *comp)
             parseIfStmt(comp);
         else
             parseBlock(comp);
-    }
 
-    genIfElseEpilog(&comp->gen);
+        genIfElseEpilog(&comp->gen);
+    }
+    else
+    {
+        genIfEpilog(&comp->gen);
+    }
 
     // Additional scope embracing shortVarDecl and statement body
     doGarbageCollection(comp, blocksCurrent(&comp->blocks));
