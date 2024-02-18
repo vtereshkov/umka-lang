@@ -96,6 +96,7 @@ typedef struct
     int  (*umkaCall)              (void *umka, int entryOffset, int numParamSlots, UmkaStackSlot *params, UmkaStackSlot *result);
     void (*umkaFree)              (void *umka);
     void (*umkaGetError)          (void *umka, UmkaError *err);
+    bool (*umkaAlive)             (void *umka);
     char *(*umkaAsm)              (void *umka);
     bool (*umkaAddModule)         (void *umka, const char *fileName, const char *sourceString);
     bool (*umkaAddFunc)           (void *umka, const char *name, UmkaExternFunc func);
@@ -121,6 +122,7 @@ UMKA_API int  umkaRun               (void *umka);
 UMKA_API int  umkaCall              (void *umka, int entryOffset, int numParamSlots, UmkaStackSlot *params, UmkaStackSlot *result);
 UMKA_API void umkaFree              (void *umka);
 UMKA_API void umkaGetError          (void *umka, UmkaError *err);
+UMKA_API bool umkaAlive             (void *umka);
 UMKA_API char *umkaAsm              (void *umka);
 UMKA_API bool umkaAddModule         (void *umka, const char *fileName, const char *sourceString);
 UMKA_API bool umkaAddFunc           (void *umka, const char *name, UmkaExternFunc func);

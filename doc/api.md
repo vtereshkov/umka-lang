@@ -199,6 +199,12 @@ UMKA_API void umkaGetError(void *umka, UmkaError *err);
 Gets the last compile-time or run-time error. Here, `umka` is the interpreter instance handle, `err` is the pointer to the error description structure to be filled.
 
 ```
+UMKA_API bool umkaAlive(void *umka);
+```
+
+Returns `true` if the interpreter instance `umka` has been initialized and not yet terminated. Termination means that either the `main` function has exited, or `exit` has been called. Neither `umkaRun`, nor `umkaCall` can be called after the termination.
+
+```
 UMKA_API bool umkaGetCallStack(void *umka, int depth, int nameSize, 
                                int *offset, char *fileName, char *fnName, int *line);
 ```

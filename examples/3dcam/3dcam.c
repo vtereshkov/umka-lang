@@ -81,8 +81,11 @@ int main(void)
 
     SetTargetFPS(60);                           // Set our game to run at 60 frames per second
 
+    int exitCode = 0;
+
     // Main game loop
-    if (umkaOk)  
+    if (umkaOk)
+    {  
         while (!WindowShouldClose())            // Detect window close button or ESC key
         {
             UpdateCamera(&camera, CAMERA_FIRST_PERSON);
@@ -92,14 +95,17 @@ int main(void)
 
                 BeginMode3D(camera);
 
-                bool umkaOk = umkaCall(umka, umkaDrawBodies, 0, NULL, NULL) == 0;
-                if (!umkaOk)
+                exitCode = umkaCall(umka, umkaDrawBodies, 0, NULL, NULL);
+                if (!umkaAlive(umka))
                 {
-                    UmkaError error;
-                    umkaGetError(umka, &error);
-                    printf("Umka runtime error %s (%d): %s\n", error.fileName, error.line, error.msg);
+                    if (exitCode != 0)
+                    {
+                        UmkaError error;
+                        umkaGetError(umka, &error);
+                        printf("Umka runtime error %s (%d): %s\n", error.fileName, error.line, error.msg);                        
+                    }
                     break;
-                }            
+                }   
 
                 EndMode3D();
 
@@ -112,6 +118,7 @@ int main(void)
 
             EndDrawing();
         }
+    }
 
     // Raylib de-initialization
     CloseWindow();        // Close window and OpenGL context
@@ -119,5 +126,5 @@ int main(void)
     // Umka de-initialization
     umkaFree(umka);
         
-    return 0;
+    return exitCode;
 }
