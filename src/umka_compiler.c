@@ -22,6 +22,7 @@ static void compilerSetAPI(Compiler *comp)
     comp->api.umkaCall              = umkaCall;
     comp->api.umkaFree              = umkaFree;
     comp->api.umkaGetError          = umkaGetError;
+    comp->api.umkaAlive             = umkaAlive;
     comp->api.umkaAsm               = umkaAsm;
     comp->api.umkaAddModule         = umkaAddModule;
     comp->api.umkaAddFunc           = umkaAddFunc;

@@ -160,6 +160,13 @@ UMKA_API void umkaGetError(void *umka, UmkaError *err)
 }
 
 
+UMKA_API bool umkaAlive(void *umka)
+{
+    Compiler *comp = umka;
+    return comp->vm.mainFiber->alive;
+}
+
+
 UMKA_API char *umkaAsm(void *umka)
 {
     Compiler *comp = umka;
