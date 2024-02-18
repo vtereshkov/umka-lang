@@ -61,6 +61,7 @@ typedef enum
     OP_STRENGTHEN_PTR,
     OP_GOTO,
     OP_GOTO_IF,
+    OP_GOTO_IF_NOT,
     OP_CALL,
     OP_CALL_INDIRECT,
     OP_CALL_EXTERN,
