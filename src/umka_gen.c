@@ -1043,7 +1043,7 @@ int genAsm(CodeGen *gen, char *buf, int size)
         chars += vmAsm(ip, gen->code, gen->debugPerInstr, buf + chars, nonneg(size - chars));
         chars += snprintf(buf + chars, nonneg(size - chars), "\n");
 
-        if (gen->code[ip].opcode == OP_GOTO || gen->code[ip].opcode == OP_GOTO_IF || gen->code[ip].opcode == OP_RETURN)
+        if (gen->code[ip].opcode == OP_GOTO || gen->code[ip].opcode == OP_GOTO_IF || gen->code[ip].opcode == OP_GOTO_IF_NOT || gen->code[ip].opcode == OP_RETURN)
             chars += snprintf(buf + chars, nonneg(size - chars), "\n");
 
     } while (gen->code[ip++].opcode != OP_HALT);
