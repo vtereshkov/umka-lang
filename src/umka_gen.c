@@ -867,8 +867,8 @@ void genWhileCondEpilog(CodeGen *gen)
 
 void genWhileEpilog(CodeGen *gen)
 {
-    genGoFromToIfNot(gen, genRestorePos(gen), gen->ip + 1);      // Goto statement end (fixup)
-    genGoto(gen, genRestorePos(gen));                            // Goto condition
+    genGoFromToIfNot(gen, genRestorePos(gen), gen->ip + 1); // Goto statement end (fixup)
+    genGoto(gen, genRestorePos(gen));                       // Goto condition
 }
 
 
