@@ -2583,7 +2583,7 @@ static void parseLogicalTerm(Compiler *comp, Type **type, Const *constant)
         }
         else
         {
-            genShortCircuitProlog(&comp->gen, op);
+            genShortCircuitProlog(&comp->gen);
 
             blocksEnter(&comp->blocks, NULL);
 
@@ -2595,7 +2595,7 @@ static void parseLogicalTerm(Compiler *comp, Type **type, Const *constant)
             identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
             blocksLeave(&comp->blocks);
 
-            genShortCircuitEpilog(&comp->gen);
+            genShortCircuitEpilog(&comp->gen, op);
         }
     }
 }
@@ -2627,7 +2627,7 @@ static void parseLogicalExpr(Compiler *comp, Type **type, Const *constant)
         }
         else
         {
-            genShortCircuitProlog(&comp->gen, op);
+            genShortCircuitProlog(&comp->gen);
 
             blocksEnter(&comp->blocks, NULL);
 
@@ -2639,7 +2639,7 @@ static void parseLogicalExpr(Compiler *comp, Type **type, Const *constant)
             identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
             blocksLeave(&comp->blocks);
 
-            genShortCircuitEpilog(&comp->gen);
+            genShortCircuitEpilog(&comp->gen, op);
         }
     }
 }

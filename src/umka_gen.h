@@ -128,8 +128,8 @@ void genForCondEpilog    (CodeGen *gen);
 void genForPostStmtEpilog(CodeGen *gen);
 void genForEpilog        (CodeGen *gen);
 
-void genShortCircuitProlog(CodeGen *gen, TokenKind op);
-void genShortCircuitEpilog(CodeGen *gen);
+void genShortCircuitProlog(CodeGen *gen);
+void genShortCircuitEpilog(CodeGen *gen, TokenKind op);
 
 void genEnterFrameStub (CodeGen *gen);
 void genLeaveFrameFixup(CodeGen *gen, int localVarSlots);

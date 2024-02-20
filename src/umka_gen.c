@@ -909,25 +909,21 @@ void genForEpilog(CodeGen *gen)
 
 // a && b ==   a  ? b : a
 // a || b == (!a) ? b : a
-void genShortCircuitProlog(CodeGen *gen, TokenKind op)
+void genShortCircuitProlog(CodeGen *gen)
 {
     genDup(gen);
-    genPopReg(gen, VM_REG_COMMON_0);
-
-    if (op == TOK_OROR)
-        genUnary(gen, TOK_NOT, TYPE_BOOL);
-
-    genGotoIf(gen, gen->ip + 2);                            // Goto "b" evaluation
     genSavePos(gen);
     genNop(gen);                                            // Goto expression end (stub)
+    genPop(gen);
 }
 
 
-void genShortCircuitEpilog(CodeGen *gen)
+void genShortCircuitEpilog(CodeGen *gen, TokenKind op)
 {
-    genPopReg(gen, VM_REG_COMMON_0);
-    genGoFromTo(gen, genRestorePos(gen), gen->ip);          // Goto expression end (fixup)
-    genPushReg(gen, VM_REG_COMMON_0);
+    if (op == TOK_ANDAND)
+        genGoFromToIfNot(gen, genRestorePos(gen), gen->ip); // Goto expression end (fixup)
+    else
+        genGoFromToIf(gen, genRestorePos(gen), gen->ip);    // Goto expression end (fixup)
 }
 
 
