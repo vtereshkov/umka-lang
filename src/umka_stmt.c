@@ -769,12 +769,13 @@ static void parseForHeader(Compiler *comp)
 }
 
 
-// forInHeader = ident ["," ident] "in" expr.
+// forInHeader = ident ["," ident ["^"]] "in" expr.
 static void parseForInHeader(Compiler *comp)
 {
     IdentName indexOrKeyName = {0}, itemName = {0};
+    bool iterateByPtr = false;
 
-    // ident ["," ident] "in"
+    // ident ["," ident ["^"]] "in"
     lexCheck(&comp->lex, TOK_IDENT);
     strcpy(indexOrKeyName, comp->lex.tok.name);
     lexNext(&comp->lex);
@@ -785,6 +786,12 @@ static void parseForInHeader(Compiler *comp)
         lexCheck(&comp->lex, TOK_IDENT);
         strcpy(itemName, comp->lex.tok.name);
         lexNext(&comp->lex);
+
+        if (comp->lex.tok.kind == TOK_CARET)
+        {
+            iterateByPtr = true;
+            lexNext(&comp->lex);
+        }
     }
 
     lexEat(&comp->lex, TOK_IN);
@@ -807,6 +814,9 @@ static void parseForInHeader(Compiler *comp)
         comp->error.handler(comp->error.context, "Expression of type %s is not iterable", typeSpelling(collectionType, typeBuf));
     }
 
+    if (collectionType->kind == TYPE_STR && iterateByPtr)
+        comp->error.handler(comp->error.context, "String is not iterable by pointer");
+
     // Declare variable for the collection length and assign len(expr) to it
     if (collectionType->kind == TYPE_ARRAY)
         genPushIntConst(&comp->gen, collectionType->numItems);
@@ -824,10 +834,14 @@ static void parseForInHeader(Compiler *comp)
     if (itemName[0] != '\0' || collectionType->kind == TYPE_MAP)
     {
         // Declare variable for the collection and assign expr to it
-        collectionIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "__collection", collectionType, false);
+        Type *collectionIdentType = collectionType;
+        if (collectionType->kind == TYPE_ARRAY)
+            collectionIdentType = typeAddPtrTo(&comp->types, &comp->blocks, collectionType);    // Avoid copying the whole static array - use a pointer instead
+
+        collectionIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "__collection", collectionIdentType, false);
         doZeroVar(comp, collectionIdent);
         doPushVarPtr(comp, collectionIdent);
-        genSwapChangeRefCntAssign(&comp->gen, collectionType);
+        genSwapChangeRefCntAssign(&comp->gen, collectionIdent->type);
     }
     else
     {
@@ -882,6 +896,9 @@ static void parseForInHeader(Compiler *comp)
         else
             itemType = collectionType->base;
 
+        if (iterateByPtr)
+            itemType = typeAddPtrTo(&comp->types, &comp->blocks, itemType);
+
         itemIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, itemName, itemType, false);
         doZeroVar(comp, itemIdent);
     }
@@ -920,7 +937,7 @@ static void parseForInHeader(Compiler *comp)
     if (itemIdent)
     {
         doPushVarPtr(comp, collectionIdent);
-        genDeref(&comp->gen, collectionType->kind);
+        genDeref(&comp->gen, collectionIdent->type->kind);
 
         if (collectionType->kind == TYPE_MAP)
         {
@@ -945,7 +962,8 @@ static void parseForInHeader(Compiler *comp)
         }
 
         // Get collection item value
-        genDeref(&comp->gen, itemIdent->type->kind);
+        if (!iterateByPtr)
+            genDeref(&comp->gen, itemIdent->type->kind);
 
         // Assign collection item to iteration variable
         doPushVarPtr(comp, itemIdent);

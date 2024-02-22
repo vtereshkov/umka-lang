@@ -1282,12 +1282,16 @@ for k := 1; k <= 128; k *= 2 {
 
 #### The `for...in` statement
 
-Iterates through all items of an array, a dynamic array, a map or a string. Before each iteration, the index (or key) and the value of the next item are evaluated and assigned to the corresponding variables declared via an implicit short variable declaration in the statement header. The item variable may be omitted.
+Iterates through all items of an array, a dynamic array, a map or a string. Before each iteration, the index (or key) and the value of the next item are evaluated and assigned to the corresponding variables declared via an implicit short variable declaration in the statement header. 
+
+Let the item type be `T`. If the item variable in the statement header is followed by a `^`, then its type is `^T` and its value is the pointer to the original item. Otherwise, its type is `T` and its value is the copy of the original item. Strings admit only the latter form.  
+
+The item variable may be omitted.
 
 Syntax:
 
 ```
-forInHeader = ident ["," ident] "in" expr.
+forInHeader = ident ["," ident ["^"]] "in" expr.
 ```
 
 Examples:
@@ -1302,6 +1306,10 @@ for index, item in data {
         maxItem = item
         maxIndex = index
     }
+}
+
+for index, item^ in data {
+    item^ = f(index)            // Modify data
 }
 ```
 
@@ -1467,7 +1475,7 @@ typeCase            = "case" type ":" stmtList.
 default             = "default" ":" stmtList.
 forStmt             = "for" (forHeader | forInHeader) block.
 forHeader           = [shortVarDecl ";"] expr [";" simpleStmt].
-forInHeader         = ident ["," ident] "in" expr.
+forInHeader         = ident ["," ident ["^"]] "in" expr.
 breakStmt           = "break".
 continueStmt        = "continue".
 returnStmt          = "return" [exprOrLitList].
