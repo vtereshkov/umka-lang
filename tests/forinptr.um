@@ -1,0 +1,130 @@
+fn print(arr: []^int) {
+    for _, x in arr {
+        printf("%v ", x^)        
+    }
+    printf("\n")    
+}
+
+fn updateVal(p: ^int) {
+    p^++
+}
+
+fn updatePtr(p: ^^int) {
+    p^ = new(int, 3 * p^^)
+}
+
+fn test1() {
+    var xs: [10]^int
+
+    for i, px^ in xs {
+        px^ = new(int, 2 * i)
+    }
+
+    print(xs)
+
+    for _, px^ in xs {
+        updatePtr(px)
+    } 
+
+    print(xs) 
+
+    for _, px^ in xs {
+        updateVal(px^)
+    } 
+
+    print(xs)
+
+    var as: [10]int 
+    for i, x in xs {
+        as[i] = x^
+    }
+
+    printf("%v\n", as)
+
+    for _, a in as {
+        a = 100 * a
+    }
+
+    printf("%v\n", as)
+
+    for _, pa^ in as {
+        pa^ = 100 * pa^
+    }
+
+    printf("%v\n\n", as)    
+}
+
+fn test2() {
+    xs := make([]^int, 10)
+
+    for i, px^ in xs {
+        px^ = new(int, 2 * i)
+    }
+
+    print(xs)
+
+    for _, px^ in xs {
+        updatePtr(px)
+    } 
+
+    print(xs) 
+
+    for _, px^ in xs {
+        updateVal(px^)
+    } 
+
+    print(xs)
+
+    var as: []int 
+    for _, x in xs {
+        as = append(as, x^)
+    }
+
+    printf("%v\n", as)
+
+    for _, a in as {
+        a = 100 * a
+    }
+
+    printf("%v\n", as)
+
+    for _, pa^ in as {
+        pa^ = 100 * pa^
+    }
+
+    printf("%v\n\n", as)    
+}
+
+fn test3() {
+    type P = struct {x, y: real}
+
+    var m: map[str]P = {
+        "Russian": {0.1, 0.2},
+        "English": {0.3, 0.4},
+        "French":  {0.5, 0.6}
+    }
+
+    printf("%v\n", m)
+
+    for lang, val in m {
+        val.y = val.x + 0.01
+    }
+
+    printf("%v\n", m)
+
+    for lang, val^ in m {
+        val.y = val.x + 0.01
+    }
+
+    printf("%v\n", m)    
+}
+
+fn test*() {
+    test1()
+    test2()
+    test3()
+}
+
+fn main() {
+    test()
+}

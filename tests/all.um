@@ -39,6 +39,7 @@ import (
     "ternary.um"
     "typeswitch.um"
     "redecl.um"
+    "forinptr.um"
 )
 
 fn main() {
@@ -82,4 +83,5 @@ fn main() {
     printf("\n\n>>> Ternary operator\n\n");         ternary.test()
     printf("\n\n>>> Type switches\n\n");            typeswitch.test()
     printf("\n\n>>> Redeclarations\n\n");           redecl.test()
+    printf("\n\n>>> Iteration by pointer\n\n");     forinptr.test()
 }
