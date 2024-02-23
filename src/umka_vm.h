@@ -248,6 +248,8 @@ void vmInit                     (VM *vm, int stackSize /* slots */, bool fileSys
 void vmFree                     (VM *vm);
 void vmReset                    (VM *vm, Instruction *code, DebugInfo *debugPerInstr);
 void vmRun                      (VM *vm, int entryOffset, int numParamSlots, Slot *params, Slot *result);
+bool vmAlive                    (VM *vm);
+void vmKill                     (VM *vm);
 int vmAsm                       (int ip, Instruction *code, DebugInfo *debugPerInstr, char *buf, int size);
 bool vmUnwindCallStack          (VM *vm, Slot **base, int *ip);
 void vmSetHook                  (VM *vm, HookEvent event, HookFunc hook);

@@ -3297,6 +3297,18 @@ void vmRun(VM *vm, int entryOffset, int numParamSlots, Slot *params, Slot *resul
 }
 
 
+bool vmAlive(VM *vm)
+{
+    return vm->mainFiber->alive;
+}
+
+
+void vmKill(VM *vm)
+{
+    vm->mainFiber->alive = false;
+}
+
+
 int vmAsm(int ip, Instruction *code, DebugInfo *debugPerInstr, char *buf, int size)
 {
     Instruction *instr = &code[ip];

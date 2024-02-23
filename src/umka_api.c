@@ -66,6 +66,8 @@ static void runtimeError(void *context, int code, const char *format, ...)
     comp->error.pos = 1;
     vsnprintf(comp->error.msg, UMKA_MSG_LEN + 1, format, args);
 
+    vmKill(&comp->vm);
+
     va_end(args);
     longjmp(comp->error.jumper, 1);
 }
@@ -163,7 +165,7 @@ UMKA_API void umkaGetError(void *umka, UmkaError *err)
 UMKA_API bool umkaAlive(void *umka)
 {
     Compiler *comp = umka;
-    return comp->vm.mainFiber->alive;
+    return vmAlive(&comp->vm);
 }
 
 
