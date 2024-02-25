@@ -21,7 +21,6 @@ void help(void)
     printf("Usage: umka [<parameters>] <file.um> [<script-parameters>]\n");
     printf("Parameters:\n");
     printf("    -stack <stack-size>     - Set stack size\n");
-    printf("    -locale <locale-string> - Set locale\n");
     printf("    -asm                    - Write assembly listing\n");
     printf("    -check                  - Compile only\n");
     printf("    -warn                   - Enable warnings\n");
@@ -96,7 +95,6 @@ int main(int argc, char **argv)
 {
     // Parse interpreter parameters
     int stackSize       = DEFAULT_STACK_SIZE;
-    const char *locale  = NULL;
     bool writeAsm       = false;
     bool compileOnly    = false;
     bool printWarnings  = false;
@@ -119,18 +117,6 @@ int main(int argc, char **argv)
                 fprintf(stderr, "Illegal stack size\n");
                 return 1;
             }
-
-            i += 2;
-        }
-        else if (strcmp(argv[i], "-locale") == 0)
-        {
-            if (i + 1 == argc)
-            {
-                fprintf(stderr, "No locale string\n");
-                return 1;
-            }
-
-            locale = argv[i + 1];
 
             i += 2;
         }
@@ -166,7 +152,7 @@ int main(int argc, char **argv)
     }
 
     void *umka = umkaAlloc();
-    bool ok = umkaInit(umka, argv[i], NULL, stackSize, locale, argc - i, argv + i, !isSandbox, !isSandbox, printWarnings ? printCompileWarning : NULL);
+    bool ok = umkaInit(umka, argv[i], NULL, stackSize, NULL, argc - i, argv + i, !isSandbox, !isSandbox, printWarnings ? printCompileWarning : NULL);
     int exitCode = 0;
 
     if (ok)

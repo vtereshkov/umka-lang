@@ -46,10 +46,13 @@ typedef struct
     int argc;
     char **argv;
 
+    // Original codepage (Windows only)
+    unsigned int originalCodepage;
+
 } Compiler;
 
 
-void compilerInit       (Compiler *comp, const char *fileName, const char *sourceString, int stackSize, const char *locale, int argc, char **argv, bool fileSystemEnabled, bool implLibsEnabled);
+void compilerInit       (Compiler *comp, const char *fileName, const char *sourceString, int stackSize, int argc, char **argv, bool fileSystemEnabled, bool implLibsEnabled);
 void compilerFree       (Compiler *comp);
 void compilerCompile    (Compiler *comp);
 void compilerRun        (Compiler *comp);
