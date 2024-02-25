@@ -4,7 +4,10 @@
 #include <stddef.h>
 #include <string.h>
 #include <stdio.h>
-#include <locale.h>
+
+#ifdef _WIN32
+    #include <windows.h>
+#endif
 
 #include "umka_compiler.h"
 #include "umka_runtime_src.h"
@@ -177,8 +180,13 @@ static void compilerDeclareExternalFuncs(Compiler *comp, bool fileSystemEnabled)
 }
 
 
-void compilerInit(Compiler *comp, const char *fileName, const char *sourceString, int stackSize, const char *locale, int argc, char **argv, bool fileSystemEnabled, bool implLibsEnabled)
+void compilerInit(Compiler *comp, const char *fileName, const char *sourceString, int stackSize, int argc, char **argv, bool fileSystemEnabled, bool implLibsEnabled)
 {
+#ifdef _WIN32
+    comp->originalCodepage = GetConsoleOutputCP();
+    SetConsoleOutputCP(CP_UTF8);
+#endif
+
     compilerSetAPI(comp);
 
     storageInit  (&comp->storage);
@@ -202,9 +210,6 @@ void compilerInit(Compiler *comp, const char *fileName, const char *sourceString
     comp->debug.fnName = "<unknown>";
 
     lexInit(&comp->lex, &comp->storage, &comp->debug, filePath, sourceString, &comp->error);
-
-    if (locale && !setlocale(LC_ALL, locale))
-        comp->error.handler(comp->error.context, "Cannot set locale");
 
     comp->argc  = argc;
     comp->argv  = argv;
@@ -252,6 +257,10 @@ void compilerFree(Compiler *comp)
     blocksFree   (&comp->blocks);
     moduleFree   (&comp->modules);
     storageFree  (&comp->storage);
+
+#ifdef _WIN32
+    SetConsoleOutputCP(comp->originalCodepage);
+#endif
 }
 
 
