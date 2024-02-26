@@ -265,6 +265,39 @@ fn system*(command: str): int
 
 Invokes the command processor to execute a `command`. Returns a platform-specific result.
 
+### Error handling
+
+#### Types
+
+```
+type ErrPos* = struct {
+    file: str
+    func: str
+    line: int
+}
+```
+
+Call stack trace position from where `error()` has been called.
+
+```
+type Err* = struct {
+    code: int
+    msg: str
+    sender: any
+    trace: []ErrPos
+}
+```
+
+Error status. A zero `code` means no error.
+
+#### Functions
+
+``` 
+fn error*(code: int = 0, msg: str = "", sender: any = null): Err
+```
+
+Generates an error status. 
+
 ## Functional programming library: `fnc.um`
 
 #### Types

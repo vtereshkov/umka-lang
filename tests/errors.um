@@ -1,0 +1,30 @@
+import "std.um"
+
+fn foo(x: str): (int, std.Err) {
+    if x == "" {
+        return 0, std.error(-2, "Empty string", "foo")
+    }
+    return len(x), std.error()
+}
+
+fn fooTest(x: str) {
+    res, err := foo(x)
+    if err.code != 0 {
+            printf("Error: %s (code %d) from %v:\n", err.msg, err.code, err.sender)
+            for _, pos in err.trace {
+                printf("    %s: (%d)\n", pos.func, pos.line)
+            }
+            return
+    }
+    printf("%v\n", res)   
+} 
+
+fn test*() {
+    fooTest("blah")
+    fooTest("")
+    fooTest("blah blah")
+}
+
+fn main() {
+    test()
+}

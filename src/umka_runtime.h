@@ -13,6 +13,14 @@ typedef struct
 } RTLDateTime;
 
 
+typedef struct
+{
+    char *fileName;
+    char *fnName;
+    int64_t line;
+} RTLErrPos;
+
+
 void rtlmemcpy          (Slot *params, Slot *result);
 void rtlstdin           (Slot *params, Slot *result);
 void rtlstdout          (Slot *params, Slot *result);
@@ -43,5 +51,6 @@ void rtlgetenv          (Slot *params, Slot *result);
 void rtlgetenvSandbox   (Slot *params, Slot *result);
 void rtlsystem          (Slot *params, Slot *result);
 void rtlsystemSandbox   (Slot *params, Slot *result);
+void rtltrace           (Slot *params, Slot *result);
 
 #endif // UMKA_RUNTIME_H_INCLUDED

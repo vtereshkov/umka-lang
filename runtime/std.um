@@ -39,22 +39,38 @@ const (
 )
 
 fn rtlstdin(): File
-fn stdin*(): File {return rtlstdin()}
+
+fn stdin*(): File {
+    return rtlstdin()
+}
 
 fn rtlstdout(): File
-fn stdout*(): File {return rtlstdout()}
+
+fn stdout*(): File {
+    return rtlstdout()
+}
 
 fn rtlstderr(): File
-fn stderr*(): File {return rtlstderr()}
 
-fn rtlfopen  (name: str, mode: str): File  
-fn fopen*    (name: str, mode: str): File {return rtlfopen(name, mode)}
+fn stderr*(): File {
+    return rtlstderr()
+}
 
-fn rtlfclose (f: File): int
-fn fclose*   (f: File): int {return rtlfclose(f)}
+fn rtlfopen(name: str, mode: str): File
 
-fn rtlfread  (buf: ^void, size, cnt: int, f: File): int
-fn fread*    (f: File, buf: any): int {
+fn fopen*(name: str, mode: str): File {
+    return rtlfopen(name, mode)
+}
+
+fn rtlfclose(f: File): int
+
+fn fclose*(f: File): int {
+    return rtlfclose(f)
+}
+
+fn rtlfread(buf: ^void, size, cnt: int, f: File): int
+
+fn fread*(f: File, buf: any): int {
     if f == null {
         exit(runtimeError, "File is null")
     }
@@ -73,8 +89,9 @@ fn fread*    (f: File, buf: any): int {
     return rtlfread(buf.__self, sizeofself(buf), 1, f)
 }
 
-fn rtlfwrite (buf: ^void, size, cnt: int, f: File): int
-fn fwrite*   (f: File, buf: any): int {
+fn rtlfwrite(buf: ^void, size, cnt: int, f: File): int
+
+fn fwrite*(f: File, buf: any): int {
     if f == null {
         exit(runtimeError, "File is null")
     }
@@ -93,15 +110,17 @@ fn fwrite*   (f: File, buf: any): int {
     return rtlfwrite(buf.__self, sizeofself(buf), 1, f)
 }
 
-fn rtlfseek  (f: File, offset, origin: int): int
-fn fseek*    (f: File, offset, origin: int): int {
+fn rtlfseek(f: File, offset, origin: int): int
+
+fn fseek*(f: File, offset, origin: int): int {
     if f == null {
         exit(runtimeError, "File is null")
     }
     return rtlfseek(f, offset, origin)
 }
 
-fn rtlftell (f: File): int
+fn rtlftell(f: File): int
+
 fn ftell*   (f: File): int {
     if f == null {
         exit(runtimeError, "File is null")
@@ -109,18 +128,23 @@ fn ftell*   (f: File): int {
     return rtlftell(f)
 }
 
-fn rtlremove (name: str): int
-fn remove*   (name: str): int {return rtlremove(name)}
+fn rtlremove(name: str): int
 
-fn rtlfeof  (f: File): int
-fn feof*    (f: File): bool {
+fn remove*(name: str): int {
+    return rtlremove(name)
+}
+
+fn rtlfeof(f: File): int
+
+fn feof*(f: File): bool {
     if f == null {
         exit(runtimeError, "File is null")
     }                
     return bool(rtlfeof(f))
 }
 
-fn rtlfflush (f: File): int
+fn rtlfflush(f: File): int
+
 fn fflush*   (f: File): int {
 	if f == null {
 		exit(runtimeError, "File is null")
@@ -130,8 +154,13 @@ fn fflush*   (f: File): int {
 
 // I/O utilities
 
-fn println*(s: str): int {return printf("%s\n", s)}
-fn fprintln*(f: File, s: str): int {return fprintf(f, "%s\n", s)}
+fn println*(s: str): int {
+    return printf("%s\n", s)
+}
+
+fn fprintln*(f: File, s: str): int {
+    return fprintf(f, "%s\n", s)
+}
 
 fn getchar*(): char {
     var c: char
@@ -210,14 +239,18 @@ const (
 
 randSeed := 0
 
-fn srand*(seed: int) {randSeed = seed}
+fn srand*(seed: int) {
+    randSeed = seed
+}
 
 fn rand*(): int {
     randSeed = (1664525 * randSeed + 1013904223) & randSeedMax
     return randSeed >> junkBits
 }
 
-fn frand*(): real {return real(rand()) / randMax}
+fn frand*(): real {
+    return real(rand()) / randMax
+}
 
 // Time
 
@@ -229,19 +262,34 @@ type DateTime* = struct {
 }
 
 fn rtltime(): int
-fn time*(): int {return rtltime()}
+
+fn time*(): int {
+    return rtltime()
+}
 
 fn rtlclock(): real
-fn clock*(): real {return rtlclock()}
+
+fn clock*(): real {
+    return rtlclock()
+}
 
 fn rtllocaltime(t: int): DateTime
-fn localtime*(t: int): DateTime {return rtllocaltime(t)}
+
+fn localtime*(t: int): DateTime {
+    return rtllocaltime(t)
+}
 
 fn rtlgmtime(t: int): DateTime
-fn gmtime*(t: int): DateTime {return rtlgmtime(t)}
+
+fn gmtime*(t: int): DateTime {
+    return rtlgmtime(t)
+}
 
 fn rtlmktime(d: ^DateTime): int
-fn mktime*(d: DateTime): int {return rtlmktime(&d)}
+
+fn mktime*(d: DateTime): int {
+    return rtlmktime(&d)
+}
 
 fn timestr*(d: DateTime): str {
     return sprintf("%4d-%02d-%02d %02d:%02d:%02d", 
@@ -251,12 +299,52 @@ fn timestr*(d: DateTime): str {
 
 // Command line and environment
 
-fn argc*(): int {return len(rtlargv)}
+fn argc*(): int {
+    return len(rtlargv)
+}
 
-fn argv*(i: int): str {return rtlargv[i]}
+fn argv*(i: int): str {
+    return rtlargv[i]
+}
 
 fn rtlgetenv(name: str): str
-fn getenv*(name: str): str {return rtlgetenv(name)}
+
+fn getenv*(name: str): str {
+    return rtlgetenv(name)
+}
 
 fn rtlsystem(command: str): int
-fn system*(command: str): int {return rtlsystem(command)}
+
+fn system*(command: str): int {
+    return rtlsystem(command)
+}
+
+// Error handling
+
+type (
+    ErrPos* = struct {
+        file: str
+        func: str
+        line: int
+    }
+
+    Err* = struct {
+        code: int
+        msg: str
+        sender: any
+        trace: []ErrPos
+    }
+)
+
+fn rtltrace(depth: int, pos: ^ErrPos): int
+
+fn error*(code: int = 0, msg: str = "", sender: any = null): Err {
+    err := Err{code, msg, sender, {}}
+    if code != 0 {
+        var pos: ErrPos
+        for depth := 2; depth < 10 && rtltrace(depth, &pos) == 0; depth++ {
+            err.trace = append(err.trace, pos)
+        } 
+    }
+    return err
+}

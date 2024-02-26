@@ -336,6 +336,18 @@ World Hello
 8.5 "43"
 
 
+>>> Error handling
+
+4
+Error: Empty string (code -2) from "foo":
+    foo: (5)
+    fooTest: (11)
+    test: (25)
+    main: (63)
+    <unknown>: (90)
+9
+
+
 >>> Language tour
 
 Arr: [2.3 -2.05 2.38]

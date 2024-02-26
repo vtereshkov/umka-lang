@@ -277,3 +277,29 @@ void rtlsystemSandbox(Slot *params, Slot *result)
     result->intVal = -1;
 }
 
+
+void rtltrace(Slot *params, Slot *result)
+{
+    int depth = params[1].intVal;
+    RTLErrPos *pos = (RTLErrPos *)params[0].ptrVal;
+
+    void *umka = result->ptrVal;
+
+    char fileName[UMKA_MSG_LEN + 1], fnName[UMKA_MSG_LEN + 1];
+    int line;
+
+    if (umkaGetCallStack(umka, depth, UMKA_MSG_LEN + 1, NULL, fileName, fnName, &line))
+    {
+        umkaDecRef(umka, pos->fileName);
+        umkaDecRef(umka, pos->fnName);
+
+        pos->fileName = umkaMakeStr(umka, fileName);
+        pos->fnName   = umkaMakeStr(umka, fnName);
+        pos->line     = line;
+
+        result->intVal = 0;
+    }
+    else
+        result->intVal = -1;
+}
+

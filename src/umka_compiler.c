@@ -177,6 +177,7 @@ static void compilerDeclareExternalFuncs(Compiler *comp, bool fileSystemEnabled)
     externalAdd(&comp->externals, "rtlmktime",      &rtlmktime);
     externalAdd(&comp->externals, "rtlgetenv",      fileSystemEnabled ? &rtlgetenv : &rtlgetenvSandbox);
     externalAdd(&comp->externals, "rtlsystem",      fileSystemEnabled ? &rtlsystem : &rtlsystemSandbox);
+    externalAdd(&comp->externals, "rtltrace",       &rtltrace);
 }
 
 

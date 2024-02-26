@@ -329,48 +329,57 @@ static void doDynArrayToDynArrayConv(Compiler *comp, Type *dest, Type **src, Con
 static void doPtrToInterfaceConv(Compiler *comp, Type *dest, Type **src, Const *constant)
 {
     if (constant)
-        comp->error.handler(comp->error.context, "Conversion to interface is not allowed in constant expressions");
-
-    int destOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, dest);
-
-    // Assign to __self
-    genPushLocalPtr(&comp->gen, destOffset);                                // Push dest.__self pointer
-    genSwapAssign(&comp->gen, TYPE_PTR, 0);                                 // Assign to dest.__self
-
-    // Assign to __selftype (RTTI)
-    Field *selfType = typeAssertFindField(&comp->types, dest, "__selftype");
-
-    genPushGlobalPtr(&comp->gen, *src);                                     // Push src type
-    genPushLocalPtr(&comp->gen, destOffset + selfType->offset);             // Push dest.__selftype pointer
-    genSwapAssign(&comp->gen, TYPE_PTR, 0);                                 // Assign to dest.__selftype
-
-    // Assign to methods
-    for (int i = 2; i < dest->numItems; i++)
     {
-        const char *name = dest->field[i]->name;
-
-        Type *rcvType = (*src)->base;
-        if (rcvType->kind == TYPE_NULL)
-            genPushIntConst(&comp->gen, 0);                                 // Allow assigning null to a non-empty interface
+        // Special case: any(null) is allowed in constant expressions
+        if (typeEquivalent(dest, comp->anyType) && typeEquivalent(*src, comp->ptrNullType))
+            constant->ptrVal = storageAdd(&comp->storage, typeSize(&comp->types, dest));
         else
+            comp->error.handler(comp->error.context, "Conversion to interface is not allowed in constant expressions");
+    }
+    else
+    {
+        int destOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, dest);
+
+        // Assign to __self
+        genPushLocalPtr(&comp->gen, destOffset);                                // Push dest.__self pointer
+        genSwapAssign(&comp->gen, TYPE_PTR, 0);                                 // Assign to dest.__self
+
+        // Assign to __selftype (RTTI)
+        Field *selfType = typeAssertFindField(&comp->types, dest, "__selftype");
+
+        genPushGlobalPtr(&comp->gen, *src);                                     // Push src type
+        genPushLocalPtr(&comp->gen, destOffset + selfType->offset);             // Push dest.__selftype pointer
+        genSwapAssign(&comp->gen, TYPE_PTR, 0);                                 // Assign to dest.__selftype
+
+        // Assign to methods
+        for (int i = 2; i < dest->numItems; i++)
         {
-            int rcvTypeModule = rcvType->typeIdent ? rcvType->typeIdent->module : -1;
+            const char *name = dest->field[i]->name;
 
-            Ident *srcMethod = identFind(&comp->idents, &comp->modules, &comp->blocks, rcvTypeModule, name, *src, true);
-            if (!srcMethod)
-                comp->error.handler(comp->error.context, "Method %s is not implemented", name);
+            Type *rcvType = (*src)->base;
+            if (rcvType->kind == TYPE_NULL)
+                genPushIntConst(&comp->gen, 0);                                 // Allow assigning null to a non-empty interface
+            else
+            {
+                int rcvTypeModule = rcvType->typeIdent ? rcvType->typeIdent->module : -1;
 
-            if (!typeCompatible(dest->field[i]->type, srcMethod->type, false))
-                comp->error.handler(comp->error.context, "Method %s has incompatible signature", name);
+                Ident *srcMethod = identFind(&comp->idents, &comp->modules, &comp->blocks, rcvTypeModule, name, *src, true);
+                if (!srcMethod)
+                    comp->error.handler(comp->error.context, "Method %s is not implemented", name);
 
-            genPushIntConst(&comp->gen, srcMethod->offset);                 // Push src value
+                if (!typeCompatible(dest->field[i]->type, srcMethod->type, false))
+                    comp->error.handler(comp->error.context, "Method %s has incompatible signature", name);
+
+                genPushIntConst(&comp->gen, srcMethod->offset);                 // Push src value
+            }
+
+            genPushLocalPtr(&comp->gen, destOffset + dest->field[i]->offset);   // Push dest.method pointer
+            genSwapAssign(&comp->gen, TYPE_FN, 0);                              // Assign to dest.method
         }
 
-        genPushLocalPtr(&comp->gen, destOffset + dest->field[i]->offset);   // Push dest.method pointer
-        genSwapAssign(&comp->gen, TYPE_FN, 0);                              // Assign to dest.method
+        genPushLocalPtr(&comp->gen, destOffset);
     }
 
-    genPushLocalPtr(&comp->gen, destOffset);
     *src = dest;
 }
 
