@@ -359,6 +359,17 @@ static const char *runtimeModuleSources[] = {
 "    }\n"
 "    return err\n"
 "}\n"
+"\n"
+"fn exitif*(err: Err) {\n"
+"    if err.code != 0 {\n"
+"        fprintf(stderr(), \"Runtime error: %s (code %d) in %v\\n\", err.msg, err.code, err.sender)\n"
+"        fprintf(stderr(), \"Stack trace:\\n\")\n"
+"        for _, pos in err.trace {\n"
+"            fprintf(stderr(), \"    %s: %s (%d)\\n\", pos.func, pos.file, pos.line)\n"
+"        }\n"
+"        exit(err.code)\n"
+"    }    \n"
+"}\n"
 " ",
 
 // fnc.um

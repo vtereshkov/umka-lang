@@ -348,3 +348,14 @@ fn error*(code: int = 0, msg: str = "", sender: any = null): Err {
     }
     return err
 }
+
+fn exitif*(err: Err) {
+    if err.code != 0 {
+        fprintf(stderr(), "Runtime error: %s (code %d) in %v\n", err.msg, err.code, err.sender)
+        fprintf(stderr(), "Stack trace:\n")
+        for _, pos in err.trace {
+            fprintf(stderr(), "    %s: %s (%d)\n", pos.func, pos.file, pos.line)
+        }
+        exit(err.code)
+    }    
+}

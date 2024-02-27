@@ -288,7 +288,7 @@ type Err* = struct {
 }
 ```
 
-Error status. A zero `code` means no error.
+Error description. A zero `code` means no error.
 
 #### Functions
 
@@ -296,7 +296,13 @@ Error status. A zero `code` means no error.
 fn error*(code: int = 0, msg: str = "", sender: any = null): Err
 ```
 
-Generates an error status. 
+Generates an error description with a call stack trace.
+
+```
+fn exitif*(err: Err)
+```
+
+Terminates the program if `err.code` is not zero, prints the error message and the call stack trace stored in `err`.
 
 ## Functional programming library: `fnc.um`
 
