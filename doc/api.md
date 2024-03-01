@@ -138,7 +138,7 @@ Adds a C/C++ function to the list of external functions that can be called from 
 UMKA_API int umkaGetFunc(void *umka, const char *moduleName, const char *funcName);
 ```
 
-Gets an Umka function that can be called from C/C++ using `umkaCall()`.  Here, `umka` is the interpreter instance handle, `moduleName` is the Umka module name, `funcName` is the Umka function name. Returns the function entry point offset.
+Gets an Umka function that can be called from C/C++ using `umkaCall()`.  Here, `umka` is the interpreter instance handle, `moduleName` is the Umka module name, `funcName` is the Umka function name. Returns the function entry point offset, or -1 if the function was not found.
 
 ``` 
 UMKA_API int umkaCall(void *umka, int entryOffset, 
