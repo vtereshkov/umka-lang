@@ -399,7 +399,7 @@ Two types are *compatible* if
 If a value `s` of type `S` is given where a value `t` of some other type `T` is expected, the `s` is implicitly converted to `t` if
 
 * `S` and `T` are compatible
-* `S` is an integer type and `T` is a real type
+* `S` is an integer type and `T` is a real type and `S` is not explicitly declared
 * `S` is `char` and `T` is `str`
 * `S` is a `[]char` and `T` is `str`
 * `S` is `str` and `T` is `[]char` 

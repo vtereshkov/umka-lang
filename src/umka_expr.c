@@ -504,7 +504,7 @@ static void doFnToClosureConv(Compiler *comp, Type *dest, Type **src, Const *con
 void doImplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant, bool lhs)
 {
     // Integer to real
-    if (typeReal(dest) && typeInteger(*src))
+    if (typeReal(dest) && typeInteger(*src) && !(*src)->typeIdent)
     {
         doIntToRealConv(comp, dest, src, constant, lhs);
     }
