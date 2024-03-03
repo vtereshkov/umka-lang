@@ -388,8 +388,8 @@ Two types are *equivalent* if
 Two types are *compatible* if
 
 * They are equivalent
-* They are integer types
-* They are real types
+* They are integer types, except when both are explicitly declared with different identifiers 
+* They are real types, except when both are explicitly declared with different identifiers
 * They are pointer types and the left-hand side pointer type has the `void` base type or the right-hand side is `null` 
 
 ### Type conversions

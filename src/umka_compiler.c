@@ -84,7 +84,7 @@ static void compilerDeclareBuiltinIdents(Compiler *comp)
     identAddConst(&comp->idents, &comp->modules, &comp->blocks, "false", comp->boolType,    true, falseConst);
     identAddConst(&comp->idents, &comp->modules, &comp->blocks, "null",  comp->ptrNullType, true, nullConst);
 
-    // Types
+    // Types (type identifier fields in types are for user-defined identifiers - not filled for built-in types)
     identAddType(&comp->idents, &comp->modules, &comp->blocks,  "void",     comp->voidType,    true);
     identAddType(&comp->idents, &comp->modules, &comp->blocks,  "int8",     comp->int8Type,    true);
     identAddType(&comp->idents, &comp->modules, &comp->blocks,  "int16",    comp->int16Type,   true);

@@ -454,13 +454,14 @@ bool typeCompatible(Type *left, Type *right, bool symmetric)
     if (typeEquivalent(left, right))
         return true;
 
-    // Integers
-    if (typeInteger(left) && typeInteger(right))
+    // Integers or reals
+    if ((typeInteger(left) && typeInteger(right)) || (typeReal(left) && typeReal(right)))
+    {
+        // Compatible except when explicitly declared with different names
+        if (left->typeIdent && right->typeIdent)
+            return left->typeIdent == right->typeIdent && left->block == right->block;
         return true;
-
-    // Reals
-    if (typeReal(left) && typeReal(right))
-        return true;
+    }
 
     // Pointers
     if (left->kind == TYPE_PTR && right->kind == TYPE_PTR)
