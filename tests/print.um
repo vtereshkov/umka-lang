@@ -11,9 +11,9 @@ fn test*() {
 	std.fclose(f)
 
 	f2 := std.fopen("test.txt", "rb")
-	std.fseek(f2, 0, std.seekEnd)
+	std.fseek(f2, 0, std.SeekFrom.end)
 	size := std.ftell(f2)
-	std.fseek(f2, 0, std.seekBegin)
+	std.fseek(f2, 0, std.SeekFrom.begin)
 	chars := make([]char, size)
 	std.fread(f2, &chars)
 	std.fclose(f2)

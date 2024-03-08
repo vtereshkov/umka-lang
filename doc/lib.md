@@ -30,6 +30,16 @@ type File* = ^struct {}
 
 File handle.
 
+```
+type SeekFrom* = enum {
+    begin                   // Beginning of file
+    cur                     // Current position
+    end                     // End of file
+}
+```
+
+File seek origin. Used by `fseek()`. 
+
 #### Constants
 
 ```
@@ -37,16 +47,6 @@ const runtimeError* = -1
 ```
 
 Default runtime error code for standard library functions.
-
-```
-const (
-    seekBegin* = 0
-    seekCur*   = 1
-    seekEnd*   = 2
-)
-```
-
-Codes defining the offset origins in `fseek()`: the beginning of file, the current position, the end of file.
 
 #### Functions
 
@@ -90,10 +90,10 @@ fn fwrite*(f: File, buf: any): int
 Writes the `buf` variable to the file `f`. `buf` can be of any type that doesn't contain pointers, strings, dynamic arrays, interfaces or fibers, except for `^[]int8`, `^[]uint8`, `^[]char`. Returns 1 if successful.
 
 ```
-fn fseek*(f: File, offset, origin: int): int
+fn fseek*(f: File, offset: int, origin: SeekFrom): int
 ```
 
-Sets the file pointer in the file `f` to the given `offset`  from the `origin` , which is either `seekBegin`, or `seekCur`, or `seekEnd`. Returns 0 if successful.
+Sets the file pointer in the file `f` to the given `offset` from the `origin`. Returns 0 if successful.
 
 ```
 fn ftell*(f: File): int
