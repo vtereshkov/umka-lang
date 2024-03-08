@@ -402,11 +402,11 @@ static Type *parseStructType(Compiler *comp)
 
     while (comp->lex.tok.kind == TOK_IDENT)
     {
-        IdentName fieldNames[MAX_FIELDS];
-        bool fieldExported[MAX_FIELDS];
+        IdentName fieldNames[MAX_IDENTS_IN_LIST];
+        bool fieldExported[MAX_IDENTS_IN_LIST];
         Type *fieldType;
         int numFields = 0;
-        parseTypedIdentList(comp, fieldNames, fieldExported, MAX_FIELDS, &numFields, &fieldType, false);
+        parseTypedIdentList(comp, fieldNames, fieldExported, MAX_IDENTS_IN_LIST, &numFields, &fieldType, false);
 
         for (int i = 0; i < numFields; i++)
         {
@@ -627,13 +627,13 @@ static void parseConstDecl(Compiler *comp)
 // varDeclItem = typedIdentList "=" exprOrLitList.
 static void parseVarDeclItem(Compiler *comp)
 {
-    IdentName varNames[MAX_FIELDS];
-    bool varExported[MAX_FIELDS];
+    IdentName varNames[MAX_IDENTS_IN_LIST];
+    bool varExported[MAX_IDENTS_IN_LIST];
     int numVars = 0;
     Type *varType;
-    parseTypedIdentList(comp, varNames, varExported, MAX_FIELDS, &numVars, &varType, false);
+    parseTypedIdentList(comp, varNames, varExported, MAX_IDENTS_IN_LIST, &numVars, &varType, false);
 
-    Ident *var[MAX_FIELDS];
+    Ident *var[MAX_IDENTS_IN_LIST];
     for (int i = 0; i < numVars; i++)
     {
         var[i] = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, varNames[i], varType, varExported[i]);
@@ -662,7 +662,7 @@ static void parseVarDeclItem(Compiler *comp)
                 typeAddField(&comp->types, designatorListType, designatorType, NULL);
         }
 
-        Const varPtrConstList[MAX_FIELDS] = {0};
+        Const varPtrConstList[MAX_IDENTS_IN_LIST] = {0};
 
         for (int i = 0; i < numVars; i++)
         {
@@ -701,10 +701,10 @@ static void parseFullVarDecl(Compiler *comp)
 // shortVarDecl = declAssignmentStmt.
 void parseShortVarDecl(Compiler *comp)
 {
-    IdentName varNames[MAX_FIELDS];
-    bool varExported[MAX_FIELDS];
+    IdentName varNames[MAX_IDENTS_IN_LIST];
+    bool varExported[MAX_IDENTS_IN_LIST];
     int numVars = 0;
-    parseIdentList(comp, varNames, varExported, MAX_FIELDS, &numVars);
+    parseIdentList(comp, varNames, varExported, MAX_IDENTS_IN_LIST, &numVars);
 
     lexEat(&comp->lex, TOK_COLONEQ);
     parseDeclAssignmentStmt(comp, varNames, varExported, numVars, comp->blocks.top == 0);

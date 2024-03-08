@@ -2800,7 +2800,7 @@ void parseExprOrUntypedLiteralList(Compiler *comp, Type **type, Type *destType, 
     if (comp->lex.tok.kind == TOK_COMMA)
     {
         // Expression list (syntactic sugar - actually a structure literal)
-        Const fieldConstantBuf[MAX_FIELDS], *fieldConstant = NULL;
+        Const fieldConstantBuf[MAX_IDENTS_IN_LIST], *fieldConstant = NULL;
         if (constant)
         {
             fieldConstantBuf[0] = *constant;
@@ -2825,6 +2825,9 @@ void parseExprOrUntypedLiteralList(Compiler *comp, Type **type, Type *destType, 
 
             if (typeExprListStruct(fieldType))
                 comp->error.handler(comp->error.context, "Nested expression lists are not allowed");
+
+            if ((*type)->numItems >= MAX_IDENTS_IN_LIST)
+                comp->error.handler(comp->error.context, "Too many expressions in list");
 
             typeAddField(&comp->types, *type, fieldType, NULL);
 

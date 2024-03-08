@@ -15,7 +15,7 @@ A program consists of keywords, identifiers, numbers, character literals, string
 Keywords have special meaning and cannot be used in any other role. Umka has the following keywords:
 
 ```
-break case const continue default else for fn import 
+break case const continue default else enum fn for import 
 interface if in map return str struct switch type var weak
 ```
 
@@ -145,14 +145,14 @@ comment
 */
 ```
 
-## Data Types
+## Data types
 
 Umka is a statically typed language. Each variable or constant has a type that is either explicitly specified in the variable declaration or inferred from the type of the right-hand side expression in a variable assignment or constant declaration. After a variable or constant is declared or assigned for the first time, it cannot change its type.
 
 Syntax:
 
 ```
-type = qualIdent | ptrType | arrayType | dynArrayType | strType | 
+type = qualIdent | ptrType | arrayType | dynArrayType | strType | enumType | 
        mapType | structType | interfaceType | closureType.
 qualIdent = [ident "."] ident.
 ```
@@ -171,10 +171,33 @@ Umka supports the following ordinal types:
 * Unsigned integer types `uint8`,  `uint16` , `uint32`,  `uint`
 * Boolean type `bool`
 * Character type `char`
+* Enumeration types
 
 The  `int`  and  `uint`  are the recommended 64-bit integer types. Other integer types are for compatibility with an external environment.
 
-The two possible values of the Boolean type are `true` and `false`. 
+The two possible values of the Boolean type are `true` and `false`.
+
+An enumeration type is defined by its base type (any integer type) and a list of named enumeration constants used as values of the enumeration type. If the base type is omitted, `int` is assumed. If the integer value of an enumeration constant is omitted, the value is obtained by incrementing the previous constant's value by 1. For the first constant, 0 is assumed.
+
+Syntax:
+
+```
+enumType = "enum" ["(" type ")"] "{" {enumItem ";"} "}".
+enumItem = ident ["=" expr].
+```
+
+Examples:
+
+```
+enum {left; middle; right}   // 0; 1; 2
+
+enum (uint8) {
+    draw = 74
+    select                   // 75
+    remove = 8
+    edit                     // 9
+}
+```
 
 #### Real types  
 
@@ -635,9 +658,9 @@ ll                  Very long
 
 Type:
 
-d, i                Integer
-u                   Unsigned integer
-x, X                Hexadecimal integer
+d, i                Integer or enumeration
+u                   Unsigned integer or enumeration
+x, X                Hexadecimal integer or enumeration
 f, F, e, E, g, G    Real
 s                   String
 c                   Character
@@ -889,14 +912,31 @@ Mat{ {1, 2}, {3, 4} }                   // Nested literals' types omitted
 fn (x: int) |y, z| {return x + y + z}
 ```
 
-### Designators and selectors
+### Enumeration constants
 
-A number of postfix *selectors* can be applied to a primary expression, a type cast or a composite literal to get a *designator*.
+An enumeration constant is a value of an enumeration type. It is denoted by the enumeration type followed by a `.` and the enumeration constant name.
 
 Syntax:
 
 ```
-designator = (primary | typeCast | compositeLiteral) selectors.
+enumConst = type "." ident.
+```
+
+Examples:
+
+```
+Mode.draw
+Button.left
+```
+
+### Designators and selectors
+
+A number of postfix *selectors* can be applied to a primary expression, a type cast, a composite literal or an enumeration constant to get a *designator*.
+
+Syntax:
+
+```
+designator = (primary | typeCast | compositeLiteral | enumConst) selectors.
 selectors  = {derefSelector | indexSelector | fieldSelector | callSelector}.
 ```
 
@@ -1438,12 +1478,14 @@ signature           = "(" [typedIdentList ["=" exprOrLit] {"," typedIdentList ["
 exportMark          = ["*"].
 identList           = ident exportMark {"," ident exportMark}.
 typedIdentList      = identList ":" [".."] type.
-type                = qualIdent | ptrType | arrayType | dynArrayType | strType |
+type                = qualIdent | ptrType | arrayType | dynArrayType | strType | enumType | 
                       mapType | structType | interfaceType | closureType.
 ptrType             = ["weak"] "^" type.
 arrayType           = "[" expr "]" type.
 dynArrayType        = "[" "]" type.
 strType             = "str".
+enumType            = "enum" ["(" type ")"] "{" {enumItem ";"} "}".
+enumItem            = ident ["=" expr].
 mapType             = "map" "[" type "]" type.
 structType          = "struct" "{" {typedIdentList ";"} "}".
 interfaceType       = "interface" "{" {(ident signature | qualIdent) ";"} "}".
@@ -1491,7 +1533,7 @@ term                = factor {("*" | "/" | "%" | "<<" | ">>" | "&") factor}.
 factor              = designator | intNumber | realNumber | charLiteral | stringLiteral |
                       ("+" | "-" | "!" | "~") factor | "&" designator | "(" expr ")".
 designatorList      = designator {"," designator}.
-designator          = (primary | typeCast | compositeLiteral) selectors.
+designator          = (primary | typeCast | compositeLiteral | enumConst) selectors.
 primary             = qualIdent | builtinCall.
 qualIdent           = [ident "."] ident.
 builtinCall         = qualIdent "(" [expr {"," expr}] ")".
@@ -1510,6 +1552,7 @@ mapLiteral          = "{" exprOrLit ":" exprOrLit {"," exprOrLit ":" exprOrLit} 
 structLiteral       = "{" [[ident ":"] exprOrLit {"," [ident ":"] exprOrLit}] "}".
 closureLiteral      = ["|" ident {"," ident} "|"] fnBlock.
 typeCast            = type "(" expr ")".
+enumConst           = type "." ident.
 ident               = (letter | "_") {letter | "_" | digit}.
 intNumber           = decNumber | hexHumber.
 decNumber           = digit {digit}.
