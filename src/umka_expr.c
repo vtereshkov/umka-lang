@@ -2013,6 +2013,7 @@ static void parseClosureLiteral(Compiler *comp, Type **type, Const *constant)
 }
 
 
+// compositeLiteral = type untypedLiteral.
 // untypedLiteral = arrayLiteral | dynArrayLiteral | mapLiteral | structLiteral | closureLiteral.
 static void parseUntypedLiteral(Compiler *comp, Type **type, Const *constant)
 {
@@ -2029,8 +2030,30 @@ static void parseUntypedLiteral(Compiler *comp, Type **type, Const *constant)
 }
 
 
-// compositeLiteral = type untypedLiteral.
-static void parseTypeCastOrCompositeLiteral(Compiler *comp, Ident *ident, Type **type, Const *constant, bool *isVar, bool *isCall, bool *isCompLit)
+// enumConst = type "." ident.
+static void parseEnumConst(Compiler *comp, Type **type, Const *constant)
+{
+    if (!typeEnum(*type))
+    {
+        char typeBuf[DEFAULT_STR_LEN + 1];
+        comp->error.handler(comp->error.context, "Type %s is not an enumeration", typeSpelling(*type, typeBuf));
+    }
+
+    lexEat(&comp->lex, TOK_PERIOD);
+    lexCheck(&comp->lex, TOK_IDENT);
+
+    EnumConst *enumConst = typeAssertFindEnumConst(&comp->types, *type, comp->lex.tok.name);
+
+    if (constant)
+        *constant = enumConst->val;
+    else
+        doPushConst(comp, *type, &enumConst->val);
+
+    lexNext(&comp->lex);
+}
+
+
+static void parseTypeCastOrCompositeLiteralOrEnumConst(Compiler *comp, Ident *ident, Type **type, Const *constant, bool *isVar, bool *isCall, bool *isCompLit)
 {
     *type = parseType(comp, ident);
 
@@ -2044,8 +2067,13 @@ static void parseTypeCastOrCompositeLiteral(Compiler *comp, Ident *ident, Type *
         parseUntypedLiteral(comp, type, constant);
         *isCompLit = true;
     }
+    else if (comp->lex.tok.kind == TOK_PERIOD)
+    {
+        parseEnumConst(comp, type, constant);
+        *isCompLit = false;
+    }
     else
-        comp->error.handler(comp->error.context, "Type cast or composite literal expected");
+        comp->error.handler(comp->error.context, "Type cast or composite literal or enumeration constant expected");
 
     *isVar = typeStructured(*type);
     *isCall = false;
@@ -2295,7 +2323,7 @@ static void parseSelectors(Compiler *comp, Type **type, Const *constant, bool *i
 }
 
 
-// designator = (primary | typeCast | compositeLiteral) selectors.
+// designator = (primary | typeCast | compositeLiteral | enumConst) selectors.
 static void parseDesignator(Compiler *comp, Type **type, Const *constant, bool *isVar, bool *isCall, bool *isCompLit)
 {
     Ident *ident = NULL;
@@ -2305,7 +2333,7 @@ static void parseDesignator(Compiler *comp, Type **type, Const *constant, bool *
         *isCompLit = false;
     }
     else
-        parseTypeCastOrCompositeLiteral(comp, ident, type, constant, isVar, isCall, isCompLit);
+        parseTypeCastOrCompositeLiteralOrEnumConst(comp, ident, type, constant, isVar, isCall, isCompLit);
 
     parseSelectors(comp, type, constant, isVar, isCall, isCompLit);
 
@@ -2363,6 +2391,7 @@ static void parseFactor(Compiler *comp, Type **type, Const *constant)
         case TOK_WEAK:
         case TOK_LBRACKET:
         case TOK_STR:
+        case TOK_ENUM:
         case TOK_MAP:
         case TOK_STRUCT:
         case TOK_INTERFACE:

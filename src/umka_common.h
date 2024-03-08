@@ -12,6 +12,7 @@ enum
     MAX_IDENT_LEN       = DEFAULT_STR_LEN,
     MAX_MODULES         = 1024,
     MAX_FIELDS          = 256,
+    MAX_ENUM_CONSTS     = 256,
     MAX_PARAMS          = 16,
     MAX_BLOCK_NESTING   = 100,
     MAX_GOTOS           = 100,

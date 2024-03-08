@@ -301,6 +301,59 @@ static Type *parseStrType(Compiler *comp)
 }
 
 
+// enumItem = ident ["=" expr].
+static void parseEnumItem(Compiler *comp, Type *type, Const *constant)
+{
+    lexCheck(&comp->lex, TOK_IDENT);
+    IdentName name;
+    strcpy(name, comp->lex.tok.name);
+
+    lexNext(&comp->lex);
+
+    if (comp->lex.tok.kind != TOK_EQ)
+        constant->intVal++;
+    else
+    {
+        lexEat(&comp->lex, TOK_EQ);
+        Type *rightType = NULL;
+        parseExpr(comp, &rightType, constant);
+        typeAssertCompatible(&comp->types, type, rightType, false);
+    }
+
+    typeAddEnumConst(&comp->types, type, name, *constant);
+}
+
+
+// enumType = "enum" ["(" type ")"] "{" {enumItem ";"} "}"
+static Type *parseEnumType(Compiler *comp)
+{
+    lexEat(&comp->lex, TOK_ENUM);
+
+    Type *baseType = comp->intType;
+    if (comp->lex.tok.kind == TOK_LPAR)
+    {
+        lexNext(&comp->lex);
+        baseType = parseType(comp, NULL);
+        typeAssertCompatible(&comp->types, comp->intType, baseType, false);
+        lexEat(&comp->lex, TOK_RPAR);
+    }
+
+    Type *type = typeAdd(&comp->types, &comp->blocks, baseType->kind);
+    type->isEnum = true;
+
+    Const constant = {.intVal = 0};
+
+    lexEat(&comp->lex, TOK_LBRACE);
+    while (comp->lex.tok.kind == TOK_IDENT)
+    {
+        parseEnumItem(comp, type, &constant);
+        lexEat(&comp->lex, TOK_SEMICOLON);
+    }
+    lexEat(&comp->lex, TOK_RBRACE);
+    return type;
+}
+
+
 // mapType = "map" "[" type "]" type.
 static Type *parseMapType(Compiler *comp)
 {
@@ -446,7 +499,7 @@ static Type *parseClosureType(Compiler *comp)
 }
 
 
-// type = qualIdent | ptrType | arrayType | dynArrayType | strType | mapType | structType | interfaceType | closureType.
+// type = qualIdent | ptrType | arrayType | dynArrayType | strType | enumType | mapType | structType | interfaceType | closureType.
 Type *parseType(Compiler *comp, Ident *ident)
 {
     if (ident)
@@ -464,6 +517,7 @@ Type *parseType(Compiler *comp, Ident *ident)
         case TOK_WEAK:      return parsePtrType(comp);
         case TOK_LBRACKET:  return parseArrayType(comp);
         case TOK_STR:       return parseStrType(comp);
+        case TOK_ENUM:      return parseEnumType(comp);
         case TOK_MAP:       return parseMapType(comp);
         case TOK_STRUCT:    return parseStructType(comp);
         case TOK_INTERFACE: return parseInterfaceType(comp);

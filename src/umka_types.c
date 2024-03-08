@@ -98,6 +98,7 @@ Type *typeAdd(Types *types, Blocks *blocks, TypeKind kind)
     type->numItems              = 0;
     type->isExprList            = false;
     type->isVariadicParamList   = false;
+    type->isEnum                = false;
     type->typeIdent             = NULL;
     type->next                  = NULL;
 
@@ -134,6 +135,13 @@ void typeDeepCopy(Type *dest, Type *src)
         {
             dest->field[i] = malloc(sizeof(Field));
             *(dest->field[i]) = *(src->field[i]);
+        }
+
+    else if (typeEnum(dest))
+        for (int i = 0; i < dest->numItems; i++)
+        {
+            dest->enumConst[i] = malloc(sizeof(EnumConst));
+            *(dest->enumConst[i]) = *(src->enumConst[i]);
         }
 
     else if (dest->kind == TYPE_FN)
@@ -351,6 +359,10 @@ static bool typeEquivalentRecursive(Type *left, Type *right, bool checkTypeIdent
         // Strings
         else if (left->kind == TYPE_STR)
             return true;
+
+        // Enumerations
+        else if (typeEnum(left) || typeEnum(right))
+            return false;
 
         // Maps
         else if (left->kind == TYPE_MAP)
@@ -647,6 +659,50 @@ Field *typeAddField(Types *types, Type *structType, Type *fieldType, const char 
 
     structType->field[structType->numItems++] = field;
     return field;
+}
+
+
+EnumConst *typeFindEnumConst(Type *enumType, const char *name)
+{
+    if (typeEnum(enumType))
+    {
+        unsigned int nameHash = hash(name);
+        for (int i = 0; i < enumType->numItems; i++)
+            if (enumType->enumConst[i]->hash == nameHash && strcmp(enumType->enumConst[i]->name, name) == 0)
+                return enumType->enumConst[i];
+    }
+    return NULL;
+}
+
+
+EnumConst *typeAssertFindEnumConst(Types *types, Type *enumType, const char *name)
+{
+    EnumConst *res = typeFindEnumConst(enumType, name);
+    if (!res)
+        types->error->handler(types->error->context, "Unknown enumeration constant %s", name);
+    return res;
+}
+
+
+EnumConst *typeAddEnumConst(Types *types, Type *enumType, const char *name, Const val)
+{
+    EnumConst *enumConst = typeFindEnumConst(enumType, name);
+    if (enumConst)
+        types->error->handler(types->error->context, "Duplicate enumeration constant %s", name);
+
+    if (enumType->numItems > MAX_ENUM_CONSTS)
+        types->error->handler(types->error->context, "Too many enumeration constants");
+
+    enumConst = malloc(sizeof(EnumConst));
+
+    strncpy(enumConst->name, name, MAX_IDENT_LEN);
+    enumConst->name[MAX_IDENT_LEN] = 0;
+
+    enumConst->hash = hash(name);
+    enumConst->val = val;
+
+    enumType->enumConst[enumType->numItems++] = enumConst;
+    return enumConst;
 }
 
 

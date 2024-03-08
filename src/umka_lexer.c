@@ -21,6 +21,7 @@ static const char *spelling [] =
     "continue",
     "default",
     "else",
+    "enum",
     "fn",
     "for",
     "import",

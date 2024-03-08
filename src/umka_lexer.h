@@ -15,6 +15,7 @@ typedef enum
     TOK_CONTINUE,
     TOK_DEFAULT,
     TOK_ELSE,
+    TOK_ENUM,
     TOK_FN,
     TOK_FOR,
     TOK_IMPORT,
