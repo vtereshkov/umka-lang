@@ -93,6 +93,11 @@ type Arr = [a]real                      // Array
 type (
     DynArr = [][5]int                   // Dynamic array
     String = str                        // String
+    Button = enum {                     // Enumeration
+        left
+        middle
+        right
+    }
     MyMap = map[str]real                // Map
     Quat = struct {                     // Structure
         q: [4]real

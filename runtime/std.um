@@ -30,12 +30,14 @@ fn frombytes*(buf: any, bytes: []uint8) {
 
 // File I/O
 
-type File* = ^struct {}
+type (
+    File* = ^struct {}
 
-const (
-    seekBegin* = 0
-    seekCur*   = 1
-    seekEnd*   = 2
+    SeekFrom* = enum {
+        begin
+        cur
+        end
+    }
 )
 
 fn rtlstdin(): File
@@ -110,9 +112,9 @@ fn fwrite*(f: File, buf: any): int {
     return rtlfwrite(buf.__self, sizeofself(buf), 1, f)
 }
 
-fn rtlfseek(f: File, offset, origin: int): int
+fn rtlfseek(f: File, offset: int, origin: SeekFrom): int
 
-fn fseek*(f: File, offset, origin: int): int {
+fn fseek*(f: File, offset: int, origin: SeekFrom): int {
     if f == null {
         exit(runtimeError, "File is null")
     }

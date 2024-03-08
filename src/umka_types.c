@@ -50,15 +50,29 @@ void typeInit(Types *types, Error *error)
 }
 
 
-void typeFreeFieldsAndParams(Type *type)
+static void typeFreeFieldsEnumConstsAndParams(Type *type)
 {
-    if (type->kind == TYPE_STRUCT || type->kind == TYPE_INTERFACE || type->kind == TYPE_CLOSURE)
+    if ((type->kind == TYPE_STRUCT || type->kind == TYPE_INTERFACE || type->kind == TYPE_CLOSURE) && type->numItems > 0)
+    {
         for (int i = 0; i < type->numItems; i++)
             free(type->field[i]);
 
-    else if (type->kind == TYPE_FN)
+        free(type->field);
+        type->field = NULL;
+    }
+    else if (typeEnum(type) && type->numItems > 0)
+    {
+        for (int i = 0; i < type->numItems; i++)
+            free(type->enumConst[i]);
+
+        free(type->enumConst);
+        type->enumConst = NULL;
+    }
+    else if (type->kind == TYPE_FN && type->sig.numParams > 0)
+    {
         for (int i = 0; i < type->sig.numParams; i++)
             free(type->sig.param[i]);
+    }
 }
 
 
@@ -81,7 +95,7 @@ void typeFree(Types *types, int startBlock)
     while (type)
     {
         Type *next = type->next;
-        typeFreeFieldsAndParams(type);
+        typeFreeFieldsEnumConstsAndParams(type);
         free(type);
         type = next;
     }
@@ -91,23 +105,10 @@ void typeFree(Types *types, int startBlock)
 Type *typeAdd(Types *types, Blocks *blocks, TypeKind kind)
 {
     Type *type = malloc(sizeof(Type));
+    memset(type, 0, sizeof(Type));
 
-    type->kind                  = kind;
-    type->block                 = blocks->item[blocks->top].block;
-    type->base                  = NULL;
-    type->numItems              = 0;
-    type->isExprList            = false;
-    type->isVariadicParamList   = false;
-    type->typeIdent             = NULL;
-    type->next                  = NULL;
-
-    if (kind == TYPE_FN)
-    {
-        type->sig.isMethod          = false;
-        type->sig.offsetFromSelf    = 0;
-        type->sig.numParams         = 0;
-        type->sig.numDefaultParams  = 0;
-    }
+    type->kind  = kind;
+    type->block = blocks->item[blocks->top].block;
 
     // Add to list
     if (!types->first)
@@ -123,25 +124,38 @@ Type *typeAdd(Types *types, Blocks *blocks, TypeKind kind)
 
 void typeDeepCopy(Type *dest, Type *src)
 {
-    typeFreeFieldsAndParams(dest);
+    typeFreeFieldsEnumConstsAndParams(dest);
 
     Type *next = dest->next;
     *dest = *src;
     dest->next = next;
 
-    if (dest->kind == TYPE_STRUCT || dest->kind == TYPE_INTERFACE || dest->kind == TYPE_CLOSURE)
+    if ((dest->kind == TYPE_STRUCT || dest->kind == TYPE_INTERFACE || dest->kind == TYPE_CLOSURE) && dest->numItems > 0)
+    {
+        dest->field = malloc(dest->numItems * sizeof(Field *));
         for (int i = 0; i < dest->numItems; i++)
         {
             dest->field[i] = malloc(sizeof(Field));
             *(dest->field[i]) = *(src->field[i]);
         }
-
-    else if (dest->kind == TYPE_FN)
+    }
+    else if (typeEnum(dest) && dest->numItems > 0)
+    {
+        dest->enumConst = malloc(dest->numItems * sizeof(EnumConst *));
+        for (int i = 0; i < dest->numItems; i++)
+        {
+            dest->enumConst[i] = malloc(sizeof(EnumConst));
+            *(dest->enumConst[i]) = *(src->enumConst[i]);
+        }
+    }
+    else if (dest->kind == TYPE_FN && dest->sig.numParams > 0)
+    {
         for (int i = 0; i < dest->sig.numParams; i++)
         {
             dest->sig.param[i] = malloc(sizeof(Param));
             *(dest->sig.param[i]) = *(src->sig.param[i]);
         }
+    }
 }
 
 
@@ -351,6 +365,10 @@ static bool typeEquivalentRecursive(Type *left, Type *right, bool checkTypeIdent
         // Strings
         else if (left->kind == TYPE_STR)
             return true;
+
+        // Enumerations
+        else if (typeEnum(left) || typeEnum(right))
+            return false;
 
         // Maps
         else if (left->kind == TYPE_MAP)
@@ -623,9 +641,6 @@ Field *typeAddField(Types *types, Type *structType, Type *fieldType, const char 
     if (fieldType->kind == TYPE_VOID)
         types->error->handler(types->error->context, "Void field %s is not allowed", name);
 
-    if (structType->numItems > MAX_FIELDS)
-        types->error->handler(types->error->context, "Too many fields");
-
     int minNextFieldOffset = 0;
     if (structType->numItems > 0)
     {
@@ -645,8 +660,79 @@ Field *typeAddField(Types *types, Type *structType, Type *fieldType, const char 
     field->type = fieldType;
     field->offset = align(minNextFieldOffset, typeAlignment(types, fieldType));
 
-    structType->field[structType->numItems++] = field;
+    if (structType->numItems > 0)
+        structType->field = realloc(structType->field, (structType->numItems + 1) * sizeof(Field *));
+    else
+        structType->field = malloc(sizeof(Field *));
+
+    structType->numItems++;
+    structType->field[structType->numItems - 1] = field;
+
     return field;
+}
+
+
+EnumConst *typeFindEnumConst(Type *enumType, const char *name)
+{
+    if (typeEnum(enumType))
+    {
+        unsigned int nameHash = hash(name);
+        for (int i = 0; i < enumType->numItems; i++)
+            if (enumType->enumConst[i]->hash == nameHash && strcmp(enumType->enumConst[i]->name, name) == 0)
+                return enumType->enumConst[i];
+    }
+    return NULL;
+}
+
+
+EnumConst *typeAssertFindEnumConst(Types *types, Type *enumType, const char *name)
+{
+    EnumConst *res = typeFindEnumConst(enumType, name);
+    if (!res)
+        types->error->handler(types->error->context, "Unknown enumeration constant %s", name);
+    return res;
+}
+
+
+EnumConst *typeFindEnumConstByVal(Type *enumType, Const val)
+{
+    if (typeEnum(enumType))
+    {
+        for (int i = 0; i < enumType->numItems; i++)
+            if (enumType->enumConst[i]->val.intVal == val.intVal)
+                return enumType->enumConst[i];
+    }
+    return NULL;
+}
+
+
+EnumConst *typeAddEnumConst(Types *types, Type *enumType, const char *name, Const val)
+{
+    EnumConst *enumConst = typeFindEnumConst(enumType, name);
+    if (enumConst)
+        types->error->handler(types->error->context, "Duplicate enumeration constant %s", name);
+
+    enumConst = typeFindEnumConstByVal(enumType, val);
+    if (enumConst)
+        types->error->handler(types->error->context, "Duplicate enumeration constant value %lld", val.intVal);
+
+    enumConst = malloc(sizeof(EnumConst));
+
+    strncpy(enumConst->name, name, MAX_IDENT_LEN);
+    enumConst->name[MAX_IDENT_LEN] = 0;
+
+    enumConst->hash = hash(name);
+    enumConst->val = val;
+
+    if (enumType->numItems > 0)
+        enumType->enumConst = realloc(enumType->enumConst, (enumType->numItems + 1) * sizeof(EnumConst *));
+    else
+        enumType->enumConst = malloc(sizeof(EnumConst *));
+
+    enumType->numItems++;
+    enumType->enumConst[enumType->numItems - 1] = enumConst;
+
+    return enumConst;
 }
 
 
@@ -717,6 +803,10 @@ static char *typeSpellingRecursive(Type *type, char *buf, int size, int depth)
         if (type->kind == TYPE_ARRAY)
         {
             len += snprintf(buf + len, nonneg(size - len), "[%d]", type->numItems);
+        }
+        else if (typeEnum(type))
+        {
+            len += snprintf(buf + len, nonneg(size - len), "enum(%s)", typeKindSpelling(type->kind));
         }
         else if (type->kind == TYPE_MAP)
         {

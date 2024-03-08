@@ -343,8 +343,8 @@ Error: Empty string (code -2) from "foo":
     foo: (5)
     fooTest: (11)
     test: (25)
-    main: (63)
-    <unknown>: (90)
+    main: (64)
+    <unknown>: (92)
 9
 
 
@@ -732,3 +732,32 @@ f(): 42 "OK!" true
 {"English": {x: 0.3 y: 0.4} "French": {x: 0.5 y: 0.6} "Russian": {x: 0.1 y: 0.2}}
 {"English": {x: 0.3 y: 0.4} "French": {x: 0.5 y: 0.6} "Russian": {x: 0.1 y: 0.2}}
 {"English": {x: 0.3 y: 0.31} "French": {x: 0.5 y: 0.51} "Russian": {x: 0.1 y: 0.11}}
+
+
+>>> Enumerations
+
+74: Draw
+75: Select
+8: Remove
+9: Edit
+23: 
+
+74: Draw
+75: Select
+8: Remove
+9: Edit
+23: Code 23
+
+74: Draw
+75: Select
+8: Remove
+9: Edit
+
+74: Draw
+75: Select
+8: Remove
+9: Edit
+23: Code 23
+42: 
+
+false true true

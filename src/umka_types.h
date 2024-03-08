@@ -64,6 +64,14 @@ typedef struct
 {
     IdentName name;
     unsigned int hash;
+    Const val;
+} EnumConst;
+
+
+typedef struct
+{
+    IdentName name;
+    unsigned int hash;
     struct tagType *type;
     Const defaultVal;
 } Param;
@@ -83,15 +91,17 @@ typedef struct tagType
 {
     TypeKind kind;
     int block;
-    struct tagType *base;                   // For pointers, arrays and maps (for maps, denotes the tree node type)
-    int numItems;                           // For arrays, structures and interfaces
-    bool isExprList;                        // For structures that represent expression lists
-    bool isVariadicParamList;               // For dynamic arrays of interfaces that represent variadic parameter lists
-    struct tagIdent *typeIdent;             // For types that have identifiers
+    struct tagType *base;                       // For pointers, arrays and maps (for maps, denotes the tree node type)
+    int numItems;                               // For arrays, structures and interfaces
+    bool isExprList;                            // For structures that represent expression lists
+    bool isVariadicParamList;                   // For dynamic arrays of interfaces that represent variadic parameter lists
+    bool isEnum;                                // For enumerations
+    struct tagIdent *typeIdent;                 // For types that have identifiers
     union
     {
-        Field *field[MAX_FIELDS];           // For structures and interfaces
-        Signature sig;                      // For functions, including methods
+        Field **field;                          // For structures, interfaces and closures
+        EnumConst **enumConst;                  // For enumerations
+        Signature sig;                          // For functions, including methods
     };
     struct tagType *next;
 } Type;
@@ -126,7 +136,7 @@ int typeAlignmentNoCheck(Type *type);
 int typeAlignment       (Types *types, Type *type);
 
 
-static inline bool typeKindInteger(TypeKind typeKind)
+static inline bool typeKindIntegerOrEnum(TypeKind typeKind)
 {
     return typeKind == TYPE_INT8  || typeKind == TYPE_INT16  || typeKind == TYPE_INT32  || typeKind == TYPE_INT ||
            typeKind == TYPE_UINT8 || typeKind == TYPE_UINT16 || typeKind == TYPE_UINT32 || typeKind == TYPE_UINT;
@@ -135,13 +145,19 @@ static inline bool typeKindInteger(TypeKind typeKind)
 
 static inline bool typeInteger(Type *type)
 {
-    return typeKindInteger(type->kind);
+    return typeKindIntegerOrEnum(type->kind) && !type->isEnum;
+}
+
+
+static inline bool typeEnum(Type *type)
+{
+    return typeKindIntegerOrEnum(type->kind) && type->isEnum;
 }
 
 
 static inline bool typeKindOrdinal(TypeKind typeKind)
 {
-    return typeKindInteger(typeKind) || typeKind == TYPE_CHAR || typeKind == TYPE_BOOL;
+    return typeKindIntegerOrEnum(typeKind) || typeKind == TYPE_CHAR || typeKind == TYPE_BOOL;
 }
 
 
@@ -268,8 +284,13 @@ Field *typeFindField        (Type *structType, const char *name);
 Field *typeAssertFindField  (Types *types, Type *structType, const char *name);
 Field *typeAddField         (Types *types, Type *structType, Type *fieldType, const char *fieldName);
 
-Param *typeFindParam        (Signature *sig, const char *name);
-Param *typeAddParam         (Types *types, Signature *sig, Type *type, const char *name);
+EnumConst *typeFindEnumConst        (Type *enumType, const char *name);
+EnumConst *typeAssertFindEnumConst  (Types *types, Type *enumType, const char *name);
+EnumConst *typeFindEnumConstByVal   (Type *enumType, Const val);
+EnumConst *typeAddEnumConst         (Types *types, Type *enumType, const char *fieldName, Const val);
+
+Param *typeFindParam    (Signature *sig, const char *name);
+Param *typeAddParam     (Types *types, Signature *sig, Type *type, const char *name);
 
 int typeParamSizeUpTo   (Types *types, Signature *sig, int index);
 int typeParamSizeTotal  (Types *types, Signature *sig);

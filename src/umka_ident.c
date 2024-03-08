@@ -69,18 +69,11 @@ Ident *identFind(Idents *idents, Modules *modules, Blocks *blocks, int module, c
 
                 if (identModuleValid)
                 {
-                    const bool method = ident->type->kind == TYPE_FN && ident->type->sig.isMethod;
+                    // Method names need not be unique in the given scope - check the receiver type to see if we found the right name
+                    const bool methodFound = ident->type->kind == TYPE_FN && ident->type->sig.isMethod;
 
-                    // We don't need a method and what we found is not a method
-                    if (!rcvType && !method)
-                    {
-                        if (markAsUsed)
-                            ident->used = true;
-                        return ident;
-                    }
-
-                    // We need a method and what we found is a method
-                    if (rcvType && method && typeCompatibleRcv(ident->type->sig.param[0]->type, rcvType))
+                    const bool found = (!rcvType && !methodFound) || (rcvType && methodFound && typeCompatibleRcv(ident->type->sig.param[0]->type, rcvType));
+                    if (found)
                     {
                         if (markAsUsed)
                             ident->used = true;

@@ -8,9 +8,9 @@ fn write(name, s: str) {
 
 fn read(name: str): str {
 	f := std.fopen(name, "rb")
-	std.fseek(f, 0, std.seekEnd)
+	std.fseek(f, 0, std.SeekFrom.end)
 	size := std.ftell(f)
-	std.fseek(f, 0, std.seekBegin)
+	std.fseek(f, 0, std.SeekFrom.begin)
 
 	data := make([]char, size)
 	std.fread(f, &data)

@@ -1493,9 +1493,9 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
     const bool hasAnyTypeFormatter = expectedTypeKind == TYPE_INTERFACE && typeLetterPos >= 0 && typeLetterPos < formatLen;     // %v
 
     if (type->kind != expectedTypeKind &&
-        !(type->kind != TYPE_VOID && expectedTypeKind == TYPE_INTERFACE) &&
-        !(typeKindInteger(type->kind) && typeKindInteger(expectedTypeKind)) &&
-        !(typeKindReal(type->kind)    && typeKindReal(expectedTypeKind)))
+        !(type->kind != TYPE_VOID            && expectedTypeKind == TYPE_INTERFACE) &&
+        !(typeKindIntegerOrEnum(type->kind)  && typeKindIntegerOrEnum(expectedTypeKind)) &&
+        !(typeKindReal(type->kind)           && typeKindReal(expectedTypeKind)))
     {
         error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Incompatible types %s and %s in printf()", typeKindSpelling(expectedTypeKind), typeKindSpelling(type->kind));
     }

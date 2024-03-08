@@ -301,6 +301,62 @@ static Type *parseStrType(Compiler *comp)
 }
 
 
+// enumItem = ident ["=" expr].
+static void parseEnumItem(Compiler *comp, Type *type, Const *constant)
+{
+    lexCheck(&comp->lex, TOK_IDENT);
+    IdentName name;
+    strcpy(name, comp->lex.tok.name);
+
+    lexNext(&comp->lex);
+
+    if (comp->lex.tok.kind != TOK_EQ)
+        constant->intVal++;
+    else
+    {
+        lexEat(&comp->lex, TOK_EQ);
+        Type *rightType = NULL;
+        parseExpr(comp, &rightType, constant);
+        typeAssertCompatible(&comp->types, comp->intType, rightType, false);
+    }
+
+    if (typeOverflow(type->kind, *constant))
+        comp->error.handler(comp->error.context, "Overflow of %s", typeKindSpelling(type->kind));
+
+    typeAddEnumConst(&comp->types, type, name, *constant);
+}
+
+
+// enumType = "enum" ["(" type ")"] "{" {enumItem ";"} "}"
+static Type *parseEnumType(Compiler *comp)
+{
+    lexEat(&comp->lex, TOK_ENUM);
+
+    Type *baseType = comp->intType;
+    if (comp->lex.tok.kind == TOK_LPAR)
+    {
+        lexNext(&comp->lex);
+        baseType = parseType(comp, NULL);
+        typeAssertCompatible(&comp->types, comp->intType, baseType, false);
+        lexEat(&comp->lex, TOK_RPAR);
+    }
+
+    Type *type = typeAdd(&comp->types, &comp->blocks, baseType->kind);
+    type->isEnum = true;
+
+    Const constant = {.intVal = -1};
+
+    lexEat(&comp->lex, TOK_LBRACE);
+    while (comp->lex.tok.kind == TOK_IDENT)
+    {
+        parseEnumItem(comp, type, &constant);
+        lexEat(&comp->lex, TOK_SEMICOLON);
+    }
+    lexEat(&comp->lex, TOK_RBRACE);
+    return type;
+}
+
+
 // mapType = "map" "[" type "]" type.
 static Type *parseMapType(Compiler *comp)
 {
@@ -346,11 +402,11 @@ static Type *parseStructType(Compiler *comp)
 
     while (comp->lex.tok.kind == TOK_IDENT)
     {
-        IdentName fieldNames[MAX_FIELDS];
-        bool fieldExported[MAX_FIELDS];
+        IdentName fieldNames[MAX_IDENTS_IN_LIST];
+        bool fieldExported[MAX_IDENTS_IN_LIST];
         Type *fieldType;
         int numFields = 0;
-        parseTypedIdentList(comp, fieldNames, fieldExported, MAX_FIELDS, &numFields, &fieldType, false);
+        parseTypedIdentList(comp, fieldNames, fieldExported, MAX_IDENTS_IN_LIST, &numFields, &fieldType, false);
 
         for (int i = 0; i < numFields; i++)
         {
@@ -446,7 +502,7 @@ static Type *parseClosureType(Compiler *comp)
 }
 
 
-// type = qualIdent | ptrType | arrayType | dynArrayType | strType | mapType | structType | interfaceType | closureType.
+// type = qualIdent | ptrType | arrayType | dynArrayType | strType | enumType | mapType | structType | interfaceType | closureType.
 Type *parseType(Compiler *comp, Ident *ident)
 {
     if (ident)
@@ -464,6 +520,7 @@ Type *parseType(Compiler *comp, Ident *ident)
         case TOK_WEAK:      return parsePtrType(comp);
         case TOK_LBRACKET:  return parseArrayType(comp);
         case TOK_STR:       return parseStrType(comp);
+        case TOK_ENUM:      return parseEnumType(comp);
         case TOK_MAP:       return parseMapType(comp);
         case TOK_STRUCT:    return parseStructType(comp);
         case TOK_INTERFACE: return parseInterfaceType(comp);
@@ -528,7 +585,12 @@ static void parseConstDeclItem(Compiler *comp, Type **type, Const *constant)
     bool exported = parseExportMark(comp);
 
     if (*type && typeInteger(*type) && comp->lex.tok.kind != TOK_EQ)
+    {
         constant->intVal++;
+
+        if (typeOverflow((*type)->kind, *constant))
+            comp->error.handler(comp->error.context, "Overflow of %s", typeKindSpelling((*type)->kind));
+    }
     else
     {
         lexEat(&comp->lex, TOK_EQ);
@@ -565,13 +627,13 @@ static void parseConstDecl(Compiler *comp)
 // varDeclItem = typedIdentList "=" exprOrLitList.
 static void parseVarDeclItem(Compiler *comp)
 {
-    IdentName varNames[MAX_FIELDS];
-    bool varExported[MAX_FIELDS];
+    IdentName varNames[MAX_IDENTS_IN_LIST];
+    bool varExported[MAX_IDENTS_IN_LIST];
     int numVars = 0;
     Type *varType;
-    parseTypedIdentList(comp, varNames, varExported, MAX_FIELDS, &numVars, &varType, false);
+    parseTypedIdentList(comp, varNames, varExported, MAX_IDENTS_IN_LIST, &numVars, &varType, false);
 
-    Ident *var[MAX_FIELDS];
+    Ident *var[MAX_IDENTS_IN_LIST];
     for (int i = 0; i < numVars; i++)
     {
         var[i] = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, varNames[i], varType, varExported[i]);
@@ -600,7 +662,7 @@ static void parseVarDeclItem(Compiler *comp)
                 typeAddField(&comp->types, designatorListType, designatorType, NULL);
         }
 
-        Const varPtrConstList[MAX_FIELDS] = {0};
+        Const varPtrConstList[MAX_IDENTS_IN_LIST] = {0};
 
         for (int i = 0; i < numVars; i++)
         {
@@ -639,10 +701,10 @@ static void parseFullVarDecl(Compiler *comp)
 // shortVarDecl = declAssignmentStmt.
 void parseShortVarDecl(Compiler *comp)
 {
-    IdentName varNames[MAX_FIELDS];
-    bool varExported[MAX_FIELDS];
+    IdentName varNames[MAX_IDENTS_IN_LIST];
+    bool varExported[MAX_IDENTS_IN_LIST];
     int numVars = 0;
-    parseIdentList(comp, varNames, varExported, MAX_FIELDS, &numVars);
+    parseIdentList(comp, varNames, varExported, MAX_IDENTS_IN_LIST, &numVars);
 
     lexEat(&comp->lex, TOK_COLONEQ);
     parseDeclAssignmentStmt(comp, varNames, varExported, numVars, comp->blocks.top == 0);
