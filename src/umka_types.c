@@ -50,11 +50,15 @@ void typeInit(Types *types, Error *error)
 }
 
 
-void typeFreeFieldsAndParams(Type *type)
+static void typeFreeFieldsEnumConstsAndParams(Type *type)
 {
     if (type->kind == TYPE_STRUCT || type->kind == TYPE_INTERFACE || type->kind == TYPE_CLOSURE)
         for (int i = 0; i < type->numItems; i++)
             free(type->field[i]);
+
+    if (typeEnum(type))
+        for (int i = 0; i < type->numItems; i++)
+            free(type->enumConst[i]);
 
     else if (type->kind == TYPE_FN)
         for (int i = 0; i < type->sig.numParams; i++)
@@ -81,7 +85,7 @@ void typeFree(Types *types, int startBlock)
     while (type)
     {
         Type *next = type->next;
-        typeFreeFieldsAndParams(type);
+        typeFreeFieldsEnumConstsAndParams(type);
         free(type);
         type = next;
     }
@@ -124,7 +128,7 @@ Type *typeAdd(Types *types, Blocks *blocks, TypeKind kind)
 
 void typeDeepCopy(Type *dest, Type *src)
 {
-    typeFreeFieldsAndParams(dest);
+    typeFreeFieldsEnumConstsAndParams(dest);
 
     Type *next = dest->next;
     *dest = *src;
@@ -684,11 +688,27 @@ EnumConst *typeAssertFindEnumConst(Types *types, Type *enumType, const char *nam
 }
 
 
+EnumConst *typeFindEnumConstByVal(Type *enumType, Const val)
+{
+    if (typeEnum(enumType))
+    {
+        for (int i = 0; i < enumType->numItems; i++)
+            if (enumType->enumConst[i]->val.intVal == val.intVal)
+                return enumType->enumConst[i];
+    }
+    return NULL;
+}
+
+
 EnumConst *typeAddEnumConst(Types *types, Type *enumType, const char *name, Const val)
 {
     EnumConst *enumConst = typeFindEnumConst(enumType, name);
     if (enumConst)
         types->error->handler(types->error->context, "Duplicate enumeration constant %s", name);
+
+    enumConst = typeFindEnumConstByVal(enumType, val);
+    if (enumConst)
+        types->error->handler(types->error->context, "Duplicate enumeration constant value %lld", val.intVal);
 
     if (enumType->numItems > MAX_ENUM_CONSTS)
         types->error->handler(types->error->context, "Too many enumeration constants");
@@ -773,6 +793,10 @@ static char *typeSpellingRecursive(Type *type, char *buf, int size, int depth)
         if (type->kind == TYPE_ARRAY)
         {
             len += snprintf(buf + len, nonneg(size - len), "[%d]", type->numItems);
+        }
+        else if (typeEnum(type))
+        {
+            len += snprintf(buf + len, nonneg(size - len), "enum(%s)", typeKindSpelling(type->kind));
         }
         else if (type->kind == TYPE_MAP)
         {

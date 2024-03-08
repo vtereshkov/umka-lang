@@ -317,8 +317,11 @@ static void parseEnumItem(Compiler *comp, Type *type, Const *constant)
         lexEat(&comp->lex, TOK_EQ);
         Type *rightType = NULL;
         parseExpr(comp, &rightType, constant);
-        typeAssertCompatible(&comp->types, type, rightType, false);
+        typeAssertCompatible(&comp->types, comp->intType, rightType, false);
     }
+
+    if (typeOverflow(type->kind, *constant))
+        comp->error.handler(comp->error.context, "Overflow of %s", typeKindSpelling(type->kind));
 
     typeAddEnumConst(&comp->types, type, name, *constant);
 }
@@ -341,7 +344,7 @@ static Type *parseEnumType(Compiler *comp)
     Type *type = typeAdd(&comp->types, &comp->blocks, baseType->kind);
     type->isEnum = true;
 
-    Const constant = {.intVal = 0};
+    Const constant = {.intVal = -1};
 
     lexEat(&comp->lex, TOK_LBRACE);
     while (comp->lex.tok.kind == TOK_IDENT)
@@ -582,7 +585,12 @@ static void parseConstDeclItem(Compiler *comp, Type **type, Const *constant)
     bool exported = parseExportMark(comp);
 
     if (*type && typeInteger(*type) && comp->lex.tok.kind != TOK_EQ)
+    {
         constant->intVal++;
+
+        if (typeOverflow((*type)->kind, *constant))
+            comp->error.handler(comp->error.context, "Overflow of %s", typeKindSpelling((*type)->kind));
+    }
     else
     {
         lexEat(&comp->lex, TOK_EQ);

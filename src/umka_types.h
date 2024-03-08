@@ -99,7 +99,7 @@ typedef struct tagType
     struct tagIdent *typeIdent;                 // For types that have identifiers
     union
     {
-        Field *field[MAX_FIELDS];               // For structures and interfaces
+        Field *field[MAX_FIELDS];               // For structures, interfaces and closures
         EnumConst *enumConst[MAX_ENUM_CONSTS];  // For enumerations
         Signature sig;                          // For functions, including methods
     };
@@ -286,6 +286,7 @@ Field *typeAddField         (Types *types, Type *structType, Type *fieldType, co
 
 EnumConst *typeFindEnumConst        (Type *enumType, const char *name);
 EnumConst *typeAssertFindEnumConst  (Types *types, Type *enumType, const char *name);
+EnumConst *typeFindEnumConstByVal   (Type *enumType, Const val);
 EnumConst *typeAddEnumConst         (Types *types, Type *enumType, const char *fieldName, Const val);
 
 Param *typeFindParam    (Signature *sig, const char *name);
