@@ -2776,13 +2776,12 @@ void parseExpr(Compiler *comp, Type **type, Const *constant)
 
 
 // exprList = expr {"," expr}.
-void parseExprListInferred(Compiler *comp, Type *inferredType, Type **type, Const *constant)
+void parseExprList(Compiler *comp, Type **type, Const *constant)
 {
-    Type *inferredExprType = inferredType;
+    Type *inferredType = *type;
     if (inferredType && typeExprListStruct(inferredType) && inferredType->numItems > 0)
-        inferredExprType = inferredType->field[0]->type;
+        *type = inferredType->field[0]->type;
 
-    *type = inferredExprType;
     parseExpr(comp, type, constant);
 
     if (comp->lex.tok.kind == TOK_COMMA)
@@ -2826,11 +2825,10 @@ void parseExprListInferred(Compiler *comp, Type *inferredType, Type **type, Cons
 
             lexNext(&comp->lex);
 
-            inferredExprType = NULL;
+            fieldType = NULL;
             if (inferredType && typeExprListStruct(inferredType) && inferredType->numItems > (*type)->numItems)
-                inferredExprType = inferredType->field[(*type)->numItems]->type;
+                fieldType = inferredType->field[(*type)->numItems]->type;
 
-            fieldType = inferredExprType;
             parseExpr(comp, &fieldType, fieldConstant);
         }
 

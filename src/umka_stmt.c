@@ -199,7 +199,7 @@ static void parseListAssignmentStmt(Compiler *comp, Type *type, Const *varPtrCon
 
     Type *rightListType = derefLeftListType;
     Const rightListConstantBuf, *rightListConstant = varPtrConstList ? &rightListConstantBuf : NULL;
-    parseExprListInferred(comp, derefLeftListType, &rightListType, rightListConstant);
+    parseExprList(comp, &rightListType, rightListConstant);
 
     const int numExpr = typeExprListStruct(rightListType) ? rightListType->numItems : 1;
     if (numExpr != type->numItems)
@@ -312,7 +312,7 @@ static void parseListDeclAssignmentStmt(Compiler *comp, IdentName *names, bool *
 {
     Type *rightListType = NULL;
     Const rightListConstantBuf, *rightListConstant = constExpr ? &rightListConstantBuf : NULL;
-    parseExprListInferred(comp, NULL, &rightListType, rightListConstant);
+    parseExprList(comp, &rightListType, rightListConstant);
 
     const int numExpr = typeExprListStruct(rightListType) ? rightListType->numItems : 1;
     if (numExpr != num)
@@ -1061,7 +1061,7 @@ static void parseReturnStmt(Compiler *comp)
 
     Type *type = sig->resultType;
     if (comp->lex.tok.kind != TOK_SEMICOLON && comp->lex.tok.kind != TOK_IMPLICIT_SEMICOLON && comp->lex.tok.kind != TOK_RBRACE)
-        parseExprListInferred(comp, sig->resultType, &type, NULL);
+        parseExprList(comp, &type, NULL);
     else
         type = comp->voidType;
 

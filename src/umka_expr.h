@@ -16,7 +16,7 @@ void doApplyOperator                (Compiler *comp, Type **type, Type **rightTy
 Ident *parseQualIdent               (Compiler *comp);
 void parseDesignatorList            (Compiler *comp, Type **type, Const *constant, bool *isVar, bool *isCall);
 void parseExpr                      (Compiler *comp, Type **type, Const *constant);
-void parseExprListInferred          (Compiler *comp, Type *inferredType, Type **type, Const *constant);
+void parseExprList                  (Compiler *comp, Type **type, Const *constant);
 
 
 #endif // UMKA_EXPR_H_INCLUDED
