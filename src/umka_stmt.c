@@ -413,7 +413,7 @@ static void parseSimpleStmt(Compiler *comp)
         parseShortVarDecl(comp);
     else
     {
-        Type *type;
+        Type *type = NULL;
         bool isVar, isCall;
         parseDesignatorList(comp, &type, NULL, &isVar, &isCall);
 

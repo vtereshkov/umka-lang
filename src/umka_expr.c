@@ -2533,7 +2533,7 @@ static void parseTerm(Compiler *comp, Type **type, Const *constant)
         else
             rightConstant = NULL;
 
-        Type *rightType;
+        Type *rightType = *type;
         parseFactor(comp, &rightType, rightConstant);
         doApplyOperator(comp, type, &rightType, constant, rightConstant, op, true, true);
     }
@@ -2557,7 +2557,7 @@ static void parseRelationTerm(Compiler *comp, Type **type, Const *constant)
         else
             rightConstant = NULL;
 
-        Type *rightType;
+        Type *rightType = *type;
         parseTerm(comp, &rightType, rightConstant);
         doApplyOperator(comp, type, &rightType, constant, rightConstant, op, true, true);
     }
@@ -2581,7 +2581,7 @@ static void parseRelation(Compiler *comp, Type **type, Const *constant)
         else
             rightConstant = NULL;
 
-        Type *rightType;
+        Type *rightType = *type;
         parseRelationTerm(comp, &rightType, rightConstant);
         doApplyOperator(comp, type, &rightType, constant, rightConstant, op, true, true);
 
@@ -2606,7 +2606,7 @@ static void parseLogicalTerm(Compiler *comp, Type **type, Const *constant)
             {
                 Const rightConstantBuf, *rightConstant = &rightConstantBuf;
 
-                Type *rightType;
+                Type *rightType = *type;
                 parseRelation(comp, &rightType, rightConstant);
                 doApplyOperator(comp, type, &rightType, constant, rightConstant, op, false, true);
                 constant->intVal = rightConstant->intVal;
@@ -2620,7 +2620,7 @@ static void parseLogicalTerm(Compiler *comp, Type **type, Const *constant)
 
             blocksEnter(&comp->blocks, NULL);
 
-            Type *rightType;
+            Type *rightType = *type;
             parseRelation(comp, &rightType, NULL);
             doApplyOperator(comp, type, &rightType, NULL, NULL, op, false, true);
 
@@ -2650,7 +2650,7 @@ static void parseLogicalExpr(Compiler *comp, Type **type, Const *constant)
             {
                 Const rightConstantBuf, *rightConstant = &rightConstantBuf;
 
-                Type *rightType;
+                Type *rightType = *type;
                 parseLogicalTerm(comp, &rightType, rightConstant);
                 doApplyOperator(comp, type, &rightType, constant, rightConstant, op, false, true);
                 constant->intVal = rightConstant->intVal;
@@ -2664,7 +2664,7 @@ static void parseLogicalExpr(Compiler *comp, Type **type, Const *constant)
 
             blocksEnter(&comp->blocks, NULL);
 
-            Type *rightType;
+            Type *rightType = *type;
             parseLogicalTerm(comp, &rightType, NULL);
             doApplyOperator(comp, type, &rightType, NULL, NULL, op, false, true);
 

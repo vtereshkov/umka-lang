@@ -120,7 +120,7 @@ static void parseSignature(Compiler *comp, Signature *sig)
 
             IdentName paramNames[MAX_PARAMS];
             bool paramExported[MAX_PARAMS];
-            Type *paramType;
+            Type *paramType = NULL;
             int numParams = 0;
             parseTypedIdentList(comp, paramNames, paramExported, MAX_PARAMS, &numParams, &paramType, true);
 
@@ -402,7 +402,7 @@ static Type *parseStructType(Compiler *comp)
     {
         IdentName fieldNames[MAX_IDENTS_IN_LIST];
         bool fieldExported[MAX_IDENTS_IN_LIST];
-        Type *fieldType;
+        Type *fieldType = NULL;
         int numFields = 0;
         parseTypedIdentList(comp, fieldNames, fieldExported, MAX_IDENTS_IN_LIST, &numFields, &fieldType, false);
 
@@ -628,7 +628,7 @@ static void parseVarDeclItem(Compiler *comp)
     IdentName varNames[MAX_IDENTS_IN_LIST];
     bool varExported[MAX_IDENTS_IN_LIST];
     int numVars = 0;
-    Type *varType;
+    Type *varType = NULL;
     parseTypedIdentList(comp, varNames, varExported, MAX_IDENTS_IN_LIST, &numVars, &varType, false);
 
     Ident *var[MAX_IDENTS_IN_LIST];
@@ -641,13 +641,13 @@ static void parseVarDeclItem(Compiler *comp)
     // Initializer
     if (comp->lex.tok.kind == TOK_EQ)
     {
-        Type *designatorType;
+        Type *designatorType = NULL;
         if (typeStructured(var[0]->type))
             designatorType = var[0]->type;
         else
             designatorType = typeAddPtrTo(&comp->types, &comp->blocks, var[0]->type);
 
-        Type *designatorListType;
+        Type *designatorListType = NULL;
         if (numVars == 1)
             designatorListType = designatorType;
         else
