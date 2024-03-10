@@ -99,7 +99,7 @@ static void parseRcvSignature(Compiler *comp, Signature *sig)
 }
 
 
-// signature = "(" [typedIdentList ["=" exprOrLit] {"," typedIdentList ["=" exprOrLit]}] ")" [":" (type | "(" type {"," type} ")")].
+// signature = "(" [typedIdentList ["=" expr] {"," typedIdentList ["=" expr]}] ")" [":" (type | "(" type {"," type} ")")].
 static void parseSignature(Compiler *comp, Signature *sig)
 {
     // Dummy hidden parameter that allows any function to be converted to a closure
@@ -120,13 +120,13 @@ static void parseSignature(Compiler *comp, Signature *sig)
 
             IdentName paramNames[MAX_PARAMS];
             bool paramExported[MAX_PARAMS];
-            Type *paramType;
+            Type *paramType = NULL;
             int numParams = 0;
             parseTypedIdentList(comp, paramNames, paramExported, MAX_PARAMS, &numParams, &paramType, true);
 
             variadicParamListFound = paramType->isVariadicParamList;
 
-            // ["=" exprOrLit]
+            // ["=" expr]
             Const defaultConstant;
             if (comp->lex.tok.kind == TOK_EQ)
             {
@@ -138,8 +138,8 @@ static void parseSignature(Compiler *comp, Signature *sig)
 
                 lexNext(&comp->lex);
 
-                Type *defaultType;
-                parseExprOrUntypedLiteral(comp, &defaultType, paramType, &defaultConstant);
+                Type *defaultType = paramType;
+                parseExpr(comp, &defaultType, &defaultConstant);
                 doAssertImplicitTypeConv(comp, paramType, &defaultType, &defaultConstant, false);
 
                 numDefaultParams++;
@@ -270,7 +270,7 @@ static Type *parseArrayType(Compiler *comp)
     {
         // Conventional array
         typeKind = TYPE_ARRAY;
-        Type *indexType;
+        Type *indexType = NULL;
         parseExpr(comp, &indexType, &len);
         typeAssertCompatible(&comp->types, comp->intType, indexType);
         if (len.intVal < 0 || len.intVal > INT_MAX)
@@ -402,7 +402,7 @@ static Type *parseStructType(Compiler *comp)
     {
         IdentName fieldNames[MAX_IDENTS_IN_LIST];
         bool fieldExported[MAX_IDENTS_IN_LIST];
-        Type *fieldType;
+        Type *fieldType = NULL;
         int numFields = 0;
         parseTypedIdentList(comp, fieldNames, fieldExported, MAX_IDENTS_IN_LIST, &numFields, &fieldType, false);
 
@@ -592,6 +592,7 @@ static void parseConstDeclItem(Compiler *comp, Type **type, Const *constant)
     else
     {
         lexEat(&comp->lex, TOK_EQ);
+        *type = NULL;
         parseExpr(comp, type, constant);
     }
 
@@ -622,13 +623,13 @@ static void parseConstDecl(Compiler *comp)
 }
 
 
-// varDeclItem = typedIdentList "=" exprOrLitList.
+// varDeclItem = typedIdentList "=" exprList.
 static void parseVarDeclItem(Compiler *comp)
 {
     IdentName varNames[MAX_IDENTS_IN_LIST];
     bool varExported[MAX_IDENTS_IN_LIST];
     int numVars = 0;
-    Type *varType;
+    Type *varType = NULL;
     parseTypedIdentList(comp, varNames, varExported, MAX_IDENTS_IN_LIST, &numVars, &varType, false);
 
     Ident *var[MAX_IDENTS_IN_LIST];
@@ -641,13 +642,13 @@ static void parseVarDeclItem(Compiler *comp)
     // Initializer
     if (comp->lex.tok.kind == TOK_EQ)
     {
-        Type *designatorType;
+        Type *designatorType = NULL;
         if (typeStructured(var[0]->type))
             designatorType = var[0]->type;
         else
             designatorType = typeAddPtrTo(&comp->types, &comp->blocks, var[0]->type);
 
-        Type *designatorListType;
+        Type *designatorListType = NULL;
         if (numVars == 1)
             designatorListType = designatorType;
         else

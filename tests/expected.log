@@ -765,3 +765,5 @@ f(): 42 "OK!" true
 42: 
 
 false true true
+
+true true

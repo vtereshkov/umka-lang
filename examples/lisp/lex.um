@@ -1,19 +1,15 @@
 import "std.um"
 
-
-const (
-    tokNull* = 0
-    tokAtom* = 1
-    tokLPar* = 2
-    tokRPar* = 3
-    
-    spelling = [4]str{"nothing", "atom", "(", ")"}
-)
-
-
 type (
+    TokenKind* = enum {
+        Null
+        Atom
+        LPar
+        RPar
+    }
+
     Token* = struct {
-        kind: int
+        kind: TokenKind
         name: str
         val: int
     }
@@ -25,6 +21,14 @@ type (
         tok: Token
     }
 )
+
+
+const spelling = [4]str{
+    "nothing", 
+    "atom", 
+    "(", 
+    ")"
+}
 
 
 fn (l: ^Lexer) open*(buf: str) {
@@ -49,7 +53,7 @@ fn (l: ^Lexer) next*() {
     const space  = fn(c: char): bool {return c == ' ' || c == '\t' || c == '\n'}
 
     ch := l.ch    
-    l.tok = Token{tokNull, "", 0}
+    l.tok = Token{.Null, "", 0}
     
     // Skip spaces
     for space(ch) {
@@ -58,7 +62,7 @@ fn (l: ^Lexer) next*() {
     
     // Read string atom
     if letter(ch) {        
-        l.tok.kind = tokAtom
+        l.tok.kind = .Atom
         l.tok.name = ""
         for letter(ch) || digit(ch) {
             l.tok.name += ch
@@ -67,7 +71,7 @@ fn (l: ^Lexer) next*() {
         
     // Read number
     } else if ch == '+' || ch == '-' || digit(ch) {
-        l.tok.kind = tokAtom
+        l.tok.kind = .Atom
         l.tok.name = "<number>"
         s := ""
         if ch == '+' || ch == '-' {
@@ -82,7 +86,7 @@ fn (l: ^Lexer) next*() {
               
     // Read parentheses
     } else if ch == '(' || ch == ')' {        
-        if ch == '(' {l.tok.kind = tokLPar} else {l.tok.kind = tokRPar}
+        if ch == '(' {l.tok.kind = .LPar} else {l.tok.kind = .RPar}
         l.tok.name = ch
         ch = l.getch()
         
@@ -94,14 +98,14 @@ fn (l: ^Lexer) next*() {
 }
 
 
-fn (l: ^Lexer) check*(kind: int) {
+fn (l: ^Lexer) check*(kind: TokenKind) {
     if l.tok.kind != kind {
-        exit(2, spelling[kind] + " expected but " + spelling[l.tok.kind] + " found")
+        exit(2, spelling[int(kind)] + " expected but " + spelling[int(l.tok.kind)] + " found")
     }
 }
 
 
-fn (l: ^Lexer) eat*(kind: int) {
+fn (l: ^Lexer) eat*(kind: TokenKind) {
     l.check(kind)
     l.next()
 }

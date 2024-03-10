@@ -143,7 +143,7 @@ static bool doTypeSwitchStmtLookahead(Compiler *comp)
 }
 
 
-// singleAssignmentStmt = designator "=" exprOrLit.
+// singleAssignmentStmt = designator "=" expr.
 static void parseSingleAssignmentStmt(Compiler *comp, Type *type, Const *varPtrConst)
 {
     if (!typeStructured(type))
@@ -153,10 +153,10 @@ static void parseSingleAssignmentStmt(Compiler *comp, Type *type, Const *varPtrC
         type = type->base;
     }
 
-    Type *rightType;
+    Type *rightType = type;
     Const rightConstantBuf, *rightConstant = varPtrConst ? &rightConstantBuf : NULL;
-    parseExprOrUntypedLiteral(comp, &rightType, type, rightConstant);
 
+    parseExpr(comp, &rightType, rightConstant);
     doAssertImplicitTypeConv(comp, type, &rightType, rightConstant, false);
 
     if (varPtrConst)                                // Initialize global variable
@@ -179,18 +179,13 @@ static void parseSingleAssignmentStmt(Compiler *comp, Type *type, Const *varPtrC
 }
 
 
-// listAssignmentStmt = designatorList "=" exprOrLitList.
+// listAssignmentStmt = designatorList "=" exprList.
 static void parseListAssignmentStmt(Compiler *comp, Type *type, Const *varPtrConstList)
 {
-    Type *rightListType;
-    Const rightListConstantBuf, *rightListConstant = varPtrConstList ? &rightListConstantBuf : NULL;
-    parseExprOrUntypedLiteralList(comp, &rightListType, type, rightListConstant);
+    Type *derefLeftListType = typeAdd(&comp->types, &comp->blocks, TYPE_STRUCT);
+    derefLeftListType->isExprList = true;
 
-    const int numExpr = typeExprListStruct(rightListType) ? rightListType->numItems : 1;
-    if (numExpr != type->numItems)
-        comp->error.handler(comp->error.context, "%d expressions expected but %d found", type->numItems, numExpr);
-
-    for (int i = type->numItems - 1; i >= 0; i--)
+    for (int i = 0; i < type->numItems; i++)
     {
         Type *leftType = type->field[i]->type;
         if (!typeStructured(leftType))
@@ -199,7 +194,20 @@ static void parseListAssignmentStmt(Compiler *comp, Type *type, Const *varPtrCon
                 comp->error.handler(comp->error.context, "Left side cannot be assigned to");
             leftType = leftType->base;
         }
+        typeAddField(&comp->types, derefLeftListType, leftType, NULL);
+    }
 
+    Type *rightListType = derefLeftListType;
+    Const rightListConstantBuf, *rightListConstant = varPtrConstList ? &rightListConstantBuf : NULL;
+    parseExprList(comp, &rightListType, rightListConstant);
+
+    const int numExpr = typeExprListStruct(rightListType) ? rightListType->numItems : 1;
+    if (numExpr != type->numItems)
+        comp->error.handler(comp->error.context, "%d expressions expected but %d found", type->numItems, numExpr);
+
+    for (int i = type->numItems - 1; i >= 0; i--)
+    {
+        Type *leftType = derefLeftListType->field[i]->type;
         Type *rightType = rightListType->field[i]->type;
 
         if (varPtrConstList)                                // Initialize global variables
@@ -255,7 +263,7 @@ static void parseShortAssignmentStmt(Compiler *comp, Type *type, TokenKind op)
     genDeref(&comp->gen, type->kind);
 
     Type *leftType = type;
-    Type *rightType;
+    Type *rightType = type;
     parseExpr(comp, &rightType, NULL);
 
     // Keep "+=" for strings as is for better optimizations
@@ -269,7 +277,7 @@ static void parseShortAssignmentStmt(Compiler *comp, Type *type, TokenKind op)
 // singleDeclAssignmentStmt = ident ":=" expr.
 static void parseSingleDeclAssignmentStmt(Compiler *comp, IdentName name, bool exported, bool constExpr)
 {
-    Type *rightType;
+    Type *rightType = NULL;
     Const rightConstantBuf, *rightConstant = constExpr ? &rightConstantBuf : NULL;
     parseExpr(comp, &rightType, rightConstant);
 
@@ -299,12 +307,12 @@ static void parseSingleDeclAssignmentStmt(Compiler *comp, IdentName name, bool e
 }
 
 
-// listDeclAssignmentStmt = identList ":=" exprOrLitList.
+// listDeclAssignmentStmt = identList ":=" exprList.
 static void parseListDeclAssignmentStmt(Compiler *comp, IdentName *names, bool *exported, int num, bool constExpr)
 {
-    Type *rightListType;
+    Type *rightListType = NULL;
     Const rightListConstantBuf, *rightListConstant = constExpr ? &rightListConstantBuf : NULL;
-    parseExprOrUntypedLiteralList(comp, &rightListType, NULL, rightListConstant);
+    parseExprList(comp, &rightListType, rightListConstant);
 
     const int numExpr = typeExprListStruct(rightListType) ? rightListType->numItems : 1;
     if (numExpr != num)
@@ -405,7 +413,7 @@ static void parseSimpleStmt(Compiler *comp)
         parseShortVarDecl(comp);
     else
     {
-        Type *type;
+        Type *type = NULL;
         bool isVar, isCall;
         parseDesignatorList(comp, &type, NULL, &isVar, &isCall);
 
@@ -459,7 +467,7 @@ static void parseIfStmt(Compiler *comp)
     }
 
     // expr
-    Type *type;
+    Type *type = comp->boolType;
     parseExpr(comp, &type, NULL);
     typeAssertCompatible(&comp->types, comp->boolType, type);
 
@@ -502,7 +510,7 @@ static void parseExprCase(Compiler *comp, Type *selectorType)
     while (1)
     {
         Const constant;
-        Type *type;
+        Type *type = selectorType;
         parseExpr(comp, &type, &constant);
         typeAssertCompatible(&comp->types, selectorType, type);
 
@@ -619,7 +627,7 @@ static void parseExprSwitchStmt(Compiler *comp)
     }
 
     // expr
-    Type *type;
+    Type *type = NULL;
     parseExpr(comp, &type, NULL);
     if (!typeOrdinal(type))
         comp->error.handler(comp->error.context, "Ordinal type expected");
@@ -671,7 +679,7 @@ static void parseTypeSwitchStmt(Compiler *comp)
     lexEat(&comp->lex, TOK_LPAR);
 
     // expr
-    Type *type;
+    Type *type = NULL;
     parseExpr(comp, &type, NULL);
     if (type->kind != TYPE_INTERFACE)
         comp->error.handler(comp->error.context, "Interface type expected");
@@ -732,7 +740,7 @@ static void parseForHeader(Compiler *comp)
     blocksEnter(&comp->blocks, NULL);
 
     // expr
-    Type *type;
+    Type *type = comp->boolType;
     parseExpr(comp, &type, NULL);
     typeAssertCompatible(&comp->types, comp->boolType, type);
 
@@ -790,7 +798,7 @@ static void parseForInHeader(Compiler *comp)
     lexEat(&comp->lex, TOK_IN);
 
     // expr
-    Type *collectionType;
+    Type *collectionType = NULL;
     parseExpr(comp, &collectionType, NULL);
 
     // Implicit dereferencing: x in a^ == x in a
@@ -1036,7 +1044,7 @@ static void parseContinueStmt(Compiler *comp)
 }
 
 
-// returnStmt = "return" [exprOrLitList].
+// returnStmt = "return" [exprList].
 static void parseReturnStmt(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_RETURN);
@@ -1051,9 +1059,9 @@ static void parseReturnStmt(Compiler *comp)
             break;
         }
 
-    Type *type;
+    Type *type = sig->resultType;
     if (comp->lex.tok.kind != TOK_SEMICOLON && comp->lex.tok.kind != TOK_IMPLICIT_SEMICOLON && comp->lex.tok.kind != TOK_RBRACE)
-        parseExprOrUntypedLiteralList(comp, &type, sig->resultType, NULL);
+        parseExprList(comp, &type, NULL);
     else
         type = comp->voidType;
 

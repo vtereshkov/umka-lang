@@ -11,11 +11,11 @@ type Parser* = struct {
 
 fn (p: ^Parser) parse(): ^ev.Expr {    
     // Parse list
-    if p.lexer.tok.kind == lex.tokLPar {
+    if p.lexer.tok.kind == .LPar {
         p.lexer.next() 
        
         var first, last: ^ev.Expr
-        for p.lexer.tok.kind == lex.tokAtom || p.lexer.tok.kind == lex.tokLPar {
+        for p.lexer.tok.kind == .Atom || p.lexer.tok.kind == .LPar {
             e := ev.strExpr("")
             e.car = p.parse()
             
@@ -27,12 +27,12 @@ fn (p: ^Parser) parse(): ^ev.Expr {
                 last = e
             }            
         }        
-        p.lexer.eat(lex.tokRPar)
+        p.lexer.eat(.RPar)
         return first
     }
     
     // Parse atom  
-    p.lexer.check(lex.tokAtom)
+    p.lexer.check(.Atom)
     res := &ev.Expr{p.lexer.tok.name, p.lexer.tok.val, null, null}
     p.lexer.next()
     return res
