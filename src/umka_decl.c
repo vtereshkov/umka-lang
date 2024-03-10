@@ -140,9 +140,7 @@ static void parseSignature(Compiler *comp, Signature *sig)
 
                 Type *defaultType;
                 parseExprOrUntypedLiteral(comp, &defaultType, paramType, &defaultConstant);
-
-                doImplicitTypeConv(comp, paramType, &defaultType, &defaultConstant, false);
-                typeAssertCompatible(&comp->types, paramType, defaultType, false);
+                doAssertImplicitTypeConv(comp, paramType, &defaultType, &defaultConstant, false);
 
                 numDefaultParams++;
             }
@@ -274,7 +272,7 @@ static Type *parseArrayType(Compiler *comp)
         typeKind = TYPE_ARRAY;
         Type *indexType;
         parseExpr(comp, &indexType, &len);
-        typeAssertCompatible(&comp->types, comp->intType, indexType, false);
+        typeAssertCompatible(&comp->types, comp->intType, indexType);
         if (len.intVal < 0 || len.intVal > INT_MAX)
             comp->error.handler(comp->error.context, "Illegal array length");
     }
@@ -317,7 +315,7 @@ static void parseEnumItem(Compiler *comp, Type *type, Const *constant)
         lexEat(&comp->lex, TOK_EQ);
         Type *rightType = NULL;
         parseExpr(comp, &rightType, constant);
-        typeAssertCompatible(&comp->types, comp->intType, rightType, false);
+        typeAssertCompatible(&comp->types, comp->intType, rightType);
     }
 
     if (typeOverflow(type->kind, *constant))
@@ -337,7 +335,7 @@ static Type *parseEnumType(Compiler *comp)
     {
         lexNext(&comp->lex);
         baseType = parseType(comp, NULL);
-        typeAssertCompatible(&comp->types, comp->intType, baseType, false);
+        typeAssertCompatible(&comp->types, comp->intType, baseType);
         lexEat(&comp->lex, TOK_RPAR);
     }
 

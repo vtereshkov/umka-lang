@@ -413,7 +413,6 @@ Two types are *compatible* if
 * They are equivalent
 * They are integer types
 * They are real types
-* They are pointer types and the left-hand side pointer type has the `void` base type or the right-hand side is `null` 
 
 ### Type conversions
 
@@ -430,6 +429,7 @@ If a value `s` of type `S` is given where a value `t` of some other type `T` is 
 * `S` is a dynamic array type and `T` is an array type and the item types of `S` and `T` are equivalent and `len(s) <= len(t)` 
 * `S` is a type (or a pointer to a type) that implements all the methods of `T` and `T` is an interface type 
 * `S` and `T` are interface types and `S` declares all the methods of `T`
+* `S` and `T` are pointer types and either `s == null`, or `T` is `^void`
 * `S` is a weak pointer type and `T` is a strong pointer type and the base types of `S` and `T` are equivalent 
 * `S` is a strong pointer type and `T` is a weak pointer type and the base types of `S` and `T` are equivalent
 * `S` is a function type and `T` is a closure type and `S` and the underlying function type of `T` are equivalent
@@ -440,13 +440,13 @@ If a value `s` of type `S` is given where a value `t` of some other type `T` is 
 
 * `S` can be implicitly converted to `T`, possibly except the type name
 * `S` and `T` are ordinal types
-* `S` and `T` are pointer types and either `T` is `^void` or  `sizeof(s^) >= sizeof(t^)` and both `S` and `T` don't contain pointers
+* `S` and `T` are pointer types and `sizeof(s^) >= sizeof(t^)` and both `S` and `T` don't contain pointers
 * `S` is an interface type and `T` is a type (or a pointer to a type) that was actually converted to `S`
 * `S` is `[]U`, `T` is `[]V` and `U` can be explicitly converted to `V` 
 
 ## Declarations
 
-All types, constants, variables and functions should be declared before the first use. The only exception is that a pointer base type `T` may be declared after using the pointer type `^T` but before the end of the same `type` declaration list. No identifier may be declared twice in the same block.
+All types, constants, variables and functions should be declared before the first use. The only exception is that a pointer base type `T` may be declared after using the pointer type `^T` but before the end of the same `type` declaration list. No identifier may be declared twice in the same block, except for redeclarations allowed in multi-value short variable declarations.
 
 Syntax:
 
@@ -588,7 +588,7 @@ a := 5
 s, val := "Hello", sin(0.1 * a)
 ```
 
-A short variable declaration may redeclare variables provided they were originally declared earlier in the same block and at least one of the variables in the left-hand side list is new. 
+A short variable declaration may redeclare variables provided they were originally declared earlier in the same block with the same type and at least one of the variables in the left-hand side list is new. Redeclaration does not introduce new variables. 
 
 ### Function and method declarations
 

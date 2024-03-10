@@ -1,4 +1,22 @@
-fn test*() {
+fn test1() {
+	// Pointers
+	p := new(int, 42)
+	var q: ^void
+
+	q = p 
+	printf("%v %v %v %v %v %v\n", p != q, q == p, p == null, null != p, q == null, null != q)
+
+	printf("%v\n", p^)
+
+	p = null 
+	printf("%v %v %v %v %v %v\n", p != q, q == p, p == null, null != p, q == null, null != q)
+
+	a := 42 + 13 * 256
+	b := ^[8]uint8(&a)^
+	printf("%v\n", b)	
+}
+
+fn test2() {
 	// Dynamic arrays
 	var p: [3]int
 	{
@@ -31,6 +49,11 @@ fn test*() {
 	printf(sprintf("%v ", pc) + s2 + '\n')
 	printf(str(pc) + s2 + '\n')
 	printf(s2 + str(pc) + '\n')
+}
+
+fn test*() {
+	test1()
+	test2()
 }
 
 fn main() {
