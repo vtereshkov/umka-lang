@@ -844,7 +844,7 @@ static void parseBuiltinNewCall(Compiler *comp, Type **type, Const *constant)
         genDup(&comp->gen);
 
         Type *exprType = NULL;
-        parseExpr(comp, &exprType, NULL);
+        parseExprInferred(comp, *type, &exprType, NULL);
         doAssertImplicitTypeConv(comp, *type, &exprType, NULL, false);
 
         genChangeRefCntAssign(&comp->gen, *type);
@@ -980,7 +980,7 @@ static void parseBuiltinInsertCall(Compiler *comp, Type **type, Const *constant)
     lexEat(&comp->lex, TOK_COMMA);
 
     Type *itemType;
-    parseExpr(comp, &itemType, NULL);
+    parseExprInferred(comp, (*type)->base, &itemType, NULL);
     doAssertImplicitTypeConv(comp, (*type)->base, &itemType, NULL, false);
 
     if (!typeStructured(itemType))
@@ -1019,8 +1019,8 @@ static void parseBuiltinDeleteCall(Compiler *comp, Type **type, Const *constant)
     lexEat(&comp->lex, TOK_COMMA);
     Type *indexType;
     Type *expectedIndexType = ((*type)->kind == TYPE_DYNARRAY) ? comp->intType : typeMapKey(*type);
-    parseExpr(comp, &indexType, NULL);
 
+    parseExprInferred(comp, expectedIndexType, &indexType, NULL);
     doAssertImplicitTypeConv(comp, expectedIndexType, &indexType, NULL, false);
 
     // Pointer to result (hidden parameter)
@@ -2699,9 +2699,7 @@ void parseExpr(Compiler *comp, Type **type, Const *constant)
             lexEat(&comp->lex, TOK_COLON);
 
             Const rightConstantBuf, *rightConstant = &rightConstantBuf;
-            parseExpr(comp, &rightType, rightConstant);
-
-            // Convert to left-hand side's type
+            parseExprInferred(comp, leftType, &rightType, rightConstant);
             doAssertImplicitTypeConv(comp, leftType, &rightType, rightConstant, false);
 
             *constant = constant->intVal ? (*leftConstant) : (*rightConstant);
@@ -2741,9 +2739,7 @@ void parseExpr(Compiler *comp, Type **type, Const *constant)
             // Right-hand side expression
             blocksEnter(&comp->blocks, NULL);
 
-            parseExpr(comp, &rightType, NULL);
-
-            // Convert to left-hand side's type
+            parseExprInferred(comp, leftType, &rightType, NULL);
             doAssertImplicitTypeConv(comp, leftType, &rightType, NULL, false);
 
             if (typeGarbageCollected(leftType))
