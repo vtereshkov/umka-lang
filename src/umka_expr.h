@@ -16,8 +16,8 @@ void doApplyOperator                (Compiler *comp, Type **type, Type **rightTy
 Ident *parseQualIdent               (Compiler *comp);
 void parseDesignatorList            (Compiler *comp, Type **type, Const *constant, bool *isVar, bool *isCall);
 void parseExpr                      (Compiler *comp, Type **type, Const *constant);
-void parseExprOrUntypedLiteral      (Compiler *comp, Type **type, Type *untypedLiteralType, Const *constant);
-void parseExprOrUntypedLiteralList  (Compiler *comp, Type **type, Type *destType, Const *constant);
+void parseExprOrUntypedExpr         (Compiler *comp, Type **type, Type *untypedLiteralType, Const *constant);
+void parseExprOrUntypedExprList     (Compiler *comp, Type **type, Type *destType, Const *constant);
 
 
 #endif // UMKA_EXPR_H_INCLUDED
