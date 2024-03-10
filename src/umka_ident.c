@@ -141,7 +141,7 @@ static Ident *identAdd(Idents *idents, Modules *modules, Blocks *blocks, IdentKi
             kind == IDENT_CONST && type->kind == TYPE_FN &&
             ident->exported == exported &&
             strcmp(ident->name, name) == 0 &&
-            typeCompatible(ident->type, type, false) &&
+            typeCompatible(ident->type, type) &&
             ident->prototypeOffset >= 0)
         {
             return ident;

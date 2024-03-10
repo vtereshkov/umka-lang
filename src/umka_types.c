@@ -467,45 +467,24 @@ void typeAssertEquivalent(Types *types, Type *left, Type *right)
 }
 
 
-bool typeCompatible(Type *left, Type *right, bool symmetric)
+bool typeCompatible(Type *left, Type *right)
 {
     if (typeEquivalent(left, right))
         return true;
 
-    // Integers
     if (typeInteger(left) && typeInteger(right))
         return true;
 
-    // Reals
     if (typeReal(left) && typeReal(right))
         return true;
 
-    // Pointers
-    if (left->kind == TYPE_PTR && right->kind == TYPE_PTR)
-    {
-        // Any pointer can be assigned to an untyped pointer
-        if (left->base->kind == TYPE_VOID)
-            return true;
-
-        // Any pointer can be compared to an untyped pointer
-        if (right->base->kind == TYPE_VOID && symmetric)
-            return true;
-
-        // Null can be assigned to any pointer
-        if (right->base->kind == TYPE_NULL)
-            return true;
-
-        // Null can be compared to any pointer
-        if (left->base->kind == TYPE_NULL && symmetric)
-            return true;
-    }
     return false;
 }
 
 
-void typeAssertCompatible(Types *types, Type *left, Type *right, bool symmetric)
+void typeAssertCompatible(Types *types, Type *left, Type *right)
 {
-    if (!typeCompatible(left, right, symmetric))
+    if (!typeCompatible(left, right))
     {
         char leftBuf[DEFAULT_STR_LEN + 1], rightBuf[DEFAULT_STR_LEN + 1];
         types->error->handler(types->error->context, "Incompatible types %s and %s", typeSpelling(left, leftBuf), typeSpelling(right, rightBuf));
@@ -515,7 +494,7 @@ void typeAssertCompatible(Types *types, Type *left, Type *right, bool symmetric)
 
 void typeAssertCompatibleParam(Types *types, Type *left, Type *right, Type *fnType, int paramIndex)
 {
-    if (!typeCompatible(left, right, false))
+    if (!typeCompatible(left, right))
     {
         char rightBuf[DEFAULT_STR_LEN + 1], fnTypeBuf[DEFAULT_STR_LEN + 1];
         types->error->handler(types->error->context, "Incompatible type %s for parameter %d to %s", typeSpelling(right, rightBuf), paramIndex, typeSpelling(fnType, fnTypeBuf));

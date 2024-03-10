@@ -220,8 +220,8 @@ static inline bool typeFiberFunc(Type *type)
 bool typeEquivalent             (Type *left, Type *right);
 bool typeEquivalentExceptIdent  (Type *left, Type *right);
 void typeAssertEquivalent       (Types *types, Type *left, Type *right);
-bool typeCompatible             (Type *left, Type *right, bool symmetric);
-void typeAssertCompatible       (Types *types, Type *left, Type *right, bool symmetric);
+bool typeCompatible             (Type *left, Type *right);
+void typeAssertCompatible       (Types *types, Type *left, Type *right);
 void typeAssertCompatibleParam  (Types *types, Type *left, Type *right, Type *fnType, int paramIndex);
 void typeAssertCompatibleBuiltin(Types *types, Type *type, /*BuiltinFunc*/ int builtin, bool condition);
 
@@ -232,12 +232,15 @@ static inline bool typeCompatibleRcv(Type *left, Type *right)
 }
 
 
-static inline bool typeCastablePtrs(Types *types, Type *left, Type *right)
+static inline bool typeImplicitlyConvertibleBaseTypes(Type *left, Type *right)
 {
-    return left->kind  == TYPE_PTR && right->kind == TYPE_PTR &&
-           (left->base->kind == TYPE_VOID ||
-           (typeSize(types, left->base) <= typeSize(types, right->base) &&
-           !typeGarbageCollected(left->base) && !typeGarbageCollected(right->base)));
+   return left->kind == TYPE_VOID || right->kind == TYPE_NULL;
+}
+
+
+static inline bool typeExplicitlyConvertibleBaseTypes(Types *types, Type *left, Type *right)
+{
+    return typeSize(types, left) <= typeSize(types, right) && !typeGarbageCollected(left) && !typeGarbageCollected(right);
 }
 
 

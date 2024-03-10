@@ -157,8 +157,7 @@ static void parseSingleAssignmentStmt(Compiler *comp, Type *type, Const *varPtrC
     Const rightConstantBuf, *rightConstant = varPtrConst ? &rightConstantBuf : NULL;
     parseExprOrUntypedLiteral(comp, &rightType, type, rightConstant);
 
-    doImplicitTypeConv(comp, type, &rightType, rightConstant, false);
-    typeAssertCompatible(&comp->types, type, rightType, false);
+    doAssertImplicitTypeConv(comp, type, &rightType, rightConstant, false);
 
     if (varPtrConst)                                // Initialize global variable
         constAssign(&comp->consts, varPtrConst->ptrVal, rightConstant, type->kind, typeSize(&comp->types, type));
@@ -208,8 +207,7 @@ static void parseListAssignmentStmt(Compiler *comp, Type *type, Const *varPtrCon
             Const rightConstantBuf = {.ptrVal = (char *)rightListConstant->ptrVal + rightListType->field[i]->offset};
             constDeref(&comp->consts, &rightConstantBuf, rightType->kind);
 
-            doImplicitTypeConv(comp, leftType, &rightType, &rightConstantBuf, false);
-            typeAssertCompatible(&comp->types, leftType, rightType, false);
+            doAssertImplicitTypeConv(comp, leftType, &rightType, &rightConstantBuf, false);
 
             constAssign(&comp->consts, varPtrConstList[i].ptrVal, &rightConstantBuf, leftType->kind, typeSize(&comp->types, leftType));
         }
@@ -220,8 +218,7 @@ static void parseListAssignmentStmt(Compiler *comp, Type *type, Const *varPtrCon
             genGetFieldPtr(&comp->gen, rightListType->field[i]->offset);    // Get expression pointer
             genDeref(&comp->gen, rightType->kind);                          // Get expression value
 
-            doImplicitTypeConv(comp, leftType, &rightType, NULL, false);
-            typeAssertCompatible(&comp->types, leftType, rightType, false);
+            doAssertImplicitTypeConv(comp, leftType, &rightType, NULL, false);
 
             genChangeRefCntAssign(&comp->gen, leftType);                    // Assign expression to variable
             genPushReg(&comp->gen, VM_REG_COMMON_3);                        // Restore expression list pointer
@@ -340,10 +337,7 @@ static void parseListDeclAssignmentStmt(Compiler *comp, IdentName *names, bool *
             constDeref(&comp->consts, &rightConstantBuf, rightType->kind);
 
             if (redecl)
-            {
-                doImplicitTypeConv(comp, ident->type, &rightType, &rightConstantBuf, false);
-                typeAssertCompatible(&comp->types, ident->type, rightType, false);
-            }
+                doAssertImplicitTypeConv(comp, ident->type, &rightType, &rightConstantBuf, false);
 
             constAssign(&comp->consts, ident->ptr, &rightConstantBuf, ident->type->kind, typeSize(&comp->types, ident->type));
         }
@@ -355,8 +349,7 @@ static void parseListDeclAssignmentStmt(Compiler *comp, IdentName *names, bool *
 
             if (redecl)
             {
-                doImplicitTypeConv(comp, ident->type, &rightType, NULL, false);
-                typeAssertCompatible(&comp->types, ident->type, rightType, false);
+                doAssertImplicitTypeConv(comp, ident->type, &rightType, NULL, false);
 
                 doPushVarPtr(comp, ident);
                 genSwapChangeRefCntAssign(&comp->gen, ident->type);                                 // Assign expression to variable - both left-hand and right-hand side reference counts modified
@@ -398,7 +391,7 @@ static void parseIncDecStmt(Compiler *comp, Type *type, TokenKind op)
         type = type->base;
     }
 
-    typeAssertCompatible(&comp->types, comp->intType, type, false);
+    typeAssertCompatible(&comp->types, comp->intType, type);
     genUnary(&comp->gen, op, type->kind);
     lexNext(&comp->lex);
 }
@@ -468,7 +461,7 @@ static void parseIfStmt(Compiler *comp)
     // expr
     Type *type;
     parseExpr(comp, &type, NULL);
-    typeAssertCompatible(&comp->types, comp->boolType, type, false);
+    typeAssertCompatible(&comp->types, comp->boolType, type);
 
     genIfCondEpilog(&comp->gen);
 
@@ -511,7 +504,7 @@ static void parseExprCase(Compiler *comp, Type *selectorType)
         Const constant;
         Type *type;
         parseExpr(comp, &type, &constant);
-        typeAssertCompatible(&comp->types, selectorType, type, false);
+        typeAssertCompatible(&comp->types, selectorType, type);
 
         genCaseExprEpilog(&comp->gen, &constant);
 
@@ -741,7 +734,7 @@ static void parseForHeader(Compiler *comp)
     // expr
     Type *type;
     parseExpr(comp, &type, NULL);
-    typeAssertCompatible(&comp->types, comp->boolType, type, false);
+    typeAssertCompatible(&comp->types, comp->boolType, type);
 
     // Additional scope embracing expr
     doGarbageCollection(comp, blocksCurrent(&comp->blocks));
@@ -1064,8 +1057,7 @@ static void parseReturnStmt(Compiler *comp)
     else
         type = comp->voidType;
 
-    doImplicitTypeConv(comp, sig->resultType, &type, NULL, false);
-    typeAssertCompatible(&comp->types, sig->resultType, type, false);
+    doAssertImplicitTypeConv(comp, sig->resultType, &type, NULL, false);
 
     // Copy structure to __result
     if (typeStructured(sig->resultType))

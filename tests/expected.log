@@ -420,6 +420,9 @@ String representation:
 
 >>> Safe type casts
 
+false true false true false true
+42
+true false true false false true
 [1 5 7 10]
 [1 4 7]
 Hey Hello
