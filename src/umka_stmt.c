@@ -143,7 +143,7 @@ static bool doTypeSwitchStmtLookahead(Compiler *comp)
 }
 
 
-// singleAssignmentStmt = designator "=" exprOrUntyped.
+// singleAssignmentStmt = designator "=" exprInferred.
 static void parseSingleAssignmentStmt(Compiler *comp, Type *type, Const *varPtrConst)
 {
     if (!typeStructured(type))
@@ -155,8 +155,8 @@ static void parseSingleAssignmentStmt(Compiler *comp, Type *type, Const *varPtrC
 
     Type *rightType;
     Const rightConstantBuf, *rightConstant = varPtrConst ? &rightConstantBuf : NULL;
-    parseExprOrUntypedExpr(comp, &rightType, type, rightConstant);
 
+    parseExprInferred(comp, type, &rightType, rightConstant);
     doAssertImplicitTypeConv(comp, type, &rightType, rightConstant, false);
 
     if (varPtrConst)                                // Initialize global variable
@@ -179,7 +179,7 @@ static void parseSingleAssignmentStmt(Compiler *comp, Type *type, Const *varPtrC
 }
 
 
-// listAssignmentStmt = designatorList "=" exprOrUntypedList.
+// listAssignmentStmt = designatorList "=" exprListInferred.
 static void parseListAssignmentStmt(Compiler *comp, Type *type, Const *varPtrConstList)
 {
     Type *derefLeftListType = typeAdd(&comp->types, &comp->blocks, TYPE_STRUCT);
@@ -199,7 +199,7 @@ static void parseListAssignmentStmt(Compiler *comp, Type *type, Const *varPtrCon
 
     Type *rightListType;
     Const rightListConstantBuf, *rightListConstant = varPtrConstList ? &rightListConstantBuf : NULL;
-    parseExprOrUntypedExprList(comp, &rightListType, derefLeftListType, rightListConstant);
+    parseExprListInferred(comp, derefLeftListType, &rightListType, rightListConstant);
 
     const int numExpr = typeExprListStruct(rightListType) ? rightListType->numItems : 1;
     if (numExpr != type->numItems)
@@ -307,12 +307,12 @@ static void parseSingleDeclAssignmentStmt(Compiler *comp, IdentName name, bool e
 }
 
 
-// listDeclAssignmentStmt = identList ":=" exprOrUntypedList.
+// listDeclAssignmentStmt = identList ":=" exprListInferred.
 static void parseListDeclAssignmentStmt(Compiler *comp, IdentName *names, bool *exported, int num, bool constExpr)
 {
     Type *rightListType;
     Const rightListConstantBuf, *rightListConstant = constExpr ? &rightListConstantBuf : NULL;
-    parseExprOrUntypedExprList(comp, &rightListType, NULL, rightListConstant);
+    parseExprListInferred(comp, NULL, &rightListType, rightListConstant);
 
     const int numExpr = typeExprListStruct(rightListType) ? rightListType->numItems : 1;
     if (numExpr != num)
@@ -501,7 +501,7 @@ static void parseIfStmt(Compiler *comp)
 }
 
 
-// exprCase = "case" exprOrUntyped {"," exprOrUntyped} ":" stmtList.
+// exprCase = "case" exprInferred {"," exprInferred} ":" stmtList.
 static void parseExprCase(Compiler *comp, Type *selectorType)
 {
     lexEat(&comp->lex, TOK_CASE);
@@ -511,7 +511,7 @@ static void parseExprCase(Compiler *comp, Type *selectorType)
     {
         Const constant;
         Type *type;
-        parseExprOrUntypedExpr(comp, &type, selectorType, &constant);
+        parseExprInferred(comp, selectorType, &type, &constant);
         typeAssertCompatible(&comp->types, selectorType, type);
 
         genCaseExprEpilog(&comp->gen, &constant);
@@ -1044,7 +1044,7 @@ static void parseContinueStmt(Compiler *comp)
 }
 
 
-// returnStmt = "return" [exprOrUntypedList].
+// returnStmt = "return" [exprListInferred].
 static void parseReturnStmt(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_RETURN);
@@ -1061,7 +1061,7 @@ static void parseReturnStmt(Compiler *comp)
 
     Type *type;
     if (comp->lex.tok.kind != TOK_SEMICOLON && comp->lex.tok.kind != TOK_IMPLICIT_SEMICOLON && comp->lex.tok.kind != TOK_RBRACE)
-        parseExprOrUntypedExprList(comp, &type, sig->resultType, NULL);
+        parseExprListInferred(comp, sig->resultType, &type, NULL);
     else
         type = comp->voidType;
 
