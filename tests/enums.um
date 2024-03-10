@@ -71,7 +71,7 @@ fn test*() {
 	printf("\n")	
 
 	m, b := get()
-	printf("%v %v\n", m == Mode.select, b == Button.left)
+	printf("%v %v\n", m == Mode.select, b == .left)
 }
 
 fn main() {

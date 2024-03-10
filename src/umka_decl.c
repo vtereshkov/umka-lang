@@ -99,7 +99,7 @@ static void parseRcvSignature(Compiler *comp, Signature *sig)
 }
 
 
-// signature = "(" [typedIdentList ["=" exprInferred] {"," typedIdentList ["=" exprInferred]}] ")" [":" (type | "(" type {"," type} ")")].
+// signature = "(" [typedIdentList ["=" expr] {"," typedIdentList ["=" expr]}] ")" [":" (type | "(" type {"," type} ")")].
 static void parseSignature(Compiler *comp, Signature *sig)
 {
     // Dummy hidden parameter that allows any function to be converted to a closure
@@ -126,7 +126,7 @@ static void parseSignature(Compiler *comp, Signature *sig)
 
             variadicParamListFound = paramType->isVariadicParamList;
 
-            // ["=" exprInferred]
+            // ["=" expr]
             Const defaultConstant;
             if (comp->lex.tok.kind == TOK_EQ)
             {
@@ -592,6 +592,7 @@ static void parseConstDeclItem(Compiler *comp, Type **type, Const *constant)
     else
     {
         lexEat(&comp->lex, TOK_EQ);
+        *type = NULL;
         parseExpr(comp, type, constant);
     }
 
@@ -622,7 +623,7 @@ static void parseConstDecl(Compiler *comp)
 }
 
 
-// varDeclItem = typedIdentList "=" exprListInferred.
+// varDeclItem = typedIdentList "=" exprList.
 static void parseVarDeclItem(Compiler *comp)
 {
     IdentName varNames[MAX_IDENTS_IN_LIST];

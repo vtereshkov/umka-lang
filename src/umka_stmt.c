@@ -143,7 +143,7 @@ static bool doTypeSwitchStmtLookahead(Compiler *comp)
 }
 
 
-// singleAssignmentStmt = designator "=" exprInferred.
+// singleAssignmentStmt = designator "=" expr.
 static void parseSingleAssignmentStmt(Compiler *comp, Type *type, Const *varPtrConst)
 {
     if (!typeStructured(type))
@@ -179,7 +179,7 @@ static void parseSingleAssignmentStmt(Compiler *comp, Type *type, Const *varPtrC
 }
 
 
-// listAssignmentStmt = designatorList "=" exprListInferred.
+// listAssignmentStmt = designatorList "=" exprList.
 static void parseListAssignmentStmt(Compiler *comp, Type *type, Const *varPtrConstList)
 {
     Type *derefLeftListType = typeAdd(&comp->types, &comp->blocks, TYPE_STRUCT);
@@ -263,7 +263,7 @@ static void parseShortAssignmentStmt(Compiler *comp, Type *type, TokenKind op)
     genDeref(&comp->gen, type->kind);
 
     Type *leftType = type;
-    Type *rightType = NULL;
+    Type *rightType = type;
     parseExpr(comp, &rightType, NULL);
 
     // Keep "+=" for strings as is for better optimizations
@@ -307,7 +307,7 @@ static void parseSingleDeclAssignmentStmt(Compiler *comp, IdentName name, bool e
 }
 
 
-// listDeclAssignmentStmt = identList ":=" exprListInferred.
+// listDeclAssignmentStmt = identList ":=" exprList.
 static void parseListDeclAssignmentStmt(Compiler *comp, IdentName *names, bool *exported, int num, bool constExpr)
 {
     Type *rightListType = NULL;
@@ -467,7 +467,7 @@ static void parseIfStmt(Compiler *comp)
     }
 
     // expr
-    Type *type = NULL;
+    Type *type = comp->boolType;
     parseExpr(comp, &type, NULL);
     typeAssertCompatible(&comp->types, comp->boolType, type);
 
@@ -501,7 +501,7 @@ static void parseIfStmt(Compiler *comp)
 }
 
 
-// exprCase = "case" exprInferred {"," exprInferred} ":" stmtList.
+// exprCase = "case" expr {"," expr} ":" stmtList.
 static void parseExprCase(Compiler *comp, Type *selectorType)
 {
     lexEat(&comp->lex, TOK_CASE);
@@ -740,7 +740,7 @@ static void parseForHeader(Compiler *comp)
     blocksEnter(&comp->blocks, NULL);
 
     // expr
-    Type *type = NULL;
+    Type *type = comp->boolType;
     parseExpr(comp, &type, NULL);
     typeAssertCompatible(&comp->types, comp->boolType, type);
 
@@ -1044,7 +1044,7 @@ static void parseContinueStmt(Compiler *comp)
 }
 
 
-// returnStmt = "return" [exprListInferred].
+// returnStmt = "return" [exprList].
 static void parseReturnStmt(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_RETURN);
