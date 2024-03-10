@@ -11,11 +11,11 @@ type Parser* = struct {
 
 fn (p: ^Parser) parse(): ^ev.Expr {    
     // Parse list
-    if p.lexer.tok.kind == lex.TokenKind.LPar {
+    if p.lexer.tok.kind == .LPar {
         p.lexer.next() 
        
         var first, last: ^ev.Expr
-        for p.lexer.tok.kind == lex.TokenKind.Atom || p.lexer.tok.kind == lex.TokenKind.LPar {
+        for p.lexer.tok.kind == .Atom || p.lexer.tok.kind == .LPar {
             e := ev.strExpr("")
             e.car = p.parse()
             

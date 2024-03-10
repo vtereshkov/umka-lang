@@ -139,7 +139,7 @@ static void parseSignature(Compiler *comp, Signature *sig)
                 lexNext(&comp->lex);
 
                 Type *defaultType = paramType;
-                parseExprInferred(comp, paramType, &defaultType, &defaultConstant);
+                parseExpr(comp, &defaultType, &defaultConstant);
                 doAssertImplicitTypeConv(comp, paramType, &defaultType, &defaultConstant, false);
 
                 numDefaultParams++;

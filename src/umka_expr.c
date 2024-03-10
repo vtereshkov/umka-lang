@@ -844,7 +844,7 @@ static void parseBuiltinNewCall(Compiler *comp, Type **type, Const *constant)
         genDup(&comp->gen);
 
         Type *exprType = *type;
-        parseExprInferred(comp, *type, &exprType, NULL);
+        parseExpr(comp, &exprType, NULL);
         doAssertImplicitTypeConv(comp, *type, &exprType, NULL, false);
 
         genChangeRefCntAssign(&comp->gen, *type);
@@ -980,7 +980,7 @@ static void parseBuiltinInsertCall(Compiler *comp, Type **type, Const *constant)
     lexEat(&comp->lex, TOK_COMMA);
 
     Type *itemType = (*type)->base;
-    parseExprInferred(comp, (*type)->base, &itemType, NULL);
+    parseExpr(comp, &itemType, NULL);
     doAssertImplicitTypeConv(comp, (*type)->base, &itemType, NULL, false);
 
     if (!typeStructured(itemType))
@@ -1021,7 +1021,7 @@ static void parseBuiltinDeleteCall(Compiler *comp, Type **type, Const *constant)
     Type *expectedIndexType = ((*type)->kind == TYPE_DYNARRAY) ? comp->intType : typeMapKey(*type);
     Type *indexType = expectedIndexType;
 
-    parseExprInferred(comp, expectedIndexType, &indexType, NULL);
+    parseExpr(comp, &indexType, NULL);
     doAssertImplicitTypeConv(comp, expectedIndexType, &indexType, NULL, false);
 
     // Pointer to result (hidden parameter)
@@ -1270,7 +1270,7 @@ static void parseBuiltinValidkeyCall(Compiler *comp, Type **type, Const *constan
 
     // Map key
     Type *keyType = typeMapKey(*type);
-    parseExprInferred(comp, typeMapKey(*type), &keyType, constant);
+    parseExpr(comp, &keyType, constant);
     doAssertImplicitTypeConv(comp, typeMapKey(*type), &keyType, NULL, false);
 
     genCallBuiltin(&comp->gen, (*type)->kind, BUILTIN_VALIDKEY);
@@ -1516,7 +1516,7 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
             else
             {
                 // Regular parameter
-                parseExprInferred(comp, formalParamType, &actualParamType, constant);
+                parseExpr(comp, &actualParamType, constant);
 
                 doImplicitTypeConv(comp, formalParamType, &actualParamType, constant, false);
                 typeAssertCompatibleParam(&comp->types, formalParamType, actualParamType, *type, numExplicitParams + 1);
@@ -1732,9 +1732,8 @@ static void parseArrayOrStructLiteral(Compiler *comp, Type **type, Const *consta
             Const itemConstantBuf, *itemConstant = constant ? &itemConstantBuf : NULL;
             int itemSize = typeSize(&comp->types, expectedItemType);
 
-            // exprInferred
-            parseExprInferred(comp, expectedItemType, &itemType, itemConstant);
-
+            // expr
+            parseExpr(comp, &itemType, itemConstant);
             doAssertImplicitTypeConv(comp, expectedItemType, &itemType, itemConstant, false);
 
             if (constant)
@@ -1786,7 +1785,7 @@ static void parseDynArrayLiteral(Compiler *comp, Type **type, Const *constant)
         while (1)
         {
             Type *itemType = staticArrayType->base;
-            parseExprInferred(comp, staticArrayType->base, &itemType, NULL);
+            parseExpr(comp, &itemType, NULL);
 
             // Special case: variadic parameter list's first item is already a dynamic array compatible with the variadic parameter list
             if ((*type)->isVariadicParamList && typeCompatible(*type, itemType) && staticArrayType->numItems == 0)
@@ -1854,7 +1853,7 @@ static void parseMapLiteral(Compiler *comp, Type **type, Const *constant)
 
             // Key
             Type *keyType = typeMapKey(*type);
-            parseExprInferred(comp, typeMapKey(*type), &keyType, NULL);
+            parseExpr(comp, &keyType, NULL);
             doAssertImplicitTypeConv(comp, typeMapKey(*type), &keyType, NULL, false);
 
             lexEat(&comp->lex, TOK_COLON);
@@ -1864,7 +1863,7 @@ static void parseMapLiteral(Compiler *comp, Type **type, Const *constant)
 
             // Item
             Type *itemType = typeMapItem(*type);
-            parseExprInferred(comp, typeMapItem(*type), &itemType, NULL);
+            parseExpr(comp, &itemType, NULL);
             doAssertImplicitTypeConv(comp, typeMapItem(*type), &itemType, NULL, false);
 
             // Assign to map item
@@ -2140,7 +2139,7 @@ static void parseIndexSelector(Compiler *comp, Type **type, Const *constant, boo
     if ((*type)->kind == TYPE_MAP)
     {
         Type *keyType = typeMapKey(*type);
-        parseExprInferred(comp, typeMapKey(*type), &keyType, NULL);
+        parseExpr(comp, &keyType, NULL);
         doAssertImplicitTypeConv(comp, typeMapKey(*type), &keyType, NULL, false);
     }
     else
@@ -2711,7 +2710,7 @@ void parseExpr(Compiler *comp, Type **type, Const *constant)
 
             Const rightConstantBuf, *rightConstant = &rightConstantBuf;
             rightType = leftType;
-            parseExprInferred(comp, leftType, &rightType, rightConstant);
+            parseExpr(comp, &rightType, rightConstant);
             doAssertImplicitTypeConv(comp, leftType, &rightType, rightConstant, false);
 
             *constant = constant->intVal ? (*leftConstant) : (*rightConstant);
@@ -2752,7 +2751,7 @@ void parseExpr(Compiler *comp, Type **type, Const *constant)
             blocksEnter(&comp->blocks, NULL);
 
             rightType = leftType;
-            parseExprInferred(comp, leftType, &rightType, NULL);
+            parseExpr(comp, &rightType, NULL);
             doAssertImplicitTypeConv(comp, leftType, &rightType, NULL, false);
 
             if (typeGarbageCollected(leftType))
@@ -2776,15 +2775,7 @@ void parseExpr(Compiler *comp, Type **type, Const *constant)
 }
 
 
-// untypedExpr = untypedLiteral | untypedEnumConst.
-// exprInferred = expr | untypedExpr.
-void parseExprInferred(Compiler *comp, Type *inferredType, Type **type, Const *constant)
-{
-    parseExpr(comp, type, constant);
-}
-
-
-// exprListInferred = exprInferred {"," exprInferred}.
+// exprList = expr {"," expr}.
 void parseExprListInferred(Compiler *comp, Type *inferredType, Type **type, Const *constant)
 {
     Type *inferredExprType = inferredType;
@@ -2792,7 +2783,7 @@ void parseExprListInferred(Compiler *comp, Type *inferredType, Type **type, Cons
         inferredExprType = inferredType->field[0]->type;
 
     *type = inferredExprType;
-    parseExprInferred(comp, inferredExprType, type, constant);
+    parseExpr(comp, type, constant);
 
     if (comp->lex.tok.kind == TOK_COMMA)
     {
@@ -2840,7 +2831,7 @@ void parseExprListInferred(Compiler *comp, Type *inferredType, Type **type, Cons
                 inferredExprType = inferredType->field[(*type)->numItems]->type;
 
             fieldType = inferredExprType;
-            parseExprInferred(comp, inferredExprType, &fieldType, fieldConstant);
+            parseExpr(comp, &fieldType, fieldConstant);
         }
 
         // Allocate structure

@@ -156,7 +156,7 @@ static void parseSingleAssignmentStmt(Compiler *comp, Type *type, Const *varPtrC
     Type *rightType = type;
     Const rightConstantBuf, *rightConstant = varPtrConst ? &rightConstantBuf : NULL;
 
-    parseExprInferred(comp, type, &rightType, rightConstant);
+    parseExpr(comp, &rightType, rightConstant);
     doAssertImplicitTypeConv(comp, type, &rightType, rightConstant, false);
 
     if (varPtrConst)                                // Initialize global variable
@@ -511,7 +511,7 @@ static void parseExprCase(Compiler *comp, Type *selectorType)
     {
         Const constant;
         Type *type = selectorType;
-        parseExprInferred(comp, selectorType, &type, &constant);
+        parseExpr(comp, &type, &constant);
         typeAssertCompatible(&comp->types, selectorType, type);
 
         genCaseExprEpilog(&comp->gen, &constant);
