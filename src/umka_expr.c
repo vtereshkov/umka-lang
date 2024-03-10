@@ -613,7 +613,7 @@ void doExplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant,
     }
 
     // Pointer to pointer
-    else if (dest->kind == TYPE_PTR && (*src)->kind == TYPE_PTR && typeExplicitlyConvertibleBaseTypes(&comp->types, dest, *src))
+    else if (dest->kind == TYPE_PTR && (*src)->kind == TYPE_PTR && typeExplicitlyConvertibleBaseTypes(&comp->types, dest->base, (*src)->base))
     {
         *src = dest;
     }

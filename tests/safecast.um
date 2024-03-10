@@ -10,6 +10,10 @@ fn test1() {
 
 	p = null 
 	printf("%v %v %v %v %v %v\n", p != q, q == p, p == null, null != p, q == null, null != q)
+
+	a := 42 + 13 * 256
+	b := ^[8]uint8(&a)^
+	printf("%v\n", b)	
 }
 
 fn test2() {

@@ -423,6 +423,7 @@ String representation:
 false true false true false true
 42
 true false true false false true
+[42 13 0 0 0 0 0 0]
 [1 5 7 10]
 [1 4 7]
 Hey Hello
