@@ -138,7 +138,7 @@ static void parseSignature(Compiler *comp, Signature *sig)
 
                 lexNext(&comp->lex);
 
-                Type *defaultType;
+                Type *defaultType = paramType;
                 parseExprInferred(comp, paramType, &defaultType, &defaultConstant);
                 doAssertImplicitTypeConv(comp, paramType, &defaultType, &defaultConstant, false);
 
@@ -270,7 +270,7 @@ static Type *parseArrayType(Compiler *comp)
     {
         // Conventional array
         typeKind = TYPE_ARRAY;
-        Type *indexType;
+        Type *indexType = NULL;
         parseExpr(comp, &indexType, &len);
         typeAssertCompatible(&comp->types, comp->intType, indexType);
         if (len.intVal < 0 || len.intVal > INT_MAX)
