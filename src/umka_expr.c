@@ -2769,16 +2769,16 @@ void parseExpr(Compiler *comp, Type **type, Const *constant)
 
 // untypedExpr = untypedLiteral | untypedEnumConst.
 // exprOrUntyped = expr | untypedExpr.
-void parseExprOrUntypedExpr(Compiler *comp, Type **type, Type *untypedExprType, Const *constant)
+void parseExprOrUntypedExpr(Compiler *comp, Type **type, Type *inferredType, Const *constant)
 {
-    if (untypedExprType && (comp->lex.tok.kind == TOK_LBRACE || comp->lex.tok.kind == TOK_OR))
+    if (inferredType && (comp->lex.tok.kind == TOK_LBRACE || comp->lex.tok.kind == TOK_OR))
     {
-        *type = untypedExprType;
+        *type = inferredType;
         parseUntypedLiteral(comp, type, constant);
     }
-    else if (untypedExprType && (comp->lex.tok.kind == TOK_PERIOD))
+    else if (inferredType && (comp->lex.tok.kind == TOK_PERIOD))
     {
-        *type = untypedExprType;
+        *type = inferredType;
         parseUntypedEnumConst(comp, type, constant);
     }
     else
@@ -2787,13 +2787,13 @@ void parseExprOrUntypedExpr(Compiler *comp, Type **type, Type *untypedExprType, 
 
 
 // exprOrUntypedList = exprOrUntyped {"," exprOrUntyped}.
-void parseExprOrUntypedExprList(Compiler *comp, Type **type, Type *destType, Const *constant)
+void parseExprOrUntypedExprList(Compiler *comp, Type **type, Type *inferredType, Const *constant)
 {
-    Type *untypedExprType = destType;
-    if (destType && typeExprListStruct(destType) && destType->numItems > 0)
-        untypedExprType = destType->field[0]->type;
+    Type *inferredExprType = inferredType;
+    if (inferredType && typeExprListStruct(inferredType) && inferredType->numItems > 0)
+        inferredExprType = inferredType->field[0]->type;
 
-    parseExprOrUntypedExpr(comp, type, untypedExprType, constant);
+    parseExprOrUntypedExpr(comp, type, inferredExprType, constant);
 
     if (comp->lex.tok.kind == TOK_COMMA)
     {
@@ -2813,12 +2813,12 @@ void parseExprOrUntypedExprList(Compiler *comp, Type **type, Type *destType, Con
         while (1)
         {
             // Convert field to the desired type if necessary and possible (no error is thrown anyway)
-            if (destType && typeExprListStruct(destType) && destType->numItems > (*type)->numItems)
+            if (inferredType && typeExprListStruct(inferredType) && inferredType->numItems > (*type)->numItems)
             {
-                Type *destFieldType = destType->field[(*type)->numItems]->type;
-                doImplicitTypeConv(comp, destFieldType, &fieldType, fieldConstant, false);
-                if (typeCompatible(destFieldType, fieldType))
-                    fieldType = destFieldType;
+                Type *inferredFieldType = inferredType->field[(*type)->numItems]->type;
+                doImplicitTypeConv(comp, inferredFieldType, &fieldType, fieldConstant, false);
+                if (typeCompatible(inferredFieldType, fieldType))
+                    fieldType = inferredFieldType;
             }
 
             if (typeExprListStruct(fieldType))
@@ -2836,11 +2836,11 @@ void parseExprOrUntypedExprList(Compiler *comp, Type **type, Type *destType, Con
 
             lexNext(&comp->lex);
 
-            untypedExprType = NULL;
-            if (destType && typeExprListStruct(destType) && destType->numItems > (*type)->numItems)
-                untypedExprType = destType->field[(*type)->numItems]->type;
+            inferredExprType = NULL;
+            if (inferredType && typeExprListStruct(inferredType) && inferredType->numItems > (*type)->numItems)
+                inferredExprType = inferredType->field[(*type)->numItems]->type;
 
-            parseExprOrUntypedExpr(comp, &fieldType, untypedExprType, fieldConstant);
+            parseExprOrUntypedExpr(comp, &fieldType, inferredExprType, fieldConstant);
         }
 
         // Allocate structure
