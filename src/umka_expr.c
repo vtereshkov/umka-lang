@@ -2051,7 +2051,14 @@ static void parseUntypedEnumConst(Compiler *comp, Type **type, Const *constant)
 
 static void parseTypeCastOrCompositeLiteralOrEnumConst(Compiler *comp, Ident *ident, Type **type, Const *constant, bool *isVar, bool *isCall, bool *isCompLit)
 {
-    *type = parseType(comp, ident);
+    if (*type && (comp->lex.tok.kind == TOK_LBRACE || comp->lex.tok.kind == TOK_OR || comp->lex.tok.kind == TOK_PERIOD))
+    {
+        // Use inferred type
+    }
+    else
+    {
+        *type = parseType(comp, ident);
+    }
 
     if (comp->lex.tok.kind == TOK_LPAR)
     {
@@ -2391,6 +2398,9 @@ static void parseFactor(Compiler *comp, Type **type, Const *constant)
         case TOK_STRUCT:
         case TOK_INTERFACE:
         case TOK_FN:
+        case TOK_LBRACE:
+        case TOK_OR:
+        case TOK_PERIOD:
         {
             // A designator that isVar is always an addressable quantity (a structured type or a pointer to a value type)
             bool isVar, isCall, isCompLit;
@@ -2770,18 +2780,7 @@ void parseExpr(Compiler *comp, Type **type, Const *constant)
 // exprInferred = expr | untypedExpr.
 void parseExprInferred(Compiler *comp, Type *inferredType, Type **type, Const *constant)
 {
-    if (inferredType && (comp->lex.tok.kind == TOK_LBRACE || comp->lex.tok.kind == TOK_OR))
-    {
-        *type = inferredType;
-        parseUntypedLiteral(comp, type, constant);
-    }
-    else if (inferredType && (comp->lex.tok.kind == TOK_PERIOD))
-    {
-        *type = inferredType;
-        parseUntypedEnumConst(comp, type, constant);
-    }
-    else
-        parseExpr(comp, type, constant);
+    parseExpr(comp, type, constant);
 }
 
 
