@@ -150,17 +150,21 @@ fn (sc: ^Scene) trace(ray: ^Ray, depth: int): Color {
 
 const (width = 640; height = 480)
 
-type RenderData = struct {
-    startHeight:  int
-    stopHeight:   int
-    pos:          mat.Vec
-    azimuth:      real
-    focal:        real
-    antialiasing: real
-    rays:         int
-    scene:        ^Scene
-    pixels:       ^[height][width][3] uint8
-}
+type (
+    Pixels = [height][width][3]uint8
+
+    RenderData = struct {
+        startHeight:  int
+        stopHeight:   int
+        pos:          mat.Vec
+        azimuth:      real
+        focal:        real
+        antialiasing: real
+        numRays:      int
+        scene:        ^Scene
+        pixels:       ^Pixels
+    }
+)
 
 fn render(parent: fiber, buf: ^RenderData) {
     sinAz, cosAz := sin(buf.azimuth), cos(buf.azimuth)
@@ -176,12 +180,12 @@ fn render(parent: fiber, buf: ^RenderData) {
 
             color := Color{0, 0, 0}
 
-            for r := 0; r < buf.rays; r++ {
+            for r := 0; r < buf.numRays; r++ {
                 randomDir := rotDir.add(randn().mul(buf.antialiasing))
                 ray := Ray{buf.pos, randomDir.normalize()}
                 color = Color(mat.Vec(color).add(mat.Vec(buf.scene.trace(&ray, 0))))
             }
-            color = Color(mat.Vec(color).mul(255.0 / buf.rays))
+            color = Color(mat.Vec(color).mul(255.0 / buf.numRays))
             
             buf.pixels[i][j] = {round(color[0]), round(color[1]), round(color[2])}
         }
@@ -245,35 +249,34 @@ fn main() {
         }
     }
             
-    scene := Scene{{0.2, 0.2, 0.2}, body}
+    scene := &Scene{{0.2, 0.2, 0.2}, body}
     
-    var pixels: [height][width][3]uint8            
+    pixels := new(Pixels)            
 
-    var rays, fibers: int
+    var numRays, numRenderers: int
     printf("Raytracer demo\n")
-    printf("Rays per pixel (recommended 1 to 20): ");  scanf("%lld", &rays)
-    printf("Threads (recommended 1, 2, 4, 8, 16): ");  scanf("%lld", &fibers)
+    printf("Rays per pixel (recommended 1 to 20): ");  scanf("%lld", &numRays)
+    printf("Threads (recommended 1, 2, 4, 8, 16): ");  scanf("%lld", &numRenderers)
     
     // Define fibers
-    renderer := make([]fiber, fibers)
-    renderData := make([]RenderData, fibers)
+    renderers := make([]fiber, numRenderers)
 
-    for i := 0; i < len(renderer); i++ {
+    for i, renderer^ in renderers {
         // Define eye
-        renderData[i] = RenderData {
-            startHeight:  height / len(renderer) * i,
-            stopHeight:   height / len(renderer) * (i + 1),
+        renderData := &RenderData{
+            startHeight:  height / numRenderers * i,
+            stopHeight:   height / numRenderers * (i + 1),
             pos:          {0, 0, 0},
             azimuth:      30.0 * std.pi / 180.0,
             focal:        500,
             antialiasing: 1.0,
-            rays:         rays,
-            scene:        &scene,
-            pixels:       &pixels
+            numRays:      numRays,
+            scene:        scene,
+            pixels:       pixels
         }
         
         // Spawn fiber
-        renderer[i] = fiberspawn(render, &renderData[i])
+        renderer^ = fiberspawn(render, renderData)
     }  
 
     // Render scene
@@ -281,9 +284,9 @@ fn main() {
     
     for true {
         working := false
-        for i := 0; i < len(renderer); i++ {
-            if fiberalive(renderer[i]) { 
-                fibercall(renderer[i])
+        for _, renderer in renderers {
+            if fiberalive(renderer) { 
+                fibercall(renderer)
                 working = true
             }
         }
@@ -297,7 +300,7 @@ fn main() {
     const fileName = "scene.ppm"
     f := std.fopen(fileName, "wb")
     fprintf(f, "P6\n%lld %lld\n255\n", width, height)
-    std.fwrite(f, &pixels)
+    std.fwrite(f, pixels)
     std.fclose(f)
     std.println("Done. See " + fileName)
     std.getchar()
