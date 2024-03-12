@@ -3,7 +3,7 @@
 cd tests
 
 cd lib
-./build_lib_linux
+./build_lib_linux.sh
 cd ..
 
 ../umka_linux/umka all.um > actual.log
