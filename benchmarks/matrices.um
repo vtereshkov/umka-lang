@@ -2,7 +2,7 @@
 
 import "std.um"
 
-fn main() {
+fn test*() {
     const size = 400
     var a, b, c: [size][size] real
     
@@ -15,8 +15,6 @@ fn main() {
     }
     
     // Multiply matrices
-    start := std.clock()
-    
     for i := 0; i < size; i++ {
         for j := 0; j < size; j++ {
             s := 0.0
@@ -25,8 +23,6 @@ fn main() {
         }
     }    
     
-    printf("elapsed: %.3f\n", std.clock() - start)
-    
     // Check result
     check := 0.0
     for i, row in c {
@@ -34,4 +30,8 @@ fn main() {
     }
 
     printf("check: %lf\n", check / size / size)
+}
+
+fn main() {
+    test()
 }

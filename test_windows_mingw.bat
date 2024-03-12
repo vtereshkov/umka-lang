@@ -6,4 +6,9 @@ cd ..
 
 ..\umka_windows_mingw\umka all.um > actual.log
 ..\umka_windows_mingw\umka compare.um actual.log expected.log
-cd .. 
+cd ..
+
+cd benchmarks
+..\umka_windows_mingw\umka allbench.um > actual.log
+..\umka_windows_mingw\umka ..\tests\compare.um actual.log expected.log
+cd ..

@@ -120,18 +120,19 @@ fn advance(sys: ^System, dt: real) {
       x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0,
       mass: solarMass}
 
+fn test*(iter: int) {
+   var bodies: []Body = [5]Body{sun, jupiter, saturn, uranus, neptune}
+   system := NewSystem(&bodies)
+   printf("%.9f\n", energy(&system))
+   for i := 0; i < iter; i++ {
+      advance(&system, 0.01)
+   }
+   printf("%.9f\n", energy(&system))   
+}
 
 fn main() {
    if std.argc() == 2 {
-      iter := std.atoi(std.argv(1))
-      
-      var bodies: []Body = [5]Body{sun, jupiter, saturn, uranus, neptune}
-      system := NewSystem(&bodies)
-      printf("%.9f\n", energy(&system))
-      for i := 0; i < iter; i++ {
-         advance(&system, 0.01)
-      }
-      printf("%.9f\n", energy(&system))
-   }   
+      test(std.atoi(std.argv(1)))
+   }
 }
 
