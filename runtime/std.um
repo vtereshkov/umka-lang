@@ -15,7 +15,25 @@ type (
         sender: any
         trace: []ErrPos
     }
+
+    StdErr* = enum {
+        ok               // No error
+        assert           // Assertion failed
+        buffer           // Wrong buffer size
+        ptr              // Pointers cannot be read or written
+        nullf            // File is null
+        eof              // End of file
+    }    
 )
+
+const stdErrMsg = [6]str{
+    "",
+    "Assertion failed",
+    "Wrong buffer size",
+    "Pointers cannot be read or written",
+    "File is null",
+    "End of file"
+}
 
 fn rtltrace(depth: int, pos: ^ErrPos): int
 
@@ -30,6 +48,10 @@ fn error*(code: int = 0, msg: str = "", sender: any = null): Err {
     return err
 }
 
+fn stderror(code: StdErr): Err {
+    return error(int(code), stdErrMsg[int(code)], "std")
+}
+
 fn exitif*(err: Err) {
     if err.code != 0 {
         printf("Runtime error: %s (code %d) in %v\n", err.msg, err.code, err.sender)
@@ -41,24 +63,14 @@ fn exitif*(err: Err) {
     }    
 }
 
-type StdErr* = enum {
-    ok     = 0           // No error
-    buffer = 1           // Wrong buffer size
-    ptr    = 2           // Pointers cannot be read or written
-    nullf  = 3           // File is null
-    eof    = 4           // End of file
-}
-
-const stdErrMsg = [5]str{
-    "",
-    "Wrong buffer size",
-    "Pointers cannot be read or written",
-    "File is null",
-    "End of file"
-}
-
-fn stderror(code: StdErr): Err {
-    return error(int(code), stdErrMsg[int(code)], "std")
+fn assert*(cond: bool, msg: str = "") {
+    if !cond {
+        err := stderror(.assert)
+        if msg != "" {
+            err.msg += ": " + msg
+        }
+        exitif(err)
+    }
 }
 
 // Memory

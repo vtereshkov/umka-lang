@@ -53,7 +53,13 @@ Generates an error description with a call stack trace.
 fn exitif*(err: Err)
 ```
 
-Terminates the program if `err.code` is not zero, prints the error message and the call stack trace stored in `err`.
+If `err.code` is not zero, terminates the program, prints the error message and the call stack trace stored in `err`.
+
+```
+fn assert*(cond: bool, msg: str = "")
+```
+
+If `cond` is `false`, terminates the program, prints the error message `msg` and the call stack trace.
 
 ### Memory 
 

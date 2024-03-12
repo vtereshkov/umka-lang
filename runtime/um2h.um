@@ -1,9 +1,7 @@
 import "std.um"
 
 fn main() {
-	if std.argc() < 2 {
-		exit(-1, "No input file(s)")
-	}
+	std.assert(std.argc() > 1, "No input file(s)")
 
 	fout, err := std.fopen("umka_runtime_src.h", "w")
 	std.exitif(err)
