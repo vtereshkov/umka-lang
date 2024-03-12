@@ -117,13 +117,17 @@ fn stderr*(): File {
 
 fn rtlfopen(name: str, mode: str): File
 
-fn fopen*(name: str, mode: str): File {
-    return rtlfopen(name, mode)
+fn fopen*(name: str, mode: str): (File, Err) {
+    f := rtlfopen(name, mode)
+    return f, f != null ? stderror(.ok) : stderror(.nullf)
 }
 
 fn rtlfclose(f: File): int
 
 fn fclose*(f: File): Err {
+    if f == null {
+        return stderror(.nullf)
+    }    
     return rtlfclose(f) == 0 ? stderror(.ok) : stderror(.eof)
 }
 

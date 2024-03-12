@@ -4,7 +4,8 @@ import (
 )
 
 fn readall(name: str): str {
-    f := std.fopen(name, "rb")
+    f, err := std.fopen(name, "rb")
+    std.exitif(err)
     data, err := std.freadall(f)
     std.exitif(err)
     std.fclose(f)

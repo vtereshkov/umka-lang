@@ -298,7 +298,8 @@ fn main() {
     
     // Write output file
     const fileName = "scene.ppm"
-    f := std.fopen(fileName, "wb")
+    f, err := std.fopen(fileName, "wb")
+    std.exitif(err)
     fprintf(f, "P6\n%lld %lld\n255\n", width, height)
     std.fwrite(f, pixels)
     std.fclose(f)

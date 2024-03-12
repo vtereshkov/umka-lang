@@ -5,10 +5,8 @@ fn main() {
 		exit(-1, "No input file(s)")
 	}
 
-	fout := std.fopen("umka_runtime_src.h", "w")
-	if fout == null {
-		exit(-1, "Cannot open output file")
-	}	
+	fout, err := std.fopen("umka_runtime_src.h", "w")
+	std.exitif(err)
 
 	fprintf(fout, "#ifndef UMKA_RUNTIME_SRC_H_INCLUDED\n")
 	fprintf(fout, "#define UMKA_RUNTIME_SRC_H_INCLUDED\n\n")
@@ -31,10 +29,8 @@ fn main() {
 	for argi := 1; argi < std.argc(); argi++ {
 		fprintf(fout, "\n// " + std.argv(argi) + "\n\n\"")
 
-		fin := std.fopen(std.argv(argi), "rb")
-		if fin == null {
-			exit(-1, "Cannot open input file")
-		}	
+		fin, err := std.fopen(std.argv(argi), "rb")
+		std.exitif(err)	
 
 		for !std.feof(fin) {
 			c := ' '

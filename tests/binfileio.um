@@ -1,13 +1,15 @@
 import "std.um"
 
 fn write(name, s: str) {
-	f := std.fopen(name, "wb")
+	f, err := std.fopen(name, "wb")
+	std.exitif(err)
 	std.fwrite(f, &[]char(s))
 	std.fclose(f)	
 } 
 
 fn read(name: str): str {
-	f := std.fopen(name, "rb")
+	f, err := std.fopen(name, "rb")
+	std.exitif(err)
 	data, err := std.freadall(f)
 	std.exitif(err)
 	std.fclose(f)

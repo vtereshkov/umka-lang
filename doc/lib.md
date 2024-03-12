@@ -4,6 +4,57 @@ All standard library modules are embedded into the Umka interpreter binary. They
 
 ## Basic library: `std.um`
 
+### Error handling
+
+#### Types
+
+```
+type ErrPos* = struct {
+    file: str
+    func: str
+    line: int
+}
+```
+
+Call stack trace position from where `error()` has been called.
+
+```
+type Err* = struct {
+    code: int
+    msg: str
+    sender: any
+    trace: []ErrPos
+}
+```
+
+Error description. A zero `code` means no error.
+
+```
+type StdErr* = enum {
+    ok     = 0           // No error
+    buffer = 1           // Wrong buffer size
+    ptr    = 2           // Pointers cannot be read or written
+    nullf  = 3           // File is null
+    eof    = 4           // End of file
+}
+```
+
+Error codes set by the standard library functions in the `Err` structure. 
+
+#### Functions
+
+``` 
+fn error*(code: int = 0, msg: str = "", sender: any = null): Err
+```
+
+Generates an error description with a call stack trace.
+
+```
+fn exitif*(err: Err)
+```
+
+Terminates the program if `err.code` is not zero, prints the error message and the call stack trace stored in `err`.
+
 ### Memory 
 
 #### Functions
@@ -15,10 +66,10 @@ fn tobytes*(buf: any): []uint8
 Copies the bytes of `buf` to a byte array.
 
 ```
-fn frombytes*(buf: any, bytes: []uint8)
+fn frombytes*(buf: any, bytes: []uint8): Err
 ```
 
-Copies the `bytes` array to `buf`. An error is triggered if some of the bytes represent a pointer.
+Copies the `bytes` array to `buf`. If unsuccessful, returns `StdErr.buffer` or `StdErr.ptr` in `Err`.
 
 ### Input/output
 
@@ -40,14 +91,6 @@ type SeekFrom* = enum {
 
 File seek origin. Used by `fseek()`. 
 
-#### Constants
-
-```
-const runtimeError* = -1
-```
-
-Default runtime error code for standard library functions.
-
 #### Functions
 
 ```
@@ -59,65 +102,72 @@ fn stderr*(): File
 Return file handles for standard input, output, and error output devices.
 
 ```
-fn fopen*(name: str, mode: str): File
+fn fopen*(name: str, mode: str): (File, Err)
 ```
 
 Opens the file specified by the `name` in the given `mode` (identical to C): 
+
 ```
 "r"   read from a text file
 "rb"  read from a binary file
 "w"   write to a text file
 "wb"  write to a binary file
 ```
-Returns the file handle.
+Returns the file handle. If unsuccessful, returns `null` as a file handle and `StdErr.nullf` in `Err`.
 
 ```
-fn fclose*(f: File): int
+fn fclose*(f: File): Err
 ```
 
-Closes the file `f`. Returns 0 if successful.
+Closes the file `f`. If unsuccessful, returns `StdErr.nullf` or `StdErr.eof` in `Err`.
 
 ```
-fn fread*(f: File, buf: any): int
+fn fseek*(f: File, offset: int, origin: SeekFrom): Err
 ```
 
-Reads the `buf` variable from the file `f`. `buf` can be of any type that doesn't contain pointers, strings, dynamic arrays, interfaces or fibers, except for `^[]int8`, `^[]uint8`, `^[]char`. Returns 1 if successful.
+Sets the file pointer in the file `f` to the given `offset` from the `origin`. If unsuccessful, returns `StdErr.nullf` or `StdErr.eof` in `Err`.
 
 ```
-fn fwrite*(f: File, buf: any): int
+fn ftell*(f: File): (int, Err)
 ```
 
-Writes the `buf` variable to the file `f`. `buf` can be of any type that doesn't contain pointers, strings, dynamic arrays, interfaces or fibers, except for `^[]int8`, `^[]uint8`, `^[]char`. Returns 1 if successful.
+Returns the file pointer position in the file `f`. If unsuccessful, returns `StdErr.nullf` or `StdErr.eof` in `Err`.
 
 ```
-fn fseek*(f: File, offset: int, origin: SeekFrom): int
+fn remove*(name: str): Err
 ```
 
-Sets the file pointer in the file `f` to the given `offset` from the `origin`. Returns 0 if successful.
-
-```
-fn ftell*(f: File): int
-```
-
-Returns the file pointer position.
-
-```
-fn remove*(name: str): int
-```
-
-Removes the file specified by the `name`. Returns 0 if successful.
+Removes the file specified by the `name`. If unsuccessful, returns `StdErr.eof` in `Err`.
 
 ```
 fn feof*(f: File): bool
 ```
 
-Returns the end-of-file indicator.
+Returns `true` if the file pointer position in the file `f` has reached the end of file.
 
 ```
-fn fflush*(f: File): int
+fn fflush*(f: File): Err
 ```
 
-Flushes the file. Returns 0 if successful.
+Flushes the buffer for the file `f`. If unsuccessful, returns `StdErr.nullf` or `StdErr.eof` in `Err`.
+
+```
+fn fread*(f: File, buf: any): (int, Err)
+```
+
+Reads the `buf` variable from the file `f`. `buf` can be of any type that doesn't contain pointers, strings, dynamic arrays, interfaces, closures or fibers, except for `^[]int8`, `^[]uint8`, `^[]char`. Returns the number of bytes read. If unsuccessful, returns `StdErr.ptr`, `StdErr.nullf` or `StdErr.eof` in `Err`.
+
+```
+fn freadall*(f: File): ([]char, Err)
+```
+
+Reads all the contents of the file `f` to a dynamic array of `char` and returns this array. If unsuccessful, returns `StdErr.ptr`, `StdErr.nullf` or `StdErr.eof` in `Err`.
+
+```
+fn fwrite*(f: File, buf: any): (int, Err)
+```
+
+Writes the `buf` variable to the file `f`. `buf` can be of any type that doesn't contain pointers, strings, dynamic arrays, interfaces, closures or fibers, except for `^[]int8`, `^[]uint8`, `^[]char`. Returns the number of bytes written. If unsuccessful, returns `StdErr.ptr`, `StdErr.nullf` or `StdErr.eof` in `Err`.
 
 ```
 fn println*(s: str): int
@@ -264,45 +314,6 @@ fn system*(command: str): int
 ```
 
 Invokes the command processor to execute a `command`. Returns a platform-specific result.
-
-### Error handling
-
-#### Types
-
-```
-type ErrPos* = struct {
-    file: str
-    func: str
-    line: int
-}
-```
-
-Call stack trace position from where `error()` has been called.
-
-```
-type Err* = struct {
-    code: int
-    msg: str
-    sender: any
-    trace: []ErrPos
-}
-```
-
-Error description. A zero `code` means no error.
-
-#### Functions
-
-``` 
-fn error*(code: int = 0, msg: str = "", sender: any = null): Err
-```
-
-Generates an error description with a call stack trace.
-
-```
-fn exitif*(err: Err)
-```
-
-Terminates the program if `err.code` is not zero, prints the error message and the call stack trace stored in `err`.
 
 ## Functional programming library: `fnc.um`
 
