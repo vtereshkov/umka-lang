@@ -185,14 +185,17 @@ fn freadwrite(f: File, buf: any, reading: bool): (int, Err) {
     var data: ^void
     var length: int 
     switch bytes := type(buf) {
-        case ^[]int8:  data, length = &bytes[0], len(bytes^)
-        case ^[]uint8: data, length = &bytes[0], len(bytes^)
-        case ^[]char:  data, length = &bytes[0], len(bytes^)
+        case ^[]int8:  length = len(bytes^); if length > 0 {data = &bytes[0]} 
+        case ^[]uint8: length = len(bytes^); if length > 0 {data = &bytes[0]}
+        case ^[]char:  length = len(bytes^); if length > 0 {data = &bytes[0]}
         default:
             if selfhasptr(buf) {
                 return 0, stderror(.ptr)
             }
-            data, length = buf.__self, sizeofself(buf)
+            length, data = sizeofself(buf), buf.__self
+    }
+    if length == 0 || data == null {
+        return 0, stderror(.ok)
     }
     size := reading ? rtlfread(data, 1, length, f) : rtlfwrite(data, 1, length, f)
     err := size == length ? stderror(.ok) : stderror(.eof)
