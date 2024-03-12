@@ -5,13 +5,8 @@ import (
 
 fn readall(name: str): str {
     f := std.fopen(name, "rb")
-
-    std.fseek(f, 0, std.SeekFrom.end)
-    size := std.ftell(f)
-    std.fseek(f, 0, std.SeekFrom.begin)
-
-    data := make([]char, size)
-    std.fread(f, &data)
+    data, err := std.freadall(f)
+    std.exitif(err)
     std.fclose(f)
 
     return str(data)
