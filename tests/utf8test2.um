@@ -14,7 +14,7 @@ fn readall(name: str): str {
 }
 
 fn test*() {
-	s := readall("../tests/utf8test2.txt")
+	s := readall("utf8test2.txt")
 
 	runes := utf8.decode(s)
 	s1 := utf8.encode(runes)

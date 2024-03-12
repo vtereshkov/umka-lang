@@ -4,7 +4,7 @@ fn test1() {
     printf("\nTest 1\n")
 
     var populations: map[str]real
-    f, err := std.fopen("../tests/countries.dat", "r")
+    f, err := std.fopen("countries.dat", "r")
     std.exitif(err)
 
     for true {

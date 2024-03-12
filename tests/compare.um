@@ -1,0 +1,48 @@
+import "std.um"
+
+fn readall(name: str): []char {
+	f, err := std.fopen(name, "rb")
+	std.exitif(err)
+	data, err := std.freadall(f)
+	std.exitif(err)
+	std.fclose(f)
+	return data
+}
+
+fn main() {
+	std.assert(std.argc() == 3, "Need two files to compare")
+
+	buf1 := readall(std.argv(1))
+	buf2 := readall(std.argv(2))
+
+	var i, j: int
+	var c1, c2: char
+
+	for i < len(buf1) || j < len(buf2) {
+		if i < len(buf1) {
+			c1 = buf1[i]
+			if c1 == '\r' || c1 == '\n' {
+				i++
+				continue
+			}
+		}
+
+		if j < len(buf2) {
+			c2 = buf2[j]
+			if c2 == '\r' || c2 == '\n' {
+				j++
+				continue
+			}
+		}
+
+		std.assert(c1 == c2, "Files differ")
+
+		i++
+		j++
+	}
+
+	std.assert(i == len(buf1) && j == len(buf2), "Files differ")
+	
+	printf("%d / %d bytes\n", i, j)
+	printf("OK\n")
+}

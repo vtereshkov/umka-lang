@@ -42,6 +42,7 @@ import (
     "redecl.um"
     "forinptr.um"
     "enums.um"
+    "extlib.um"
 )
 
 fn main() {
@@ -88,4 +89,5 @@ fn main() {
     printf("\n\n>>> Redeclarations\n\n");           redecl.test()
     printf("\n\n>>> Iteration by pointer\n\n");     forinptr.test()
     printf("\n\n>>> Enumerations\n\n");             enums.test()
+    printf("\n\n>>> External libraries\n\n");       extlib.test()
 }

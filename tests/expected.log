@@ -343,8 +343,8 @@ Error: Empty string (code -2) from "foo":
     foo: (5)
     fooTest: (11)
     test: (25)
-    main: (64)
-    <unknown>: (92)
+    main: (65)
+    <unknown>: (94)
 9
 
 
@@ -767,3 +767,8 @@ f(): 42 "OK!" true
 false true true
 
 true true
+
+
+>>> External libraries
+
+8.000000 -2.000000 Hello
