@@ -1,34 +1,91 @@
 // Umka standard library
 
-// Memory
+// Error handling
 
-const runtimeError* = -1
+type (
+    ErrPos* = struct {
+        file: str
+        func: str
+        line: int
+    }
+
+    Err* = struct {
+        code: int
+        msg: str
+        sender: any
+        trace: []ErrPos
+    }
+)
+
+fn rtltrace(depth: int, pos: ^ErrPos): int
+
+fn error*(code: int = 0, msg: str = "", sender: any = null): Err {
+    err := Err{code, msg, sender, {}}
+    if code != 0 {
+        var pos: ErrPos
+        for depth := 2; depth < 10 && rtltrace(depth, &pos) == 0; depth++ {
+            err.trace = append(err.trace, pos)
+        } 
+    }
+    return err
+}
+
+fn exitif*(err: Err) {
+    if err.code != 0 {
+        printf("Runtime error: %s (code %d) in %v\n", err.msg, err.code, err.sender)
+        printf("Stack trace:\n")
+        for _, pos in err.trace {
+            printf("    %s: %s (%d)\n", pos.func, pos.file, pos.line)
+        }
+        exit(err.code)
+    }    
+}
+
+type StdErr* = enum {
+    ok     = 0           // No error
+    buffer = 1           // Wrong buffer size
+    ptr    = 2           // Pointers cannot be read or written
+    nullf  = 3           // File is null
+    eof    = 4           // End of file
+}
+
+const stdErrMsg = [5]str{
+    "",
+    "Wrong buffer size",
+    "Pointers cannot be read or written",
+    "File is null",
+    "End of file"
+}
+
+fn stderror(code: StdErr): Err {
+    return error(int(code), stdErrMsg[int(code)], "std")
+}
+
+// Memory
 
 fn rtlmemcpy(dest, src: ^void, count: int)
 
 fn tobytes*(buf: any): []uint8 {
-    if buf.__self == null {
-        exit(runtimeError, "Buffer is null")
+    if !valid(buf) {
+        return {}
     }
     bytes := make([]uint8, sizeofself(buf))
     rtlmemcpy(&bytes[0], buf.__self, sizeofself(buf))
     return bytes
 }
 
-fn frombytes*(buf: any, bytes: []uint8) {
-    if buf.__self == null {
-        exit(runtimeError, "Buffer is null")
+fn frombytes*(buf: any, bytes: []uint8): Err {
+    if !valid(buf) || sizeofself(buf) != len(bytes) {
+        return stderror(.buffer)
     }    
     if selfhasptr(buf) {
-        exit(runtimeError, "Cannot access reference types")
+        return stderror(.ptr)
     }
-    if sizeofself(buf) != len(bytes) {
-        exit(runtimeError, "Illegal buffer size")
-    }
-    rtlmemcpy(buf.__self, &bytes[0], sizeofself(buf))    
+    rtlmemcpy(buf.__self, &bytes[0], sizeofself(buf))
+    return {}    
 }
 
-// File I/O
+// Input/output
 
 type (
     File* = ^struct {}
@@ -66,95 +123,106 @@ fn fopen*(name: str, mode: str): File {
 
 fn rtlfclose(f: File): int
 
-fn fclose*(f: File): int {
-    return rtlfclose(f)
-}
-
-fn rtlfread(buf: ^void, size, cnt: int, f: File): int
-
-fn fread*(f: File, buf: any): int {
-    if f == null {
-        exit(runtimeError, "File is null")
-    }
-    if bytes := ^[]int8(buf); bytes != null {
-        return rtlfread(&bytes[0], len(bytes^), 1, f)
-    }
-    if ubytes := ^[]uint8(buf); ubytes != null {
-        return rtlfread(&ubytes[0], len(ubytes^), 1, f)
-    }        
-    if chars := ^[]char(buf); chars != null {
-        return rtlfread(&chars[0], len(chars^), 1, f)
-    }
-    if selfhasptr(buf) {
-        exit(runtimeError, "Cannot read reference types except ^[]int8, ^[]uint8, ^[]char")
-    }
-    return rtlfread(buf.__self, sizeofself(buf), 1, f)
-}
-
-fn rtlfwrite(buf: ^void, size, cnt: int, f: File): int
-
-fn fwrite*(f: File, buf: any): int {
-    if f == null {
-        exit(runtimeError, "File is null")
-    }
-    if bytes := ^[]int8(buf); bytes != null {
-        return rtlfwrite(&bytes[0], len(bytes^), 1, f)
-    }
-    if ubytes := ^[]uint8(buf); ubytes != null {
-        return rtlfwrite(&ubytes[0], len(ubytes^), 1, f)
-    } 
-    if chars := ^[]char(buf); chars != null {
-        return rtlfwrite(&chars[0], len(chars^), 1, f)
-    }             
-    if selfhasptr(buf) {
-        exit(runtimeError, "Cannot write reference types except ^[]int8, ^[]uint8, ^[]char")
-    }
-    return rtlfwrite(buf.__self, sizeofself(buf), 1, f)
+fn fclose*(f: File): Err {
+    return rtlfclose(f) == 0 ? stderror(.ok) : stderror(.eof)
 }
 
 fn rtlfseek(f: File, offset: int, origin: SeekFrom): int
 
-fn fseek*(f: File, offset: int, origin: SeekFrom): int {
+fn fseek*(f: File, offset: int, origin: SeekFrom): Err {
     if f == null {
-        exit(runtimeError, "File is null")
+        return stderror(.nullf)
     }
-    return rtlfseek(f, offset, origin)
+    return rtlfseek(f, offset, origin) == 0 ? stderror(.ok) : stderror(.eof)
 }
 
 fn rtlftell(f: File): int
 
-fn ftell*   (f: File): int {
+fn ftell*(f: File): (int, Err) {
     if f == null {
-        exit(runtimeError, "File is null")
+        return 0, stderror(.nullf)
     }
-    return rtlftell(f)
+    pos := rtlftell(f)
+    return pos, pos >= 0 ? stderror(.ok) : stderror(.eof)
 }
 
 fn rtlremove(name: str): int
 
-fn remove*(name: str): int {
-    return rtlremove(name)
+fn remove*(name: str): Err {
+    return rtlremove(name) == 0 ? stderror(.ok) : stderror(.eof)
 }
 
 fn rtlfeof(f: File): int
 
 fn feof*(f: File): bool {
     if f == null {
-        exit(runtimeError, "File is null")
-    }                
-    return bool(rtlfeof(f))
+        return true
+    }
+    eof := bool(rtlfeof(f))               
+    return eof
 }
 
 fn rtlfflush(f: File): int
 
-fn fflush*   (f: File): int {
+fn fflush*(f: File): Err {
 	if f == null {
-		exit(runtimeError, "File is null")
+		return stderror(.nullf)
 	}
-	return rtlfflush(f)
+	return rtlfflush(f) == 0 ? stderror(.ok) : stderror(.eof)
 }
 
-// I/O utilities
+fn rtlfread (buf: ^void, size, cnt: int, f: File): int
+fn rtlfwrite(buf: ^void, size, cnt: int, f: File): int
+
+fn freadwrite(f: File, buf: any, reading: bool): (int, Err) {
+    if f == null {
+        return 0, stderror(.nullf)
+    }
+    var data: ^void
+    var length: int 
+    switch bytes := type(buf) {
+        case ^[]int8:  data, length = &bytes[0], len(bytes^)
+        case ^[]uint8: data, length = &bytes[0], len(bytes^)
+        case ^[]char:  data, length = &bytes[0], len(bytes^)
+        default:
+            if selfhasptr(buf) {
+                return 0, stderror(.ptr)
+            }
+            data, length = buf.__self, sizeofself(buf)
+    }
+    size := reading ? rtlfread(data, 1, length, f) : rtlfwrite(data, 1, length, f)
+    err := size == length ? stderror(.ok) : stderror(.eof)
+    return size, err
+}
+
+fn fread*(f: File, buf: any): (int, Err) {
+    return freadwrite(f, buf, true)
+}
+
+fn freadall*(f: File): ([]char, Err) {
+    err := fseek(f, 0, .end)
+    if err.code != 0 {
+        return {}, err
+    }
+    size, err := ftell(f)
+    if err.code != 0 {
+        return {}, err
+    }
+    err = fseek(f, 0, .begin)
+    if err.code != 0 {
+        return {}, err
+    }
+    data := make([]char, size)
+    _, err := fread(f, &data)
+    if err.code != 0 {
+        return data, err
+    }
+    return data, stderror(.ok)
+}
+
+fn fwrite*(f: File, buf: any): (int, Err) {
+    return freadwrite(f, buf, false)
+}
 
 fn println*(s: str): int {
     return printf("%s\n", s)
@@ -319,45 +387,4 @@ fn rtlsystem(command: str): int
 
 fn system*(command: str): int {
     return rtlsystem(command)
-}
-
-// Error handling
-
-type (
-    ErrPos* = struct {
-        file: str
-        func: str
-        line: int
-    }
-
-    Err* = struct {
-        code: int
-        msg: str
-        sender: any
-        trace: []ErrPos
-    }
-)
-
-fn rtltrace(depth: int, pos: ^ErrPos): int
-
-fn error*(code: int = 0, msg: str = "", sender: any = null): Err {
-    err := Err{code, msg, sender, {}}
-    if code != 0 {
-        var pos: ErrPos
-        for depth := 2; depth < 10 && rtltrace(depth, &pos) == 0; depth++ {
-            err.trace = append(err.trace, pos)
-        } 
-    }
-    return err
-}
-
-fn exitif*(err: Err) {
-    if err.code != 0 {
-        printf("Runtime error: %s (code %d) in %v\n", err.msg, err.code, err.sender)
-        printf("Stack trace:\n")
-        for _, pos in err.trace {
-            printf("    %s: %s (%d)\n", pos.func, pos.file, pos.line)
-        }
-        exit(err.code)
-    }    
 }
