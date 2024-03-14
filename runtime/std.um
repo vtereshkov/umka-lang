@@ -54,12 +54,12 @@ fn stderror(code: StdErr): Err {
 
 fn exitif*(err: Err) {
     if err.code != 0 {
-        printf("Runtime error: %s (code %d) in %v\n", err.msg, err.code, err.sender)
-        printf("Stack trace:\n")
+        s := sprintf("Runtime error: %s (code %d) in %v\n", err.msg, err.code, err.sender)
+        s += sprintf("Stack trace:\n")
         for _, pos in err.trace {
-            printf("    %s: %s (%d)\n", pos.func, pos.file, pos.line)
+            s += sprintf("    %s: %s (%d)\n", pos.func, pos.file, pos.line)
         }
-        exit(err.code)
+        exit(err.code, s)
     }    
 }
 
