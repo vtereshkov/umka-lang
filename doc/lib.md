@@ -167,7 +167,7 @@ Reads the `buf` variable from the file `f`. `buf` can be of any type that doesn'
 fn freadall*(f: File): ([]char, Err)
 ```
 
-Reads all the contents of the file `f` to a dynamic array of `char` and returns this array. If unsuccessful, returns `StdErr.ptr`, `StdErr.nullf` or `StdErr.eof` in `Err`.
+Reads all the contents of the file `f` to a dynamic array of `char` and returns this array. `f` should be opened in the `"rb"` mode. If unsuccessful, returns `StdErr.ptr`, `StdErr.nullf` or `StdErr.eof` in `Err`.
 
 ```
 fn fwrite*(f: File, buf: any): (int, Err)
