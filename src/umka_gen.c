@@ -16,6 +16,12 @@ static void genNotify(CodeGen *gen, GenNotificationKind kind)
 }
 
 
+static void genUnnotify(CodeGen *gen)
+{
+    genNotify(gen, GEN_NOTIFICATION_NONE);
+}
+
+
 static bool genJustNotified(CodeGen *gen, GenNotificationKind kind)
 {
     return gen->lastNotification.kind == kind && gen->lastNotification.ip == gen->ip;
@@ -32,7 +38,7 @@ void genInit(CodeGen *gen, DebugInfo *debug, Error *error)
     gen->debug = debug;
     gen->debugPerInstr = malloc(gen->capacity * sizeof(DebugInfo));
     gen->error = error;
-    genNotify(gen, GEN_NOTIFICATION_NONE);
+    genUnnotify(gen);
 }
 
 
@@ -60,14 +66,14 @@ static void genAddInstr(CodeGen *gen, const Instruction *instr)
     gen->debugPerInstr[gen->ip] = *gen->debug;
 
     gen->ip++;
-    genNotify(gen, GEN_NOTIFICATION_NONE);
+    genUnnotify(gen);
 }
 
 
 static void genRemoveInstr(CodeGen *gen)
 {
     gen->ip--;
-    genNotify(gen, GEN_NOTIFICATION_NONE);
+    genUnnotify(gen);
 }
 
 
@@ -111,6 +117,7 @@ static bool optimizePushZero(CodeGen *gen, int slots)
     if (prev && prev->opcode == OP_PUSH_ZERO)
     {
         prev->operand.intVal += slots;
+        genUnnotify(gen);
         return true;
     }
 
@@ -126,6 +133,7 @@ static bool optimizePop(CodeGen *gen)
     if (prev && prev->opcode == OP_POP)
     {
         prev->operand.intVal++;
+        genUnnotify(gen);
         return true;
     }
 
@@ -133,6 +141,7 @@ static bool optimizePop(CodeGen *gen)
     if (prev && prev->opcode == OP_CHANGE_REF_CNT && prev->inlineOpcode == OP_NOP)
     {
         prev->inlineOpcode = OP_POP;
+        genUnnotify(gen);
         return true;
     }
 
@@ -179,6 +188,7 @@ static bool optimizeDeref(CodeGen *gen, TypeKind typeKind)
     {
         prev->inlineOpcode = OP_DEREF;
         prev->typeKind = typeKind;
+        genUnnotify(gen);
         return true;
     }
 
@@ -210,7 +220,10 @@ static bool optimizeGetArrayPtr(CodeGen *gen, int itemSize, int len)
 static bool optimizeGetFieldPtr(CodeGen *gen, int fieldOffset)
 {
     if (fieldOffset == 0)
+    {
+        genUnnotify(gen);
         return true;
+    }
 
     Instruction *prev = getPrevInstr(gen, 1);
 
@@ -218,6 +231,7 @@ static bool optimizeGetFieldPtr(CodeGen *gen, int fieldOffset)
     if (prev && prev->opcode == OP_PUSH_LOCAL_PTR)
     {
         prev->operand.intVal += fieldOffset;
+        genUnnotify(gen);
         return true;
     }
 
@@ -248,6 +262,7 @@ static bool optimizeUnary(CodeGen *gen, TokenKind tokKind, TypeKind typeKind)
         else
             prev->operand.intVal = arg.intVal;
 
+        genUnnotify(gen);
         return true;
     }
 
@@ -296,6 +311,7 @@ static bool optimizeBinary(CodeGen *gen, TokenKind tokKind, TypeKind typeKind)
         else
             prev->operand.intVal = lhs.intVal;
 
+        genUnnotify(gen);
         return true;
     }
 
@@ -375,6 +391,7 @@ static bool optimizeCallBuiltin(CodeGen *gen, TypeKind typeKind, BuiltinFunc bui
             else
                 prev->operand.intVal = arg.intVal;
 
+            genUnnotify(gen);
             return true;
         }
     }
