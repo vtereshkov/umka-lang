@@ -17,6 +17,7 @@ gcc -s umka.o -o umka -static-libgcc -L$PWD -lm -lumka -Wl,-rpath,'$ORIGIN' &&
 ar rcs libumka_static.a *.o &&
 
 rm -f *.o &&
+rm -f *.a &&
 
 cd .. &&
 
