@@ -343,8 +343,8 @@ Error: Empty string (code -2) from "foo":
     foo: (5)
     fooTest: (11)
     test: (25)
-    main: (65)
-    <unknown>: (94)
+    main: (66)
+    <unknown>: (96)
 9
 
 
@@ -767,6 +767,13 @@ f(): 42 "OK!" true
 false true true
 
 true true
+
+
+>>> Forward declarations
+
+{name: "node1" children: [{name: "node11" children: []} {name: "node12" children: [{name: "node121" children: []}]}]}
+
+{name: "node1" children: {"child1": {name: "node11" children: {}} "child2": {name: "node12" children: {"child21": {name: "node121" children: {}}}}}}
 
 
 >>> External libraries

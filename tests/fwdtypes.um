@@ -1,0 +1,53 @@
+type (
+	MapNodeChildren = map[str]MapNode
+
+	ArrNode = struct {
+	    name: str
+	    children: []ArrNode
+	}	
+
+	MapNode = struct {
+    	name: str
+    	children: MapNodeChildren
+	}
+)
+
+fn test*() {
+	arrtree := ArrNode{
+		"node1",
+		{
+			{
+				"node11",
+				{}
+			},
+			{
+				"node12",
+				{}
+			}			
+		}
+	}
+
+	arrtree.children[1].children = append(arrtree.children[1].children, ArrNode{"node121", {}})
+
+	maptree := MapNode{
+		"node1",
+		{
+			"child1": {
+				"node11",
+				{}
+			},
+			"child2": {
+				"node12",
+				{}
+			}			
+		}
+	}
+
+	maptree.children["child2"].children["child21"] = {"node121", {}}
+
+	printf("%v\n\n%v\n", arrtree, maptree)
+}
+
+fn main() {
+	test()
+}

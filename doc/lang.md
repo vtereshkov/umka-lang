@@ -446,7 +446,7 @@ If a value `s` of type `S` is given where a value `t` of some other type `T` is 
 
 ## Declarations
 
-All types, constants, variables and functions should be declared before the first use. The only exception is that a pointer base type `T` may be declared after using the pointer type `^T` but before the end of the same `type` declaration list. No identifier may be declared twice in the same block, except for redeclarations allowed in multi-value short variable declarations.
+All types, constants, variables and functions should be declared before the first use. As an exception, a pointer base type, a dynamic array base type or a map item type may be declared after using the pointer type, the dynamic array type or the map type, respectively, but before the end of the same `type` declaration list. No identifier may be declared twice in the same block, except for redeclarations allowed in multi-value short variable declarations.
 
 Syntax:
 
