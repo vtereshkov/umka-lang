@@ -209,17 +209,8 @@ static void parseSignature(Compiler *comp, Signature *sig)
 }
 
 
-// ptrType = ["weak"] "^" type.
-static Type *parsePtrType(Compiler *comp)
+static Type *parseTypeOrForwardType(Compiler *comp)
 {
-    bool weak = false;
-    if (comp->lex.tok.kind == TOK_WEAK)
-    {
-        weak = true;
-        lexNext(&comp->lex);
-    }
-
-    lexEat(&comp->lex, TOK_CARET);
     Type *type = NULL;
 
     // Forward declaration
@@ -243,6 +234,23 @@ static Type *parsePtrType(Compiler *comp)
     if (!forward)
         type = parseType(comp, NULL);
 
+    return type;
+}
+
+
+// ptrType = ["weak"] "^" type.
+static Type *parsePtrType(Compiler *comp)
+{
+    bool weak = false;
+    if (comp->lex.tok.kind == TOK_WEAK)
+    {
+        weak = true;
+        lexNext(&comp->lex);
+    }
+
+    lexEat(&comp->lex, TOK_CARET);
+
+    Type *type = parseTypeOrForwardType(comp);
     type = typeAddPtrTo(&comp->types, &comp->blocks, type);
     if (weak)
         type->kind = TYPE_WEAKPTR;
@@ -279,7 +287,7 @@ static Type *parseArrayType(Compiler *comp)
 
     lexEat(&comp->lex, TOK_RBRACKET);
 
-    Type *baseType = parseType(comp, NULL);
+    Type *baseType = (typeKind == TYPE_DYNARRAY) ? parseTypeOrForwardType(comp) : parseType(comp, NULL);
 
     if (len.intVal > 0 && typeSize(&comp->types, baseType) > INT_MAX / len.intVal)
         comp->error.handler(comp->error.context, "Array is too large");
@@ -371,7 +379,7 @@ static Type *parseMapType(Compiler *comp)
 
     lexEat(&comp->lex, TOK_RBRACKET);
 
-    Type *itemType = parseType(comp, NULL);
+    Type *itemType = parseTypeOrForwardType(comp);
     Type *ptrItemType = typeAddPtrTo(&comp->types, &comp->blocks, itemType);
 
     // The map base type is the Umka equivalent of MapNode
