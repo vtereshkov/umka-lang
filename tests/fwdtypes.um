@@ -45,7 +45,7 @@ fn test*() {
 
 	maptree.children["child2"].children["child21"] = {"node121", {}}
 
-	printf("%v\n\n%v\n", arrtree, maptree)
+	printf("%llv\n\n%llv\n", arrtree, maptree)
 }
 
 fn main() {

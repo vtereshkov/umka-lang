@@ -9,7 +9,7 @@ type Person = struct {
 fn by_name_eq(n: str): fn (person: any): any {
 	printf("running by_name_eq with name : %s\n", n)
 	return fn (person: any): any |n| {
-		printf("running by_name_eq with name : %v and person : %v\n", n, Person(person))
+		printf("running by_name_eq with name : %v and person : %llv\n", n, Person(person))
 		return Person(person).name == n
 	}
 }

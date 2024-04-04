@@ -1152,46 +1152,113 @@ static FORCE_INLINE void doGetMapKeys(Map *map, void *keys, Error *error)
 }
 
 
-static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int maxDepth, Error *error)
+static FORCE_INLINE int doPrintIndented(char *buf, int maxLen, int depth, bool pretty, char ch)
 {
+    enum {INDENT_WIDTH = 4};
+
     int len = 0;
-    if (maxDepth == 0)
+
+    switch (ch)
     {
-        len = snprintf(buf, maxLen, "...");
+        case '(':
+        case '[':
+        case '{':
+        {
+            len += snprintf(buf + len, maxLen, "%c", ch);
+            if (pretty)
+                len += snprintf(buf + len, maxLen, "\n%*c", INDENT_WIDTH * (depth + 1), ' ');
+            break;
+        }
+
+        case ')':
+        case ']':
+        case '}':
+        {
+            if (pretty)
+            {
+                if (depth > 0)
+                    len += snprintf(buf + len, maxLen, "\n%*c", INDENT_WIDTH * depth, ' ');
+                else
+                    len += snprintf(buf + len, maxLen, "\n");
+            }
+            len += snprintf(buf + len, maxLen, "%c", ch);
+            break;
+        }
+
+        case ' ':
+        {
+            if (pretty)
+                len += snprintf(buf + len, maxLen, "\n%*c", INDENT_WIDTH * (depth + 1), ' ');
+            else
+                len += snprintf(buf + len, maxLen, " ");
+            break;
+        }
+
+        default: break;
+    }
+
+    return len;
+}
+
+
+static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int depth, bool pretty, bool dereferenced, Error *error)
+{
+    enum {MAX_DEPTH = 20};
+
+    int len = 0;
+
+    if (depth == MAX_DEPTH)
+    {
+        len += snprintf(buf + len, maxLen, "...");
         return len;
     }
 
     switch (type->kind)
     {
-        case TYPE_VOID:     len = snprintf(buf, maxLen, "void");                                                             break;
+        case TYPE_VOID:     len += snprintf(buf + len, maxLen, "void");                                                             break;
         case TYPE_INT8:
         case TYPE_INT16:
         case TYPE_INT32:
         case TYPE_INT:
         case TYPE_UINT8:
         case TYPE_UINT16:
-        case TYPE_UINT32:   len = snprintf(buf, maxLen, "%lld", (long long int)slot->intVal);                                break;
-        case TYPE_UINT:     len = snprintf(buf, maxLen, "%llu", (unsigned long long int)slot->uintVal);                      break;
-        case TYPE_BOOL:     len = snprintf(buf, maxLen, slot->intVal ? "true" : "false");                                    break;
+        case TYPE_UINT32:   len += snprintf(buf + len, maxLen, "%lld", (long long int)slot->intVal);                                break;
+        case TYPE_UINT:     len += snprintf(buf + len, maxLen, "%llu", (unsigned long long int)slot->uintVal);                      break;
+        case TYPE_BOOL:     len += snprintf(buf + len, maxLen, slot->intVal ? "true" : "false");                                    break;
         case TYPE_CHAR:
         {
             const char *format = (unsigned char)slot->intVal >= ' ' ? "'%c'" : "0x%02X";
-            len = snprintf(buf, maxLen, format, (unsigned char)slot->intVal);
+            len += snprintf(buf + len, maxLen, format, (unsigned char)slot->intVal);
             break;
         }
         case TYPE_REAL32:
-        case TYPE_REAL:     len = snprintf(buf, maxLen, "%lg", slot->realVal);                                               break;
-        case TYPE_PTR:      len = snprintf(buf, maxLen, "%p", slot->ptrVal);                                                 break;
-        case TYPE_WEAKPTR:  len = snprintf(buf, maxLen, "%llx", (unsigned long long int)slot->weakPtrVal);                   break;
+        case TYPE_REAL:     len += snprintf(buf + len, maxLen, "%lg", slot->realVal);                                               break;
+        case TYPE_PTR:
+        {
+            len += snprintf(buf + len, maxLen, "%p", slot->ptrVal);
+
+            if (dereferenced && slot->ptrVal && type->base->kind != TYPE_VOID)
+            {
+                Slot dataSlot = {.ptrVal = slot->ptrVal};
+                doBasicDeref(&dataSlot, type->base->kind, error);
+
+                len += snprintf(buf + len, maxLen, " -> ");
+                len += doPrintIndented(buf + len, maxLen, depth, pretty, '(');
+                len += doFillReprBuf(&dataSlot, type->base, buf + len, maxLen, depth + 1, pretty, dereferenced, error);
+                len += doPrintIndented(buf + len, maxLen, depth, pretty, ')');
+            }
+            break;
+        }
+        case TYPE_WEAKPTR:  len += snprintf(buf + len, maxLen, "%llx", (unsigned long long int)slot->weakPtrVal);                   break;
         case TYPE_STR:
         {
             doCheckStr((char *)slot->ptrVal, error);
-            len = snprintf(buf, maxLen, "\"%s\"", slot->ptrVal ? (char *)slot->ptrVal : "");
+            len += snprintf(buf + len, maxLen, "\"%s\"", slot->ptrVal ? (char *)slot->ptrVal : "");
             break;
         }
         case TYPE_ARRAY:
         {
-            len += snprintf(buf, maxLen, "[");
+            len += doPrintIndented(buf + len, maxLen, depth, pretty, '[');
 
             char *itemPtr = (char *)slot->ptrVal;
             int itemSize = typeSizeNoCheck(type->base);
@@ -1200,19 +1267,21 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int maxD
             {
                 Slot itemSlot = {.ptrVal = itemPtr};
                 doBasicDeref(&itemSlot, type->base->kind, error);
-                len += doFillReprBuf(&itemSlot, type->base, buf + len, maxLen, maxDepth - 1, error);
+                len += doFillReprBuf(&itemSlot, type->base, buf + len, maxLen, depth + 1, pretty, dereferenced, error);
+
                 if (i < type->numItems - 1)
-                    len += snprintf(buf + len, maxLen, " ");
+                    len += doPrintIndented(buf + len, maxLen, depth, pretty, ' ');
+
                 itemPtr += itemSize;
             }
 
-            len += snprintf(buf + len, maxLen, "]");
+            len += doPrintIndented(buf + len, maxLen, depth, pretty, ']');
             break;
         }
 
         case TYPE_DYNARRAY:
         {
-            len += snprintf(buf, maxLen, "[");
+            len += doPrintIndented(buf + len, maxLen, depth, pretty, '[');
 
             DynArray *array = (DynArray *)slot->ptrVal;
             if (array && array->data)
@@ -1222,20 +1291,22 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int maxD
                 {
                     Slot itemSlot = {.ptrVal = itemPtr};
                     doBasicDeref(&itemSlot, type->base->kind, error);
-                    len += doFillReprBuf(&itemSlot, type->base, buf + len, maxLen, maxDepth - 1, error);
+                    len += doFillReprBuf(&itemSlot, type->base, buf + len, maxLen, depth + 1, pretty, dereferenced, error);
+
                     if (i < getDims(array)->len - 1)
-                        len += snprintf(buf + len, maxLen, " ");
+                        len += doPrintIndented(buf + len, maxLen, depth, pretty, ' ');
+
                     itemPtr += array->itemSize;
                 }
             }
 
-            len += snprintf(buf + len, maxLen, "]");
+            len += doPrintIndented(buf + len, maxLen, depth, pretty, ']');
             break;
         }
 
         case TYPE_MAP:
         {
-            len += snprintf(buf, maxLen, "{");
+            len += doPrintIndented(buf + len, maxLen, depth, pretty, '{');
 
             Map *map = (Map *)slot->ptrVal;
             if (map && map->root)
@@ -1253,7 +1324,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int maxD
                 {
                     Slot keySlot = {.ptrVal = keyPtr};
                     doBasicDeref(&keySlot, keyType->kind, error);
-                    len += doFillReprBuf(&keySlot, keyType, buf + len, maxLen, maxDepth - 1, error);
+                    len += doFillReprBuf(&keySlot, keyType, buf + len, maxLen, depth + 1, pretty, dereferenced, error);
 
                     len += snprintf(buf + len, maxLen, ": ");
 
@@ -1263,10 +1334,10 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int maxD
 
                     Slot itemSlot = {.ptrVal = node->data};
                     doBasicDeref(&itemSlot, itemType->kind, error);
-                    len += doFillReprBuf(&itemSlot, itemType, buf + len, maxLen, maxDepth - 1, error);
+                    len += doFillReprBuf(&itemSlot, itemType, buf + len, maxLen, depth + 1, pretty, dereferenced, error);
 
                     if (i < map->root->len - 1)
-                        len += snprintf(buf + len, maxLen, " ");
+                        len += doPrintIndented(buf + len, maxLen, depth, pretty, ' ');
 
                     keyPtr += keySize;
                 }
@@ -1274,7 +1345,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int maxD
                 free(keys);
             }
 
-            len += snprintf(buf + len, maxLen, "}");
+            len += doPrintIndented(buf + len, maxLen, depth, pretty, '}');
             break;
         }
 
@@ -1282,7 +1353,8 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int maxD
         case TYPE_STRUCT:
         case TYPE_CLOSURE:
         {
-            len += snprintf(buf, maxLen, "{");
+            len += doPrintIndented(buf + len, maxLen, depth, pretty, '{');
+
             bool skipNames = typeExprListStruct(type);
 
             for (int i = 0; i < type->numItems; i++)
@@ -1291,12 +1363,13 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int maxD
                 doBasicDeref(&fieldSlot, type->field[i]->type->kind, error);
                 if (!skipNames)
                     len += snprintf(buf + len, maxLen, "%s: ", type->field[i]->name);
-                len += doFillReprBuf(&fieldSlot, type->field[i]->type, buf + len, maxLen, maxDepth - 1, error);
+                len += doFillReprBuf(&fieldSlot, type->field[i]->type, buf + len, maxLen, depth + 1, pretty, dereferenced, error);
+
                 if (i < type->numItems - 1)
-                    len += snprintf(buf + len, maxLen, " ");
+                    len += doPrintIndented(buf + len, maxLen, depth, pretty, ' ');
             }
 
-            len += snprintf(buf + len, maxLen, "}");
+            len += doPrintIndented(buf + len, maxLen, depth, pretty, '}');
             break;
         }
 
@@ -1307,15 +1380,26 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int maxD
             {
                 Slot selfSlot = {.ptrVal = interface->self};
                 doBasicDeref(&selfSlot, interface->selfType->base->kind, error);
-                len += doFillReprBuf(&selfSlot, interface->selfType->base, buf + len, maxLen, maxDepth - 1, error);
+
+                if (pretty)
+                {
+                    char selfTypeBuf[DEFAULT_STR_LEN + 1];
+                    len += snprintf(buf + len, maxLen, "%s", typeSpelling(interface->selfType->base, selfTypeBuf));
+                    len += doPrintIndented(buf + len, maxLen, depth, pretty, '(');
+                }
+
+                len += doFillReprBuf(&selfSlot, interface->selfType->base, buf + len, maxLen, depth + 1, pretty, dereferenced, error);
+
+                if (pretty)
+                    len += doPrintIndented(buf + len, maxLen, depth, pretty, ')');
             }
             else
-                len += snprintf(buf, maxLen, "null");
+                len += snprintf(buf + len, maxLen, "null");
             break;
         }
 
-        case TYPE_FIBER:    len = snprintf(buf, maxLen, "fiber @ %p", slot->ptrVal);                break;
-        case TYPE_FN:       len = snprintf(buf, maxLen, "fn @ %lld", (long long int)slot->intVal);  break;
+        case TYPE_FIBER:    len += snprintf(buf + len, maxLen, "fiber @ %p", slot->ptrVal);                break;
+        case TYPE_FN:       len += snprintf(buf + len, maxLen, "fn @ %lld", (long long int)slot->intVal);  break;
         default:            break;
     }
 
@@ -1323,15 +1407,25 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int maxD
 }
 
 
-static FORCE_INLINE void doCheckFormatString(const char *format, int *formatLen, int *typeLetterPos, TypeKind *typeKind, Error *error)
+typedef enum
 {
-    enum {SIZE_SHORT_SHORT, SIZE_SHORT, SIZE_NORMAL, SIZE_LONG, SIZE_LONG_LONG} size;
+    FORMAT_SIZE_SHORT_SHORT,
+    FORMAT_SIZE_SHORT,
+    FORMAT_SIZE_NORMAL,
+    FORMAT_SIZE_LONG,
+    FORMAT_SIZE_LONG_LONG
+} FormatStringTypeSize;
+
+
+static FORCE_INLINE void doCheckFormatString(const char *format, int *formatLen, int *typeLetterPos, TypeKind *typeKind, FormatStringTypeSize *size, Error *error)
+{
+    *size = FORMAT_SIZE_NORMAL;
     *typeKind = TYPE_VOID;
     int i = 0;
 
     while (format[i])
     {
-        size = SIZE_NORMAL;
+        *size = FORMAT_SIZE_NORMAL;
         *typeKind = TYPE_VOID;
 
         while (format[i] && format[i] != '%')
@@ -1363,23 +1457,23 @@ static FORCE_INLINE void doCheckFormatString(const char *format, int *formatLen,
             // [length]
             if (format[i] == 'h')
             {
-                size = SIZE_SHORT;
+                *size = FORMAT_SIZE_SHORT;
                 i++;
 
                 if (format[i] == 'h')
                 {
-                    size = SIZE_SHORT_SHORT;
+                    *size = FORMAT_SIZE_SHORT_SHORT;
                     i++;
                 }
             }
             else if (format[i] == 'l')
             {
-                size = SIZE_LONG;
+                *size = FORMAT_SIZE_LONG;
                 i++;
 
                 if (format[i] == 'l')
                 {
-                    size = SIZE_LONG_LONG;
+                    *size = FORMAT_SIZE_LONG_LONG;
                     i++;
                 }
             }
@@ -1392,13 +1486,13 @@ static FORCE_INLINE void doCheckFormatString(const char *format, int *formatLen,
                 case 'd':
                 case 'i':
                 {
-                    switch (size)
+                    switch (*size)
                     {
-                        case SIZE_SHORT_SHORT:  *typeKind = TYPE_INT8;      break;
-                        case SIZE_SHORT:        *typeKind = TYPE_INT16;     break;
-                        case SIZE_NORMAL:
-                        case SIZE_LONG:         *typeKind = TYPE_INT32;     break;
-                        case SIZE_LONG_LONG:    *typeKind = TYPE_INT;       break;
+                        case FORMAT_SIZE_SHORT_SHORT:  *typeKind = TYPE_INT8;      break;
+                        case FORMAT_SIZE_SHORT:        *typeKind = TYPE_INT16;     break;
+                        case FORMAT_SIZE_NORMAL:
+                        case FORMAT_SIZE_LONG:         *typeKind = TYPE_INT32;     break;
+                        case FORMAT_SIZE_LONG_LONG:    *typeKind = TYPE_INT;       break;
                     }
                     break;
                 }
@@ -1406,13 +1500,13 @@ static FORCE_INLINE void doCheckFormatString(const char *format, int *formatLen,
                 case 'x':
                 case 'X':
                 {
-                    switch (size)
+                    switch (*size)
                     {
-                        case SIZE_SHORT_SHORT:  *typeKind = TYPE_UINT8;      break;
-                        case SIZE_SHORT:        *typeKind = TYPE_UINT16;     break;
-                        case SIZE_NORMAL:
-                        case SIZE_LONG:         *typeKind = TYPE_UINT32;     break;
-                        case SIZE_LONG_LONG:    *typeKind = TYPE_UINT;       break;
+                        case FORMAT_SIZE_SHORT_SHORT:  *typeKind = TYPE_UINT8;      break;
+                        case FORMAT_SIZE_SHORT:        *typeKind = TYPE_UINT16;     break;
+                        case FORMAT_SIZE_NORMAL:
+                        case FORMAT_SIZE_LONG:         *typeKind = TYPE_UINT32;     break;
+                        case FORMAT_SIZE_LONG_LONG:    *typeKind = TYPE_UINT;       break;
                     }
                     break;
                 }
@@ -1421,10 +1515,10 @@ static FORCE_INLINE void doCheckFormatString(const char *format, int *formatLen,
                 case 'e':
                 case 'E':
                 case 'g':
-                case 'G': *typeKind = (size == SIZE_NORMAL) ? TYPE_REAL32 : TYPE_REAL;      break;
-                case 's': *typeKind = TYPE_STR;                                             break;
-                case 'c': *typeKind = TYPE_CHAR;                                            break;
-                case 'v': *typeKind = TYPE_INTERFACE;  /* Actually any type */              break;
+                case 'G': *typeKind = (*size == FORMAT_SIZE_NORMAL) ? TYPE_REAL32 : TYPE_REAL;  break;
+                case 's': *typeKind = TYPE_STR;                                                 break;
+                case 'c': *typeKind = TYPE_CHAR;                                                break;
+                case 'v': *typeKind = TYPE_INTERFACE;  /* Actually any type */                  break;
 
                 default : error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Illegal type character %c in format string", format[i]);
             }
@@ -1488,7 +1582,9 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
 
     int formatLen = -1, typeLetterPos = -1;
     TypeKind expectedTypeKind = TYPE_NONE;
-    doCheckFormatString(format, &formatLen, &typeLetterPos, &expectedTypeKind, error);
+    FormatStringTypeSize formatStringTypeSize = FORMAT_SIZE_NORMAL;
+
+    doCheckFormatString(format, &formatLen, &typeLetterPos, &expectedTypeKind, &formatStringTypeSize, error);
 
     const bool hasAnyTypeFormatter = expectedTypeKind == TYPE_INTERFACE && typeLetterPos >= 0 && typeLetterPos < formatLen;     // %v
 
@@ -1522,15 +1618,27 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
 
     // Special case: %v formatter - convert argument of any type to its string representation
     char reprBuf[sizeof(StrDimensions) + DEFAULT_STR_LEN + 1];
-    char isReprBufInHeap = false;
+    bool isReprBufInHeap = false;
     char *dimsAndRepr = NULL;
 
     if (hasAnyTypeFormatter)
     {
-        curFormat[typeLetterPos] = 's';
+        // %hhv -> %  s
+        // %hv  -> % s
+        // %v   -> %s
+        // %lv  -> % s
+        // %llv -> %  s
 
-        enum {MAX_NESTING = 20};
-        const int reprLen = doFillReprBuf(&value, type, NULL, 0, MAX_NESTING, error);  // Predict buffer length
+        curFormat[typeLetterPos] = 's';
+        if (formatStringTypeSize != FORMAT_SIZE_NORMAL && typeLetterPos - 1 >= 0)
+            curFormat[typeLetterPos - 1] = ' ';
+        if ((formatStringTypeSize == FORMAT_SIZE_LONG_LONG || formatStringTypeSize == FORMAT_SIZE_SHORT_SHORT) && typeLetterPos - 2 >= 0)
+            curFormat[typeLetterPos - 2] = ' ';
+
+        const bool pretty = formatStringTypeSize == FORMAT_SIZE_LONG_LONG;
+        const bool dereferenced = formatStringTypeSize == FORMAT_SIZE_LONG || formatStringTypeSize == FORMAT_SIZE_LONG_LONG;
+
+        const int reprLen = doFillReprBuf(&value, type, NULL, 0, 0, pretty, dereferenced, error);  // Predict buffer length
 
         isReprBufInHeap = sizeof(StrDimensions) + reprLen + 1 > sizeof(reprBuf);
         dimsAndRepr = isReprBufInHeap ? malloc(sizeof(StrDimensions) + reprLen + 1) : &reprBuf;
@@ -1541,7 +1649,7 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
         char *repr = dimsAndRepr + sizeof(StrDimensions);
         repr[reprLen] = 0;
 
-        doFillReprBuf(&value, type, repr, reprLen + 1, MAX_NESTING, error);            // Fill buffer
+        doFillReprBuf(&value, type, repr, reprLen + 1, 0, pretty, dereferenced, error);            // Fill buffer
 
         value.ptrVal = repr;
         typeKind = TYPE_STR;
@@ -1605,7 +1713,9 @@ static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool con
 
     int formatLen = -1, typeLetterPos = -1;
     TypeKind expectedTypeKind = TYPE_NONE;
-    doCheckFormatString(format, &formatLen, &typeLetterPos, &expectedTypeKind, error);
+    FormatStringTypeSize formatStringTypeSize = FORMAT_SIZE_NORMAL;
+
+    doCheckFormatString(format, &formatLen, &typeLetterPos, &expectedTypeKind, &formatStringTypeSize, error);
 
     if (typeKind != expectedTypeKind || expectedTypeKind == TYPE_INTERFACE)
     {

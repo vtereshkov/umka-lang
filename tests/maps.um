@@ -26,7 +26,7 @@ fn test1() {
     russia2020 := populations["Russia"]
 
     printf("Population of Russia was %.2f million. Now it is %.2f million\n\n", russia2019, russia2020)
-    printf("%v\n", populations)
+    printf("%llv\n", populations)
 
     printf("\nCountries and regions more populous than Russia:\n")
     for country, pop in populations {

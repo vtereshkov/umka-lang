@@ -238,7 +238,242 @@ woof
 Test 1
 Population of Russia was 146.73 million. Now it is 146.75 million
 
-{"OCEANIA": 43.155 "Oman": 4.713 "WORLD": 7772.85 "Western-Sahara": 0.597 "WESTERN-EUROPE": 195.479 "WESTERN-ASIA": 280.927 "WESTERN-AFRICA": 401.115 "Guyana": 0.787 "Guinea-Bissau": 1.927 "Guinea": 12.56 "Guam": 0.175 "Guatemala": 18.066 "Guadeloupe": 0.375 "Georgia": 3.715 "Germany": 83.3 "Gambia": 2.417 "Gabon": 2.231 "Greece": 10.7 "Grenada": 0.113 "Ghana": 31.073 "Kosovo": 1.791 "Korea-South": 51.781 "Korea-North": 25.779 "Kuwait": 4.691 "Kenya": 53.528 "Kyrgyzstan": 6.594 "Kiribati": 0.125 "Kazakhstan": 18.732 "Somalia": 15.893 "South-Sudan": 11.194 "South-Africa": 59.628 "Solomon-Islands": 0.715 "SOUTH-ASIA": 1967.13 "SOUTH-AMERICA": 429.191 "SOUTHEAST-ASIA": 661.845 "SOUTHERN-EUROPE": 153.251 "SOUTHERN-AFRICA": 67.732 "Sweden": 10.377 "Switzerland": 8.634 "Suriname": 0.605 "Sudan": 43.849 "Seychelles": 0.098 "Senegal": 16.744 "Serbia": 6.957 "Syria": 19.398 "Sierra-Leone": 7.977 "Singapore": 5.769 "Sao-Tome-and-Principe": 0.21 "Samoa": 0.2 "Saudi-Arabia": 35.041 "Saint-Lucia": 0.182 "San-Marino": 0.034 "Sri-Lanka": 21.937 "Slovenia": 2.103 "Slovakia": 5.462 "St.-Kitts-Nevis": 0.054 "St.-Vincent-and-the-Grenadines": 0.111 "Spain": 47.635 "Costa-Rica": 5.111 "Comoros": 0.87 "Congo-Dem.-Rep.": 89.568 "Congo": 5.518 "Colombia": 49.444 "Cote-d'Ivoire": 26.175 "Curacao": 0.155 "Cuba": 11.281 "Central-African-Republic": 4.83 "CENTRAL-ASIA": 74.961 "CENTRAL-AMERICA": 178.611 "Cyprus": 1.207 "Cameroon": 26.598 "Cambodia": 15.497 "Canada": 38.19 "Cape-Verde": 0.556 "CARIBBEAN": 43.233 "Czechia": 10.716 "Croatia": 4.02 "China-Macao-SAR": 0.686 "China-Hong-Kong-SAR": 7.494 "China": 1402.38 "Chile": 19.47 "Channel-Islands": 0.172 "Chad": 16.877 "Mongolia": 3.361 "Monaco": 0.038 "Montenegro": 0.622 "Mozambique": 31.166 "Morocco": 35.952 "Moldova": 3.535 "Mexico": 127.792 "Myanmar": 54.704 "MIDDLE-AFRICA": 179.757 "Mauritius": 1.265 "Mauritania": 4.65 "Mayotte": 0.284 "Marshall-Islands": 0.057 "Martinique": 0.356 "Mali": 20.251 "Malawi": 19.13 "Malaysia": 32.781 "Malta": 0.522 "Maldives": 0.541 "Madagascar": 27.691 "Uganda": 45.741 "Ukraine": 41.778 "United-Kingdom": 67.16 "United-States": 329.878 "United-Arab-Emirates": 9.778 "Uzbekistan": 34.174 "Uruguay": 3.531 "eSwatini": 1.104 "Egypt": 100.803 "Estonia": 1.331 "Ecuador": 17.511 "EUROPE": 746.622 "Equatorial-Guinea": 1.403 "EAST-ASIA": 1641.06 "EASTERN-EUROPE": 291.902 "EASTERN-AFRICA": 444.97 "Eritrea": 3.546 "El-Salvador": 6.481 "Ethiopia": 114.916 "Yemen": 29.826 "Israel": 9.216 "Iceland": 0.368 "Indonesia": 271.739 "India": 1400.1 "Ireland": 5.003 "Iraq": 39.725 "Iran": 84.15 "Italy": 60.296 "Qatar": 2.839 "ASIA": 4625.93 "Austria": 8.914 "Australia": 25.754 "Angola": 32.522 "Antigua-and-Barbuda": 0.098 "Andorra": 0.082 "Afghanistan": 38.928 "AFRICA": 1337.92 "Azerbaijan": 10.108 "Argentina": 45.377 "Armenia": 2.956 "Algeria": 44.357 "Albania": 2.838 "Norway": 5.387 "North-Macedonia": 2.08 "NORTHERN-EUROPE": 105.99 "NORTHERN-AMERICA": 368.193 "NORTHERN-AFRICA": 244.344 "New-Caledonia": 0.295 "New-Zealand": 4.987 "Netherlands": 17.467 "Nepal": 29.996 "Nigeria": 206.14 "Niger": 24.189 "Nicaragua": 6.596 "Namibia": 2.541 "Nauru": 0.011 "Venezuela": 28.645 "Vietnam": 96.209 "Vanuatu": 0.321 "Federated-States-of-Micronesia": 0.106 "Finland": 5.529 "Fiji": 0.896 "French-Guiana": 0.294 "French-Polynesia": 0.28 "France": 64.94 "Zimbabwe": 14.863 "Zambia": 18.384 "Jordan": 10.679 "Jamaica": 2.809 "Japan": 125.967 "Romania": 19.241 "Rwanda": 12.952 "Russia": 146.748 "Reunion": 0.861 "Bosnia-Herzegovina": 3.281 "Bolivia": 11.633 "Botswana": 2.317 "Burkina-Faso": 20.903 "Burundi": 11.866 "Bulgaria": 6.927 "Benin": 12.209 "Belgium": 11.515 "Belize": 0.419 "Belarus": 9.375 "Bangladesh": 169.809 "Barbados": 0.287 "Bahamas": 0.393 "Bahrain": 1.465 "Brunei": 0.469 "Brazil": 211.812 "Bhutan": 0.73 "Luxembourg": 0.632 "Lesotho": 2.142 "Lebanon": 6.825 "Liechtenstein": 0.039 "Liberia": 5.058 "Libya": 6.891 "Lithuania": 2.794 "Laos": 7.242 "Latvia": 1.902 "LATIN-AMERICA-AND-THE-CARIBBEAN": 651.036 "Togo": 8.279 "Tonga": 0.099 "Tunisia": 11.896 "Tuvalu": 0.01 "Turkmenistan": 6.031 "Turkey": 83.737 "Timor-Leste": 1.318 "Taiwan": 23.61 "Tanzania": 59.734 "Tajikistan": 9.429 "Trinidad-and-Tobago": 1.369 "Thailand": 66.534 "Dominican-Republic": 10.5 "Dominica": 0.072 "Denmark": 5.829 "Djibouti": 0.988 "Honduras": 9.864 "Hungary": 9.767 "Haiti": 11.403 "Portugal": 10.255 "Poland": 38.368 "Puerto-Rico": 3.189 "Peru": 32.824 "Pakistan": 220.94 "Panama": 4.283 "Paraguay": 7.255 "Palestinian-Territory": 5.008 "Palau": 0.018 "Papua-New-Guinea": 8.95 "Philippines": 109.581}
+{
+    "OCEANIA": 43.155
+    "Oman": 4.713
+    "WORLD": 7772.85
+    "Western-Sahara": 0.597
+    "WESTERN-EUROPE": 195.479
+    "WESTERN-ASIA": 280.927
+    "WESTERN-AFRICA": 401.115
+    "Guyana": 0.787
+    "Guinea-Bissau": 1.927
+    "Guinea": 12.56
+    "Guam": 0.175
+    "Guatemala": 18.066
+    "Guadeloupe": 0.375
+    "Georgia": 3.715
+    "Germany": 83.3
+    "Gambia": 2.417
+    "Gabon": 2.231
+    "Greece": 10.7
+    "Grenada": 0.113
+    "Ghana": 31.073
+    "Kosovo": 1.791
+    "Korea-South": 51.781
+    "Korea-North": 25.779
+    "Kuwait": 4.691
+    "Kenya": 53.528
+    "Kyrgyzstan": 6.594
+    "Kiribati": 0.125
+    "Kazakhstan": 18.732
+    "Somalia": 15.893
+    "South-Sudan": 11.194
+    "South-Africa": 59.628
+    "Solomon-Islands": 0.715
+    "SOUTH-ASIA": 1967.13
+    "SOUTH-AMERICA": 429.191
+    "SOUTHEAST-ASIA": 661.845
+    "SOUTHERN-EUROPE": 153.251
+    "SOUTHERN-AFRICA": 67.732
+    "Sweden": 10.377
+    "Switzerland": 8.634
+    "Suriname": 0.605
+    "Sudan": 43.849
+    "Seychelles": 0.098
+    "Senegal": 16.744
+    "Serbia": 6.957
+    "Syria": 19.398
+    "Sierra-Leone": 7.977
+    "Singapore": 5.769
+    "Sao-Tome-and-Principe": 0.21
+    "Samoa": 0.2
+    "Saudi-Arabia": 35.041
+    "Saint-Lucia": 0.182
+    "San-Marino": 0.034
+    "Sri-Lanka": 21.937
+    "Slovenia": 2.103
+    "Slovakia": 5.462
+    "St.-Kitts-Nevis": 0.054
+    "St.-Vincent-and-the-Grenadines": 0.111
+    "Spain": 47.635
+    "Costa-Rica": 5.111
+    "Comoros": 0.87
+    "Congo-Dem.-Rep.": 89.568
+    "Congo": 5.518
+    "Colombia": 49.444
+    "Cote-d'Ivoire": 26.175
+    "Curacao": 0.155
+    "Cuba": 11.281
+    "Central-African-Republic": 4.83
+    "CENTRAL-ASIA": 74.961
+    "CENTRAL-AMERICA": 178.611
+    "Cyprus": 1.207
+    "Cameroon": 26.598
+    "Cambodia": 15.497
+    "Canada": 38.19
+    "Cape-Verde": 0.556
+    "CARIBBEAN": 43.233
+    "Czechia": 10.716
+    "Croatia": 4.02
+    "China-Macao-SAR": 0.686
+    "China-Hong-Kong-SAR": 7.494
+    "China": 1402.38
+    "Chile": 19.47
+    "Channel-Islands": 0.172
+    "Chad": 16.877
+    "Mongolia": 3.361
+    "Monaco": 0.038
+    "Montenegro": 0.622
+    "Mozambique": 31.166
+    "Morocco": 35.952
+    "Moldova": 3.535
+    "Mexico": 127.792
+    "Myanmar": 54.704
+    "MIDDLE-AFRICA": 179.757
+    "Mauritius": 1.265
+    "Mauritania": 4.65
+    "Mayotte": 0.284
+    "Marshall-Islands": 0.057
+    "Martinique": 0.356
+    "Mali": 20.251
+    "Malawi": 19.13
+    "Malaysia": 32.781
+    "Malta": 0.522
+    "Maldives": 0.541
+    "Madagascar": 27.691
+    "Uganda": 45.741
+    "Ukraine": 41.778
+    "United-Kingdom": 67.16
+    "United-States": 329.878
+    "United-Arab-Emirates": 9.778
+    "Uzbekistan": 34.174
+    "Uruguay": 3.531
+    "eSwatini": 1.104
+    "Egypt": 100.803
+    "Estonia": 1.331
+    "Ecuador": 17.511
+    "EUROPE": 746.622
+    "Equatorial-Guinea": 1.403
+    "EAST-ASIA": 1641.06
+    "EASTERN-EUROPE": 291.902
+    "EASTERN-AFRICA": 444.97
+    "Eritrea": 3.546
+    "El-Salvador": 6.481
+    "Ethiopia": 114.916
+    "Yemen": 29.826
+    "Israel": 9.216
+    "Iceland": 0.368
+    "Indonesia": 271.739
+    "India": 1400.1
+    "Ireland": 5.003
+    "Iraq": 39.725
+    "Iran": 84.15
+    "Italy": 60.296
+    "Qatar": 2.839
+    "ASIA": 4625.93
+    "Austria": 8.914
+    "Australia": 25.754
+    "Angola": 32.522
+    "Antigua-and-Barbuda": 0.098
+    "Andorra": 0.082
+    "Afghanistan": 38.928
+    "AFRICA": 1337.92
+    "Azerbaijan": 10.108
+    "Argentina": 45.377
+    "Armenia": 2.956
+    "Algeria": 44.357
+    "Albania": 2.838
+    "Norway": 5.387
+    "North-Macedonia": 2.08
+    "NORTHERN-EUROPE": 105.99
+    "NORTHERN-AMERICA": 368.193
+    "NORTHERN-AFRICA": 244.344
+    "New-Caledonia": 0.295
+    "New-Zealand": 4.987
+    "Netherlands": 17.467
+    "Nepal": 29.996
+    "Nigeria": 206.14
+    "Niger": 24.189
+    "Nicaragua": 6.596
+    "Namibia": 2.541
+    "Nauru": 0.011
+    "Venezuela": 28.645
+    "Vietnam": 96.209
+    "Vanuatu": 0.321
+    "Federated-States-of-Micronesia": 0.106
+    "Finland": 5.529
+    "Fiji": 0.896
+    "French-Guiana": 0.294
+    "French-Polynesia": 0.28
+    "France": 64.94
+    "Zimbabwe": 14.863
+    "Zambia": 18.384
+    "Jordan": 10.679
+    "Jamaica": 2.809
+    "Japan": 125.967
+    "Romania": 19.241
+    "Rwanda": 12.952
+    "Russia": 146.748
+    "Reunion": 0.861
+    "Bosnia-Herzegovina": 3.281
+    "Bolivia": 11.633
+    "Botswana": 2.317
+    "Burkina-Faso": 20.903
+    "Burundi": 11.866
+    "Bulgaria": 6.927
+    "Benin": 12.209
+    "Belgium": 11.515
+    "Belize": 0.419
+    "Belarus": 9.375
+    "Bangladesh": 169.809
+    "Barbados": 0.287
+    "Bahamas": 0.393
+    "Bahrain": 1.465
+    "Brunei": 0.469
+    "Brazil": 211.812
+    "Bhutan": 0.73
+    "Luxembourg": 0.632
+    "Lesotho": 2.142
+    "Lebanon": 6.825
+    "Liechtenstein": 0.039
+    "Liberia": 5.058
+    "Libya": 6.891
+    "Lithuania": 2.794
+    "Laos": 7.242
+    "Latvia": 1.902
+    "LATIN-AMERICA-AND-THE-CARIBBEAN": 651.036
+    "Togo": 8.279
+    "Tonga": 0.099
+    "Tunisia": 11.896
+    "Tuvalu": 0.01
+    "Turkmenistan": 6.031
+    "Turkey": 83.737
+    "Timor-Leste": 1.318
+    "Taiwan": 23.61
+    "Tanzania": 59.734
+    "Tajikistan": 9.429
+    "Trinidad-and-Tobago": 1.369
+    "Thailand": 66.534
+    "Dominican-Republic": 10.5
+    "Dominica": 0.072
+    "Denmark": 5.829
+    "Djibouti": 0.988
+    "Honduras": 9.864
+    "Hungary": 9.767
+    "Haiti": 11.403
+    "Portugal": 10.255
+    "Poland": 38.368
+    "Puerto-Rico": 3.189
+    "Peru": 32.824
+    "Pakistan": 220.94
+    "Panama": 4.283
+    "Paraguay": 7.255
+    "Palestinian-Territory": 5.008
+    "Palau": 0.018
+    "Papua-New-Guinea": 8.95
+    "Philippines": 109.581
+}
 
 Countries and regions more populous than Russia:
                                    WORLD: 7772.85
@@ -529,9 +764,21 @@ A name: a.um
 >>> Closures - 1
 
 running by_name_eq with name : Foo
-running by_name_eq with name : "Foo" and person : {name: "Foo" age: 24 sex: "M"}
-running by_name_eq with name : "Foo" and person : {name: "Bar" age: 23 sex: "M"}
-running by_name_eq with name : "Foo" and person : {name: "FooBar" age: 23 sex: "F"}
+running by_name_eq with name : "Foo" and person : {
+    name: "Foo"
+    age: 24
+    sex: "M"
+}
+running by_name_eq with name : "Foo" and person : {
+    name: "Bar"
+    age: 23
+    sex: "M"
+}
+running by_name_eq with name : "Foo" and person : {
+    name: "FooBar"
+    age: 23
+    sex: "F"
+}
 [true false false]
 
 
@@ -771,9 +1018,51 @@ true true
 
 >>> Forward declarations
 
-{name: "node1" children: [{name: "node11" children: []} {name: "node12" children: [{name: "node121" children: []}]}]}
+{
+    name: "node1"
+    children: [
+        {
+            name: "node11"
+            children: [
+                
+            ]
+        }
+        {
+            name: "node12"
+            children: [
+                {
+                    name: "node121"
+                    children: [
+                        
+                    ]
+                }
+            ]
+        }
+    ]
+}
 
-{name: "node1" children: {"child1": {name: "node11" children: {}} "child2": {name: "node12" children: {"child21": {name: "node121" children: {}}}}}}
+{
+    name: "node1"
+    children: {
+        "child1": {
+            name: "node11"
+            children: {
+                
+            }
+        }
+        "child2": {
+            name: "node12"
+            children: {
+                "child21": {
+                    name: "node121"
+                    children: {
+                        
+                    }
+                }
+            }
+        }
+    }
+}
 
 
 >>> External libraries

@@ -664,9 +664,14 @@ x, X                Hexadecimal integer or enumeration
 f, F, e, E, g, G    Real
 s                   String
 c                   Character
-v                   Any (only in printf, fprintf, sprintf)
+v                   Any
 ```
+
+The `v` type specifier prints the hierarchical structure of any value according to its type. It is only allowed in `printf`, `fprintf`, `sprintf`. When combined with the `l` or `ll` length specifier, it also dereferences all pointers contained in the value. The `ll` length specifier also enables multi-line pretty-printing with indentation. 
+
 The number of the format specifiers and the data types encoded by them should match the number and types of `a1`, `a2`... Otherwise, a runtime error is triggered.
+
+
 
 ##### Mathematical functions
 
