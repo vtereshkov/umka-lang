@@ -1,20 +1,20 @@
 {
     "name": "umka",
     "version": "v1.4.0",
-    "author": "Vasiliy Tereshkov",
+    "author": "Vasiliy Tereshkov <vtereshkov@mail.ru>",
     "license": "BSD-2",
     "description": "The Umka Programming language",
     "readme": "README.md",
     "link": "https://github.com/vtereshkov/umka-lang",
     "dependencies": [],
     "include": [
-			"umka.exe",
-			"umka",
-			"libumka.so",
-			"libumka.dll",
-			"umka_api.h"
-		],
-		"pre_build": "sh umbox_pre_build.sh",
-		"post_build": "sh umbox_post_build.sh",
-		"run": "make"
+        "umka.exe",
+        "umka",
+        "libumka.so",
+        "libumka.dll",
+        "umka_api.h"
+    ],
+    "pre_build": "sh umbox_pre_build.sh",
+    "post_build": "sh umbox_post_build.sh",
+    "run": "make"
 }
