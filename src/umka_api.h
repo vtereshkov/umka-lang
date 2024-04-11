@@ -69,18 +69,12 @@ typedef struct
 } UmkaMap;
 
 
-enum
-{
-    UMKA_MSG_LEN = 255
-};
-
-
 typedef struct
 {
-    char fileName[UMKA_MSG_LEN + 1];
-    char fnName[UMKA_MSG_LEN + 1];
-    int line, pos;
-    char msg[UMKA_MSG_LEN + 1];
+    char *fileName;
+    char *fnName;
+    int line, pos, code;
+    char *msg;
 } UmkaError;
 
 
@@ -95,7 +89,7 @@ typedef struct
     int  (*umkaRun)               (void *umka);
     int  (*umkaCall)              (void *umka, int entryOffset, int numParamSlots, UmkaStackSlot *params, UmkaStackSlot *result);
     void (*umkaFree)              (void *umka);
-    void (*umkaGetError)          (void *umka, UmkaError *err);
+    UmkaError *(*umkaGetError)    (void *umka);
     bool (*umkaAlive)             (void *umka);
     char *(*umkaAsm)              (void *umka);
     bool (*umkaAddModule)         (void *umka, const char *fileName, const char *sourceString);
@@ -121,7 +115,7 @@ UMKA_API bool umkaCompile           (void *umka);
 UMKA_API int  umkaRun               (void *umka);
 UMKA_API int  umkaCall              (void *umka, int entryOffset, int numParamSlots, UmkaStackSlot *params, UmkaStackSlot *result);
 UMKA_API void umkaFree              (void *umka);
-UMKA_API void umkaGetError          (void *umka, UmkaError *err);
+UMKA_API UmkaError *umkaGetError    (void *umka);
 UMKA_API bool umkaAlive             (void *umka);
 UMKA_API char *umkaAsm              (void *umka);
 UMKA_API bool umkaAddModule         (void *umka, const char *fileName, const char *sourceString);

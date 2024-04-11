@@ -248,16 +248,17 @@ void compilerInit(Compiler *comp, const char *fileName, const char *sourceString
 
 void compilerFree(Compiler *comp)
 {
-    lexFree      (&comp->lex);
-    vmFree       (&comp->vm);
-    genFree      (&comp->gen);
-    constFree    (&comp->consts);
-    identFree    (&comp->idents, -1);
-    typeFree     (&comp->types, -1);
-    externalFree (&comp->externals);
-    blocksFree   (&comp->blocks);
-    moduleFree   (&comp->modules);
-    storageFree  (&comp->storage);
+    lexFree         (&comp->lex);
+    vmFree          (&comp->vm);
+    genFree         (&comp->gen);
+    constFree       (&comp->consts);
+    identFree       (&comp->idents, -1);
+    typeFree        (&comp->types, -1);
+    externalFree    (&comp->externals);
+    blocksFree      (&comp->blocks);
+    moduleFree      (&comp->modules);
+    storageFree     (&comp->storage);
+    errorReportFree (&comp->error.report);
 
 #ifdef _WIN32
     SetConsoleOutputCP(comp->originalCodepage);

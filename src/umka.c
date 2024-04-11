@@ -10,7 +10,8 @@
 enum
 {
     DEFAULT_STACK_SIZE      =  1 * 1024 * 1024,  // Slots
-    MAX_CALL_STACK_DEPTH    = 10
+    MAX_CALL_STACK_DEPTH    = 10,
+    MAX_STR_LENGTH          = 256
 };
 
 
@@ -36,28 +37,26 @@ void printCompileWarning(UmkaError *warning)
 
 void printCompileError(void *umka)
 {
-    UmkaError error;
-    umkaGetError(umka, &error);
-    fprintf(stderr, "Error %s (%d, %d): %s\n", error.fileName, error.line, error.pos, error.msg);
+    UmkaError *error = umkaGetError(umka);
+    fprintf(stderr, "Error %s (%d, %d): %s\n", error->fileName, error->line, error->pos, error->msg);
 }
 
 
 void printRuntimeError(void *umka)
 {
-    UmkaError error;
-    umkaGetError(umka, &error);
+    UmkaError *error = umkaGetError(umka);
 
-    if (*error.msg)
+    if (error->msg[0])
     {
-        fprintf(stderr, "\nRuntime error %s (%d): %s\n", error.fileName, error.line, error.msg);
+        fprintf(stderr, "\nRuntime error %s (%d): %s\n", error->fileName, error->line, error->msg);
         fprintf(stderr, "Stack trace:\n");
 
         for (int depth = 0; depth < MAX_CALL_STACK_DEPTH; depth++)
         {
-            char fileName[UMKA_MSG_LEN + 1], fnName[UMKA_MSG_LEN + 1];
+            char fileName[MAX_STR_LENGTH + 1], fnName[MAX_STR_LENGTH + 1];
             int line;
 
-            if (!umkaGetCallStack(umka, depth, UMKA_MSG_LEN + 1, NULL, fileName, fnName, &line))
+            if (!umkaGetCallStack(umka, depth, MAX_STR_LENGTH + 1, NULL, fileName, fnName, &line))
                 break;
 
             fprintf(stderr, "    %s: %s (%d)\n", fnName, fileName, line);

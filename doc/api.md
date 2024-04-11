@@ -152,17 +152,12 @@ Calls the specific Umka function. Here, `umka` is the interpreter instance handl
 ### Types
 
 ```
-enum
-{
-    UMKA_MSG_LEN = 255
-};
-
 typedef struct
 {
-    char fileName[UMKA_MSG_LEN + 1];
-    char fnName[UMKA_MSG_LEN + 1];
-    int line, pos;
-    char msg[UMKA_MSG_LEN + 1];
+    char *fileName;
+    char *fnName;
+    int line, pos, code;
+    char *msg;
 } UmkaError;
 ```
 
@@ -193,10 +188,10 @@ Umka debug hook function. A callback that is called each time a hook event occur
 ### Functions
 
 ```
-UMKA_API void umkaGetError(void *umka, UmkaError *err);
+UMKA_API UmkaError *umkaGetError(void *umka);
 ```
 
-Gets the last compile-time or run-time error. Here, `umka` is the interpreter instance handle, `err` is the pointer to the error description structure to be filled.
+Returns the last compile-time or run-time error. Here, `umka` is the interpreter instance handle. The returned pointer is valid until either a new error occurs, or `umkaFree` is called.
 
 ```
 UMKA_API bool umkaAlive(void *umka);

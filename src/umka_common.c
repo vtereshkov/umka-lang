@@ -15,6 +15,50 @@
 #include "umka_common.h"
 
 
+// Errors
+
+void errorReportInit(ErrorReport *report, const char *fileName, const char *fnName, int line, int pos, int code, const char *format, va_list args)
+{
+    errorReportFree(report);
+
+    report->fileName = malloc(strlen(fileName) + 1);
+    strcpy(report->fileName, fileName);
+
+    report->fnName = malloc(strlen(fnName) + 1);
+    strcpy(report->fnName, fnName);
+
+    report->line = line;
+    report->pos = pos;
+    report->code = code;
+
+    const int msgLen = vsnprintf(NULL, 0, format, args);
+    report->msg = malloc(msgLen + 1);
+    vsnprintf(report->msg, msgLen + 1, format, args);
+}
+
+
+void errorReportFree(ErrorReport *report)
+{
+    if (report->fileName)
+    {
+        free(report->fileName);
+        report->fileName = NULL;
+    }
+
+    if (report->fnName)
+    {
+        free(report->fnName);
+        report->fnName = NULL;
+    }
+
+    if (report->msg)
+    {
+        free(report->msg);
+        report->msg = NULL;
+    }
+}
+
+
 // Storage
 
 void storageInit(Storage *storage)
@@ -560,3 +604,4 @@ External *externalAdd(Externals *externals, const char *name, void *entry)
     }
     return externals->last;
 }
+

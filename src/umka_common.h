@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdarg.h>
 #include <setjmp.h>
 
 
@@ -91,6 +92,15 @@ typedef struct
 typedef void (*WarningCallback)(void * /*UmkaError*/ warning);
 
 
+typedef struct      // Must be identical to UmkaError
+{
+    char *fileName;
+    char *fnName;
+    int line, pos, code;
+    char *msg;
+} ErrorReport;
+
+
 typedef struct
 {
     void (*handler)(void *context, const char *format, ...);
@@ -99,12 +109,7 @@ typedef struct
     WarningCallback warningCallback;
     void *context;
     jmp_buf jumper;
-
-    // Error report
-    char fileName[DEFAULT_STR_LEN + 1];
-    char fnName[DEFAULT_STR_LEN + 1];
-    int line, pos, code;
-    char msg[DEFAULT_STR_LEN + 1];
+    ErrorReport report;
 } Error;
 
 
@@ -183,6 +188,9 @@ typedef struct
     External *first, *last;
 } Externals;
 
+
+void errorReportInit(ErrorReport *report, const char *fileName, const char *fnName, int line, int pos, int code, const char *format, va_list args);
+void errorReportFree(ErrorReport *report);
 
 void  storageInit  (Storage *storage);
 void  storageFree  (Storage *storage);
