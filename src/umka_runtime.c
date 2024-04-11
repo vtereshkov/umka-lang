@@ -285,10 +285,10 @@ void rtltrace(Slot *params, Slot *result)
 
     void *umka = result->ptrVal;
 
-    char fileName[UMKA_MSG_LEN + 1], fnName[UMKA_MSG_LEN + 1];
+    char fileName[DEFAULT_STR_LEN + 1], fnName[DEFAULT_STR_LEN + 1];
     int line;
 
-    if (umkaGetCallStack(umka, depth, UMKA_MSG_LEN + 1, NULL, fileName, fnName, &line))
+    if (umkaGetCallStack(umka, depth, DEFAULT_STR_LEN + 1, NULL, fileName, fnName, &line))
     {
         umkaDecRef(umka, pos->fileName);
         umkaDecRef(umka, pos->fnName);

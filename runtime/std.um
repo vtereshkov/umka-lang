@@ -54,17 +54,10 @@ fn stderror(code: StdErr): Err {
 
 fn exitif*(err: Err) {
     if err.code != 0 {
-        const maxMsgLen = 245
         msg := sprintf("%s (code %d) in %v\n", err.msg, err.code, err.sender)
         msg += sprintf("Stack trace:\n")
         for _, pos in err.trace {
-            item := sprintf("    %s: %s (%d)\n", pos.func, pos.file, pos.line)
-            if len(msg) + len(item) <= maxMsgLen {
-                msg += item
-            } else {
-                msg += "    ...\n"
-                break
-            }
+            msg += sprintf("    %s: %s (%d)\n", pos.func, pos.file, pos.line)
         }
         exit(err.code, msg)
     }    

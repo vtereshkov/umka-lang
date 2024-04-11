@@ -18,15 +18,19 @@ static void compileWarning(void *context, DebugInfo *debug, const char *format, 
 
     Compiler *comp = context;
 
-    UmkaError warning;
-    strcpy(warning.fileName, debug ? debug->fileName : comp->lex.fileName);
-    strcpy(warning.fnName, debug ? debug->fnName : comp->debug.fnName);
-    warning.line = debug ? debug->line : comp->lex.tok.line;
-    warning.pos = debug ? 1 : comp->lex.tok.pos;
-    vsnprintf(warning.msg, UMKA_MSG_LEN + 1, format, args);
+    ErrorReport report = {0};
+    errorReportInit(&report,
+                    debug ? debug->fileName : comp->lex.fileName,
+                    debug ? debug->fnName : comp->debug.fnName,
+                    debug ? debug->line : comp->lex.tok.line,
+                    debug ? 1 : comp->lex.tok.pos,
+                    0,
+                    format, args);
 
     if (comp->error.warningCallback)
-        ((UmkaWarningCallback)comp->error.warningCallback)(&warning);
+        ((UmkaWarningCallback)comp->error.warningCallback)((UmkaError *)&report);
+
+    errorReportFree(&report);
 
     va_end(args);
 }
@@ -38,13 +42,7 @@ static void compileError(void *context, const char *format, ...)
     va_start(args, format);
 
     Compiler *comp = context;
-
-    strcpy(comp->error.fileName, comp->lex.fileName);
-    strcpy(comp->error.fnName, comp->debug.fnName);
-    comp->error.line = comp->lex.tok.line;
-    comp->error.pos = comp->lex.tok.pos;
-    comp->error.code = 1;
-    vsnprintf(comp->error.msg, UMKA_MSG_LEN + 1, format, args);
+    errorReportInit(&comp->error.report, comp->lex.fileName, comp->debug.fnName, comp->lex.tok.line, comp->lex.tok.pos, 1, format, args);
 
     va_end(args);
     longjmp(comp->error.jumper, 1);
@@ -58,13 +56,7 @@ static void runtimeError(void *context, int code, const char *format, ...)
 
     Compiler *comp = context;
     DebugInfo *debug = &comp->vm.fiber->debugPerInstr[comp->vm.fiber->ip];
-
-    strcpy(comp->error.fileName, debug->fileName);
-    strcpy(comp->error.fnName, debug->fnName);
-    comp->error.line = debug->line;
-    comp->error.code = code;
-    comp->error.pos = 1;
-    vsnprintf(comp->error.msg, UMKA_MSG_LEN + 1, format, args);
+    errorReportInit(&comp->error.report, debug->fileName, debug->fnName, debug->line, 1, code, format, args);
 
     vmKill(&comp->vm);
 
@@ -125,7 +117,7 @@ UMKA_API int umkaRun(void *umka)
         return 0;
     }
 
-    return comp->error.code;
+    return comp->error.report.code;
 }
 
 
@@ -139,7 +131,7 @@ UMKA_API int umkaCall(void *umka, int entryOffset, int numParamSlots, UmkaStackS
         return 0;
     }
 
-    return comp->error.code;
+    return comp->error.report.code;
 }
 
 
@@ -151,14 +143,10 @@ UMKA_API void umkaFree(void *umka)
 }
 
 
-UMKA_API void umkaGetError(void *umka, UmkaError *err)
+UMKA_API UmkaError *umkaGetError(void *umka)
 {
     Compiler *comp = umka;
-    strcpy(err->fileName, comp->error.fileName);
-    strcpy(err->fnName, comp->error.fnName);
-    err->line = comp->error.line;
-    err->pos = comp->error.pos;
-    strcpy(err->msg, comp->error.msg);
+    return (UmkaError *)(&comp->error.report);
 }
 
 
