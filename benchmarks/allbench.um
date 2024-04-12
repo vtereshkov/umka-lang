@@ -7,14 +7,14 @@ import (
 )
 
 fn benchmark(f: fn ()) {
-    start := std.clock()
+    start := std::clock()
     f()
-    stop := std.clock()
-    fprintf(std.stderr(), "Time elapsed: %.3f s\n", stop - start)   
+    stop := std::clock()
+    fprintf(std::stderr(), "Time elapsed: %.3f s\n", stop - start)   
 }
 
 fn main() {
-    printf("\n\n>>> Binary trees\n\n");             benchmark({trees.test()})
-    printf("\n\n>>> N body problem\n\n");           benchmark({nbody.test(100000)})
-    printf("\n\n>>> Matrix multiplication\n\n");    benchmark({matrices.test()})
+    printf("\n\n>>> Binary trees\n\n");             benchmark({trees::test()})
+    printf("\n\n>>> N body problem\n\n");           benchmark({nbody::test(100000)})
+    printf("\n\n>>> Matrix multiplication\n\n");    benchmark({matrices::test()})
 }

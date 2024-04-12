@@ -22,7 +22,7 @@ fn test*() {
 		{"Bar", 23, "M"},
 		{"FooBar", 23, "F"}}
 
-	mapped := fnc.Array(persons).transform(named_foo)
+	mapped := fnc::Array(persons).transform(named_foo)
 	printf("%v\n", mapped)
 }
 

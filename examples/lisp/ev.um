@@ -24,7 +24,7 @@ fn (e: ^Expr) toStr*(): str {
     } else if e.atom == "" {
         return "(" + e.car.toStr() + " . " + e.cdr.toStr() + ")"
     } else if num(e) {
-        return std.itoa(e.val)
+        return std::itoa(e.val)
     }
     return e.atom
 }

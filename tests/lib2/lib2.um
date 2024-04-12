@@ -1,2 +1,2 @@
 import "utils.um"
-fn f*() {utils.f()}
+fn f*() {utils::f()}

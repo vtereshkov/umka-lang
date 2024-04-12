@@ -6,16 +6,16 @@ fn test*() {
 	s := sprintf("%d %v %f %v\n", 7, []int{42, 43}, 6.0, map[str]real{"Hello": 3.14, "World": 1 / 3.0})
 	printf("%s", s)
 
-	f, err := std.fopen("test.txt", "w")
-	std.exitif(err)
+	f, err := std::fopen("test.txt", "w")
+	std::exitif(err)
 	fprintf(f, "%d %v %f %v\n", 7, []int{42, 43}, 6.0, map[str]real{"Hello": 3.14, "World": 1 / 3.0})
-	std.fclose(f)
+	std::fclose(f)
 
-	f2, err := std.fopen("test.txt", "rb")
-	std.exitif(err)
-	chars, err := std.freadall(f2)
-	std.exitif(err)
-	std.fclose(f2)
+	f2, err := std::fopen("test.txt", "rb")
+	std::exitif(err)
+	chars, err := std::freadall(f2)
+	std::exitif(err)
+	std::fclose(f2)
 	printf("%s", str(chars))	
 }
 

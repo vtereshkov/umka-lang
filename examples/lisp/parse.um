@@ -5,18 +5,18 @@ import (
 
 
 type Parser* = struct {
-    lexer: lex.Lexer
+    lexer: lex::Lexer
 }
 
 
-fn (p: ^Parser) parse(): ^ev.Expr {    
+fn (p: ^Parser) parse(): ^ev::Expr {    
     // Parse list
     if p.lexer.tok.kind == .LPar {
         p.lexer.next() 
        
-        var first, last: ^ev.Expr
+        var first, last: ^ev::Expr
         for p.lexer.tok.kind == .Atom || p.lexer.tok.kind == .LPar {
-            e := ev.strExpr("")
+            e := ev::strExpr("")
             e.car = p.parse()
             
             if first == null {
@@ -33,14 +33,14 @@ fn (p: ^Parser) parse(): ^ev.Expr {
     
     // Parse atom  
     p.lexer.check(.Atom)
-    res := &ev.Expr{p.lexer.tok.name, p.lexer.tok.val, null, null}
+    res := &ev::Expr{p.lexer.tok.name, p.lexer.tok.val, null, null}
     p.lexer.next()
     return res
 
 }
 
 
-fn parseStr*(buf: str): ^ev.Expr {
+fn parseStr*(buf: str): ^ev::Expr {
     var p: Parser
     p.lexer.open(buf)
     p.lexer.next()
@@ -52,7 +52,7 @@ fn execStr*(buf: str): str {
     e := parseStr(buf)
     
     // Convert expression to a fictitious function call: apply((lambda () e), nil)
-    lambda := ev.cons(ev.strExpr("lambda"), ev.cons(null, ev.cons(e, null)))
-    return ev.evalquote(lambda, null).toStr()
+    lambda := ev::cons(ev::strExpr("lambda"), ev::cons(null, ev::cons(e, null)))
+    return ev::evalquote(lambda, null).toStr()
 }
 

@@ -4,8 +4,8 @@ import (
 )
 
 fn test*() {
-        lib1.f()
-        lib2.f()
+        lib1::f()
+        lib2::f()
 }
 
 fn main() {

@@ -18,11 +18,11 @@ var cubes: [maxColumns] struct {
     color:    Color
 }
 
-fn rnd(min, max: real): real {return min + (max - min) * std.frand()}
+fn rnd(min, max: real): real {return min + (max - min) * std::frand()}
 
 fn initBodies() {    
     // Generates some random columns
-    std.srand(std.time())
+    std::srand(std::time())
     for _, cube^ in cubes {
         cube.height   = rnd(1, 12);
         cube.position = {rnd(-15, 15), cube.height / 2, rnd(-15, 15)}

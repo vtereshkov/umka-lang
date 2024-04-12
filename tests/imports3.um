@@ -4,7 +4,7 @@ std := 42
 imports3 := 43
 
 fn test*() {
-    printf("%v %v %v\n", std, imports3, s.argc())
+    printf("%v %v %v\n", std, imports3, s::argc())
 }
 
 fn main() {

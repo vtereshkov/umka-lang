@@ -1,7 +1,5 @@
 // Matrix multiplication benchmark - Umka version
 
-import "std.um"
-
 fn test*() {
     const size = 400
     var a, b, c: [size][size] real

@@ -82,7 +82,7 @@ fn (l: ^Lexer) next*() {
             s += ch
             ch = l.getch()
         }
-        l.tok.val = std.atoi(s)
+        l.tok.val = std::atoi(s)
               
     // Read parentheses
     } else if ch == '(' || ch == ')' {        
@@ -91,7 +91,7 @@ fn (l: ^Lexer) next*() {
         ch = l.getch()
         
     } else if ch != '\0' {
-        exit(2, "Illegal character " + ch + " (" + std.itoa(int(ch)) + ")")
+        exit(2, "Illegal character " + ch + " (" + std::itoa(int(ch)) + ")")
     }
     
     l.ch = ch

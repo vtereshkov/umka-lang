@@ -690,7 +690,7 @@ void doApplyOperator(Compiler *comp, Type **type, Type **rightType, Const *const
 }
 
 
-// qualIdent = [ident "."] ident.
+// qualIdent = [ident ("." | "::")] ident.
 Ident *parseQualIdent(Compiler *comp)
 {
     lexCheck(&comp->lex, TOK_IDENT);
@@ -699,7 +699,13 @@ Ident *parseQualIdent(Compiler *comp)
     if (ident->kind == IDENT_MODULE)
     {
         lexNext(&comp->lex);
-        lexEat(&comp->lex, TOK_PERIOD);
+        if (comp->lex.tok.kind == TOK_PERIOD)
+        {
+            comp->error.warningHandler(comp->error.context, NULL, "Deprecated module access syntax. Use :: instead of .");
+            lexNext(&comp->lex);
+        }
+        else
+            lexEat(&comp->lex, TOK_COLONCOLON);
         lexCheck(&comp->lex, TOK_IDENT);
 
         ident = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, ident->moduleVal, comp->lex.tok.name, NULL);

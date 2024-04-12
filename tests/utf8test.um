@@ -1,18 +1,19 @@
-import "utf8.um"
+import (
+	"std.um"
+	"utf8.um"
+)
 
 fn testStr(s: str) {
 	printf("string: %s\n", s)
-	printf("bytes: %lld\ncharacters: %lld\n", len(s), utf8.runeCount(s))
+	printf("bytes: %lld\ncharacters: %lld\n", len(s), utf8::runeCount(s))
 
-	runes := utf8.decode(s)
+	runes := utf8::decode(s)
 	for _, r in runes {
 		printf("%s: U+%x\n", r.encode(), r)
 	}
 
-	s1 := utf8.encode(runes)
-	if s1 != s {
-		exit(1, "UTF-8 encoding failed")
-	}
+	s1 := utf8::encode(runes)
+	std::assert(s1 == s, "UTF-8 encoding failed")
 
 	printf("reconstructed string: %s\n", s1)
 	printf("\n")	

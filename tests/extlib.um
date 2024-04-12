@@ -1,7 +1,7 @@
 import "lib/lib.um"
 
 fn test*() {
-	printf("%f %f %s\n", lib.add(3, 5), lib.sub(3, 5), lib.hello())      
+	printf("%f %f %s\n", lib::add(3, 5), lib::sub(3, 5), lib::hello())      
 }
 
 fn main() {

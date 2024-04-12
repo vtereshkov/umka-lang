@@ -1,10 +1,10 @@
 import "std.um"
 
-fn foo(x: str): (int, std.Err) {
+fn foo(x: str): (int, std::Err) {
     if x == "" {
-        return 0, std.error(-2, "Empty string", "foo")
+        return 0, std::error(-2, "Empty string", "foo")
     }
-    return len(x), std.error()
+    return len(x), std::error()
 }
 
 fn fooTest(x: str) {

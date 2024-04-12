@@ -3,30 +3,30 @@ import "std.um"
 fn test*() {
 	printf("Left trimming\n")
 
-	printf("%v\n", std.ltrim("Hello World"))
-	printf("%v\n", std.ltrim("  Hello World"))
-	printf("%v\n", std.ltrim("Hello World   "))
-	printf("%v\n", std.ltrim(" \tHello World   "))
-	printf("%v\n", std.ltrim("    "))
-	printf("%v\n", std.ltrim(""))
+	printf("%v\n", std::ltrim("Hello World"))
+	printf("%v\n", std::ltrim("  Hello World"))
+	printf("%v\n", std::ltrim("Hello World   "))
+	printf("%v\n", std::ltrim(" \tHello World   "))
+	printf("%v\n", std::ltrim("    "))
+	printf("%v\n", std::ltrim(""))
 
 	printf("Right trimming\n")
 
-	printf("%v\n", std.rtrim("Hello World"))
-	printf("%v\n", std.rtrim("  Hello World"))
-	printf("%v\n", std.rtrim("Hello World   "))
-	printf("%v\n", std.rtrim(" \tHello World   "))
-	printf("%v\n", std.rtrim("    "))
-	printf("%v\n", std.rtrim(""))
+	printf("%v\n", std::rtrim("Hello World"))
+	printf("%v\n", std::rtrim("  Hello World"))
+	printf("%v\n", std::rtrim("Hello World   "))
+	printf("%v\n", std::rtrim(" \tHello World   "))
+	printf("%v\n", std::rtrim("    "))
+	printf("%v\n", std::rtrim(""))
 
 	printf("Left & right trimming\n")
 
-	printf("%v\n", std.trim("Hello World"))
-	printf("%v\n", std.trim("  Hello World"))
-	printf("%v\n", std.trim("Hello World   "))
-	printf("%v\n", std.trim(" \tHello World   "))
-	printf("%v\n", std.trim("    "))
-	printf("%v\n", std.trim(""))
+	printf("%v\n", std::trim("Hello World"))
+	printf("%v\n", std::trim("  Hello World"))
+	printf("%v\n", std::trim("Hello World   "))
+	printf("%v\n", std::trim(" \tHello World   "))
+	printf("%v\n", std::trim("    "))
+	printf("%v\n", std::trim(""))
 }
 
 fn main() {

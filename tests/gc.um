@@ -82,7 +82,7 @@ fn test*() {
     
     new([1000000] int)
 
-    std.println("See any memory leak warnings?")
+    std::println("See any memory leak warnings?")
 }
 
 fn main() {

@@ -82,6 +82,7 @@ static const char *spelling [] =
     ",",
     ";",
     ":",
+    "::",
     ".",
     "..",
 
@@ -624,6 +625,11 @@ static void lexOperator(Lexer *lex)
             if (ch == '=')
             {
                 lex->tok.kind = TOK_COLONEQ;
+                ch = lexChar(lex);
+            }
+            else if (ch == ':')
+            {
+                lex->tok.kind = TOK_COLONCOLON;
                 ch = lexChar(lex);
             }
             else

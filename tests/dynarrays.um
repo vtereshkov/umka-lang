@@ -2,7 +2,7 @@ import "std.um"
 
 fn f(b: [11][2]^int) {
     for _, x in b {
-        std.println("b: " + std.itoa(x[0]^) + " " + std.itoa(x[1]^))
+        std::println("b: " + std::itoa(x[0]^) + " " + std::itoa(x[1]^))
     }
 } 
 
@@ -73,64 +73,64 @@ fn test*() {
     } 
     
     for _, x in a {
-        std.println("a: " + std.itoa(x[0]^) + " " + std.itoa(x[1]^))
+        std::println("a: " + std::itoa(x[0]^) + " " + std::itoa(x[1]^))
     }
        
-    std.println("Appending...")
+    std::println("Appending...")
     a = append(a, [2]^int {new(int), new(int)})
     a[len(a) - 1][0]^ = 666
     a[len(a) - 1][1]^ = 777    
 
     for _, x in a {
-        std.println("a: " + std.itoa(x[0]^) + " " + std.itoa(x[1]^))
+        std::println("a: " + std::itoa(x[0]^) + " " + std::itoa(x[1]^))
     }   
 
     f(a)
         
-    std.println("Appending...")
+    std::println("Appending...")
     e := append(copy(a), [2]^int {new(int), new(int)})
     e[len(e) - 1][0]^ = 876
     e[len(e) - 1][1]^ = 765
 
     for _, x in e {
-        std.println("e: " + std.itoa(x[0]^) + " " + std.itoa(x[1]^))
+        std::println("e: " + std::itoa(x[0]^) + " " + std::itoa(x[1]^))
     } 
 
     f := copy(e)
     
     del := 4
-    std.println("Deleting #" + std.itoa(del) + "...")
+    std::println("Deleting #" + std::itoa(del) + "...")
     e = delete(e, del)
     
     for _, x in e {
-        std.println("e: " + std.itoa(x[0]^) + " " + std.itoa(x[1]^))
+        std::println("e: " + std::itoa(x[0]^) + " " + std::itoa(x[1]^))
     } 
 
     for _, x in f {
-        std.println("f: " + std.itoa(x[0]^) + " " + std.itoa(x[1]^))
+        std::println("f: " + std::itoa(x[0]^) + " " + std::itoa(x[1]^))
     }       
     
     c := []int{3, 4, 5}
     printf("c: %v\n", c)
     
-    std.println("Appending...")
+    std::println("Appending...")
     c = append(c, []int{6, 7})
     printf("c: %v\n", c)
 
     d := [][]int{[]int{666, 777}, [2]int{888, 999}}
     printf("d: %v\n", d)   
     
-    std.println("Appending...")    
+    std::println("Appending...")    
     d = append(d, [2]int {444, 555})
     printf("d: %v\n", d)
 
-    std.println("Inserting...") 
+    std::println("Inserting...") 
     insertions()       
 
-    std.println("Slicing...") 
+    std::println("Slicing...") 
     slices()
 
-    std.println("Copying...") 
+    std::println("Copying...") 
     copies()          
 }
 

@@ -131,8 +131,8 @@ fn test*(iter: int) {
 }
 
 fn main() {
-   if std.argc() == 2 {
-      test(std.atoi(std.argv(1)))
+   if std::argc() == 2 {
+      test(std::atoi(std::argv(1)))
    }
 }
 

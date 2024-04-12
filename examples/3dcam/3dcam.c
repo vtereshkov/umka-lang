@@ -51,9 +51,8 @@ int main(void)
     }
     else
     {
-        UmkaError error;
-        umkaGetError(umka, &error);
-        printf("Umka error %s (%d, %d): %s\n", error.fileName, error.line, error.pos, error.msg);
+        UmkaError *error = umkaGetError(umka);
+        printf("Umka error %s (%d, %d): %s\n", error->fileName, error->line, error->pos, error->msg);
     }
     
     // Raylib initialization
@@ -74,9 +73,8 @@ int main(void)
         
     if (!umkaOk)
     {
-        UmkaError error;
-        umkaGetError(umka, &error);
-        printf("Umka runtime error %s (%d): %s\n", error.fileName, error.line, error.msg);
+        UmkaError *error = umkaGetError(umka);
+        printf("Umka runtime error %s (%d): %s\n", error->fileName, error->line, error->msg);
     }        
 
     SetTargetFPS(60);                           // Set our game to run at 60 frames per second
@@ -100,9 +98,8 @@ int main(void)
                 {
                     if (exitCode != 0)
                     {
-                        UmkaError error;
-                        umkaGetError(umka, &error);
-                        printf("Umka runtime error %s (%d): %s\n", error.fileName, error.line, error.msg);                        
+                        UmkaError *error = umkaGetError(umka);
+                        printf("Umka runtime error %s (%d): %s\n", error->fileName, error->line, error->msg);                        
                     }
                     break;
                 }   

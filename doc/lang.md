@@ -114,7 +114,7 @@ Umka has a set of arithmetical, bitwise, logical, relation operators, as well as
 &&   ||   ?    !    ++   --
 ==   <    >    !=   <=   >=
 =    :=   (    )    [    ]    {    }    
-^    ;    :    .    ..
+^    ;    :    ::   .    ..
 ```
 
 #### Implicit semicolons
@@ -154,7 +154,6 @@ Syntax:
 ```
 type = qualIdent | ptrType | arrayType | dynArrayType | strType | enumType | 
        mapType | structType | interfaceType | closureType.
-qualIdent = [ident "."] ident.
 ```
 
 Any data type except the interface type can have a set of functions attached to it, which are called *methods*. A variable of that type is called the *receiver* with respect to any method which is called on it. Methods are not considered a part of the type declaration. 
@@ -630,7 +629,7 @@ Built-in functions don't necessarily adhere to the general rules for functions.
 
 ```
 fn printf(format: str, a1: T1, a2: T2...): int
-fn fprintf(f: ^std.File, format: str, a1: T1, a2: T2...): int
+fn fprintf(f: ^std::File, format: str, a1: T1, a2: T2...): int
 fn sprintf(format: str, a1: T1, a2: T2...): str
 ```
 
@@ -638,7 +637,7 @@ Write `a1`, `a2`... to the console, or to the file `f`, or to a string, accordin
 
 ```
 fn scanf(format: str, a1: ^T1, a2: ^T2...): int
-fn fscanf(f: ^std.File, format: str, a1: ^T1, a2: ^T2...): int
+fn fscanf(f: ^std::File, format: str, a1: ^T1, a2: ^T2...): int
 fn sscanf(buf, format: str, a1: ^T1, a2: ^T2...): int
 ```
 
@@ -844,7 +843,7 @@ Syntax:
 
 ```
 primary     = qualIdent | builtinCall.
-qualIdent   = [ident "."] ident.
+qualIdent   = [ident ("." | "::")] ident.
 builtinCall = qualIdent "(" [expr {"," expr}] ")".
 ```
 
@@ -852,7 +851,7 @@ Examples:
 
 ```
 i
-std.File
+std::File
 atan2(y0, x0)
 printf("a = %f\n", a)
 ```
@@ -1433,7 +1432,7 @@ Examples:
 ```
 import "std.um"
 fn main() {
-    std.println("Hello, World!")
+    std::println("Hello, World!")
 }
 
 import (
@@ -1526,7 +1525,7 @@ factor              = designator | intNumber | realNumber | charLiteral | string
 designatorList      = designator {"," designator}.
 designator          = (primary | typeCast | compositeLiteral | enumConst) selectors.
 primary             = qualIdent | builtinCall.
-qualIdent           = [ident "."] ident.
+qualIdent           = [ident ("." | "::")] ident.
 builtinCall         = qualIdent "(" [expr {"," expr}] ")".
 selectors           = {derefSelector | indexSelector | fieldSelector | callSelector}.
 derefSelector       = "^".

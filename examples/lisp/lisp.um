@@ -6,7 +6,7 @@ import (
 fn getStr(): str {
     s := ""
     for true {
-        c := std.getchar()
+        c := std::getchar()
         if c == '\n' {break}
         s += c
     }
@@ -24,6 +24,6 @@ fn main() {
         printf("> ")  
         input := getStr()
         if input == "" {break}
-        printf("< %s\n\n", parse.execStr(input))
+        printf("< %s\n\n", parse::execStr(input))
     }  
 }

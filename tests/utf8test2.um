@@ -4,11 +4,11 @@ import (
 )
 
 fn readall(name: str): str {
-    f, err := std.fopen(name, "rb")
-    std.exitif(err)
-    data, err := std.freadall(f)
-    std.exitif(err)
-    std.fclose(f)
+    f, err := std::fopen(name, "rb")
+    std::exitif(err)
+    data, err := std::freadall(f)
+    std::exitif(err)
+    std::fclose(f)
 
     return str(data)
 }
@@ -16,8 +16,8 @@ fn readall(name: str): str {
 fn test*() {
 	s := readall("utf8test2.txt")
 
-	runes := utf8.decode(s)
-	s1 := utf8.encode(runes)
+	runes := utf8::decode(s)
+	s1 := utf8::encode(runes)
 
 	if s1 == s && len(s) > 30000 && len(runes) > 20000 {
 		printf("Test passed\n")

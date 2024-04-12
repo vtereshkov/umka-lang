@@ -5,18 +5,18 @@ import (
     "mat.um"
 )
 
-fn randn(): mat.Vec {
-    return {std.frand() - 0.5, std.frand() - 0.5, std.frand() - 0.5}
+fn randn(): mat::Vec {
+    return {std::frand() - 0.5, std::frand() - 0.5, std::frand() - 0.5}
 }
 
-type Color = mat.Vec
+type Color = mat::Vec
 
 type Ray = struct {
-    origin, dir: mat.Vec
+    origin, dir: mat::Vec
 }
 
 type GenericBody = struct {
-    center:      mat.Vec
+    center:      mat::Vec
     color:       Color
     diffuseness: real
     isLamp:      bool
@@ -28,17 +28,17 @@ fn (b: ^GenericBody) lambertFactor(lambert: real): real {
 
 type Body = interface {
     get(): ^GenericBody
-    intersect(ray: ^Ray, point, normal: ^mat.Vec): bool
+    intersect(ray: ^Ray, point, normal: ^mat::Vec): bool
 }
 
 type Box = struct {
     body: GenericBody
-    halfsize: mat.Vec
+    halfsize: mat::Vec
 }
 
 fn (b: ^Box) get(): ^GenericBody {return &b.body}
 
-fn (b: ^Box) intersectFace(ray: ^Ray, point, normal: ^mat.Vec, i, j, k: int): bool {
+fn (b: ^Box) intersectFace(ray: ^Ray, point, normal: ^mat::Vec, i, j, k: int): bool {
     if fabs(ray.dir[k]) > 1e-9 {
         side := 1.0
         if ray.dir[k] > 0.0 {
@@ -67,7 +67,7 @@ fn (b: ^Box) intersectFace(ray: ^Ray, point, normal: ^mat.Vec, i, j, k: int): bo
     return false
 }
 
-fn (b: ^Box) intersect(ray: ^Ray, point, normal: ^mat.Vec): bool {
+fn (b: ^Box) intersect(ray: ^Ray, point, normal: ^mat::Vec): bool {
     return b.intersectFace(ray, point, normal, 0, 1, 2) || 
            b.intersectFace(ray, point, normal, 2, 0, 1) || 
            b.intersectFace(ray, point, normal, 1, 2, 0)
@@ -80,7 +80,7 @@ type Sphere = struct {
 
 fn (s: ^Sphere) get(): ^GenericBody {return &s.body}
 
-fn (s: ^Sphere) intersect(ray: ^Ray, point, normal: ^mat.Vec): bool {
+fn (s: ^Sphere) intersect(ray: ^Ray, point, normal: ^mat::Vec): bool {
     displacement := s.body.center.sub(ray.origin)
     proj := displacement.dot(ray.dir)
     discr := s.radius * s.radius + proj * proj - displacement.dot(displacement)
@@ -108,10 +108,10 @@ fn (sc: ^Scene) trace(ray: ^Ray, depth: int): Color {
     // Find nearest intersection
     bestDist := 1e9
     bestIndex := -1
-    var bestPoint, bestNormal: mat.Vec
+    var bestPoint, bestNormal: mat::Vec
 
     for i, b in sc.body {
-        var point, normal: mat.Vec
+        var point, normal: mat::Vec
         
         if found := b.intersect(ray, &point, &normal); found {           
             if dist := point.sub(ray.origin).norm(); dist < bestDist {
@@ -142,7 +142,7 @@ fn (sc: ^Scene) trace(ray: ^Ray, depth: int): Color {
 
         diffuseRay := Ray{bestPoint, diffuseDir}
 
-        return Color(mat.Vec(sc.trace(&diffuseRay, depth + 1)).mul(bestBody.lambertFactor(lambert)).elementwise(mat.Vec(bestBody.color)))
+        return Color(mat::Vec(sc.trace(&diffuseRay, depth + 1)).mul(bestBody.lambertFactor(lambert)).elementwise(mat::Vec(bestBody.color)))
     }
 
     return sc.ambientColor
@@ -156,7 +156,7 @@ type (
     RenderData = struct {
         startHeight:  int
         stopHeight:   int
-        pos:          mat.Vec
+        pos:          mat::Vec
         azimuth:      real
         focal:        real
         antialiasing: real
@@ -171,9 +171,9 @@ fn render(parent: fiber, buf: ^RenderData) {
     
     for i := buf.startHeight; i < buf.stopHeight; i++ {
         for j := 0; j < width; j++ {
-            dir := mat.Vec{j - width / 2, i - height / 2, buf.focal}
+            dir := mat::Vec{j - width / 2, i - height / 2, buf.focal}
 
-            rotDir := mat.Vec{
+            rotDir := mat::Vec{
                  dir[0]*cosAz + dir[2]*sinAz,
                  dir[1],
                 -dir[0]*sinAz + dir[2]*cosAz}
@@ -183,9 +183,9 @@ fn render(parent: fiber, buf: ^RenderData) {
             for r := 0; r < buf.numRays; r++ {
                 randomDir := rotDir.add(randn().mul(buf.antialiasing))
                 ray := Ray{buf.pos, randomDir.normalize()}
-                color = Color(mat.Vec(color).add(mat.Vec(buf.scene.trace(&ray, 0))))
+                color = Color(mat::Vec(color).add(mat::Vec(buf.scene.trace(&ray, 0))))
             }
-            color = Color(mat.Vec(color).mul(255.0 / buf.numRays))
+            color = Color(mat::Vec(color).mul(255.0 / buf.numRays))
             
             buf.pixels[i][j] = {round(color[0]), round(color[1]), round(color[2])}
         }
@@ -267,7 +267,7 @@ fn main() {
             startHeight:  height / numRenderers * i,
             stopHeight:   height / numRenderers * (i + 1),
             pos:          {0, 0, 0},
-            azimuth:      30.0 * std.pi / 180.0,
+            azimuth:      30.0 * std::pi / 180.0,
             focal:        500,
             antialiasing: 1.0,
             numRays:      numRays,
@@ -280,7 +280,7 @@ fn main() {
     }  
 
     // Render scene
-    startTime := std.clock()
+    startTime := std::clock()
     
     for true {
         working := false
@@ -293,17 +293,17 @@ fn main() {
         if !working {break}
     }    
         
-    endTime := std.clock()    
+    endTime := std::clock()    
     printf("Rendering time = %.3f s\n", endTime - startTime)
     
     // Write output file
     const fileName = "scene.ppm"
-    f, err := std.fopen(fileName, "wb")
-    std.exitif(err)
+    f, err := std::fopen(fileName, "wb")
+    std::exitif(err)
     fprintf(f, "P6\n%lld %lld\n255\n", width, height)
-    std.fwrite(f, pixels)
-    std.fclose(f)
-    std.println("Done. See " + fileName)
-    std.getchar()
-    std.getchar()
+    std::fwrite(f, pixels)
+    std::fclose(f)
+    std::println("Done. See " + fileName)
+    std::getchar()
+    std::getchar()
 }

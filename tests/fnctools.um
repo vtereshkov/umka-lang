@@ -10,7 +10,7 @@ fn test*() {
     less := fn (x: any): bool |max| {return int(x) < max} 
     sum  := fn (x, y: any): any     {return int(x) + int(y)}     
     
-    result := int(fnc.Array(data).transform(sqr).filter(less).reduce(sum))   
+    result := int(fnc::Array(data).transform(sqr).filter(less).reduce(sum))   
     printf("Sum of all squares less than %lld = %lld \n", max, result)     
 }
 

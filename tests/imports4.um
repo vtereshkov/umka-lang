@@ -6,7 +6,7 @@ import (
 )
 
 fn test*() {
-   printf("A name: %s\n", a.Name) 
+   printf("A name: %s\n", a::Name) 
 }
 
 fn main() {

@@ -1,10 +1,10 @@
 import "std.um"
 
 fn main() {
-	std.assert(std.argc() > 1, "No input file(s)")
+	std::assert(std::argc() > 1, "No input file(s)")
 
-	fout, err := std.fopen("umka_runtime_src.h", "w")
-	std.exitif(err)
+	fout, err := std::fopen("umka_runtime_src.h", "w")
+	std::exitif(err)
 
 	fprintf(fout, "#ifndef UMKA_RUNTIME_SRC_H_INCLUDED\n")
 	fprintf(fout, "#define UMKA_RUNTIME_SRC_H_INCLUDED\n\n")
@@ -13,9 +13,9 @@ fn main() {
 
 	fprintf(fout, "static const char *runtimeModuleNames[] = {")
 
-	for argi := 1; argi < std.argc(); argi++ {
-		fprintf(fout, "\"" + std.argv(argi) + "\"")
-		if argi != std.argc() - 1 {
+	for argi := 1; argi < std::argc(); argi++ {
+		fprintf(fout, "\"" + std::argv(argi) + "\"")
+		if argi != std::argc() - 1 {
 			fprintf(fout, ", ")
 		}
 	}
@@ -24,13 +24,13 @@ fn main() {
 
 	fprintf(fout, "static const char *runtimeModuleSources[] = {\n")
 
-	for argi := 1; argi < std.argc(); argi++ {
-		fprintf(fout, "\n// " + std.argv(argi) + "\n\n\"")
+	for argi := 1; argi < std::argc(); argi++ {
+		fprintf(fout, "\n// " + std::argv(argi) + "\n\n\"")
 
-		fin, err := std.fopen(std.argv(argi), "rb")
-		std.exitif(err)	
+		fin, err := std::fopen(std::argv(argi), "rb")
+		std::exitif(err)	
 
-		for !std.feof(fin) {
+		for !std::feof(fin) {
 			c := ' '
 			fscanf(fin, "%c", &c)
 
@@ -44,16 +44,16 @@ fn main() {
 			}
 		}
 
-		if argi != std.argc() - 1 {
+		if argi != std::argc() - 1 {
 			fprintf(fout, "\",\n")
 		} else {
 			fprintf(fout, "\"\n};\n\n")
 		}
 
-		std.fclose(fin)
+		std::fclose(fin)
 	}
 
 	fprintf(fout, "#endif // UMKA_RUNTIME_SRC_H_INCLUDED\n")
 	
-	std.fclose(fout)
+	std::fclose(fout)
 }

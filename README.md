@@ -145,7 +145,7 @@ sum := 0.0
 ```
 #### Function call
 ```
-y := tan(30 * std.pi / 180)
+y := tan(30 * std::pi / 180)
 h = append(h, [5]int{10, 20, 30, 40, 50})
 h = delete(h, 1)
 ```
@@ -162,9 +162,9 @@ if x, ok := getValue(); ok {
 #### Switch
 ```
 switch a {
-    case 1, 3, 5, 7: std.println(std.itoa(a) + " is odd")
-    case 2, 4, 6, 8: std.println(std.itoa(a) + " is even")
-    default:         std.println("I don't know")
+    case 1, 3, 5, 7: std::println(std::itoa(a) + " is odd")
+    case 2, 4, 6, 8: std::println(std::itoa(a) + " is even")
+    default:         std::println("I don't know")
 }
 
 switch v := type(a) {
@@ -189,7 +189,7 @@ for i, x in g {
 ```
 fn childFunc(parent: fiber, buf: ^int) {
     for i := 0; i < 5; i++ {
-        std.println("Child : i=" + std.itoa(i) + " buf=" + std.itoa(buf^))
+        std::println("Child : i=" + std::itoa(i) + " buf=" + std::itoa(buf^))
         buf^ = i * 3
         fibercall(parent)
     }
@@ -199,7 +199,7 @@ fn parentFunc() {
     a := new(int)
     child := fiberspawn(childFunc, a)    
     for i := 0; i < 10; i++ {
-        std.println("Parent: i=" + std.itoa(i) + " buf=" + std.itoa(a^))
+        std::println("Parent: i=" + std::itoa(i) + " buf=" + std::itoa(a^))
         a^ = i * 7
         if fiberalive(child) {
             fibercall(child)

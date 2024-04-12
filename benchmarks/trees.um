@@ -1,7 +1,5 @@
 // Binary trees benchmark - Umka version
 
-import "std.um"
-
 type Node = struct {
     item: int
     left, right: ^Node
@@ -32,7 +30,6 @@ fn test*() {
         stretch_depth = max_depth + 1
     )
 
-    start := std.clock()
     stretch_tree := make_tree(0, stretch_depth)
     printf("stretch tree of depth %lld check: %lld\n", stretch_depth, check_tree(stretch_tree))
 

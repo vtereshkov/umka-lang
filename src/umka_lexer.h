@@ -76,6 +76,7 @@ typedef enum
     TOK_COMMA,
     TOK_SEMICOLON,
     TOK_COLON,
+    TOK_COLONCOLON,
     TOK_PERIOD,
     TOK_ELLIPSIS,
 

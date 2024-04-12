@@ -4,8 +4,8 @@ import (
 )
 
 fn test*() {
-        utils1.f()
-        utils2.f()
+        utils1::f()
+        utils2::f()
 }
 
 fn main() {
