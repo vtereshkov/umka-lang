@@ -31,9 +31,14 @@ void errorReportInit(ErrorReport *report, const char *fileName, const char *fnNa
     report->pos = pos;
     report->code = code;
 
+    va_list argsCopy;
+    va_copy(argsCopy, args);
+
     const int msgLen = vsnprintf(NULL, 0, format, args);
     report->msg = malloc(msgLen + 1);
-    vsnprintf(report->msg, msgLen + 1, format, args);
+    vsnprintf(report->msg, msgLen + 1, format, argsCopy);
+
+    va_end(argsCopy);
 }
 
 
