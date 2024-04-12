@@ -31,7 +31,7 @@ void help(void)
 
 void printCompileWarning(UmkaError *warning)
 {
-    fprintf(stderr, "Warning %s (%d): %s\n", warning->fileName, warning->line, warning->msg);
+    fprintf(stderr, "Warning %s (%d, %d): %s\n", warning->fileName, warning->line, warning->pos, warning->msg);
 }
 
 
