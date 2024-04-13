@@ -701,7 +701,8 @@ Ident *parseQualIdent(Compiler *comp)
         lexNext(&comp->lex);
         if (comp->lex.tok.kind == TOK_PERIOD)
         {
-            comp->error.warningHandler(comp->error.context, NULL, "Deprecated module access syntax. Use :: instead of .");
+            comp->error.warningHandler(comp->error.context, NULL, "Deprecated module access syntax fixed");
+            lexReplace(&comp->lex, TOK_COLONCOLON);
             lexNext(&comp->lex);
         }
         else

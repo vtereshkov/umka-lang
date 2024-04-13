@@ -173,17 +173,29 @@ int lexInit(Lexer *lex, Storage *storage, DebugInfo *debug, const char *fileName
     lex->debug->fnName = "<unknown>";
     lex->debug->line = lex->line;
 
+    lex->outBuf = malloc(2 * bufLen + 1);
+    lex->outBufPos = 0;
+    lex->lastReplaceBufPos = -1;
+
     return bufLen;
 }
 
 
 void lexFree(Lexer *lex)
 {
+    lexSave(lex);
+
     if (lex->buf)
     {
         free(lex->buf);
         lex->fileName = NULL;
         lex->buf = NULL;
+    }
+
+    if (lex->outBuf)
+    {
+        free(lex->outBuf);
+        lex->outBuf = NULL;
     }
 }
 
@@ -881,6 +893,35 @@ TokenKind lexShortAssignment(TokenKind kind)
 }
 
 
+void lexReplace(Lexer *lex, TokenKind kind)
+{
+    int size = (lex->bufPos - 1) - (lex->lastReplaceBufPos + 1);
+    memcpy(lex->outBuf + lex->outBufPos, lex->buf + lex->lastReplaceBufPos + 1, size);
+    lex->outBufPos += size;
+
+    size = strlen(spelling[kind]);
+    memcpy(lex->outBuf + lex->outBufPos, spelling[kind], size);
+    lex->outBufPos += size;
+
+    lex->lastReplaceBufPos = lex->bufPos - 1;
+}
+
+
+void lexSave(Lexer *lex)
+{
+    int size = lex->bufPos - (lex->lastReplaceBufPos + 1);
+    memcpy(lex->outBuf + lex->outBufPos, lex->buf + lex->lastReplaceBufPos + 1, size);
+    lex->outBufPos += size;
+
+    char *outFileName = malloc(strlen(lex->fileName) + 2);
+    sprintf(outFileName, "%sc", lex->fileName);
+
+    FILE *outFile = fopen(outFileName, "wb");
+    fwrite(lex->outBuf, lex->outBufPos, 1, outFile);
+    fclose(outFile);
+
+    free(outFileName);
+}
 
 
 

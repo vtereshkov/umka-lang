@@ -124,6 +124,9 @@ typedef struct
     Storage *storage;
     DebugInfo *debug;
     Error *error;
+
+    char *outBuf;
+    int lastReplaceBufPos, outBufPos;
 } Lexer;
 
 
@@ -136,5 +139,7 @@ void lexEat(Lexer *lex, TokenKind kind);
 const char *lexSpelling(TokenKind kind);
 TokenKind lexShortAssignment(TokenKind kind);
 
+void lexReplace(Lexer *lex, TokenKind kind);
+void lexSave(Lexer *lex);
 
 #endif // UMKA_LEXER_H_INCLUDED
