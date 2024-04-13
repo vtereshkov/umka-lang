@@ -690,26 +690,27 @@ void doApplyOperator(Compiler *comp, Type **type, Type **rightType, Const *const
 }
 
 
-// qualIdent = [ident ("." | "::")] ident.
+// qualIdent = [ident "::"] ident.
 Ident *parseQualIdent(Compiler *comp)
 {
     lexCheck(&comp->lex, TOK_IDENT);
-    Ident *ident = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, comp->lex.tok.name, NULL);
 
-    if (ident->kind == IDENT_MODULE)
+    int moduleToSeekIn = comp->blocks.module;
+
+    Lexer lookaheadLex = comp->lex;
+    lexNext(&lookaheadLex);
+    if (lookaheadLex.tok.kind == TOK_COLONCOLON)
     {
+        Ident *moduleIdent = identAssertFindModule(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, comp->lex.tok.name);
+
         lexNext(&comp->lex);
-        if (comp->lex.tok.kind == TOK_PERIOD)
-        {
-            comp->error.warningHandler(comp->error.context, NULL, "Deprecated module access syntax. Use :: instead of .");
-            lexNext(&comp->lex);
-        }
-        else
-            lexEat(&comp->lex, TOK_COLONCOLON);
+        lexNext(&comp->lex);
         lexCheck(&comp->lex, TOK_IDENT);
 
-        ident = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, ident->moduleVal, comp->lex.tok.name, NULL);
+        moduleToSeekIn = moduleIdent->moduleVal;
     }
+
+    Ident *ident = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, moduleToSeekIn, comp->lex.tok.name, NULL);
 
     if (identIsOuterLocalVar(&comp->blocks, ident))
         comp->error.handler(comp->error.context, "%s is not specified as a captured variable", ident->name);

@@ -218,7 +218,9 @@ static Type *parseTypeOrForwardType(Compiler *comp)
     if (comp->types.forwardTypesEnabled && comp->lex.tok.kind == TOK_IDENT)
     {
         Ident *ident = identFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, comp->lex.tok.name, NULL, true);
-        if (!ident)
+        Ident *moduleIdent = identFindModule(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, comp->lex.tok.name, true);
+
+        if (!ident && !moduleIdent)
         {
             type = typeAdd(&comp->types, &comp->blocks, TYPE_FORWARD);
             type->typeIdent = identAddType(&comp->idents, &comp->modules, &comp->blocks, comp->lex.tok.name, type, false);

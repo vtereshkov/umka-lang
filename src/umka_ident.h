@@ -51,8 +51,10 @@ typedef struct
 void identInit(Idents *idents, DebugInfo *debug, Error *error);
 void identFree(Idents *idents, int startBlock /* < 0 to free in all blocks*/);
 
-Ident *identFind          (Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, Type *rcvType, bool markAsUsed);
-Ident *identAssertFind    (Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, Type *rcvType);
+Ident *identFind            (Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, Type *rcvType, bool markAsUsed);
+Ident *identAssertFind      (Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, Type *rcvType);
+Ident *identFindModule      (Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, bool markAsUsed);
+Ident *identAssertFindModule(Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name);
 
 bool identIsOuterLocalVar (Blocks *blocks, Ident *ident);
 

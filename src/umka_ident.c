@@ -53,14 +53,14 @@ void identFree(Idents *idents, int startBlock)
 }
 
 
-Ident *identFind(Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, Type *rcvType, bool markAsUsed)
+static Ident *identFindEx(Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, Type *rcvType, bool markAsUsed, bool isModule)
 {
     const unsigned int nameHash = hash(name);
 
     for (int i = blocks->top; i >= 0; i--)
     {
         for (Ident *ident = idents->first; ident; ident = ident->next)
-            if (ident->hash == nameHash && strcmp(ident->name, name) == 0 && ident->block == blocks->item[i].block)
+            if (ident->hash == nameHash && strcmp(ident->name, name) == 0 && ident->block == blocks->item[i].block && (ident->kind == IDENT_MODULE) == isModule)
             {
                 // What we found has correct name and block scope, check module scope
                 const bool identModuleValid = (ident->module == 0 && blocks->module == module) ||                                                // Universe module
@@ -87,11 +87,32 @@ Ident *identFind(Idents *idents, Modules *modules, Blocks *blocks, int module, c
 }
 
 
+Ident *identFind(Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, Type *rcvType, bool markAsUsed)
+{
+    return identFindEx(idents, modules, blocks, module, name, rcvType, markAsUsed, false);
+}
+
+
 Ident *identAssertFind(Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, Type *rcvType)
 {
     Ident *res = identFind(idents, modules, blocks, module, name, rcvType, true);
     if (!res)
         idents->error->handler(idents->error->context, "Unknown identifier %s", name);
+    return res;
+}
+
+
+Ident *identFindModule(Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, bool markAsUsed)
+{
+    return identFindEx(idents, modules, blocks, module, name, NULL, markAsUsed, true);
+}
+
+
+Ident *identAssertFindModule(Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name)
+{
+    Ident *res = identFindModule(idents, modules, blocks, module, name, true);
+    if (!res)
+        idents->error->handler(idents->error->context, "Unknown module %s", name);
     return res;
 }
 

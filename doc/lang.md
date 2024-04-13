@@ -843,7 +843,7 @@ Syntax:
 
 ```
 primary     = qualIdent | builtinCall.
-qualIdent   = [ident ("." | "::")] ident.
+qualIdent   = [ident "::"] ident.
 builtinCall = qualIdent "(" [expr {"," expr}] ")".
 ```
 
@@ -1525,7 +1525,7 @@ factor              = designator | intNumber | realNumber | charLiteral | string
 designatorList      = designator {"," designator}.
 designator          = (primary | typeCast | compositeLiteral | enumConst) selectors.
 primary             = qualIdent | builtinCall.
-qualIdent           = [ident ("." | "::")] ident.
+qualIdent           = [ident "::"] ident.
 builtinCall         = qualIdent "(" [expr {"," expr}] ")".
 selectors           = {derefSelector | indexSelector | fieldSelector | callSelector}.
 derefSelector       = "^".

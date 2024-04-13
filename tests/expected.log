@@ -753,7 +753,7 @@ Utils from lib 2
 
 >>> Imports - 3
 
-42 43 1
+42 43 1 "Hello"
 
 
 >>> Imports - 4
