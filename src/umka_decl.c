@@ -213,14 +213,20 @@ static Type *parseTypeOrForwardType(Compiler *comp)
 {
     Type *type = NULL;
 
-    // Forward declaration
+    // Forward declaration?
     bool forward = false;
     if (comp->types.forwardTypesEnabled && comp->lex.tok.kind == TOK_IDENT)
     {
-        Ident *ident = identFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, comp->lex.tok.name, NULL, true);
-        Ident *moduleIdent = identFindModule(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, comp->lex.tok.name, true);
+        Ident *ident = NULL;
 
-        if (!ident && !moduleIdent)
+        Lexer lookaheadLex = comp->lex;
+        lexNext(&lookaheadLex);
+        if (lookaheadLex.tok.kind == TOK_COLONCOLON)
+            ident = identFindModule(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, comp->lex.tok.name, true);
+        else
+            ident = identFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, comp->lex.tok.name, NULL, true);
+
+        if (!ident)
         {
             type = typeAdd(&comp->types, &comp->blocks, TYPE_FORWARD);
             type->typeIdent = identAddType(&comp->idents, &comp->modules, &comp->blocks, comp->lex.tok.name, type, false);
