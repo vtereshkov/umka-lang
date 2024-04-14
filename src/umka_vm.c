@@ -1593,7 +1593,8 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
         !(typeKindIntegerOrEnum(type->kind)  && typeKindIntegerOrEnum(expectedTypeKind)) &&
         !(typeKindReal(type->kind)           && typeKindReal(expectedTypeKind)))
     {
-        error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Incompatible types %s and %s in printf()", typeKindSpelling(expectedTypeKind), typeKindSpelling(type->kind));
+        char typeBuf[DEFAULT_STR_LEN + 1];
+        error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Incompatible types %s and %s in printf()", typeKindSpelling(expectedTypeKind), typeSpelling(type, typeBuf));
     }
 
     // Check overflow
