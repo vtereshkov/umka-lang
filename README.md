@@ -6,7 +6,9 @@
 Umka is a statically typed embeddable scripting language. It combines the simplicity and flexibility needed for scripting with a compile-time protection against type errors. Its aim is to follow the Python Zen principle _Explicit is better than implicit_ more consistently than dynamically typed languages generally do.
 
 * [Playground](https://vtereshkov.github.io/umka-lang)
-* [Downloads](https://github.com/vtereshkov/umka-lang/releases)
+* Downloads
+  * [Stable](https://github.com/vtereshkov/umka-lang/releases)
+  * [Unstable](https://umbox.tophat2d.dev/api/package/umka/download/box.tar)
 * [Packages](https://umbox.tophat2d.dev)
 * Documentation
   * [Language](https://github.com/vtereshkov/umka-lang/blob/master/doc/lang.md)
