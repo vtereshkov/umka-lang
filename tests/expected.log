@@ -578,8 +578,8 @@ Error: Empty string (code -2) from "foo":
     foo: (5)
     fooTest: (11)
     test: (25)
-    main: (66)
-    <unknown>: (96)
+    main: (67)
+    <unknown>: (98)
 9
 
 
@@ -672,7 +672,7 @@ HellHell
 86
 
 
->>> Weak pointers
+>>> Weak pointers - 1
 
 Test 1
 42
@@ -680,6 +680,30 @@ it's null
 Test 2
 13 12
 true true
+
+
+>>> Weak pointers - 2
+
+42
+42
+666
+666
+2024
+
+[5 7]
+5 8
+[5 8]
+[2025 2026]
+
+{a: 5 b: 7}
+74
+
+5 8
+{a: 5 b: 8}
+{a: 2024 b: 2025}
+
+25
+
 
 
 >>> Byte conversions

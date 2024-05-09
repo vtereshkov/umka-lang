@@ -1,0 +1,90 @@
+import "std.um"
+
+fn f(p: ^int): int {return p^}
+
+fn test1() {
+    x := new(int, 42)
+    var w: weak ^int = x 
+    printf("%v\n", f(w))
+    printf("%v\n", w^)
+
+    w^ = 666
+    printf("%v\n", w^)
+    printf("%v\n", weak ^int(x)^)
+
+    weak ^int(x)^ = 2024
+    printf("%v\n\n", w^)        
+}
+
+fn test2() {
+    x := new([2]int, {5, 7})
+    var w: weak ^[2]int = x
+    printf("%v\n", w^)
+
+    w[1] = 8
+    printf("%v %v\n", w[0], w[1])
+    printf("%v\n", weak ^[2]int(x)^)
+
+    weak ^[2]int(x)^ = {2024, 2025}
+
+    for _, e^ in w {
+        e^++
+    } 
+
+    printf("%v\n\n", w^)     
+}
+
+type S = struct {a, b: int}
+
+fn (s: ^S) sq(): int {return s.a * s.a + s.b * s.b}
+
+fn test3() {
+    x := &S{5, 7}
+    var w: weak ^S = x 
+    printf("%v\n", w^)
+    printf("%v\n\n", w.sq())
+
+    w.b = 8
+    printf("%v %v\n", w.a, w.b)
+    printf("%v\n", weak ^S(x)^)
+
+    weak ^S(x)^ = {2024, 2025}
+    printf("%v\n\n", w^)     
+}
+
+type F = fn(x: int): int
+
+fn test4() { 
+    var w: weak ^F = &F{return x * x} 
+    printf("%v\n\n", w(5))    
+}
+
+fn test5() {
+    var w: weak ^int
+
+    {
+        x := new(int, 42)
+        w = x
+
+        std::assert(w != null)
+        std::assert(null != w)
+
+        std::assert(w == x)
+        std::assert(x == w)                        
+    }
+ 
+    std::assert(w == null)
+    std::assert(null == w)
+}
+
+fn test*() {
+    test1()
+    test2()
+    test3()
+    test4()
+    test5()
+}
+
+fn main() {
+    test()     
+}

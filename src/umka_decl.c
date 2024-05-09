@@ -140,7 +140,7 @@ static void parseSignature(Compiler *comp, Signature *sig)
 
                 Type *defaultType = paramType;
                 parseExpr(comp, &defaultType, &defaultConstant);
-                doAssertImplicitTypeConv(comp, paramType, &defaultType, &defaultConstant, false);
+                doAssertImplicitTypeConv(comp, paramType, &defaultType, &defaultConstant);
 
                 numDefaultParams++;
             }

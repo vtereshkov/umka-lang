@@ -204,9 +204,9 @@ Umka supports the  `real32` and  `real`  floating-point types.  The  `real`  is 
 
 #### Pointer types
 
-A variable that stores a memory address of another variable has a pointer type. The type of that another variable is called the *base type* of the pointer type. The pointer type is specified by a `^`  followed by the base type specification. If the base type is unknown, it should be specified as `void`.
+A variable that stores a memory address of another variable has a pointer type. The type of that another variable is called the *base type* of the pointer type. The pointer type is specified by a `^`  followed by the base type specification. If the base type is unknown, it should be specified as `void`. An uninitialized pointer has the value `null`. 
 
-Umka performs automatic memory management using reference counting. All pointers are reference-counted by default. However, in processing data structures with cyclic references (like doubly-linked lists), reference counting is unable to deallocate memory properly. In this case, one of the pointers that constitute the cycle can be declared `weak` . A weak pointer is not reference-counted and its existence does not prevent the pointed-to variable from being deallocated. A weak pointer cannot be dereferenced. Instead, it should be first converted to a conventional (or strong) pointer of the same base type. If the weak pointer does not point to a valid dynamically allocated memory block, the result of this conversion is `null`.
+Umka performs automatic memory management using reference counting. All pointers are reference-counted by default. However, in processing data structures with cyclic references (like doubly-linked lists), reference counting is unable to deallocate memory properly. In this case, one of the pointers that constitute the cycle can be declared `weak`. A weak pointer is not reference-counted and its existence does not prevent the pointed-to variable from being deallocated. If a weak pointer does not point to a valid dynamically allocated memory block, it is equal to `null`.
 
 Syntax:
 
@@ -221,8 +221,6 @@ Examples:
 ^void
 weak ^Vec
 ```
-
-An uninitialized pointer has the value `null`.
 
 #### Function types
 
@@ -428,9 +426,9 @@ If a value `s` of type `S` is given where a value `t` of some other type `T` is 
 * `S` is a dynamic array type and `T` is an array type and the item types of `S` and `T` are equivalent and `len(s) <= len(t)` 
 * `S` is a type (or a pointer to a type) that implements all the methods of `T` and `T` is an interface type 
 * `S` and `T` are interface types and `S` declares all the methods of `T`
-* `S` and `T` are pointer types and either `s == null`, or `T` is `^void`
-* `S` is a weak pointer type and `T` is a strong pointer type and the base types of `S` and `T` are equivalent 
-* `S` is a strong pointer type and `T` is a weak pointer type and the base types of `S` and `T` are equivalent
+* `S` and `T` are pointer types and either `s` is `null`, or `T` is `^void`
+* `S` is a weak pointer type and `T` is a strong pointer type and either the base types of `S` and `T` are equivalent, or `t` is `null` 
+* `S` is a strong pointer type and `T` is a weak pointer type and either the base types of `S` and `T` are equivalent, or `s` is `null`, and `s` and `t` are not operands of a `==` or `!=` operator
 * `S` is a function type and `T` is a closure type and `S` and the underlying function type of `T` are equivalent
 
 #### Explicit conversions

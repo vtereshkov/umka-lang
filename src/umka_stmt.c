@@ -157,7 +157,7 @@ static void parseSingleAssignmentStmt(Compiler *comp, Type *type, Const *varPtrC
     Const rightConstantBuf, *rightConstant = varPtrConst ? &rightConstantBuf : NULL;
 
     parseExpr(comp, &rightType, rightConstant);
-    doAssertImplicitTypeConv(comp, type, &rightType, rightConstant, false);
+    doAssertImplicitTypeConv(comp, type, &rightType, rightConstant);
 
     if (varPtrConst)                                // Initialize global variable
         constAssign(&comp->consts, varPtrConst->ptrVal, rightConstant, type->kind, typeSize(&comp->types, type));
@@ -215,7 +215,7 @@ static void parseListAssignmentStmt(Compiler *comp, Type *type, Const *varPtrCon
             Const rightConstantBuf = {.ptrVal = (char *)rightListConstant->ptrVal + rightListType->field[i]->offset};
             constDeref(&comp->consts, &rightConstantBuf, rightType->kind);
 
-            doAssertImplicitTypeConv(comp, leftType, &rightType, &rightConstantBuf, false);
+            doAssertImplicitTypeConv(comp, leftType, &rightType, &rightConstantBuf);
 
             constAssign(&comp->consts, varPtrConstList[i].ptrVal, &rightConstantBuf, leftType->kind, typeSize(&comp->types, leftType));
         }
@@ -226,7 +226,7 @@ static void parseListAssignmentStmt(Compiler *comp, Type *type, Const *varPtrCon
             genGetFieldPtr(&comp->gen, rightListType->field[i]->offset);    // Get expression pointer
             genDeref(&comp->gen, rightType->kind);                          // Get expression value
 
-            doAssertImplicitTypeConv(comp, leftType, &rightType, NULL, false);
+            doAssertImplicitTypeConv(comp, leftType, &rightType, NULL);
 
             genChangeRefCntAssign(&comp->gen, leftType);                    // Assign expression to variable
             genPushReg(&comp->gen, VM_REG_COMMON_3);                        // Restore expression list pointer
@@ -345,7 +345,7 @@ static void parseListDeclAssignmentStmt(Compiler *comp, IdentName *names, bool *
             constDeref(&comp->consts, &rightConstantBuf, rightType->kind);
 
             if (redecl)
-                doAssertImplicitTypeConv(comp, ident->type, &rightType, &rightConstantBuf, false);
+                doAssertImplicitTypeConv(comp, ident->type, &rightType, &rightConstantBuf);
 
             constAssign(&comp->consts, ident->ptr, &rightConstantBuf, ident->type->kind, typeSize(&comp->types, ident->type));
         }
@@ -357,7 +357,7 @@ static void parseListDeclAssignmentStmt(Compiler *comp, IdentName *names, bool *
 
             if (redecl)
             {
-                doAssertImplicitTypeConv(comp, ident->type, &rightType, NULL, false);
+                doAssertImplicitTypeConv(comp, ident->type, &rightType, NULL);
 
                 doPushVarPtr(comp, ident);
                 genSwapChangeRefCntAssign(&comp->gen, ident->type);                                 // Assign expression to variable - both left-hand and right-hand side reference counts modified
@@ -802,8 +802,11 @@ static void parseForInHeader(Compiler *comp)
     parseExpr(comp, &collectionType, NULL);
 
     // Implicit dereferencing: x in a^ == x in a
-    if (collectionType->kind == TYPE_PTR)
+    if (collectionType->kind == TYPE_PTR || collectionType->kind == TYPE_WEAKPTR)
     {
+        if (collectionType->kind == TYPE_WEAKPTR)
+            genStrengthenPtr(&comp->gen);
+
         genDeref(&comp->gen, collectionType->base->kind);
         collectionType = collectionType->base;
     }
@@ -1065,7 +1068,7 @@ static void parseReturnStmt(Compiler *comp)
     else
         type = comp->voidType;
 
-    doAssertImplicitTypeConv(comp, sig->resultType, &type, NULL, false);
+    doAssertImplicitTypeConv(comp, sig->resultType, &type, NULL);
 
     // Copy structure to __result
     if (typeStructured(sig->resultType))
@@ -1203,7 +1206,7 @@ void parseFnBlock(Compiler *comp, Ident *fn, Type *upvaluesStructType)
 
         doPushVarPtr(comp, upvaluesParamIdent);
         genDeref(&comp->gen, upvaluesParamIdent->type->kind);
-        doExplicitTypeConv(comp, upvaluesStructType, &upvaluesParamType, NULL, false);
+        doExplicitTypeConv(comp, upvaluesStructType, &upvaluesParamType, NULL);
 
         // Copy upvalue structure fields to new local variables
         for (int i = 0; i < upvaluesStructType->numItems; i++)
