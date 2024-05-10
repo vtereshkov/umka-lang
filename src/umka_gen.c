@@ -219,12 +219,6 @@ static bool optimizeGetArrayPtr(CodeGen *gen, int itemSize, int len)
 
 static bool optimizeGetFieldPtr(CodeGen *gen, int fieldOffset)
 {
-    if (fieldOffset == 0)
-    {
-        genUnnotify(gen);
-        return true;
-    }
-
     Instruction *prev = getPrevInstr(gen, 1);
 
     // Optimization: PUSH_LOCAL_PTR + GET_FIELD_PTR -> PUSH_LOCAL_PTR
