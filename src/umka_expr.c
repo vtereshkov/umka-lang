@@ -91,7 +91,7 @@ static void doTryImplicitDeref(Compiler *comp, Type **type)
     }
     else if ((*type)->kind == TYPE_PTR && (*type)->base->kind == TYPE_WEAKPTR)
     {
-        genDeref(&comp->gen, TYPE_PTR);
+        genDeref(&comp->gen, TYPE_WEAKPTR);
         genStrengthenPtr(&comp->gen);
         *type = typeAddPtrTo(&comp->types, &comp->blocks, (*type)->base->base);
     }
@@ -2152,7 +2152,7 @@ static void parseDerefSelector(Compiler *comp, Type **type, Const *constant, boo
         if ((*type)->kind != TYPE_PTR)
             comp->error.handler(comp->error.context, "Typed pointer expected");
 
-        genDeref(&comp->gen, TYPE_PTR);
+        genDeref(&comp->gen, (*type)->base->kind);
         *type = (*type)->base;
     }
 
