@@ -113,6 +113,7 @@ static const char *builtinSpelling [] =
     "fiberspawn",
     "fibercall",
     "fiberalive",
+    "memusage",
     "exit"
 };
 
@@ -123,6 +124,7 @@ static void pageInit(HeapPages *pages, Fiber *fiber, Error *error)
 {
     pages->first = pages->last = NULL;
     pages->freeId = 1;
+    pages->totalSize = 0;
     pages->fiber = fiber;
     pages->error = error;
 }
@@ -202,6 +204,8 @@ static FORCE_INLINE HeapPage *pageAdd(HeapPages *pages, int numChunks, int chunk
         pages->last = page;
     }
 
+    pages->totalSize += page->numChunks * page->chunkSize;
+
 #ifdef UMKA_REF_CNT_DEBUG
     printf("Add page at %p\n", page->ptr);
 #endif
@@ -215,6 +219,8 @@ static FORCE_INLINE void pageRemove(HeapPages *pages, HeapPage *page)
 #ifdef UMKA_REF_CNT_DEBUG
     printf("Remove page at %p\n", page->ptr);
 #endif
+
+    pages->totalSize -= page->numChunks * page->chunkSize;
 
     if (page == pages->first)
         pages->first = page->next;
@@ -2445,6 +2451,13 @@ static FORCE_INLINE void doBuiltinFiberalive(Fiber *fiber, HeapPages *pages, Err
 }
 
 
+// fn memusage(): int
+static FORCE_INLINE void doBuiltinMemusage(Fiber *fiber, HeapPages *pages, Error *error)
+{
+    (--fiber->top)->intVal = pages->totalSize;
+}
+
+
 // fn exit(code: int, msg: str = "")
 static FORCE_INLINE void doBuiltinExit(Fiber *fiber, Error *error)
 {
@@ -3214,6 +3227,7 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         case BUILTIN_FIBERALIVE:    doBuiltinFiberalive(fiber, pages, error); break;
 
         // Misc
+        case BUILTIN_MEMUSAGE:      doBuiltinMemusage(fiber, pages, error); break;
         case BUILTIN_EXIT:          doBuiltinExit(fiber, error); return;
     }
     fiber->ip++;
@@ -3563,6 +3577,12 @@ void vmMakeDynArray(VM *vm, DynArray *array, Type *type, int len)
 
     doBasicChangeRefCnt(vm->fiber, &vm->pages, array, type, TOK_MINUSMINUS);
     doAllocDynArray(&vm->pages, array, type, len, vm->error);
+}
+
+
+int64_t vmGetMemUsage(VM *vm)
+{
+    return vm->pages.totalSize;
 }
 
 

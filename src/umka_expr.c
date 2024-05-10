@@ -1411,6 +1411,17 @@ static void parseBuiltinFiberCall(Compiler *comp, Type **type, Const *constant, 
 }
 
 
+// fn memusage(): int
+static void parseBuiltinMemusageCall(Compiler *comp, Type **type, Const *constant)
+{
+    if (constant)
+        comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
+
+    genCallBuiltin(&comp->gen, TYPE_INT, BUILTIN_MEMUSAGE);
+    *type = comp->intType;
+}
+
+
 // fn exit(code: int, msg: str = "")
 static void parseBuiltinExitCall(Compiler *comp, Type **type, Const *constant)
 {
@@ -1494,6 +1505,7 @@ static void parseBuiltinCall(Compiler *comp, Type **type, Const *constant, Built
         case BUILTIN_FIBERALIVE:    parseBuiltinFiberCall(comp, type, constant, builtin);   break;
 
         // Misc
+        case BUILTIN_MEMUSAGE:      parseBuiltinMemusageCall(comp, type, constant);         break;
         case BUILTIN_EXIT:          parseBuiltinExitCall(comp, type, constant);             break;
 
         default: comp->error.handler(comp->error.context, "Illegal built-in function");

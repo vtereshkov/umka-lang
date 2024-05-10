@@ -213,6 +213,12 @@ UMKA_API void umkaSetHook(void *umka, UmkaHookEvent event, UmkaHookFunc hook);
 Sets a debug hook function `hook` that will be called by the Umka virtual machine each time the `event` occurs.
 
 ```
+UMKA_API int64_t umkaGetMemUsage(void *umka);
+```
+
+Returns the allocated heap memory size in bytes.
+
+```
 UMKA_API char *umkaAsm(void *umka);
 ```
 

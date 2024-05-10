@@ -131,6 +131,7 @@ typedef enum
     BUILTIN_FIBERALIVE,
 
     // Misc
+    BUILTIN_MEMUSAGE,
     BUILTIN_EXIT
 } BuiltinFunc;
 
@@ -174,6 +175,7 @@ typedef struct
 {
     HeapPage *first, *last;
     int freeId;
+    int64_t totalSize;
     struct tagFiber *fiber;
     Error *error;
 } HeapPages;
@@ -259,6 +261,7 @@ void vmDecRef                   (VM *vm, void *ptr);
 void *vmGetMapNodeData          (VM *vm, Map *map, Slot key);
 char *vmMakeStr                 (VM *vm, const char *str);
 void vmMakeDynArray             (VM *vm, DynArray *array, Type *type, int len);
+int64_t vmGetMemUsage           (VM *vm);
 const char *vmBuiltinSpelling   (BuiltinFunc builtin);
 
 #endif // UMKA_VM_H_INCLUDED

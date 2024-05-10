@@ -287,3 +287,10 @@ UMKA_API const char *umkaGetVersion(void)
         return "Umka "UMKA_VERSION" ("__DATE__" "__TIME__")";
 }
 
+
+UMKA_API int64_t umkaGetMemUsage(void *umka)
+{
+    Compiler *comp = umka;
+    return vmGetMemUsage(&comp->vm);
+}
+

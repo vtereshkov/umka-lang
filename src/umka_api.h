@@ -106,6 +106,7 @@ typedef struct
     void (*umkaMakeDynArray)      (void *umka, void *array, void *type, int len);
     int  (*umkaGetDynArrayLen)    (const void *array);
     const char *(*umkaGetVersion) (void);
+    int64_t (*umkaGetMemUsage)    (void *umka);
 } UmkaAPI;
 
 
@@ -132,6 +133,7 @@ UMKA_API int  umkaGetStrLen         (const char *str);
 UMKA_API void umkaMakeDynArray      (void *umka, void *array, void *type, int len);
 UMKA_API int  umkaGetDynArrayLen    (const void *array);
 UMKA_API const char *umkaGetVersion (void);
+UMKA_API int64_t umkaGetMemUsage    (void *umka);
 
 static inline UmkaAPI *umkaGetAPI   (void *umka)
 {

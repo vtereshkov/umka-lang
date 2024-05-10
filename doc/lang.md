@@ -826,6 +826,12 @@ Checks whether the `child` fiber function has not yet returned.
 ##### Miscellaneous functions
 
 ```
+fn memusage(): int
+```
+
+Returns the allocated heap memory size in bytes.
+
+```
 fn exit(code: int, msg: str = "")
 ```
 

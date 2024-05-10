@@ -41,6 +41,7 @@ static void compilerSetAPI(Compiler *comp)
     comp->api.umkaMakeDynArray      = umkaMakeDynArray;
     comp->api.umkaGetDynArrayLen    = umkaGetDynArrayLen;
     comp->api.umkaGetVersion        = umkaGetVersion;
+    comp->api.umkaGetMemUsage       = umkaGetMemUsage;
 }
 
 
@@ -151,6 +152,7 @@ static void compilerDeclareBuiltinIdents(Compiler *comp)
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "fiberalive", comp->boolType,    BUILTIN_FIBERALIVE);
 
     // Misc
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "memusage",   comp->intType,     BUILTIN_MEMUSAGE);
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "exit",       comp->voidType,    BUILTIN_EXIT);
 }
 
