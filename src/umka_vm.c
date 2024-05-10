@@ -663,7 +663,13 @@ static FORCE_INLINE void doBasicAssign(void *lhs, Slot rhs, TypeKind typeKind, i
         case TYPE_MAP:
         case TYPE_STRUCT:
         case TYPE_INTERFACE:
-        case TYPE_CLOSURE:      memcpy(lhs, rhs.ptrVal, structSize); break;
+        case TYPE_CLOSURE:
+        {
+            if (!rhs.ptrVal)
+                error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Pointer is null");
+            memcpy(lhs, rhs.ptrVal, structSize);
+            break;
+        }
         case TYPE_FIBER:        *(void *        *)lhs = rhs.ptrVal;  break;
         case TYPE_FN:           *(int64_t       *)lhs = rhs.intVal;  break;
 
