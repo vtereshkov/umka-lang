@@ -183,6 +183,9 @@ static void doDynArrayToStrConv(Compiler *comp, Type *dest, Type **src, Const *c
     if (constant)
         comp->error.handler(comp->error.context, "Conversion to string is not allowed in constant expressions");
 
+    if (lhs)
+        genSwap(&comp->gen);
+
     // fn maketostr(src: char | []char): str
 
     genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_MAKETOSTR);
@@ -190,11 +193,14 @@ static void doDynArrayToStrConv(Compiler *comp, Type *dest, Type **src, Const *c
     // Copy result to a temporary local variable to collect it as garbage when leaving the block
     doCopyResultToTempVar(comp, dest);
 
+    if (lhs)
+        genSwap(&comp->gen);
+
     *src = dest;
 }
 
 
-static void doStrToDynArrayConv(Compiler *comp, Type *dest, Type **src, Const *constant, bool lhs)
+static void doStrToDynArrayConv(Compiler *comp, Type *dest, Type **src, Const *constant)
 {
     if (constant)
         comp->error.handler(comp->error.context, "Conversion to dynamic array is not allowed in constant expressions");
@@ -215,10 +221,13 @@ static void doStrToDynArrayConv(Compiler *comp, Type *dest, Type **src, Const *c
 }
 
 
-static void doDynArrayToArrayConv(Compiler *comp, Type *dest, Type **src, Const *constant)
+static void doDynArrayToArrayConv(Compiler *comp, Type *dest, Type **src, Const *constant, bool lhs)
 {
     if (constant)
         comp->error.handler(comp->error.context, "Conversion to array is not allowed in constant expressions");
+
+    if (lhs)
+        genSwap(&comp->gen);
 
     // fn maketoarr(src: []ItemType, type: Type): [...]ItemType
 
@@ -231,6 +240,9 @@ static void doDynArrayToArrayConv(Compiler *comp, Type *dest, Type **src, Const 
 
     // Copy result to a temporary local variable to collect it as garbage when leaving the block
     doCopyResultToTempVar(comp, dest);
+
+    if (lhs)
+        genSwap(&comp->gen);
 
     *src = dest;
 }
@@ -479,18 +491,12 @@ static void doInterfaceToValueConv(Compiler *comp, Type *dest, Type **src, Const
 }
 
 
-static void doPtrToWeakPtrConv(Compiler *comp, Type *dest, Type **src, Const *constant, bool lhs)
+static void doPtrToWeakPtrConv(Compiler *comp, Type *dest, Type **src, Const *constant)
 {
     if (constant)
         comp->error.handler(comp->error.context, "Conversion to weak pointer is not allowed in constant expressions");
 
-    if (lhs)
-        genSwap(&comp->gen);
-
     genWeakenPtr(&comp->gen);
-
-    if (lhs)
-        genSwap(&comp->gen);
 
     *src = dest;
 }
@@ -553,22 +559,22 @@ static void doImplicitTypeConvEx(Compiler *comp, Type *dest, Type **src, Const *
         doDynArrayToStrConv(comp, dest, src, constant, lhs);
     }
 
-    // String to dynamic array
-    else if (dest->kind == TYPE_DYNARRAY && dest->base->kind == TYPE_CHAR && (*src)->kind == TYPE_STR)
+    // String to dynamic array (not applied to operands of binary operators)
+    else if (!lhs && !rhs && dest->kind == TYPE_DYNARRAY && dest->base->kind == TYPE_CHAR && (*src)->kind == TYPE_STR)
     {
-        doStrToDynArrayConv(comp, dest, src, constant, lhs);
-    }
-
-    // Array to dynamic array
-    else if (dest->kind == TYPE_DYNARRAY && (*src)->kind == TYPE_ARRAY && typeEquivalent(dest->base, (*src)->base))
-    {
-        doArrayToDynArrayConv(comp, dest, src, constant);
+        doStrToDynArrayConv(comp, dest, src, constant);
     }
 
     // Dynamic array to array
     else if (dest->kind == TYPE_ARRAY && (*src)->kind == TYPE_DYNARRAY && typeEquivalent(dest->base, (*src)->base))
     {
-        doDynArrayToArrayConv(comp, dest, src, constant);
+        doDynArrayToArrayConv(comp, dest, src, constant, lhs);
+    }
+
+    // Array to dynamic array (not applied to operands of binary operators)
+    else if (!lhs && !rhs && dest->kind == TYPE_DYNARRAY && (*src)->kind == TYPE_ARRAY && typeEquivalent(dest->base, (*src)->base))
+    {
+        doArrayToDynArrayConv(comp, dest, src, constant);
     }
 
     // Concrete to interface or interface to interface
@@ -601,10 +607,10 @@ static void doImplicitTypeConvEx(Compiler *comp, Type *dest, Type **src, Const *
         *src = dest;
     }
 
-    // Pointer to weak pointer (not applied to "==" or "!=" operands)
+    // Pointer to weak pointer (not applied to operands of binary operators)
     else if (!lhs && !rhs && dest->kind == TYPE_WEAKPTR && (*src)->kind == TYPE_PTR && (typeEquivalent(dest->base, (*src)->base) || (*src)->base->kind == TYPE_NULL))
     {
-        doPtrToWeakPtrConv(comp, dest, src, constant, lhs);
+        doPtrToWeakPtrConv(comp, dest, src, constant);
     }
 
     // Weak pointer to pointer

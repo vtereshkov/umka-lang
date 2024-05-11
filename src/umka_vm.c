@@ -1004,7 +1004,6 @@ static void doGetMapKeyBytes(Slot key, Type *keyType, Error *error, char **keyBy
         case TYPE_REAL:
         case TYPE_PTR:
         case TYPE_WEAKPTR:
-        case TYPE_FN:
         {
             // keyBytes must point to a pre-allocated 8-byte buffer
             doBasicAssign(*keyBytes, key, keyType->kind, 0, error);

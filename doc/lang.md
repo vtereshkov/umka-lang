@@ -421,14 +421,14 @@ If a value `s` of type `S` is given where a value `t` of some other type `T` is 
 * `S` is an integer type and `T` is a real type
 * `S` is `char` and `T` is `str`
 * `S` is a `[]char` and `T` is `str`
-* `S` is `str` and `T` is `[]char` 
-* `S` is an array type and `T` is a dynamic array type and the item types of `S` and `T` are equivalent
+* `S` is `str` and `T` is `[]char` and `s` and `t` are not operands of a binary operator
+* `S` is an array type and `T` is a dynamic array type and the item types of `S` and `T` are equivalent and `s` and `t` are not operands of a binary operator
 * `S` is a dynamic array type and `T` is an array type and the item types of `S` and `T` are equivalent and `len(s) <= len(t)` 
 * `S` is a type (or a pointer to a type) that implements all the methods of `T` and `T` is an interface type 
 * `S` and `T` are interface types and `S` declares all the methods of `T`
 * `S` and `T` are pointer types and either `s` is `null`, or `T` is `^void`
 * `S` is a weak pointer type and `T` is a strong pointer type and either the base types of `S` and `T` are equivalent, or `t` is `null` 
-* `S` is a strong pointer type and `T` is a weak pointer type and either the base types of `S` and `T` are equivalent, or `s` is `null`, and `s` and `t` are not operands of a `==` or `!=` operator
+* `S` is a strong pointer type and `T` is a weak pointer type and either the base types of `S` and `T` are equivalent, or `s` is `null`, and `s` and `t` are not operands of a binary operator
 * `S` is a function type and `T` is a closure type and `S` and the underlying function type of `T` are equivalent
 
 #### Explicit conversions
@@ -1062,8 +1062,8 @@ x < 3 ? 42.5 : 60
 >>  Right shift         Integers
 &&  Logical "and"       Booleans
 ||  Logical "or"        Booleans
-==  "Equal"             Ordinals, reals, pointers, strings, arrays, structures, functions
-!=  "Not equal"         Ordinals, reals, pointers, strings, arrays, structures, functions
+==  "Equal"             Ordinals, reals, pointers, strings, arrays, structures
+!=  "Not equal"         Ordinals, reals, pointers, strings, arrays, structures
 >   "Greater"           Ordinals, reals, strings
 <   "Less"              Ordinals, reals, strings
 >=  "Greater or equal"  Ordinals, reals, strings
@@ -1082,6 +1082,12 @@ Operand types are implicitly converted in two steps:
 
 * The right operand type is converted to the left operand type
 * The left operand type is converted to the right operand type
+
+From the implicit type conversion rules it follows that:
+
+* If one of the operands is a string and the other is a dynamic array, both are converted to the string type
+* If one of the operands is an array and the other is a dynamic array, both are converted to the array type
+* If one of the operands is a pointer and the other is a weak pointer, both are converted to the pointer type
 
 #### Ternary operator
 

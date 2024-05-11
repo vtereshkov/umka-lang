@@ -1,3 +1,5 @@
+import "std.um"
+
 fn test1() {
 	// Pointers
 	p := new(int, 42)
@@ -13,7 +15,7 @@ fn test1() {
 
 	a := 42 + 13 * 256
 	b := ^[8]uint8(&a)^
-	printf("%v\n", b)	
+	printf("%v\n", b)   
 }
 
 fn test2() {
@@ -39,7 +41,7 @@ fn test2() {
 		pc = s
 		s = "Hey " + s
 
-		printf(s + '\n')				
+		printf(s + '\n')                
 	}
 
 	pc[len(pc) - 1] = '\0'
@@ -51,9 +53,27 @@ fn test2() {
 	printf(s2 + str(pc) + '\n')
 }
 
+fn test3() {
+	a := [2]int{5, 7}
+	b := []int{5, 7}
+	
+	std::assert(a == b)
+	std::assert(b == a)
+	
+	c := "ab"
+	d := []char{'a', 'b'}
+	
+	std::assert(c == d)
+	std::assert(d == c)
+
+	std::assert(c + d == "abab")
+	std::assert(d + c == "abab")
+}
+
 fn test*() {
 	test1()
 	test2()
+	test3()
 }
 
 fn main() {
