@@ -1422,7 +1422,7 @@ fn p(a: int): (int, bool) {
 
 ## Modules
 
-An Umka program consists of one or more source files, or modules. The main module should have the `main()` function with no parameters and no return values, which is the entry point of the program.
+An Umka program consists of one or more source files, or modules. If the main module has a `main()` function with no parameters and no return values, this function becomes the entry point of the program.
 
 Modules can be imported from other modules using the `import` clause in the beginning of the importing module. In this case, all the identifiers declared as exported in the module scope of the imported module become valid in the importing module, if qualified with the imported module name.
 

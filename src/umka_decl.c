@@ -921,14 +921,12 @@ void parseProgram(Compiler *comp)
     // Entry point
     genEntryPoint(&comp->gen, 0);
 
-    Ident *mainFn = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, mainModule, "main", NULL);
-    if (!identIsMain(mainFn))
-        comp->error.handler(comp->error.context, "Illegal main() function");
-
-    // Dummy upvalue
-    genPushZero(&comp->gen, sizeof(Interface) / sizeof(Slot));
-
-    genCall(&comp->gen, mainFn->offset);
+    Ident *mainFn = identFind(&comp->idents, &comp->modules, &comp->blocks, mainModule, "main", NULL, false);
+    if (mainFn && identIsMain(mainFn))
+    {
+        genPushZero(&comp->gen, sizeof(Interface) / sizeof(Slot));  // Dummy upvalue
+        genCall(&comp->gen, mainFn->offset);
+    }
 
     doGarbageCollection(comp, 0);
     genHalt(&comp->gen);

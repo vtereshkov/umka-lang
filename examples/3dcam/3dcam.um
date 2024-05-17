@@ -45,7 +45,3 @@ fn drawBodies() {
         drawCube(cube.position, 2, cube.height, 2, cube.color)
     }
 }
-
-fn main() {}
-    
-    

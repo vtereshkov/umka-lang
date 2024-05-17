@@ -38,7 +38,7 @@ Compiles the Umka program into bytecode. Here, `umka` is the interpreter instanc
 UMKA_API int umkaRun(void *umka);
 ```
 
-Runs the Umka program previously compiled to bytecode, i. e., calls its `main()` function. Here, `umka` is the interpreter instance handle. Returns `0` if the program execution finishes successfully and no run-time errors were detected, otherwise return the error code.
+Runs the Umka program previously compiled to bytecode, i.e., calls its `main()` function, if it exists, and gracefully deallocates heap memory referenced by global variables. Here, `umka` is the interpreter instance handle. Returns `0` if the program execution finishes successfully and no run-time errors were detected, otherwise return the error code.
 
 ```
 UMKA_API void umkaFree(void *umka);
