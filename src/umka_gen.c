@@ -93,6 +93,31 @@ static Instruction *getPrevInstr(CodeGen *gen, int depth)
 }
 
 
+static bool optimizePushLocalPtr(CodeGen *gen, int offset)
+{
+    Instruction *prev = getPrevInstr(gen, 1), *prev2 = getPrevInstr(gen, 2);
+
+    // Optimization: PUSH_LOCAL_PTR + ZERO + PUSH_LOCAL_PTR -> PUSH_LOCAL_PTR_ZERO
+    if (prev  && prev->opcode  == OP_ZERO &&
+        prev2 && prev2->opcode == OP_PUSH_LOCAL_PTR)
+    {
+        if (offset == prev2->operand.intVal)
+        {
+            const int size = prev->operand.intVal;
+
+            genRemoveInstr(gen);
+            genRemoveInstr(gen);
+            genPushLocalPtrZero(gen, offset, size);
+
+            genUnnotify(gen);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+
 static bool optimizePushReg(CodeGen *gen, int regIndex)
 {
     Instruction *prev = getPrevInstr(gen, 1);
@@ -433,7 +458,17 @@ void genPushGlobalPtr(CodeGen *gen, void *ptrVal)
 
 void genPushLocalPtr(CodeGen *gen, int offset)
 {
-    const Instruction instr = {.opcode = OP_PUSH_LOCAL_PTR, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = offset};
+    if (!optimizePushLocalPtr(gen, offset))
+    {
+        const Instruction instr = {.opcode = OP_PUSH_LOCAL_PTR, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = offset};
+        genAddInstr(gen, &instr);
+    }
+}
+
+
+void genPushLocalPtrZero(CodeGen *gen, int offset, int size)
+{
+    const Instruction instr = {.opcode = OP_PUSH_LOCAL_PTR_ZERO, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.int32Val = {offset, size}};
     genAddInstr(gen, &instr);
 }
 

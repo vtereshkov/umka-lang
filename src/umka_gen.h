@@ -48,16 +48,17 @@ void genFree(CodeGen *gen);
 
 void genNop(CodeGen *gen);
 
-void genPushIntConst (CodeGen *gen, int64_t intVal);
-void genPushUIntConst(CodeGen *gen, uint64_t uintVal);
-void genPushRealConst(CodeGen *gen, double realVal);
-void genPushGlobalPtr(CodeGen *gen, void *ptrVal);
-void genPushLocalPtr (CodeGen *gen, int offset);
-void genPushLocal    (CodeGen *gen, TypeKind typeKind, int offset);
-void genPushReg      (CodeGen *gen, int regIndex);
-void genPushStruct   (CodeGen *gen, int size);
-void genPushUpvalue  (CodeGen *gen);
-void genPushZero     (CodeGen *gen, int slots);
+void genPushIntConst    (CodeGen *gen, int64_t intVal);
+void genPushUIntConst   (CodeGen *gen, uint64_t uintVal);
+void genPushRealConst   (CodeGen *gen, double realVal);
+void genPushGlobalPtr   (CodeGen *gen, void *ptrVal);
+void genPushLocalPtr    (CodeGen *gen, int offset);
+void genPushLocalPtrZero(CodeGen *gen, int offset, int size);
+void genPushLocal       (CodeGen *gen, TypeKind typeKind, int offset);
+void genPushReg         (CodeGen *gen, int regIndex);
+void genPushStruct      (CodeGen *gen, int size);
+void genPushUpvalue     (CodeGen *gen);
+void genPushZero        (CodeGen *gen, int slots);
 
 void genPop   (CodeGen *gen);
 void genPopReg(CodeGen *gen, int regIndex);
