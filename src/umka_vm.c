@@ -29,6 +29,7 @@ static const char *opcodeSpelling [] =
     "PUSH",
     "PUSH_ZERO",
     "PUSH_LOCAL_PTR",
+    "PUSH_LOCAL_PTR_ZERO",
     "PUSH_LOCAL",
     "PUSH_REG",
     "PUSH_STRUCT",
@@ -2494,15 +2495,22 @@ static FORCE_INLINE void doPushZero(Fiber *fiber, Error *error)
 
 static FORCE_INLINE void doPushLocalPtr(Fiber *fiber)
 {
-    // Local variable addresses are offsets (in bytes) from the stack/heap frame base pointer
     (--fiber->top)->ptrVal = (int8_t *)fiber->base + fiber->code[fiber->ip].operand.intVal;
+    fiber->ip++;
+}
+
+
+static FORCE_INLINE void doPushLocalPtrZero(Fiber *fiber)
+{
+    (--fiber->top)->ptrVal = (int8_t *)fiber->base + fiber->code[fiber->ip].operand.int32Val[0];
+    int size = fiber->code[fiber->ip].operand.int32Val[1];
+    memset(fiber->top->ptrVal, 0, size);
     fiber->ip++;
 }
 
 
 static FORCE_INLINE void doPushLocal(Fiber *fiber, Error *error)
 {
-    // Local variable addresses are offsets (in bytes) from the stack/heap frame base pointer
     (--fiber->top)->ptrVal = (int8_t *)fiber->base + fiber->code[fiber->ip].operand.intVal;
     doBasicDeref(fiber->top, fiber->code[fiber->ip].typeKind, error);
     fiber->ip++;
@@ -3325,6 +3333,7 @@ static FORCE_INLINE void vmLoop(VM *vm)
             case OP_PUSH:                           doPush(fiber, error);                         break;
             case OP_PUSH_ZERO:                      doPushZero(fiber, error);                     break;
             case OP_PUSH_LOCAL_PTR:                 doPushLocalPtr(fiber);                        break;
+            case OP_PUSH_LOCAL_PTR_ZERO:            doPushLocalPtrZero(fiber);                    break;
             case OP_PUSH_LOCAL:                     doPushLocal(fiber, error);                    break;
             case OP_PUSH_REG:                       doPushReg(fiber);                             break;
             case OP_PUSH_STRUCT:                    doPushStruct(fiber, error);                   break;
@@ -3489,6 +3498,7 @@ int vmAsm(int ip, Instruction *code, DebugInfo *debugPerInstr, char *buf, int si
             chars += snprintf(buf + chars, nonneg(size - chars), " %s (%lld)", fnName, (long long int)instr->operand.intVal);
             break;
         }
+        case OP_PUSH_LOCAL_PTR_ZERO:
         case OP_GET_ARRAY_PTR:          chars += snprintf(buf + chars, nonneg(size - chars), " %d %d", (int)instr->operand.int32Val[0], (int)instr->operand.int32Val[1]); break;
         case OP_CALL_EXTERN:            chars += snprintf(buf + chars, nonneg(size - chars), " %p",    instr->operand.ptrVal); break;
         case OP_CALL_BUILTIN:           chars += snprintf(buf + chars, nonneg(size - chars), " %s",    builtinSpelling[instr->operand.builtinVal]); break;
