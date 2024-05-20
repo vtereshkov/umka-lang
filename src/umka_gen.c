@@ -1073,7 +1073,21 @@ int genTryRemoveCopyResultToTempVar(CodeGen *gen)
 
 int genAsm(CodeGen *gen, char *buf, int size)
 {
-    int ip = 0, chars = 0;
+    bool *jumpFrom = calloc(gen->capacity + 1, 1);
+    bool *jumpTo = calloc(gen->capacity + 1, 1);
+
+    int ip = 0;
+    do
+    {
+        if (gen->code[ip].opcode == OP_GOTO || gen->code[ip].opcode == OP_GOTO_IF || gen->code[ip].opcode == OP_GOTO_IF_NOT)
+        {
+            jumpFrom[ip] = true;
+            jumpTo[(int)gen->code[ip].operand.intVal] = true;
+        }
+    } while (gen->code[ip++].opcode != OP_HALT);
+
+    ip = 0;
+    int chars = 0;
     do
     {
         if (ip == 0 || gen->debugPerInstr[ip].fileName != gen->debugPerInstr[ip - 1].fileName)
@@ -1085,10 +1099,13 @@ int genAsm(CodeGen *gen, char *buf, int size)
         chars += vmAsm(ip, gen->code, gen->debugPerInstr, buf + chars, nonneg(size - chars));
         chars += snprintf(buf + chars, nonneg(size - chars), "\n");
 
-        if (gen->code[ip].opcode == OP_GOTO || gen->code[ip].opcode == OP_GOTO_IF || gen->code[ip].opcode == OP_GOTO_IF_NOT || gen->code[ip].opcode == OP_RETURN)
+        if (gen->code[ip].opcode == OP_RETURN || jumpFrom[ip] || jumpTo[ip + 1])
             chars += snprintf(buf + chars, nonneg(size - chars), "\n");
 
     } while (gen->code[ip++].opcode != OP_HALT);
+
+    free(jumpFrom);
+    free(jumpTo);
 
     return chars;
 }
