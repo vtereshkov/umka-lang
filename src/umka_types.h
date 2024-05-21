@@ -188,7 +188,7 @@ static inline bool typeStructured(Type *type)
 
 static inline bool typeKindGarbageCollected(TypeKind typeKind)
 {
-    return typeKind == TYPE_PTR    || typeKind == TYPE_WEAKPTR   ||
+    return typeKind == TYPE_PTR    ||
            typeKind == TYPE_STR    || typeKind == TYPE_ARRAY     || typeKind == TYPE_DYNARRAY || typeKind == TYPE_MAP ||
            typeKind == TYPE_STRUCT || typeKind == TYPE_INTERFACE || typeKind == TYPE_CLOSURE  || typeKind == TYPE_FIBER;
 }

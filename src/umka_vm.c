@@ -817,9 +817,6 @@ static FORCE_INLINE void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, voi
                 break;
             }
 
-            case TYPE_WEAKPTR:
-                break;
-
             case TYPE_STR:
             {
                 doCheckStr((char *)ptr, pages->error);

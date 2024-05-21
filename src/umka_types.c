@@ -279,7 +279,7 @@ int typeAlignment(Types *types, Type *type)
 
 bool typeGarbageCollected(Type *type)
 {
-    if (type->kind == TYPE_PTR      || type->kind == TYPE_WEAKPTR   || type->kind == TYPE_STR     || type->kind == TYPE_MAP  ||
+    if (type->kind == TYPE_PTR      || type->kind == TYPE_STR     || type->kind == TYPE_MAP  ||
         type->kind == TYPE_DYNARRAY || type->kind == TYPE_INTERFACE || type->kind == TYPE_CLOSURE || type->kind == TYPE_FIBER)
         return true;
 
