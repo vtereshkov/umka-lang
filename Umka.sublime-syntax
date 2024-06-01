@@ -4,8 +4,11 @@
 file_extensions:
   - um
 scope: source.umka
+variables:
+  ident: '[A-Za-z_][A-Za-z_0-9]*'
+  space: '\s*'
 contexts:
-  main:  
+  prototype:
     # Line comments
     - match: '//'
       scope: punctuation.definition.comment.umka
@@ -16,9 +19,60 @@ contexts:
       scope: punctuation.definition.comment.begin.umka
       push: block_comment  
 
+  import_named_string:
+    - match: "\""
+      scope: punctuation.definition.string.begin.umka
+      push: double_quoted_string
+      pop: true
+
+  import:
+    # Exit
+    - match: '\)'
+      scope: keyword.control.umka         
+      pop: true
+
+    # Import default
+    - match: "\""
+      scope: punctuation.definition.string.begin.umka
+      push: module_string
+
+    # Import named
+    - match: '\b({{ident}}){{space}}(\=)'
+      captures:
+        1: entity.name.module.umka
+        2: keyword.operator.umka
+      push: import_named_string
+
+    - include: main
+
+  main:
+    # Imports
+    - match: '\bimport{{space}}\('
+      scope: keyword.control.umka         
+      push: import
+
     # Keywords
     - match: '\b(break|case|const|continue|default|else|enum|for|fn|import|interface|if|in|map|return|str|struct|switch|type|var|weak)\b'
       scope: keyword.control.umka         
+
+    # Closure parameters
+    - match: '(\|[^\|]+\|){{space}}(\{)'
+      captures:
+        1: variable.parameter.umka
+
+    # Function call
+    - match: '\b({{ident}}){{space}}(\*?){{space}}(\()'
+      captures:
+        1: support.function.umka
+        2: support.function.umka
+
+    # Member
+    - match: '(?<=::|\.){{space}}({{ident}})'
+      scope: variable.parameter.umka
+
+    # Module
+    - match: '\b({{ident}}){{space}}(?=::)'
+      scope: entity.name.module.umka
 
     # Operators
     - match: '\+|\-|\*|/|%|&|\||~|<<|>>|\+=|\-=|\*=|/=|%=|&=|\|=|~=|<<=|>>=|&&|\|\||\?|!|\++|\--|==|<|>|!=|<=|>=|=|:='
@@ -27,9 +81,13 @@ contexts:
     # Punctuation
     - match: '\(|\)|\[|\]|\{|\}|\^|;|:|::|\.'
       scope: punctuation.separator.umka
+ 
+    # Hex literals
+    - match: '\b(0[Xx])[0-9A-F]+\b'
+      scope: constant.numeric.umka      
 
-    # Numeric literals
-    - match: '\b(0[Xx])?[0-9.]+([Ee][+-]?[0-9]*)?\b'
+    # Decimal literals
+    - match: '\b[0-9.]+([Ee][+-]?[0-9]*)?\b'
       scope: constant.numeric.umka       
 
     # String literals
@@ -48,7 +106,17 @@ contexts:
 
     # Predeclared types
     - match: '\b(void|int8|int16|int32|int|uint8|uint16|uint32|uint|bool|char|real32|real|fiber|any)\b'
-      scope: storage.type.umka   
+      scope: storage.type.umka
+
+  module_string:
+    - meta_scope: string.quoted.double.umka
+    - match: '\\.'
+      scope: constant.character.escape.umka
+    - match: "{{ident}}(?=.um)"
+      scope: entity.name.module.umka
+    - match: '"'
+      scope: punctuation.definition.string.end.umka
+      pop: true
 
   double_quoted_string:
     - meta_scope: string.quoted.double.umka
@@ -70,9 +138,15 @@ contexts:
     - meta_scope: comment.line.umka
     - match: $
       pop: true
+    - include: todos
 
   block_comment:
     - meta_scope: comment.block.umka
     - match: '\*/'
       scope: punctuation.definition.comment.end.umka
-      pop: true       
+      pop: true
+    - include: todos
+
+  todos:
+    - match: '(TODO|FIXME|BUG|HACK|NOTE|XXX)'
+      scope: markup.bold.umka
