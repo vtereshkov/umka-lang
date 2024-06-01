@@ -46,10 +46,22 @@ contexts:
     - include: main
 
   main:
+    # Types
+    - match: '\b_*[A-Z][A-Za-z_0-9]*\b'
+      scope: storage.type.umka
+
     # Imports
     - match: '\bimport{{space}}\('
       scope: keyword.control.umka         
       push: import
+
+    - match: '\bimport{{space}}(?=\")'
+      scope: keyword.control.umka     
+      push:
+        - match: '"'
+          scope: punctuation.definition.string.begin.umka
+          push: module_string
+          pop: true
 
     # Keywords
     - match: '\b(break|case|const|continue|default|else|enum|for|fn|import|interface|if|in|map|return|str|struct|switch|type|var|weak)\b'
@@ -59,12 +71,14 @@ contexts:
     - match: '(\|[^\|]+\|){{space}}(\{)'
       captures:
         1: variable.parameter.umka
+        2: punctuation.definition.codeblock.begin.umka
 
     # Function call
     - match: '\b({{ident}}){{space}}(\*?){{space}}(\()'
       captures:
         1: support.function.umka
         2: support.function.umka
+        3: punctuation.definition.parameters.begin.umka
 
     # Member
     - match: '(?<=::|\.){{space}}({{ident}})'
