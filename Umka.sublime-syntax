@@ -27,10 +27,6 @@ contexts:
       pop: true
 
   expr_traps:
-    # Assignment recapture
-    - match: '(:=|\+=|\-=|\*=|/=|%=|&=|\|=|~=|<<=|>>=|\^=|=)'
-      scope: keyword.operator.umka
-
     # Type scoped
     - match: '\{'
       scope: punctuation.definition.parameters.begin.umka
@@ -71,7 +67,23 @@ contexts:
       scope: punctuation.separator.umka
       pop: true
 
+    - match: '(?=\})'
+      pop: true
+
+    - match: '(?=\))'
+      pop: true
+
+    - match: '(?=\])'
+      pop: true
+
     - include: expr_traps
+    - include: main
+
+  block_scoped:
+    - match: '\}'
+      scope: punctuation.definition.codeblock.end.umka
+      pop: true
+
     - include: main
 
   parenthesis_scoped:
@@ -112,8 +124,7 @@ contexts:
     - match: '$'
       pop: true
 
-    - match: '\{'
-      scope: punctuation.definition.codeblock.begin.umka
+    - match: '(?=\{)'
       pop: true
 
     - include: main
@@ -126,8 +137,7 @@ contexts:
     - match: '$'
       pop: true
 
-    - match: '\{'
-      scope: punctuation.definition.codeblock.begin.umka
+    - match: '(?=\{)'
       pop: true
 
     - include: main
@@ -197,6 +207,10 @@ contexts:
     - match: '\['
       scope: punctuation.definition.parameters.begin.umka
       push: bracket_scoped
+
+    - match: '\{'
+      scope: punctuation.definition.codeblock.begin.umka
+      push: block_scoped
 
     # Predeclared constants
     - match: '\b(true|false|null)\b'
@@ -279,10 +293,14 @@ contexts:
       push: ternary_scoped
 
     # Closure parameters
-    - match: '(\|[^\|]+\|){{space}}(\{)'
+    - match: '(\|[^\|]*\|){{space}}(?=\{)'
       captures:
         1: variable.parameter.umka
         2: punctuation.definition.codeblock.begin.umka
+
+    # Type
+    - match: '\b_*[A-Z][A-Za-z_0-9]*\b'
+      scope: storage.type.umka
 
     # Function call
     - match: '\b({{ident}}){{space}}(\*?){{space}}(?=\()'
@@ -294,10 +312,6 @@ contexts:
     - match: '(?<=\.){{space}}({{ident}})'
       scope: variable.parameter.umka
 
-    # Type
-    - match: '\b_*[A-Z][A-Za-z_0-9]*\b'
-      scope: storage.type.umka
-    
     # Module
     - match: '\b({{ident}}){{space}}(?=::)'
       scope: entity.name.module.umka
@@ -310,13 +324,8 @@ contexts:
     - match: '|\+\+|\-\-|&&|\|\||\*|\+|\-|/|%|&|\||~|<<|>>|!|==|!=|<=|>=|<|>|:=|^='
       scope: keyword.operator.umka
 
-    - match: '\{'
-      scope: punctuation.definition.codeblock.begin.umka
-    - match: '\}'
-      scope: punctuation.definition.codeblock.end.umka
-
     # Punctuation
-    - match: '\^|;|:|::|\.'
+    - match: '\^|;|:|::|\.|,'
       scope: punctuation.separator.umka
  
     # Hex literals
@@ -381,5 +390,5 @@ contexts:
     - include: todos
 
   todos:
-    - match: '(TODO|FIXME|BUG|HACK|NOTE|XXX)'
+    - match: '(TODO|FIXME|BUG|HACK|NOTE|XXX)(\(.*\))?:?'
       scope: markup.bold.umka
