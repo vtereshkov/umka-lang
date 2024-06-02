@@ -103,7 +103,7 @@ contexts:
   method_trap:
     # Method creation builtin override
     - match: '\b({{builtin}}){{space}}(\*?){{space}}(?=\()'
-      scope: entity.name.function
+      scope: entity.name.function.umka
 
     - match: '\('
       scope: punctuation.definition.parameters.begin.umka
