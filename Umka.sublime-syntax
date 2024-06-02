@@ -5,6 +5,7 @@ file_extensions:
   - um
 scope: source.umka
 variables:
+  builtin: (append|atan|atan2|cap|ceil|copy|cos|delete|exit|exp|fabs|fiberalive|fibercall|fiberspawn|floor|fprintf|fscanf|insert|keys|len|log|make|memusage|new|printf|round|scanf|selfhasptr|selftypeeq|sin|sizeof|sizeofself|slice|sprintf|sqrt|sscanf|trunc|typeptr|valid|validkey)
   ident: '[A-Za-z_][A-Za-z_0-9]*'
   space: '\s*'
 contexts:
@@ -24,6 +25,16 @@ contexts:
       scope: punctuation.definition.string.begin.umka
       push: double_quoted_string
       pop: true
+
+  expr_traps:
+    # Assignment recapture
+    - match: '(:=|\+=|\-=|\*=|/=|%=|&=|\|=|~=|<<=|>>=|\^=|=)'
+      scope: keyword.operator.umka
+
+    # Type scoped
+    - match: '\{'
+      scope: punctuation.definition.parameters.begin.umka
+      push: type_scoped
 
   import:
     # Exit
@@ -50,29 +61,17 @@ contexts:
       scope: keyword.operator.umka
       pop: true
 
-    # Type scoped
-    - match: '(\{)'
-      captures:
-        1: punctuation.definition.parameters.begin.umka
-      push: type_scoped
-
     - include: main
   
   expr_scoped:
     - match: '$'
-      scope: punctuation.definition.parameters.end.umka
       pop: true
 
     - match: ';'
       scope: punctuation.separator.umka
       pop: true
 
-    # Type scoped
-    - match: '(\{)'
-      captures:
-        1: punctuation.definition.parameters.begin.umka
-      push: type_scoped
-
+    - include: expr_traps
     - include: main
 
   parenthesis_scoped:
@@ -80,12 +79,7 @@ contexts:
       scope: punctuation.definition.parameters.end.umka
       pop: true
 
-    # Type scoped
-    - match: '(\{)'
-      captures:
-        1: punctuation.definition.parameters.begin.umka
-      push: type_scoped
-
+    - include: expr_traps
     - include: main
 
   bracket_scoped:
@@ -96,17 +90,30 @@ contexts:
     - match: '$'
       pop: true
 
-    # Type scoped
-    - match: '(\{)'
-      captures:
-        1: punctuation.definition.parameters.begin.umka
-      push: type_scoped
-
+    - include: expr_traps
     - include: main
   
   function_param_trap:
     - match: '\)'
+      scope: punctuation.definition.parameters.end.umka
+      pop: true
+
+    - include: main
+
+  method_trap:
+    # Method creation builtin override
+    - match: '\b({{builtin}}){{space}}(\*?){{space}}(?=\()'
+      scope: entity.name.function.umka
+
+    - match: '\('
       scope: punctuation.definition.parameters.begin.umka
+      push: function_param_trap
+    
+    - match: '$'
+      pop: true
+
+    - match: '\{'
+      scope: punctuation.definition.codeblock.begin.umka
       pop: true
 
     - include: main
@@ -120,13 +127,12 @@ contexts:
       pop: true
 
     - match: '\{'
-      scope: punctuation.definition.codeblock.end.umka
+      scope: punctuation.definition.codeblock.begin.umka
       pop: true
 
     - include: main
 
   enum_scoped:
-    # Module override
     - match: '\b({{ident}})\b'
       scope: variable.parameter.umka
 
@@ -140,10 +146,6 @@ contexts:
     # Module override
     - match: '\b({{ident}}){{space}}(?=::)'
       scope: entity.name.module.umka
-
-    - match: '\{'
-      scope: punctuation.definition.parameters.end.umka
-      push: type_scoped
 
     - match: '\}'
       scope: punctuation.definition.parameters.end.umka
@@ -161,7 +163,7 @@ contexts:
       scope: entity.name.module.umka
 
     - match: '\{'
-      scope: punctuation.definition.parameters.end.umka
+      scope: punctuation.definition.parameters.begin.umka
       push: type_scoped
 
     - match: '\}'
@@ -184,7 +186,7 @@ contexts:
       scope: keyword.operator.umka
 
     # Assign/decl expr scope trap
-    - match: ':=|\+=|\-=|\*=|/=|%=|&=|\|=|~=|<<=|>>=|\^=|='
+    - match: '(:=|\+=|\-=|\*=|/=|%=|&=|\|=|~=|<<=|>>=|\^=|=)'
       scope: keyword.operator.umka
       push: expr_scoped
 
@@ -204,9 +206,15 @@ contexts:
     - match: '\b(str|void|int8|int16|int32|int|uint8|uint16|uint32|uint|bool|char|real32|real|fiber|any)\b'
       scope: storage.type.umka
 
+    # Method call builtin override
+    - match: '(?<=\.){{space}}({{builtin}}){{space}}(\*?){{space}}(?=\()'
+      captures:
+        1: entity.name.function.umka
+        2: entity.name.function.umka
+
     # Builtin functions
-    - match: '\b(append|atan|atan2|cap|ceil|copy|cos|delete|exit|exp|fabs|fiberalive|fibercall|fiberspawn|floor|fprintf|fscanf|insert|keys|len|log|make|memusage|new|printf|round|scanf|selfhasptr|selftypeeq|sin|sizeof|sizeofself|slice|sprintf|sqrt|sscanf|trunc|typeptr|valid|validkey)\b'
-      scope: keyword.operator.umka
+    - match: '\b{{builtin}}\b'
+      scope: support.function.umka
 
     # Imports
     - match: '\bimport{{space}}\('
@@ -232,6 +240,10 @@ contexts:
           push: double_quoted_string
           pop: true
 
+    # Method brace trap
+    - match: '\bfn{{space}}(?=\()'
+      scope: keyword.control.umka
+      push: method_trap
 
     # Function brace trap
     - match: '\bfn\b'
@@ -275,8 +287,8 @@ contexts:
     # Function call
     - match: '\b({{ident}}){{space}}(\*?){{space}}(?=\()'
       captures:
-        1: support.function.umka
-        2: support.function.umka
+        1: entity.name.function.umka
+        2: entity.name.function.umka
 
     # Member
     - match: '(?<=\.){{space}}({{ident}})'
@@ -295,17 +307,13 @@ contexts:
       scope: variable.parameter.umka
 
     # Operators
-    - match: '\+|\-|\*|/|%|&|\||~|<<|>>|\+=|\-=|\*=|/=|%=|&=|\|=|~=|<<=|>>=|&&|\|\||\?|!|\++|\--|==|<|>|!=|<=|>=|=|:=|^='
+    - match: '|\+\+|\-\-|&&|\|\||\*|\+|\-|/|%|&|\||~|<<|>>|!|==|!=|<=|>=|<|>|:=|^='
       scope: keyword.operator.umka
 
     - match: '\{'
       scope: punctuation.definition.codeblock.begin.umka
     - match: '\}'
       scope: punctuation.definition.codeblock.end.umka
-    - match: '\['
-      scope: punctuation.definition.parameters.begin.umka
-    - match: '\]'
-      scope: punctuation.definition.parameters.end.umka
 
     # Punctuation
     - match: '\^|;|:|::|\.'
