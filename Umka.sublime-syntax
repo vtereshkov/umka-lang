@@ -125,7 +125,6 @@ contexts:
       pop: true
 
     - match: '(?=\{)'
-      scope: punctuation.definition.codeblock.begin.umka
       pop: true
 
     - include: main
@@ -139,7 +138,6 @@ contexts:
       pop: true
 
     - match: '(?=\{)'
-      scope: punctuation.definition.codeblock.begin.umka
       pop: true
 
     - include: main
