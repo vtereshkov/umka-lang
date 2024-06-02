@@ -286,8 +286,17 @@ contexts:
     - match: '\+|\-|\*|/|%|&|\||~|<<|>>|\+=|\-=|\*=|/=|%=|&=|\|=|~=|<<=|>>=|&&|\|\||\?|!|\++|\--|==|<|>|!=|<=|>=|=|:=|^='
       scope: keyword.operator.umka
 
+    - match: '\{'
+      scope: punctuation.definition.codeblock.begin.umka
+    - match: '\}'
+      scope: punctuation.definition.codeblock.end.umka
+    - match: '\['
+      scope: punctuation.definition.parameters.begin.umka
+    - match: '\]'
+      scope: punctuation.definition.parameters.end.umka
+
     # Punctuation
-    - match: '\(|\)|\[|\]|\{|\}|\^|;|:|::|\.'
+    - match: '\^|;|:|::|\.'
       scope: punctuation.separator.umka
  
     # Hex literals
