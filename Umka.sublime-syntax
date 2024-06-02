@@ -221,6 +221,18 @@ contexts:
           push: module_string
           pop: true
 
+    - match: '\b(import){{space}}({{ident}}){{space}}(\=){{space}}(?=\")'
+      captures:
+        1: keyword.control.umka
+        2: entity.name.module.umka
+        3: keyword.operator.umka
+      push:
+        - match: '"'
+          scope: punctuation.definition.string.begin.umka
+          push: double_quoted_string
+          pop: true
+
+
     # Function brace trap
     - match: '\bfn\b'
       scope: keyword.control.umka
