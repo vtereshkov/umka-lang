@@ -129,6 +129,18 @@ contexts:
 
     - include: main
 
+  switch_trap:
+    - match: ':='
+      scope: keyword.operator.umka
+    
+    - match: '$'
+      pop: true
+
+    - match: '(?=\{)'
+      pop: true
+
+    - include: main
+
   function_trap:
     - match: '\('
       scope: punctuation.definition.parameters.begin.umka
@@ -259,6 +271,11 @@ contexts:
       scope: keyword.control.umka
       push: method_trap
 
+    # Switch brace trap
+    - match: '\bswitch\b'
+      scope: keyword.control.umka
+      push: switch_trap
+
     # Function brace trap
     - match: '\bfn\b'
       scope: keyword.control.umka
@@ -311,6 +328,14 @@ contexts:
     # Member
     - match: '(?<=\.){{space}}({{ident}})'
       scope: variable.parameter.umka
+    
+    # TOPHAT TYPE NAME HACK, DO NOT COMMIT
+    - match: '(th){{space}}(::){{space}}(fu|uu|iu)'
+      captures:
+        1: entity.name.module.umka
+        2: punctuation.separator.umka
+        3: storage.type.umka
+    # <<<<<<<<<<<<<<<<<
 
     # Module
     - match: '\b({{ident}}){{space}}(?=::)'
