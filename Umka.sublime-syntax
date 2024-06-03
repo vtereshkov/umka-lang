@@ -129,6 +129,18 @@ contexts:
 
     - include: main
 
+  switch_trap:
+    - match: ':='
+      scope: keyword.operator.umka
+    
+    - match: '$'
+      pop: true
+
+    - match: '(?=\{)'
+      pop: true
+
+    - include: main
+
   function_trap:
     - match: '\('
       scope: punctuation.definition.parameters.begin.umka
@@ -258,6 +270,11 @@ contexts:
     - match: '\bfn{{space}}(?=\()'
       scope: keyword.control.umka
       push: method_trap
+
+    # Switch brace trap
+    - match: '\bswitch\b'
+      scope: keyword.control.umka
+      push: switch_trap
 
     # Function brace trap
     - match: '\bfn\b'
