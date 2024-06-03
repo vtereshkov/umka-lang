@@ -328,14 +328,6 @@ contexts:
     # Member
     - match: '(?<=\.){{space}}({{ident}})'
       scope: variable.parameter.umka
-    
-    # TOPHAT TYPE NAME HACK, DO NOT COMMIT
-    - match: '(th){{space}}(::){{space}}(fu|uu|iu)'
-      captures:
-        1: entity.name.module.umka
-        2: punctuation.separator.umka
-        3: storage.type.umka
-    # <<<<<<<<<<<<<<<<<
 
     # Module
     - match: '\b({{ident}}){{space}}(?=::)'
