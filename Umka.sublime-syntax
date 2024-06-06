@@ -53,10 +53,11 @@ contexts:
     - include: main
 
   ternary_scoped:
-    - match: '\:'
+    - match: '(?<!\:)\:(?!\:)'
       scope: keyword.operator.umka
       pop: true
 
+    - include: expr_traps
     - include: main
   
   expr_scoped:
