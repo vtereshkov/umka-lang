@@ -5,7 +5,8 @@
     "license": "BSD-2",
     "description": "The Umka Programming language",
     "readme": "README.md",
-    "link": "https://github.com/vtereshkov/umka-lang",
+    "source": "https://github.com/vtereshkov/umka-lang",
+    "homepage": "https://github.com/vtereshkov/umka-lang",
     "dependencies": [],
     "include": [
         "umka.exe",
