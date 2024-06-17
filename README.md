@@ -54,20 +54,24 @@ _400 x 400 matrix multiplication (AMD A4-3300M @ 1.9 GHz, Windows 7)_
 
 ## Projects in Umka
 
-* [tophat](https://tophat2d.dev/) - a 2D game framework focused on minimalism
-* [SaveScum](https://skejeton.itch.io/savescum) - a tophat-based puzzle platformer game 
+* [tophat](https://tophat2d.dev/): A 2D game framework focused on minimalism
+* [SaveScum](https://skejeton.itch.io/savescum): A tophat-based puzzle platformer game 
 
 ![](resources/tophat.png)
 
-* [I LOVE FEM](https://github.com/vtereshkov/fem) - a tophat-based 2D finite element method demo
+* [I LOVE FEM](https://github.com/vtereshkov/fem): A tophat-based 2D finite element method demo
 
 ![](resources/fem.png)
 
-* [VDrift/Umka](https://github.com/vtereshkov/vdrift) - a racing simulator that lets you design, tune and test your own car autopilot
+* [SpaceSim](https://github.com/vtereshkov/space-sim): A 3D orbital rendez-vous and docking simulation that uses a custom software renderer written in pure Umka, with tophat as a 2D drawing backend
+
+![](resources/spacesim.png)
+
+* [VDrift/Umka](https://github.com/vtereshkov/vdrift): A racing simulator that lets you design, tune and test your own car autopilot
 
 ![](resources/vdrift.png)
 
-* TractorSim3D - a 6 DOF tractor dynamics simulator with a scriptable steering controller and [raylib](https://www.raylib.com)-based graphics
+* TractorSim3D: A 6 DOF tractor dynamics simulator with a scriptable steering controller and [raylib](https://www.raylib.com)-based graphics
 
 ![](resources/tractor.png)
 
