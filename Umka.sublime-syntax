@@ -7,19 +7,9 @@ scope: source.umka
 variables:
   builtin: (append|atan|atan2|cap|ceil|copy|cos|delete|exit|exp|fabs|fiberalive|fibercall|fiberspawn|floor|fprintf|fscanf|insert|keys|len|log|make|memusage|new|printf|round|scanf|selfhasptr|selftypeeq|sin|sizeof|sizeofself|slice|sprintf|sqrt|sscanf|trunc|typeptr|valid|validkey)
   ident: '[A-Za-z_][A-Za-z_0-9]*'
+  typeident: '_*[A-Z][A-Za-z_0-9]*'
   space: '\s*'
 contexts:
-  prototype:
-    # Line comments
-    - match: '//'
-      scope: punctuation.definition.comment.umka
-      push: line_comment
-
-    # Block comments
-    - match: '/\*'
-      scope: punctuation.definition.comment.begin.umka
-      push: block_comment  
-
   import_named_string:
     - match: "\""
       scope: punctuation.definition.string.begin.umka
@@ -107,6 +97,9 @@ contexts:
     - include: main
   
   function_param_trap:
+    - match: '\bfn\b'
+      scope: keyword.control.umka
+
     - match: '\)'
       scope: punctuation.definition.parameters.end.umka
       pop: true
@@ -118,6 +111,12 @@ contexts:
     - match: '\b({{builtin}}){{space}}(\*?){{space}}(?=\()'
       scope: entity.name.function.umka
 
+    # Definition
+    - match: '\b({{ident}}){{space}}(\*?){{space}}(?=\()'
+      captures:
+        1: entity.name.function.umka
+        2: keyword.operator.umka
+
     - match: '\('
       scope: punctuation.definition.parameters.begin.umka
       push: function_param_trap
@@ -125,7 +124,9 @@ contexts:
     - match: '$'
       pop: true
 
-    - match: '(?=\{)'
+    - match: '\{'
+      push: block_scoped
+      scope: punctuation.definition.codeblock.begin.umka
       pop: true
 
     - include: main
@@ -133,7 +134,7 @@ contexts:
   switch_trap:
     - match: ':='
       scope: keyword.operator.umka
-    
+ 
     - match: '$'
       pop: true
 
@@ -147,23 +148,45 @@ contexts:
       scope: punctuation.definition.parameters.begin.umka
       push: function_param_trap
     
+    # Definition
+    - match: '\b({{ident}}){{space}}(\*?){{space}}(?=\()'
+      captures:
+        1: entity.name.function.umka
+        2: keyword.operator.umka
+
     - match: '$'
       pop: true
 
-    - match: '(?=\{)'
+    - match: '\{'
+      push: block_scoped
+      scope: punctuation.definition.codeblock.begin.umka
       pop: true
 
     - include: main
 
   enum_scoped:
     - match: '\b({{ident}})\b'
-      scope: variable.parameter.umka
+      scope: constant.enum.umka
 
     - match: '\}'
       scope: punctuation.definition.parameters.end.umka
       pop: true
 
     - include: main
+
+  interface_scoped:
+    - match: '\b({{builtin}}){{space}}(?=\()'
+      scope: entity.name.function.umka
+
+    - match: '\b({{builtin}})\b'
+      scope: 
+
+    - match: '\}'
+      scope: punctuation.definition.parameters.end.umka
+      pop: true
+
+    - include: main
+
 
   struct_scoped:
     # Module override
@@ -184,6 +207,9 @@ contexts:
     # Module override
     - match: '\b({{ident}}){{space}}(?=::)'
       scope: entity.name.module.umka
+    
+    - match: '\b(?=var|const|if|for)\b'
+      set: block_scoped
 
     - match: '\{'
       scope: punctuation.definition.parameters.begin.umka
@@ -202,7 +228,7 @@ contexts:
       scope: variable.parameter.umka
 
     - include: main
-
+  
   main:
     # Equality trap
     - match: '=='
@@ -234,10 +260,9 @@ contexts:
       scope: storage.type.umka
 
     # Method call builtin override
-    - match: '(?<=\.){{space}}({{builtin}}){{space}}(\*?){{space}}(?=\()'
+    - match: '(?<=\.){{space}}({{builtin}}){{space}}(?=\()'
       captures:
-        1: entity.name.function.umka
-        2: entity.name.function.umka
+        1: variable.function.umka
 
     # Builtin functions
     - match: '\b{{builtin}}\b'
@@ -301,6 +326,20 @@ contexts:
         2: punctuation.definition.parameters.begin.umka
       push: enum_scoped
 
+    # Interface definitions
+    - match: '\b(interface){{space}}(\{)'
+      captures:
+        1: keyword.control.umka
+        2: punctuation.definition.parameters.begin.umka
+      push: interface_scoped
+
+    # Enum member before case
+    - match: '\b(case){{space}}(\.){{space}}({{ident}})'
+      captures: 
+        1: keyword.control.umka
+        2: punctuation.separator.umka
+        3: constant.enum.umka
+
     # Keywords
     - match: '\b(break|case|const|continue|default|else|enum|for|fn|import|interface|if|in|map|return|str|struct|switch|type|var|weak)\b'
       scope: keyword.control.umka         
@@ -311,24 +350,51 @@ contexts:
       push: ternary_scoped
 
     # Closure parameters
-    - match: '(\|[^\|]*\|){{space}}(?=\{)'
+    - match: '(\|[^\|]*\|){{space}}(\{)'
       captures:
         1: variable.parameter.umka
         2: punctuation.definition.codeblock.begin.umka
+      push: block_scoped
+
+    # Enum direct access
+    - match: '\b({{typeident}}){{space}}(\.){{space}}({{ident}})'
+      captures:
+        1: storage.type.umka
+        2: punctuation.separator.umka
+        3: constant.enum.umka
+
+    # Variadic type
+    - match: '(\.\.){{space}}({{ident}})'
+      captures:
+        1: punctuation.separator.um
+        2: storage.type.umka
 
     # Type
-    - match: '\b_*[A-Z][A-Za-z_0-9]*\b'
+    - match: '\b{{typeident}}\b'
       scope: storage.type.umka
 
     # Function call
-    - match: '\b({{ident}}){{space}}(\*?){{space}}(?=\()'
+    - match: '\b({{ident}}){{space}}(?=\()'
       captures:
-        1: entity.name.function.umka
-        2: entity.name.function.umka
+        1: variable.function.umka
+
+    # Method call
+    - match: '(\.){{space}}({{ident}}){{space}}(?=\()'
+      captures:
+        1: punctuation.separator.umka
+        2: variable.function.umka
 
     # Member
-    - match: '(?<=\.){{space}}({{ident}})'
-      scope: variable.parameter.umka
+    - match: '(?<=[A-Za-z_0-9\]\)\}\^]){{space}}(\.){{space}}({{ident}})'
+      captures: 
+        1: punctuation.separator.umka
+        2: variable.parameter.umka
+
+    # Enum member
+    - match: '(\.){{space}}({{ident}})'
+      captures: 
+        1: punctuation.separator.umka
+        2: constant.enum.umka
 
     # Module
     - match: '\b({{ident}}){{space}}(?=::)'
@@ -337,6 +403,16 @@ contexts:
     # Module member
     - match: '(?<=::){{space}}({{ident}})'
       scope: variable.parameter.umka
+
+    # Line comments
+    - match: '//'
+      scope: punctuation.definition.comment.umka
+      push: line_comment
+
+    # Block comments
+    - match: '/\*'
+      scope: punctuation.definition.comment.begin.umka
+      push: block_comment  
 
     # Operators
     - match: '|\+\+|\-\-|&&|\|\||\*|\+|\-|/|%|&|\||~|<<|>>|!|==|!=|<=|>=|<|>|:=|^='
