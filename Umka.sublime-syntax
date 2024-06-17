@@ -385,7 +385,7 @@ contexts:
         2: variable.function.umka
 
     # Member
-    - match: '(?<=[A-Za-z_0-9\]\)\}]){{space}}(\.){{space}}({{ident}})'
+    - match: '(?<=[A-Za-z_0-9\]\)\}\^]){{space}}(\.){{space}}({{ident}})'
       captures: 
         1: punctuation.separator.umka
         2: variable.parameter.umka
