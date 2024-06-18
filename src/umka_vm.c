@@ -3130,7 +3130,11 @@ static FORCE_INLINE void doCallExtern(Fiber *fiber, Error *error)
 {
     ExternFunc fn = (ExternFunc)fiber->code[fiber->ip].operand.ptrVal;
     fiber->reg[VM_REG_RESULT].ptrVal = error->context;    // Upon entry, the result slot stores the Umka instance
+
+    int ip = fiber->ip;
     fn(fiber->base + 2, &fiber->reg[VM_REG_RESULT]);      // + 2 for old base pointer and return address
+    fiber->ip = ip;
+
     fiber->ip++;
 }
 
@@ -3407,11 +3411,11 @@ void vmRun(VM *vm, int entryOffset, int numParamSlots, Slot *params, Slot *resul
     if (!vm->fiber->alive)
         vm->error->runtimeHandler(vm->error->context, VM_RUNTIME_ERROR, "Cannot run a dead fiber");
 
-    // Individual function call
+    const int numDummyUpvaluesSlots = sizeof(Interface) / sizeof(Slot);
+
     if (entryOffset > 0)
     {
         // Push parameters
-        const int numDummyUpvaluesSlots = sizeof(Interface) / sizeof(Slot);
         vm->fiber->top -= numDummyUpvaluesSlots + numParamSlots;
 
         for (int i = 0; i < numParamSlots; i++)
@@ -3419,17 +3423,25 @@ void vmRun(VM *vm, int entryOffset, int numParamSlots, Slot *params, Slot *resul
         for (int i = numParamSlots; i < numDummyUpvaluesSlots + numParamSlots; i++)
             vm->fiber->top[i].intVal = 0;
 
-        // Push null return address and go to the entry point
+        // Push null return address
         (--vm->fiber->top)->intVal = 0;
-        vm->fiber->ip = entryOffset;
     }
+
+    // Go to the entry point
+    vm->fiber->ip = entryOffset;
 
     // Main loop
     vmLoop(vm);
 
-    // Save result
-    if (entryOffset > 0 && result)
-        *result = vm->fiber->reg[VM_REG_RESULT];
+    if (entryOffset > 0)
+    {
+        // Remove parameters
+        vm->fiber->top += numDummyUpvaluesSlots + numParamSlots;
+
+        // Save result
+        if (result)
+            *result = vm->fiber->reg[VM_REG_RESULT];
+    }
 }
 
 
