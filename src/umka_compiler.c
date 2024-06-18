@@ -271,19 +271,18 @@ void compilerFree(Compiler *comp)
 void compilerCompile(Compiler *comp)
 {
     parseProgram(comp);
+    vmReset(&comp->vm, comp->gen.code, comp->gen.debugPerInstr);
 }
 
 
 void compilerRun(Compiler *comp)
 {
-    vmReset(&comp->vm, comp->gen.code, comp->gen.debugPerInstr);
     vmRun(&comp->vm, 0, 0, NULL, NULL);
 }
 
 
 void compilerCall(Compiler *comp, int entryOffset, int numParamSlots, Slot *params, Slot *result)
 {
-    vmReset(&comp->vm, comp->gen.code, comp->gen.debugPerInstr);
     vmRun(&comp->vm, entryOffset, numParamSlots, params, result);
 }
 

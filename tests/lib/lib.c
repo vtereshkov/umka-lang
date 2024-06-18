@@ -23,3 +23,24 @@ void hello(UmkaStackSlot *params, UmkaStackSlot *result)
     UmkaAPI *api = umkaGetAPI(umka);
     result->ptrVal = api->umkaMakeStr(umka, "Hello");
 }
+
+
+void sum(UmkaStackSlot *param, UmkaStackSlot *result) 
+{
+    int n = param[0].intVal;
+    int callback = param[1].intVal;
+
+    void *umka = result->ptrVal;
+    UmkaAPI *api = umkaGetAPI(umka);
+
+    int sum = 0;
+    for (int i = 1; i <= n; i++)
+    {
+        UmkaStackSlot callbackParam[] = {{.intVal = i}};
+        UmkaStackSlot callbackResult;
+        api->umkaCall(umka, callback, 1, callbackParam, &callbackResult);
+        sum += callbackResult.intVal;
+    }
+
+    result->intVal = sum;
+}
