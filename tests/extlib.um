@@ -1,7 +1,12 @@
 import "lib/lib.um"
 
 fn test*() {
-	printf("%f %f %s\n", lib::add(3, 5), lib::sub(3, 5), lib::hello())      
+	printf("%f %f %v %s\n", 
+		lib::add(3, 5), 
+		lib::sub(3, 5),
+		lib::sum({return i * i}, 10) == (10 * 11 * 21) / 6, 
+		lib::hello()		
+	)      
 }
 
 fn main() {

@@ -295,7 +295,7 @@ static FORCE_INLINE bool stackUnwind(Fiber *fiber, Slot **base, int *ip)
         return false;
 
     int returnOffset = (*base + 1)->intVal;
-    if (returnOffset == VM_FIBER_KILL_SIGNAL)
+    if (returnOffset == VM_RETURN_FROM_FIBER)
         return false;
 
     *base = (Slot *)((*base)->ptrVal);
@@ -2420,7 +2420,7 @@ static FORCE_INLINE void doBuiltinFiberspawn(Fiber *fiber, HeapPages *pages, Err
 
     (--child->top)->ptrVal = fiber;                     // Push parent fiber pointer
     (--child->top)->ptrVal = anyParam;                  // Push arbitrary pointer parameter
-    (--child->top)->intVal = VM_FIBER_KILL_SIGNAL;      // Push fiber kill signal instead of return address
+    (--child->top)->intVal = VM_RETURN_FROM_FIBER;      // Push 'return from fiber' signal instead of return address
     child->ip = childEntryOffset;                       // Call
 
     // Return child fiber pointer to parent fiber as result
@@ -3247,7 +3247,7 @@ static FORCE_INLINE void doReturn(Fiber *fiber, Fiber **newFiber)
     // Pop return address
     int returnOffset = (fiber->top++)->intVal;
 
-    if (returnOffset == VM_FIBER_KILL_SIGNAL)
+    if (returnOffset == VM_RETURN_FROM_FIBER)
     {
         // For fiber function, kill the fiber, extract the parent fiber pointer and switch to it
         fiber->alive = false;
@@ -3379,16 +3379,13 @@ static FORCE_INLINE void vmLoop(VM *vm)
             }
             case OP_RETURN:
             {
-                if (fiber->top->intVal == 0)
-                    return;
-
                 Fiber *newFiber = NULL;
                 doReturn(fiber, &newFiber);
 
                 if (newFiber)
                     fiber = vm->fiber = vm->pages.fiber = newFiber;
 
-                if (!fiber->alive)
+                if (!fiber->alive || fiber->ip == VM_RETURN_FROM_VM)
                     return;
 
                 break;
@@ -3411,11 +3408,10 @@ void vmRun(VM *vm, int entryOffset, int numParamSlots, Slot *params, Slot *resul
     if (!vm->fiber->alive)
         vm->error->runtimeHandler(vm->error->context, VM_RUNTIME_ERROR, "Cannot run a dead fiber");
 
-    const int numDummyUpvaluesSlots = sizeof(Interface) / sizeof(Slot);
-
     if (entryOffset > 0)
     {
         // Push parameters
+        const int numDummyUpvaluesSlots = sizeof(Interface) / sizeof(Slot);
         vm->fiber->top -= numDummyUpvaluesSlots + numParamSlots;
 
         for (int i = 0; i < numParamSlots; i++)
@@ -3423,8 +3419,8 @@ void vmRun(VM *vm, int entryOffset, int numParamSlots, Slot *params, Slot *resul
         for (int i = numParamSlots; i < numDummyUpvaluesSlots + numParamSlots; i++)
             vm->fiber->top[i].intVal = 0;
 
-        // Push null return address
-        (--vm->fiber->top)->intVal = 0;
+        // Push 'return from VM' signal as return address
+        (--vm->fiber->top)->intVal = VM_RETURN_FROM_VM;
     }
 
     // Go to the entry point
@@ -3433,15 +3429,9 @@ void vmRun(VM *vm, int entryOffset, int numParamSlots, Slot *params, Slot *resul
     // Main loop
     vmLoop(vm);
 
-    if (entryOffset > 0)
-    {
-        // Remove parameters
-        vm->fiber->top += numDummyUpvaluesSlots + numParamSlots;
-
-        // Save result
-        if (result)
-            *result = vm->fiber->reg[VM_REG_RESULT];
-    }
+    // Save result
+    if (entryOffset > 0 && result)
+        *result = vm->fiber->reg[VM_REG_RESULT];
 }
 
 

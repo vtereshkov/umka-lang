@@ -1,3 +1,4 @@
 fn add*(a, b: real): real
 fn sub*(a, b: real): real
 fn hello*(): str
+fn sum*(callback: fn (i: int): int, n: int): int

@@ -22,7 +22,8 @@ enum
     VM_MIN_HEAP_CHUNK    = 64,                      // Bytes
     VM_MIN_HEAP_PAGE     = 1024 * 1024,             // Bytes
 
-    VM_FIBER_KILL_SIGNAL = -1                       // Used instead of return address in fiber function calls
+    VM_RETURN_FROM_VM    = -2,                      // Used instead of return address in functions called by umkaCall()
+    VM_RETURN_FROM_FIBER = -1                       // Used instead of return address in fiber function calls
 };
 
 enum
