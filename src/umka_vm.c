@@ -101,6 +101,7 @@ static const char *builtinSpelling [] =
     "insert",
     "delete",
     "slice",
+    "sort",
     "len",
     "cap",
     "sizeof",
@@ -2220,6 +2221,57 @@ static FORCE_INLINE void doBuiltinSlice(Fiber *fiber, HeapPages *pages, Error *e
 }
 
 
+// fn sort(array: [] type, compare: fn (a, b: ^type): int)
+typedef struct
+{
+    VM *vm;
+    Closure *compare;
+} CompareContext;
+
+
+CompareContext *compareContext = NULL;
+
+
+static FORCE_INLINE void vmLoop(VM *vm);
+
+
+static FORCE_INLINE int compareFn(const void *a, const void *b)
+{
+    (--compareContext->vm->fiber->top)->ptrVal = compareContext->compare->upvalue.selfType;
+    (--compareContext->vm->fiber->top)->ptrVal = compareContext->compare->upvalue.self;
+    (--compareContext->vm->fiber->top)->ptrVal = (void *)a;
+    (--compareContext->vm->fiber->top)->ptrVal = (void *)b;
+    (--compareContext->vm->fiber->top)->intVal = VM_RETURN_FROM_VM;
+
+    int ip = compareContext->vm->fiber->ip;
+    compareContext->vm->fiber->ip = compareContext->compare->entryOffset;
+    vmLoop(compareContext->vm);
+    compareContext->vm->fiber->ip = ip;
+
+    return compareContext->vm->fiber->reg[VM_REG_RESULT].intVal;
+}
+
+
+static FORCE_INLINE void doBuiltinSort(VM *vm)
+{
+    Closure *compare = (Closure *)(vm->fiber->top++)->ptrVal;
+    DynArray *array  = (DynArray *)(vm->fiber->top++)->ptrVal;
+
+    if (!array)
+        vm->error->runtimeHandler(vm->error->context, VM_RUNTIME_ERROR, "Dynamic array is null");
+
+    if (!compare || compare->entryOffset <= 0)
+        vm->error->runtimeHandler(vm->error->context, VM_RUNTIME_ERROR, "Called function is not defined");
+
+    if (array->data)
+    {
+        CompareContext context = {vm, compare};
+        compareContext = &context;
+        qsort(array->data, getDims(array)->len, array->itemSize, compareFn);
+    }
+}
+
+
 static FORCE_INLINE void doBuiltinLen(Fiber *fiber, Error *error)
 {
     switch (fiber->code[fiber->ip].typeKind)
@@ -3139,7 +3191,7 @@ static FORCE_INLINE void doCallExtern(Fiber *fiber, Error *error)
 }
 
 
-static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages *pages, Error *error)
+static FORCE_INLINE void doCallBuiltin(VM *vm, Fiber *fiber, Fiber **newFiber, HeapPages *pages, Error *error)
 {
     BuiltinFunc builtin = fiber->code[fiber->ip].operand.builtinVal;
     TypeKind typeKind   = fiber->code[fiber->ip].typeKind;
@@ -3216,6 +3268,7 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         case BUILTIN_INSERT:        doBuiltinInsert(fiber, pages, error); break;
         case BUILTIN_DELETE:        doBuiltinDelete(fiber, pages, typeKind, error); break;
         case BUILTIN_SLICE:         doBuiltinSlice(fiber, pages, error); break;
+        case BUILTIN_SORT:          doBuiltinSort(vm); break;
         case BUILTIN_LEN:           doBuiltinLen(fiber, error); break;
         case BUILTIN_CAP:           doBuiltinCap(fiber, error); break;
         case BUILTIN_SIZEOF:        error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Illegal instruction"); return;       // Done at compile time
@@ -3367,7 +3420,7 @@ static FORCE_INLINE void vmLoop(VM *vm)
             case OP_CALL_BUILTIN:
             {
                 Fiber *newFiber = NULL;
-                doCallBuiltin(fiber, &newFiber, pages, error);
+                doCallBuiltin(vm, fiber, &newFiber, pages, error);
 
                 if (!fiber->alive)
                     return;
