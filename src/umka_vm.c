@@ -295,7 +295,7 @@ static FORCE_INLINE bool stackUnwind(Fiber *fiber, Slot **base, int *ip)
         return false;
 
     int returnOffset = (*base + 1)->intVal;
-    if (returnOffset == VM_RETURN_FROM_FIBER)
+    if (returnOffset == VM_RETURN_FROM_FIBER || returnOffset == VM_RETURN_FROM_VM)
         return false;
 
     *base = (Slot *)((*base)->ptrVal);
