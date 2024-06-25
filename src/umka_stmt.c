@@ -1071,7 +1071,7 @@ static void parseReturnStmt(Compiler *comp)
     doAssertImplicitTypeConv(comp, sig->resultType, &type, NULL);
 
     // Check non-64-bit ordinal and real types for overflow
-    if ((typeOrdinal(sig->resultType) || typeReal(sig->resultType)) && typeSizeNoCheck(sig->resultType) < typeSizeNoCheck(comp->intType))
+    if ((typeOrdinal(sig->resultType) || typeReal(sig->resultType)) && sig->resultType->kind != type->kind && typeSizeNoCheck(sig->resultType) < typeSizeNoCheck(comp->intType))
         genAssertRange(&comp->gen, sig->resultType->kind);
 
     // Copy structure to __result
