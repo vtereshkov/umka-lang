@@ -1614,6 +1614,10 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
         }
     }
 
+    // Allow closing parenthesis on a new line
+    if (comp->lex.tok.kind == TOK_IMPLICIT_SEMICOLON)
+        lexNext(&comp->lex);
+
     int numDefaultOrVariadicFormalParams = 0;
 
     if ((*type)->sig.numDefaultParams > 0)
@@ -1661,10 +1665,6 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
         comp->error.handler(comp->error.context, "Called function is not defined");
 
     *type = (*type)->sig.resultType;
-
-    // Allow closing parenthesis on a new line
-    if (comp->lex.tok.kind == TOK_IMPLICIT_SEMICOLON)
-        lexNext(&comp->lex);
 
     lexEat(&comp->lex, TOK_RPAR);
 }
