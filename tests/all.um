@@ -3,6 +3,7 @@ import (
     "binfileio.um"
     "dynarrays.um"
     "dynarrays2.um"
+    "dynarrays3.um"
     "strings.um"
     "fibers.um"
     "fnctools.um"
@@ -52,6 +53,7 @@ fn main() {
     printf("\n\n>>> Binary file I/O\n\n");          binfileio::test()
     printf("\n\n>>> Dynamic arrays - 1\n\n");       dynarrays::test()
     printf("\n\n>>> Dynamic arrays - 2\n\n");       dynarrays2::test()
+    printf("\n\n>>> Dynamic arrays - 3\n\n");       dynarrays3::test()
     printf("\n\n>>> Strings\n\n");                  strings::test()
     printf("\n\n>>> Fibers\n\n");                   fibers::test()
     printf("\n\n>>> Functional tools\n\n");         fnctools::test()

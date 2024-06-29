@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <limits.h>
+#include <stdlib.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -203,19 +204,26 @@ static void doDynArrayToStrConv(Compiler *comp, Type *dest, Type **src, Const *c
 static void doStrToDynArrayConv(Compiler *comp, Type *dest, Type **src, Const *constant)
 {
     if (constant)
-        comp->error.handler(comp->error.context, "Conversion to dynamic array is not allowed in constant expressions");
+    {
+        int len = getStrDims((char *)constant->ptrVal)->len;
+        DynArray *array = storageAddDynArray(&comp->storage, dest, len);
+        memcpy(array->data, constant->ptrVal, len);
+        constant->ptrVal = array;
+    }
+    else
+    {
+        // fn makefromstr(src: str, type: Type): []char
 
-    // fn makefromstr(src: str, type: Type): []char
+        genPushGlobalPtr(&comp->gen, dest);                                 // Dynamic array type
 
-    genPushGlobalPtr(&comp->gen, dest);                                 // Dynamic array type
+        int resultOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, dest);
+        genPushLocalPtr(&comp->gen, resultOffset);                          // Pointer to result (hidden parameter)
 
-    int resultOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, dest);
-    genPushLocalPtr(&comp->gen, resultOffset);                          // Pointer to result (hidden parameter)
+        genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_MAKEFROMSTR);
 
-    genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_MAKEFROMSTR);
-
-    // Copy result to a temporary local variable to collect it as garbage when leaving the block
-    doCopyResultToTempVar(comp, dest);
+        // Copy result to a temporary local variable to collect it as garbage when leaving the block
+        doCopyResultToTempVar(comp, dest);
+    }
 
     *src = dest;
 }
@@ -251,20 +259,26 @@ static void doDynArrayToArrayConv(Compiler *comp, Type *dest, Type **src, Const 
 static void doArrayToDynArrayConv(Compiler *comp, Type *dest, Type **src, Const *constant)
 {
     if (constant)
-        comp->error.handler(comp->error.context, "Conversion to dynamic array is not allowed in constant expressions");
+    {
+        DynArray *array = storageAddDynArray(&comp->storage, dest, (*src)->numItems);
+        memcpy(array->data, constant->ptrVal, (*src)->numItems * array->itemSize);
+        constant->ptrVal = array;
+    }
+    else
+    {
+        // fn makefromarr(src: [...]ItemType, type: Type, len: int): type
 
-    // fn makefromarr(src: [...]ItemType, type: Type, len: int): type
+        genPushGlobalPtr(&comp->gen, dest);                                 // Dynamic array type
+        genPushIntConst(&comp->gen, (*src)->numItems);                      // Dynamic array length
 
-    genPushGlobalPtr(&comp->gen, dest);                                 // Dynamic array type
-    genPushIntConst(&comp->gen, (*src)->numItems);                      // Dynamic array length
+        int resultOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, dest);
+        genPushLocalPtr(&comp->gen, resultOffset);                          // Pointer to result (hidden parameter)
 
-    int resultOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, dest);
-    genPushLocalPtr(&comp->gen, resultOffset);                          // Pointer to result (hidden parameter)
+        genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_MAKEFROMARR);
 
-    genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_MAKEFROMARR);
-
-    // Copy result to a temporary local variable to collect it as garbage when leaving the block
-    doCopyResultToTempVar(comp, dest);
+        // Copy result to a temporary local variable to collect it as garbage when leaving the block
+        doCopyResultToTempVar(comp, dest);
+    }
 
     *src = dest;
 }
@@ -1852,8 +1866,10 @@ static void parseDynArrayLiteral(Compiler *comp, Type **type, Const *constant)
     if (!(*type)->isVariadicParamList)
         lexEat(&comp->lex, TOK_LBRACE);
 
+    int constItemsCapacity = 8;
+    Const *constItems = NULL;
     if (constant)
-        comp->error.handler(comp->error.context, "Dynamic array literals are not allowed for constants");
+        constItems = malloc(constItemsCapacity * sizeof(Const));
 
     // Dynamic array is first parsed as a static array of unknown length, then converted to a dynamic array
     Type *staticArrayType = typeAdd(&comp->types, &comp->blocks, TYPE_ARRAY);
@@ -1867,13 +1883,25 @@ static void parseDynArrayLiteral(Compiler *comp, Type **type, Const *constant)
         while (1)
         {
             Type *itemType = staticArrayType->base;
-            parseExpr(comp, &itemType, NULL);
+
+            Const *constItem = NULL;
+            if (constant)
+            {
+                if (staticArrayType->numItems == constItemsCapacity)
+                {
+                    constItemsCapacity *= 2;
+                    constItems = realloc(constItems, constItemsCapacity * sizeof(Const));
+                }
+                constItem = &constItems[staticArrayType->numItems];
+            }
+
+            parseExpr(comp, &itemType, constItem);
 
             // Special case: variadic parameter list's first item is already a dynamic array compatible with the variadic parameter list
             if ((*type)->isVariadicParamList && typeCompatible(*type, itemType) && staticArrayType->numItems == 0)
                 return;
 
-            doAssertImplicitTypeConv(comp, staticArrayType->base, &itemType, NULL);
+            doAssertImplicitTypeConv(comp, staticArrayType->base, &itemType, constItem);
 
             staticArrayType->numItems++;
 
@@ -1892,20 +1920,37 @@ static void parseDynArrayLiteral(Compiler *comp, Type **type, Const *constant)
         lexEat(&comp->lex, TOK_RBRACE);
     }
 
-    // Allocate array
-    Ident *staticArray = identAllocTempVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, staticArrayType, false);
-    doZeroVar(comp, staticArray);
-
-    // Assign items
-    for (int i = staticArrayType->numItems - 1; i >= 0; i--)
+    if (constant)
     {
-        genPushLocalPtr(&comp->gen, staticArray->offset + i * itemSize);
-        genSwapChangeRefCntAssign(&comp->gen, staticArrayType->base);
+        // Allocate array
+        Const constStaticArray = {.ptrVal = storageAdd(&comp->storage, staticArrayType->numItems * itemSize)};
+
+        // Assign items
+        for (int i = staticArrayType->numItems - 1; i >= 0; i--)
+            constAssign(&comp->consts, (char *)constStaticArray.ptrVal + i * itemSize, &constItems[i], staticArrayType->base->kind, itemSize);
+
+        free(constItems);
+
+        *constant = constStaticArray;
+    }
+    else
+    {
+        // Allocate array
+        Ident *staticArray = identAllocTempVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, staticArrayType, false);
+        doZeroVar(comp, staticArray);
+
+        // Assign items
+        for (int i = staticArrayType->numItems - 1; i >= 0; i--)
+        {
+            genPushLocalPtr(&comp->gen, staticArray->offset + i * itemSize);
+            genSwapChangeRefCntAssign(&comp->gen, staticArrayType->base);
+        }
+
+        doPushVarPtr(comp, staticArray);
     }
 
     // Convert to dynamic array
-    doPushVarPtr(comp, staticArray);
-    doAssertImplicitTypeConv(comp, *type, &staticArrayType, NULL);
+    doAssertImplicitTypeConv(comp, *type, &staticArrayType, constant);
 }
 
 
