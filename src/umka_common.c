@@ -13,6 +13,7 @@
 #endif
 
 #include "umka_common.h"
+#include "umka_types.h"
 
 
 // Errors
@@ -116,6 +117,23 @@ char *storageAddStr(Storage *storage, int len)
     data[len] = 0;
 
     return data;
+}
+
+
+DynArray *storageAddDynArray(Storage *storage, struct tagType *type, int len)
+{
+    DynArray *array = (DynArray *)storageAdd(storage, sizeof(DynArray));
+
+    array->type     = type;
+    array->itemSize = typeSizeNoCheck(array->type->base);
+
+    DynArrayDimensions dims = {.len = len, .capacity = 2 * (len + 1)};
+
+    char *dimsAndData = storageAdd(storage, sizeof(DynArrayDimensions) + dims.capacity * array->itemSize);
+    *(DynArrayDimensions *)dimsAndData = dims;
+
+    array->data = dimsAndData + sizeof(DynArrayDimensions);
+    return array;
 }
 
 

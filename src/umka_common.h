@@ -192,10 +192,11 @@ typedef struct
 void errorReportInit(ErrorReport *report, const char *fileName, const char *fnName, int line, int pos, int code, const char *format, va_list args);
 void errorReportFree(ErrorReport *report);
 
-void  storageInit  (Storage *storage);
-void  storageFree  (Storage *storage);
-char *storageAdd   (Storage *storage, int size);
-char *storageAddStr(Storage *storage, int len);
+void  storageInit               (Storage *storage);
+void  storageFree               (Storage *storage);
+char *storageAdd                (Storage *storage, int size);
+char *storageAddStr             (Storage *storage, int len);
+DynArray *storageAddDynArray    (Storage *storage, struct tagType *type, int len);
 
 void  moduleInit                (Modules *modules, bool implLibsEnabled, Error *error);
 void  moduleFree                (Modules *modules);

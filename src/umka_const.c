@@ -81,6 +81,7 @@ void constAssign(Consts *consts, void *lhs, Const *rhs, TypeKind typeKind, int s
         case TYPE_WEAKPTR:      *(uint64_t      *)lhs = rhs->weakPtrVal;     break;
         case TYPE_STR:          *(void *        *)lhs = rhs->ptrVal;         break;
         case TYPE_ARRAY:
+        case TYPE_DYNARRAY:
         case TYPE_STRUCT:
         case TYPE_INTERFACE:
         case TYPE_CLOSURE:      memcpy(lhs, rhs->ptrVal, size);              break;
