@@ -1,0 +1,55 @@
+import "std.um"
+
+fn foo(name: str, words: []str = {"Hello", "World"}) {
+    greeting := name + " says "
+    for _, w in words {
+        greeting += w + " "
+    }
+    printf("%s\n", greeting)
+}
+
+var x: []int = {2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17}
+y := []int{22, 23}
+
+var z: [][]real = {
+    {1, 2, 3},
+    {4, 5, 6},
+    {7, 8.5}
+}
+
+var chars: []char = "Hahaha"
+
+fn test*() {
+    printf("%v\n", x)
+
+    ptr1 := &x[0]
+
+    x = delete(x, 15)
+    printf("%v\n", x)
+
+    x = delete(x, 1)
+    printf("%v\n", x)
+    
+    x = append(x, y)
+    printf("%v\n", x)
+
+    ptr2 := &x[0]
+    std::assert(ptr1 == ptr2)
+
+    for i := 0; i < 10; i++ {
+        x = append(x, []int{66 + i, 77 + i})
+    }
+    printf("%v\n", x)
+
+    printf("%v\n", z)
+
+    printf("%v\n", append(copy(chars), []char("-Hohoho")))
+    printf("%v\n", chars)
+
+    foo("Vasiliy")
+    foo("Umka", {"Meow", "Purr", "Meow"})
+}
+
+fn main() {
+    test()
+}
