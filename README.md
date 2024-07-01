@@ -14,6 +14,7 @@ Umka is a statically typed embeddable scripting language. It combines the simpli
   * [Language](https://github.com/vtereshkov/umka-lang/blob/master/doc/lang.md)
   * [Standard library](https://github.com/vtereshkov/umka-lang/blob/master/doc/lib.md)
   * [Embedding API](https://github.com/vtereshkov/umka-lang/blob/master/doc/api.md)
+* [Community](https://discord.gg/PcT7cn59h9)  
 * [VS Code plugin](https://marketplace.visualstudio.com/items?itemName=mrms.vscode-umka)
 
 ## Features
@@ -35,7 +36,8 @@ _400 x 400 matrix multiplication (AMD A4-3300M @ 1.9 GHz, Windows 7)_
 * Try Umka in the [playground](https://vtereshkov.github.io/umka-lang)
 * Download the [latest release](https://github.com/vtereshkov/umka-lang/releases) for Windows and Linux
 * Take a [tour of Umka](https://github.com/vtereshkov/umka-lang/blob/master/README.md#a-tour-of-umka)
-* Read the [language](https://github.com/vtereshkov/umka-lang/blob/master/doc/lang.md) and [standard library](https://github.com/vtereshkov/umka-lang/blob/master/doc/lib.md) documentation 
+* Read the [language](https://github.com/vtereshkov/umka-lang/blob/master/doc/lang.md) and [standard library](https://github.com/vtereshkov/umka-lang/blob/master/doc/lib.md) documentation
+* Join our [community chat](https://discord.gg/PcT7cn59h9) 
 * Explore the [raytracer](https://github.com/vtereshkov/umka-lang/blob/master/examples/raytracer/raytracer.um) example that demonstrates many language features like fibers, interfaces and dynamic arrays
 * Play with the toy [Lisp interpreter](https://github.com/vtereshkov/umka-lang/blob/master/examples/lisp) written in Umka
 * Try the more realistic [C](https://github.com/vtereshkov/umka-lang/blob/master/examples/3dcam/3dcam.c)+[Umka](https://github.com/vtereshkov/umka-lang/blob/master/examples/3dcam/3dcam.um) embedded scripting example (_Note:_ [raylib](https://www.raylib.com) is required to [compile and run it](https://github.com/vtereshkov/umka-lang/blob/master/examples/3dcam/3dcam.md))
