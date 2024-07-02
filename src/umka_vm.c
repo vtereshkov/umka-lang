@@ -3141,6 +3141,8 @@ static FORCE_INLINE void doCallExtern(Fiber *fiber, Error *error)
 
 static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages *pages, Error *error)
 {
+    // Preserve instruction pointer, in case any of the standard calls end up calling Umka again.
+    int ip = fiber->ip;
     BuiltinFunc builtin = fiber->code[fiber->ip].operand.builtinVal;
     TypeKind typeKind   = fiber->code[fiber->ip].typeKind;
 
@@ -3238,6 +3240,7 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         case BUILTIN_MEMUSAGE:      doBuiltinMemusage(fiber, pages, error); break;
         case BUILTIN_EXIT:          doBuiltinExit(fiber, error); return;
     }
+    fiber->ip = ip;
     fiber->ip++;
 }
 
