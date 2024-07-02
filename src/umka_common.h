@@ -109,6 +109,7 @@ typedef struct
     WarningCallback warningCallback;
     void *context;
     jmp_buf jumper;
+    int jumperNesting;
     ErrorReport report;
 } Error;
 

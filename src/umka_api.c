@@ -113,7 +113,9 @@ UMKA_API int umkaRun(void *umka)
 
     if (setjmp(comp->error.jumper) == 0)
     {
+        comp->error.jumperNesting++;
         compilerRun(comp);
+        comp->error.jumperNesting--;
         return 0;
     }
 
@@ -125,9 +127,15 @@ UMKA_API int umkaCall(void *umka, int entryOffset, int numParamSlots, UmkaStackS
 {
     Compiler *comp = umka;
 
-    if (setjmp(comp->error.jumper) == 0)
+    // Nested calls to umkaCall() should not reset the error jumper
+    jmp_buf dummyJumper;
+    jmp_buf *jumper = comp->error.jumperNesting == 0 ? &comp->error.jumper : &dummyJumper;
+
+    if (setjmp(*jumper) == 0)
     {
+        comp->error.jumperNesting++;
         compilerCall(comp, entryOffset, numParamSlots, (Slot *)params, (Slot *)result);
+        comp->error.jumperNesting--;
         return 0;
     }
 
