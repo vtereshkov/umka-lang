@@ -747,7 +747,7 @@ static void parseFnDecl(Compiler *comp)
     {
         Type *rcvBaseType = fnType->sig.param[0]->type->base;
 
-        if (rcvBaseType->kind == TYPE_STRUCT && typeFindField(rcvBaseType, name))
+        if (rcvBaseType->kind == TYPE_STRUCT && typeFindField(rcvBaseType, name, NULL))
             comp->error.handler(comp->error.context, "Structure already has field %s", name);
     }
 

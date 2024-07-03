@@ -574,22 +574,26 @@ void typeEnableForward(Types *types, bool enable)
 }
 
 
-Field *typeFindField(Type *structType, const char *name)
+Field *typeFindField(Type *structType, const char *name, int *index)
 {
     if (structType->kind == TYPE_STRUCT || structType->kind == TYPE_INTERFACE || structType->kind == TYPE_CLOSURE)
     {
         unsigned int nameHash = hash(name);
         for (int i = 0; i < structType->numItems; i++)
             if (structType->field[i]->hash == nameHash && strcmp(structType->field[i]->name, name) == 0)
+            {
+                if (index)
+                    *index = i;
                 return structType->field[i];
+            }
     }
     return NULL;
 }
 
 
-Field *typeAssertFindField(Types *types, Type *structType, const char *name)
+Field *typeAssertFindField(Types *types, Type *structType, const char *name, int *index)
 {
-    Field *res = typeFindField(structType, name);
+    Field *res = typeFindField(structType, name, index);
     if (!res)
         types->error->handler(types->error->context, "Unknown field %s", name);
     return res;
@@ -610,7 +614,7 @@ Field *typeAddField(Types *types, Type *structType, Type *fieldType, const char 
         name = fieldNameBuf;
     }
 
-    Field *field = typeFindField(structType, name);
+    Field *field = typeFindField(structType, name, NULL);
     if (field)
         types->error->handler(types->error->context, "Duplicate field %s", name);
 

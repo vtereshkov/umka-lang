@@ -387,7 +387,7 @@ static void doPtrToInterfaceConv(Compiler *comp, Type *dest, Type **src, Const *
         genSwapAssign(&comp->gen, TYPE_PTR, 0);                                 // Assign to dest.__self
 
         // Assign to __selftype (RTTI)
-        Field *selfType = typeAssertFindField(&comp->types, dest, "__selftype");
+        Field *selfType = typeAssertFindField(&comp->types, dest, "__selftype", NULL);
 
         genPushGlobalPtr(&comp->gen, *src);                                     // Push src type
         genPushLocalPtr(&comp->gen, destOffset + selfType->offset);             // Push dest.__selftype pointer
@@ -440,7 +440,7 @@ static void doInterfaceToInterfaceConv(Compiler *comp, Type *dest, Type **src, C
     genSwapAssign(&comp->gen, TYPE_PTR, 0);                                 // Assign to dest.__self (NULL means a dynamic type)
 
     // Assign to __selftype (RTTI)
-    Field *selfType = typeAssertFindField(&comp->types, dest, "__selftype");
+    Field *selfType = typeAssertFindField(&comp->types, dest, "__selftype", NULL);
 
     genDup(&comp->gen);                                                     // Duplicate src pointer
     genGetFieldPtr(&comp->gen, selfType->offset);                           // Get src.__selftype pointer
@@ -452,7 +452,7 @@ static void doInterfaceToInterfaceConv(Compiler *comp, Type *dest, Type **src, C
     for (int i = 2; i < dest->numItems; i++)
     {
         const char *name = dest->field[i]->name;
-        Field *srcMethod = typeFindField(*src, name);
+        Field *srcMethod = typeFindField(*src, name, NULL);
         if (!srcMethod)
             comp->error.handler(comp->error.context, "Method %s is not implemented", name);
 
@@ -1557,7 +1557,7 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
     if ((*type)->kind == TYPE_CLOSURE)
     {
         // Closure upvalue
-        Field *fn = typeAssertFindField(&comp->types, *type, "__fn");
+        Field *fn = typeAssertFindField(&comp->types, *type, "__fn", NULL);
         *type = fn->type;
 
         genPushUpvalue(&comp->gen);
@@ -1768,6 +1768,8 @@ static void parseArrayOrStructLiteral(Compiler *comp, Type **type, Const *consta
     lexEat(&comp->lex, TOK_LBRACE);
 
     bool namedFields = false;
+    bool *fieldInitialized = NULL;
+
     if ((*type)->kind == TYPE_STRUCT)
     {
         if (comp->lex.tok.kind == TOK_RBRACE)
@@ -1779,6 +1781,9 @@ static void parseArrayOrStructLiteral(Compiler *comp, Type **type, Const *consta
             namedFields = lookaheadLex.tok.kind == TOK_COLON;
         }
     }
+
+    if (namedFields)
+        fieldInitialized = calloc((*type)->numItems + 1, sizeof(bool));
 
     const int size = typeSize(&comp->types, *type);
     Ident *arrayOrStruct = NULL;
@@ -1808,7 +1813,14 @@ static void parseArrayOrStructLiteral(Compiler *comp, Type **type, Const *consta
             if (namedFields)
             {
                 lexCheck(&comp->lex, TOK_IDENT);
-                field = typeAssertFindField(&comp->types, *type, comp->lex.tok.name);
+
+                int fieldIndex = 0;
+                field = typeAssertFindField(&comp->types, *type, comp->lex.tok.name, &fieldIndex);
+
+                if (field && fieldInitialized[fieldIndex])
+                    comp->error.handler(comp->error.context, "Duplicate field %s", field->name);
+
+                fieldInitialized[fieldIndex] = true;
                 itemOffset = field->offset;
 
                 lexNext(&comp->lex);
@@ -1846,8 +1858,12 @@ static void parseArrayOrStructLiteral(Compiler *comp, Type **type, Const *consta
             lexNext(&comp->lex);
         }
     }
+
     if (!namedFields && numItems < (*type)->numItems)
         comp->error.handler(comp->error.context, "Too few elements in literal");
+
+    if (fieldInitialized)
+        free(fieldInitialized);
 
     if (!constant)
         doPushVarPtr(comp, arrayOrStruct);
@@ -2028,7 +2044,7 @@ static void parseClosureLiteral(Compiler *comp, Type **type, Const *constant)
         if (comp->blocks.top != 0)
             genNop(&comp->gen);                                     // Jump over the nested function block (stub)
 
-        Field *fn = typeAssertFindField(&comp->types, *type, "__fn");
+        Field *fn = typeAssertFindField(&comp->types, *type, "__fn", NULL);
 
         Const fnConstant = {.intVal = comp->gen.ip};
         Ident *fnConstantIdent = identAddTempConst(&comp->idents, &comp->modules, &comp->blocks, fn->type, fnConstant);
@@ -2095,7 +2111,7 @@ static void parseClosureLiteral(Compiler *comp, Type **type, Const *constant)
             }
 
             // Assign closure upvalues
-            Field *upvalues = typeAssertFindField(&comp->types, closureIdent->type, "__upvalues");
+            Field *upvalues = typeAssertFindField(&comp->types, closureIdent->type, "__upvalues", NULL);
             Type *upvaluesType = upvaluesStructIdent->type;
 
             doPushVarPtr(comp, closureIdent);
@@ -2113,7 +2129,7 @@ static void parseClosureLiteral(Compiler *comp, Type **type, Const *constant)
 
         genNop(&comp->gen);                                     // Jump over the nested function block (stub)
 
-        Field *fn = typeAssertFindField(&comp->types, closureIdent->type, "__fn");
+        Field *fn = typeAssertFindField(&comp->types, closureIdent->type, "__fn", NULL);
 
         Const fnConstant = {.intVal = comp->gen.ip};
         Ident *fnConstantIdent = identAddTempConst(&comp->idents, &comp->modules, &comp->blocks, fn->type, fnConstant);
@@ -2365,7 +2381,7 @@ static void parseFieldSelector(Compiler *comp, Type **type, Const *constant, boo
             comp->error.handler(comp->error.context, "Method %s is not defined for %s", comp->lex.tok.name, typeSpelling(*type, typeBuf));
         }
 
-        Field *field = typeAssertFindField(&comp->types, *type, comp->lex.tok.name);
+        Field *field = typeAssertFindField(&comp->types, *type, comp->lex.tok.name, NULL);
         lexNext(&comp->lex);
 
         genGetFieldPtr(&comp->gen, field->offset);

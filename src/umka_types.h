@@ -283,8 +283,8 @@ static inline bool typeOverflow(TypeKind typeKind, Const val)
 }
 
 
-Field *typeFindField        (Type *structType, const char *name);
-Field *typeAssertFindField  (Types *types, Type *structType, const char *name);
+Field *typeFindField        (Type *structType, const char *name, int *index);
+Field *typeAssertFindField  (Types *types, Type *structType, const char *name, int *index);
 Field *typeAddField         (Types *types, Type *structType, Type *fieldType, const char *fieldName);
 
 EnumConst *typeFindEnumConst        (Type *enumType, const char *name);
