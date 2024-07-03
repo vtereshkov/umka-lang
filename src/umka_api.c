@@ -44,6 +44,8 @@ static void compileError(void *context, const char *format, ...)
     Compiler *comp = context;
     errorReportInit(&comp->error.report, comp->lex.fileName, comp->debug.fnName, comp->lex.tok.line, comp->lex.tok.pos, 1, format, args);
 
+    vmKill(&comp->vm);
+
     va_end(args);
     longjmp(comp->error.jumper, 1);
 }
