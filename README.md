@@ -69,6 +69,10 @@ _400 x 400 matrix multiplication (AMD A4-3300M @ 1.9 GHz, Windows 7)_
 
 ![](resources/spacesim.png)
 
+* [Umka OS](https://github.com/skejeton/umka-os): A proof of concept operating system written in C and Umka
+
+![](resources/os.png)
+
 * [VDrift/Umka](https://github.com/vtereshkov/vdrift): A racing simulator that lets you design, tune and test your own car autopilot
 
 ![](resources/vdrift.png)
