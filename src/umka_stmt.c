@@ -74,13 +74,23 @@ void doResolveExtern(Compiler *comp)
                 if (!fn)
                     comp->error.handler(comp->error.context, "Unresolved prototype of %s", ident->name);
 
-                // All parameters must be declared since they may require garbage collection
                 blocksEnter(&comp->blocks, ident);
                 genEntryPoint(&comp->gen, ident->prototypeOffset);
                 genEnterFrameStub(&comp->gen);
 
+                ExternalCallParamLayout *paramLayout = (ExternalCallParamLayout *)storageAdd(&comp->storage, sizeof(ExternalCallParamLayout) + ident->type->sig.numParams * sizeof(int64_t));
+
+                paramLayout->numParams = ident->type->sig.numParams;
+                paramLayout->numResultParams = typeStructured(ident->type->sig.resultType) ? 1 : 0;
+
+                // All parameters must be declared since they may require garbage collection
                 for (int i = 0; i < ident->type->sig.numParams; i++)
-                    identAllocParam(&comp->idents, &comp->types, &comp->modules, &comp->blocks, &ident->type->sig, i);
+                {
+                    Ident *param = identAllocParam(&comp->idents, &comp->types, &comp->modules, &comp->blocks, &ident->type->sig, i);
+                    paramLayout->firstSlotIndex[i] = param->offset / sizeof(Slot) - 2;                 // - 2 slots for old base pointer and return address
+                }
+
+                genPushGlobalPtr(&comp->gen, paramLayout);
 
                 genCallExtern(&comp->gen, fn);
 

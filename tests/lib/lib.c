@@ -3,34 +3,37 @@
 
 void add(UmkaStackSlot *params, UmkaStackSlot *result)
 {
-    double a = params[1].realVal;
-    double b = params[0].realVal;
-    result->realVal = a + b;
+    double a = umkaGetParam(params, 0)->realVal;
+    double b = umkaGetParam(params, 1)->realVal;
+    umkaGetResult(result)->realVal = a + b;
 }
 
 
-void sub(UmkaStackSlot *params, UmkaStackSlot *result)
+void mulVec(UmkaStackSlot *params, UmkaStackSlot *result)
 {
-    double a = params[1].realVal;
-    double b = params[0].realVal;
-    result->realVal = a - b;
+    double a = umkaGetParam(params, 0)->realVal;
+    double* v = (double *)umkaGetParam(params, 1);
+    double* out = umkaAllocResult(params);
+    out[0] = a * v[0];
+    out[1] = a * v[1];
+    umkaGetResult(result)->ptrVal = out;
 }
 
 
 void hello(UmkaStackSlot *params, UmkaStackSlot *result)
 {
-    void *umka = result->ptrVal;
+    void *umka = umkaGetInstance(result);
     UmkaAPI *api = umkaGetAPI(umka);
-    result->ptrVal = api->umkaMakeStr(umka, "Hello");
+    umkaGetResult(result)->ptrVal = api->umkaMakeStr(umka, "Hello");
 }
 
 
-void sum(UmkaStackSlot *param, UmkaStackSlot *result) 
+void sum(UmkaStackSlot *params, UmkaStackSlot *result) 
 {
-    int n = param[0].intVal;
-    int callback = param[1].intVal;
+    int callback = ((UmkaClosure *)umkaGetParam(params, 0))->entryOffset;
+    int n = umkaGetParam(params, 1)->intVal;
 
-    void *umka = result->ptrVal;
+    void *umka = umkaGetInstance(result);
     UmkaAPI *api = umkaGetAPI(umka);
 
     int sum = 0;
@@ -42,5 +45,5 @@ void sum(UmkaStackSlot *param, UmkaStackSlot *result)
         sum += callbackResult.intVal;
     }
 
-    result->intVal = sum;
+    umkaGetResult(result)->intVal = sum;
 }

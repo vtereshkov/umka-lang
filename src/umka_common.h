@@ -190,6 +190,14 @@ typedef struct
 } Externals;
 
 
+typedef struct
+{
+    int64_t numParams;
+    int64_t numResultParams;
+    int64_t firstSlotIndex[];
+} ExternalCallParamLayout;
+
+
 void errorReportInit(ErrorReport *report, const char *fileName, const char *fnName, int line, int pos, int code, const char *format, va_list args);
 void errorReportFree(ErrorReport *report);
 
