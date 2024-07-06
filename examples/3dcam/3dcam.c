@@ -6,12 +6,11 @@
 
 
 // Umka extension functions
-// The order of the parameters is counted from the end, not the beginning. if your function is `add(x, y: int)`, x is on params[1] and y is on params[0].
 void rlDrawPlane(UmkaStackSlot *params, UmkaStackSlot *result)
 {
-    Color *color = (Color *)&params[0];
-    Vector2 *size = (Vector2 *)&params[1];
-    Vector3 *centerPos = (Vector3 *)&params[2];
+    Vector3 *centerPos = (Vector3 *)umkaGetParam(params, 0);
+    Vector2 *size = (Vector2 *)umkaGetParam(params, 1);
+    Color *color = (Color *)umkaGetParam(params, 2);
 
     DrawPlane(*centerPos, *size, *color);
 }
@@ -19,12 +18,12 @@ void rlDrawPlane(UmkaStackSlot *params, UmkaStackSlot *result)
 
 void rlDrawCube(UmkaStackSlot *params, UmkaStackSlot *result)
 {
-    Color *color = (Color *)&params[0];
-    float length = params[1].realVal;
-    float height = params[2].realVal;
-    float width = params[3].realVal;
-    Vector3 *position = (Vector3 *)&params[4];
-      
+    Vector3 *position = (Vector3 *)umkaGetParam(params, 0);
+    float width = umkaGetParam(params, 1)->realVal;
+    float height = umkaGetParam(params, 2)->realVal;
+    float length = umkaGetParam(params, 3)->realVal;
+    Color *color = (Color *)umkaGetParam(params, 4);
+
     DrawCube(*position, width, height, length, *color);
 }
 

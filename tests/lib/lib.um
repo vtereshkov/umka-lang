@@ -1,4 +1,4 @@
 fn add*(a, b: real): real
-fn sub*(a, b: real): real
+fn mulVec*(a: real, v: [2]real): [2]real
 fn hello*(): str
 fn sum*(callback: fn (i: int): int, n: int): int

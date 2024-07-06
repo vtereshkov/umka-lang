@@ -23,6 +23,35 @@
 #include "umka_vm.h"
 
 
+/*
+Virtual machine stack layout (64-bit slots):
+
+0   ...
+    ...                                              <- Stack origin
+    ...
+    Temporary value 1                                <- Stack top
+    Temporary value 0
+    ...
+    Local variable 1
+    ...
+    Local variable 1
+    Local variable 0
+    ...
+    Local variable 0
+    Parameter layout table pointer
+    Stack frame ref count
+    Caller's stack frame base pointer                <- Stack frame base pointer
+    Return address
+    Parameter N
+    ...
+    Parameter N
+    Parameter N - 1
+    ...
+    Parameter N - 1
+    ...                                              <- Stack origin + size
+*/
+
+
 static const char *opcodeSpelling [] =
 {
     "NOP",
@@ -3129,6 +3158,10 @@ static FORCE_INLINE void doCallIndirect(Fiber *fiber, Error *error)
 static FORCE_INLINE void doCallExtern(Fiber *fiber, Error *error)
 {
     ExternFunc fn = (ExternFunc)fiber->code[fiber->ip].operand.ptrVal;
+
+    Slot *paramLayout = fiber->base - 2;
+    paramLayout->ptrVal = (fiber->top++)->ptrVal;
+
     fiber->reg[VM_REG_RESULT].ptrVal = error->context;    // Upon entry, the result slot stores the Umka instance
 
     int ip = fiber->ip;
@@ -3280,6 +3313,9 @@ static FORCE_INLINE void doEnterFrame(Fiber *fiber, HeapPages *pages, HookFunc *
     // Push stack frame ref count
     (--fiber->top)->intVal = 0;
 
+    // Push parameter layout table pointer
+    (--fiber->top)->ptrVal = NULL;
+
     // Move stack top
     fiber->top -= localVarSlots;
 
@@ -3306,7 +3342,7 @@ static FORCE_INLINE void doLeaveFrame(Fiber *fiber, HeapPages *pages, HookFunc *
     // Restore stack top
     fiber->top = fiber->base;
 
-    // Pop old stack/heap frame base pointer
+    // Pop old stack frame base pointer
     fiber->base = (Slot *)(fiber->top++)->ptrVal;
 
     fiber->ip++;

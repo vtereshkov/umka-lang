@@ -24,6 +24,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 
 #if defined(__cplusplus)
@@ -71,6 +72,20 @@ typedef struct
 
 typedef struct
 {
+    void *data;
+    void *type;
+} UmkaAny;
+
+
+typedef struct
+{
+    int64_t entryOffset;
+    UmkaAny upvalue;
+} UmkaClosure;
+
+
+typedef struct
+{
     char *fileName;
     char *fnName;
     int line, pos, code;
@@ -79,6 +94,14 @@ typedef struct
 
 
 typedef void (*UmkaWarningCallback)(UmkaError *warning);
+
+
+typedef struct
+{
+    int64_t numParams;
+    int64_t numResultParams;
+    int64_t firstSlotIndex[];
+} UmkaExternalCallParamLayout;
 
 
 typedef struct
@@ -135,9 +158,40 @@ UMKA_API int  umkaGetDynArrayLen    (const void *array);
 UMKA_API const char *umkaGetVersion (void);
 UMKA_API int64_t umkaGetMemUsage    (void *umka);
 
+
 static inline UmkaAPI *umkaGetAPI   (void *umka)
 {
     return (UmkaAPI *)umka;
+}
+
+
+static inline UmkaStackSlot *umkaGetParam(UmkaStackSlot *params, int index)
+{
+    const UmkaExternalCallParamLayout *paramLayout = (UmkaExternalCallParamLayout *)params[-4].ptrVal;
+    if (index < 0 || index >= paramLayout->numParams - paramLayout->numResultParams - 1)
+        return NULL;
+    return params + paramLayout->firstSlotIndex[index + 1];     // + 1 to skip upvalues
+}
+
+
+static inline void *umkaAllocResult(UmkaStackSlot *params)
+{
+    const UmkaExternalCallParamLayout *paramLayout = (UmkaExternalCallParamLayout *)params[-4].ptrVal;
+    if (paramLayout->numResultParams == 0)
+        return NULL;
+    return params[paramLayout->firstSlotIndex[paramLayout->numParams - 1]].ptrVal;
+}
+
+
+static inline UmkaStackSlot *umkaGetResult(UmkaStackSlot *result)
+{
+    return result;
+}
+
+
+static inline void *umkaGetInstance(UmkaStackSlot *result)
+{
+    return result->ptrVal;
 }
 
 

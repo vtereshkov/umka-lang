@@ -1,7 +1,7 @@
 #ifndef UMKA_RUNTIME_H_INCLUDED
 #define UMKA_RUNTIME_H_INCLUDED
 
-#include "umka_vm.h"
+#include "umka_api.h"
 
 
 typedef struct
@@ -21,36 +21,36 @@ typedef struct
 } RTLErrPos;
 
 
-void rtlmemcpy          (Slot *params, Slot *result);
-void rtlstdin           (Slot *params, Slot *result);
-void rtlstdout          (Slot *params, Slot *result);
-void rtlstderr          (Slot *params, Slot *result);
-void rtlfopen           (Slot *params, Slot *result);
-void rtlfopenSandbox    (Slot *params, Slot *result);
-void rtlfclose          (Slot *params, Slot *result);
-void rtlfcloseSandbox   (Slot *params, Slot *result);
-void rtlfread           (Slot *params, Slot *result);
-void rtlfreadSandbox    (Slot *params, Slot *result);
-void rtlfwrite          (Slot *params, Slot *result);
-void rtlfwriteSandbox   (Slot *params, Slot *result);
-void rtlfseek           (Slot *params, Slot *result);
-void rtlfseekSandbox    (Slot *params, Slot *result);
-void rtlftell           (Slot *params, Slot *result);
-void rtlftellSandbox    (Slot *params, Slot *result);
-void rtlremove          (Slot *params, Slot *result);
-void rtlremoveSandbox   (Slot *params, Slot *result);
-void rtlfeof            (Slot *params, Slot *result);
-void rtlfeofSandbox     (Slot *params, Slot *result);
-void rtlfflush          (Slot *params, Slot *result);
-void rtltime            (Slot *params, Slot *result);
-void rtlclock           (Slot *params, Slot *result);
-void rtllocaltime       (Slot *params, Slot *result);
-void rtlgmtime          (Slot *params, Slot *result);
-void rtlmktime          (Slot *params, Slot *result);
-void rtlgetenv          (Slot *params, Slot *result);
-void rtlgetenvSandbox   (Slot *params, Slot *result);
-void rtlsystem          (Slot *params, Slot *result);
-void rtlsystemSandbox   (Slot *params, Slot *result);
-void rtltrace           (Slot *params, Slot *result);
+void rtlmemcpy          (UmkaStackSlot *params, UmkaStackSlot *result);
+void rtlstdin           (UmkaStackSlot *params, UmkaStackSlot *result);
+void rtlstdout          (UmkaStackSlot *params, UmkaStackSlot *result);
+void rtlstderr          (UmkaStackSlot *params, UmkaStackSlot *result);
+void rtlfopen           (UmkaStackSlot *params, UmkaStackSlot *result);
+void rtlfopenSandbox    (UmkaStackSlot *params, UmkaStackSlot *result);
+void rtlfclose          (UmkaStackSlot *params, UmkaStackSlot *result);
+void rtlfcloseSandbox   (UmkaStackSlot *params, UmkaStackSlot *result);
+void rtlfread           (UmkaStackSlot *params, UmkaStackSlot *result);
+void rtlfreadSandbox    (UmkaStackSlot *params, UmkaStackSlot *result);
+void rtlfwrite          (UmkaStackSlot *params, UmkaStackSlot *result);
+void rtlfwriteSandbox   (UmkaStackSlot *params, UmkaStackSlot *result);
+void rtlfseek           (UmkaStackSlot *params, UmkaStackSlot *result);
+void rtlfseekSandbox    (UmkaStackSlot *params, UmkaStackSlot *result);
+void rtlftell           (UmkaStackSlot *params, UmkaStackSlot *result);
+void rtlftellSandbox    (UmkaStackSlot *params, UmkaStackSlot *result);
+void rtlremove          (UmkaStackSlot *params, UmkaStackSlot *result);
+void rtlremoveSandbox   (UmkaStackSlot *params, UmkaStackSlot *result);
+void rtlfeof            (UmkaStackSlot *params, UmkaStackSlot *result);
+void rtlfeofSandbox     (UmkaStackSlot *params, UmkaStackSlot *result);
+void rtlfflush          (UmkaStackSlot *params, UmkaStackSlot *result);
+void rtltime            (UmkaStackSlot *params, UmkaStackSlot *result);
+void rtlclock           (UmkaStackSlot *params, UmkaStackSlot *result);
+void rtllocaltime       (UmkaStackSlot *params, UmkaStackSlot *result);
+void rtlgmtime          (UmkaStackSlot *params, UmkaStackSlot *result);
+void rtlmktime          (UmkaStackSlot *params, UmkaStackSlot *result);
+void rtlgetenv          (UmkaStackSlot *params, UmkaStackSlot *result);
+void rtlgetenvSandbox   (UmkaStackSlot *params, UmkaStackSlot *result);
+void rtlsystem          (UmkaStackSlot *params, UmkaStackSlot *result);
+void rtlsystemSandbox   (UmkaStackSlot *params, UmkaStackSlot *result);
+void rtltrace           (UmkaStackSlot *params, UmkaStackSlot *result);
 
 #endif // UMKA_RUNTIME_H_INCLUDED

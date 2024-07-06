@@ -67,64 +67,15 @@ typedef union
 } UmkaStackSlot;
 ```
 
-Umka fiber stack slot. Used for passing parameters to functions and returning results from functions. 
-
-Each parameter or result occupies at least one slot. A parameter of a structured type, when passed by value, occupies the minimal number of consecutive slots sufficient to store it. Parameter size is determined by the following rules:
-
-* Array size is the sum of the sizes of its items
-* Dynamic array size is `sizeof(UmkaDynArray)`
-* Structure size is the sum of the padded sizes of its fields. The padding is determined by the natural alignment of the fields, i.e., the address of an `n`-byte field should be a multiple of `n`  
-* Map size is `sizeof(UmkaMap)`
+Umka fiber stack slot. Used for passing parameters to functions and returning results from functions. Each parameter or result occupies at least one slot. A parameter of a structured type, when passed by value, occupies the minimal number of consecutive slots sufficient to store it.
 
 ```
 typedef void (*UmkaExternFunc)(UmkaStackSlot *params, UmkaStackSlot *result);
 ```
 
-Umka external C/C++ function pointer. When an external C/C++ function is called from Umka, its parameters are stored in `params` in right-to-left order (i.e., the rightmost parameter is `params[0]`). The `params` is the array of slots, not of parameters. Thus, if some of the parameters are of structured types and passed by value, `params[i]` may not represent the `i`-th parameter from the right. 
+Umka external C/C++ function pointer. When an external C/C++ function is called from Umka, its parameters are stored in `params`, which is an array of stack slots, not of parameters. Use `umkaGetParam` to access parameters from the slots. 
 
-The returned value should be put to `result`. If the function returns a structured type, it implicitly declares a hidden rightmost parameter that is the pointer to the memory allocated to store the returned value. This pointer should be duplicated in `result`. 
-
-Upon entry, `result` stores a pointer to the Umka interpreter instance handle.
-
-Examples:
-
-```
-// lib.um
-fn add*(a, b: real): real
-
-// lib.c
-void add(UmkaStackSlot *params, UmkaStackSlot *result)
-{
-    double a = params[1].realVal;
-    double b = params[0].realVal;
-    result->realVal = a + b;
-}
-
-params:
-    0:  b
-    1:  a
-```
-```
-// lib.um
-fn mulVec*(a: real, v: [2]real): [2]real
-
-// lib.c
-void mulVec(UmkaStackSlot *params, UmkaStackSlot *result)
-{
-    double a = params[3].realVal;
-    double* v = (double *)&params[1];
-    double* out = params[0].ptrVal;   // Hidden result pointer
-    out[0] = a * v[0];
-    out[1] = a * v[1];
-    result->ptrVal = out;
-}
-
-params:
-    0:  out
-    1:  v[0]
-    2:  v[1]
-    3:  a
-```
+The `result` parameter is for storing the returned value. Use `umkaGetResult` to access the stack slot that can actually store the value.
 
 ### Functions
 
@@ -145,7 +96,71 @@ UMKA_API int umkaCall(void *umka, int entryOffset,
                       int numParamSlots, UmkaStackSlot *params, UmkaStackSlot *result);
 ```
 
-Calls the specific Umka function. Here, `umka` is the interpreter instance handle, `entryPoint` is the function entry point offset previously obtained by calling `umkaGetFunc()`,  `numParamSlots` is the number of Umka fiber stack slots occupied by the actual parameters passed to the function (equal to the number of parameters if no structured parameters are passed by value), `params` is the array of stack slots occupied by the actual parameters, `result` is the pointer to the stack slot to be occupied by the returned value. Returns `0` if the Umka function returns successfully and no run-time errors are detected, otherwise returns the error code.
+Calls the specific Umka function. Here, `umka` is the interpreter instance handle, `entryPoint` is the function entry point offset previously obtained by calling `umkaGetFunc`,  `numParamSlots` is the number of Umka fiber stack slots occupied by the actual parameters passed to the function (equal to the number of parameters if no structured parameters are passed by value), `params` is the array of stack slots occupied by the actual parameters, `result` is the pointer to the stack slot to be occupied by the returned value. Returns `0` if the Umka function returns successfully and no run-time errors are detected, otherwise returns the error code.
+
+```
+static inline UmkaStackSlot *umkaGetParam(UmkaStackSlot *params, int index);
+```
+
+Returns the pointer to the first stack slot occupied by the parameter at position `index` (the leftmost parameter index is 0). If there is no such parameter, returns `NULL`. For the definition of `params`, see `UmkaExternFunc`.
+
+```
+static inline void *umkaAllocResult(UmkaStackSlot *params);
+```
+
+Returns the pointer to the memory area allocated for storing the returned value of a structured type. This memory area should be filled by the user, and the pointer be saved to the result slot obtained by calling `umkaGetResult`. If the returned value is not of a structured type, returns `NULL`; such returned values are stored directly in the result slot. For the definition of `params`, see `UmkaExternFunc`.
+
+```
+static inline UmkaStackSlot *umkaGetResult(UmkaStackSlot *result);
+```
+
+Returns the pointer to the stack slot allocated for storing the returned value. For the definition of `result`, see `UmkaExternFunc`.
+
+```
+static inline void *umkaGetInstance(UmkaStackSlot *result);
+```
+
+Returns the interpreter instance handle. Must not be called after the first call to `umkaGetResult`. For the definition of `result`, see `UmkaExternFunc`.
+
+Example:
+
+```
+// lib.um - UMI interface
+
+fn add*(a, b: real): real
+fn mulVec*(a: real, v: [2]real): [2]real
+fn hello*(): str
+```
+```
+// lib.c - UMI implementation
+
+#include "umka_api.h"
+
+void add(UmkaStackSlot *params, UmkaStackSlot *result)
+{
+    double a = umkaGetParam(params, 0)->realVal;
+    double b = umkaGetParam(params, 1)->realVal;
+    umkaGetResult(result)->realVal = a + b;
+}
+
+void mulVec(UmkaStackSlot *params, UmkaStackSlot *result)
+{
+    double a = umkaGetParam(params, 0)->realVal;
+    double* v = (double *)umkaGetParam(params, 1);
+    double* out = umkaAllocResult(params);
+    out[0] = a * v[0];
+    out[1] = a * v[1];
+    umkaGetResult(result)->ptrVal = out;
+}
+
+void hello(UmkaStackSlot *params, UmkaStackSlot *result)
+{
+    void *umka = umkaGetInstance(result);
+    UmkaAPI *api = umkaGetAPI(umka);
+    umkaGetResult(result)->ptrVal = api->umkaMakeStr(umka, "Hello");
+}
+
+```
 
 ## Debugging and profiling
 
@@ -248,6 +263,26 @@ typedef struct
 ```
 
 Umka map. Can be accessed by `umkaGetMapItem`.
+
+```
+typedef struct
+{
+    void *data;
+    void *type;
+} UmkaAny;
+```
+
+Umka `any` interface.
+
+```
+typedef struct
+{
+    int64_t entryOffset;
+    UmkaAny upvalue;
+} UmkaClosure;
+```
+
+Umka closure.
 
 ### Functions
 
