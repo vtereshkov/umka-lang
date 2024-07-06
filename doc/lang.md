@@ -1450,8 +1450,8 @@ import (
         utils2 = "lib2/utils.um"
 )
 fn main() {
-        utils1.f()
-        utils2.f()
+        utils1::f()
+        utils2::f()
 }
 ```
 
