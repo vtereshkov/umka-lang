@@ -204,7 +204,7 @@ void rtltime(UmkaStackSlot *params, UmkaStackSlot *result)
 void rtlclock(UmkaStackSlot *params, UmkaStackSlot *result)
 {
 #ifdef _WIN32
-    result->realVal = (double)clock() / CLOCKS_PER_SEC;
+    umkaGetResult(result)->realVal = (double)clock() / CLOCKS_PER_SEC;
 #else
     // On Linux, clock() measures per-process time and may produce wrong actual time estimates
     struct timespec t;
@@ -252,7 +252,7 @@ void rtlmktime(UmkaStackSlot *params, UmkaStackSlot *result)
 void rtlgetenv(UmkaStackSlot *params, UmkaStackSlot *result)
 {
     const char *name = (const char *)umkaGetParam(params, 0)->ptrVal;
-    void *umka = result->ptrVal;
+    void *umka = umkaGetResult(result)->ptrVal;
 
     const char *env = getenv(name);
     umkaGetResult(result)->ptrVal = umkaMakeStr(umka, env);

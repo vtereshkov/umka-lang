@@ -900,6 +900,8 @@ static void parseBuiltinNewCall(Compiler *comp, Type **type, Const *constant)
 
     // Type
     *type = parseType(comp, NULL);
+    typeAssertCompatibleBuiltin(&comp->types, *type, BUILTIN_NEW, (*type)->kind != TYPE_VOID && (*type)->kind != TYPE_NULL);
+
     int size = typeSize(&comp->types, *type);
 
     genPushGlobalPtr(&comp->gen, *type);
@@ -2635,7 +2637,7 @@ static void parseFactor(Compiler *comp, Type **type, Const *constant)
             parseDesignator(comp, type, constant, &isVar, &isCall, &isCompLit);
 
             if (!isVar)
-                comp->error.handler(comp->error.context, "Unable to take address");
+                comp->error.handler(comp->error.context, "Cannot take address");
 
             if (isCompLit)
                 doEscapeToHeap(comp, typeAddPtrTo(&comp->types, &comp->blocks, *type), true);

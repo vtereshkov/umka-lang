@@ -296,6 +296,8 @@ static Type *parseArrayType(Compiler *comp)
     lexEat(&comp->lex, TOK_RBRACKET);
 
     Type *baseType = (typeKind == TYPE_DYNARRAY) ? parseTypeOrForwardType(comp) : parseType(comp, NULL);
+    if (baseType->kind == TYPE_VOID)
+        comp->error.handler(comp->error.context, "Array items cannot be void");
 
     if (len.intVal > 0 && typeSize(&comp->types, baseType) > INT_MAX / len.intVal)
         comp->error.handler(comp->error.context, "Array is too large");
@@ -388,6 +390,9 @@ static Type *parseMapType(Compiler *comp)
     lexEat(&comp->lex, TOK_RBRACKET);
 
     Type *itemType = parseTypeOrForwardType(comp);
+    if (itemType->kind == TYPE_VOID)
+        comp->error.handler(comp->error.context, "Map items cannot be void");
+
     Type *ptrItemType = typeAddPtrTo(&comp->types, &comp->blocks, itemType);
 
     // The map base type is the Umka equivalent of MapNode
