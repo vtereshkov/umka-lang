@@ -244,7 +244,7 @@ Generates the Umka assembly listing for the Umka program previously compiled to 
 }
 ```
 
-Umka dynamic array containing items of type `T`. Even though the array items pointed to by `data` can be both read and written, the structure itself is considered read-only. It cannot be used for returning a dynamic array from an external C/C++ function.
+Umka dynamic array containing items of type `T`. Can be initialized by calling `umkaMakeDynArray`.
 
 ```
 typedef struct
@@ -254,7 +254,7 @@ typedef struct
 } UmkaMap;
 ```
 
-Umka map. Can be accessed by `umkaGetMapItem`.
+Umka map. Can be accessed by calling `umkaGetMapItem`.
 
 ```
 typedef struct
