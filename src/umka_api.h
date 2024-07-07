@@ -167,24 +167,18 @@ static inline UmkaAPI *umkaGetAPI   (void *umka)
 
 static inline UmkaStackSlot *umkaGetParam(UmkaStackSlot *params, int index)
 {
-    const UmkaExternalCallParamLayout *paramLayout = (UmkaExternalCallParamLayout *)params[-4].ptrVal;
+    const UmkaExternalCallParamLayout *paramLayout = (UmkaExternalCallParamLayout *)params[-4].ptrVal;      // For -4, see the stack layout diagram in umka_vm.c
     if (index < 0 || index >= paramLayout->numParams - paramLayout->numResultParams - 1)
         return NULL;
-    return params + paramLayout->firstSlotIndex[index + 1];     // + 1 to skip upvalues
+    return params + paramLayout->firstSlotIndex[index + 1];                                                 // + 1 to skip upvalues
 }
 
 
-static inline void *umkaAllocResult(UmkaStackSlot *params)
+static inline UmkaStackSlot *umkaGetResult(UmkaStackSlot *params, UmkaStackSlot *result)
 {
-    const UmkaExternalCallParamLayout *paramLayout = (UmkaExternalCallParamLayout *)params[-4].ptrVal;
-    if (paramLayout->numResultParams == 0)
-        return NULL;
-    return params[paramLayout->firstSlotIndex[paramLayout->numParams - 1]].ptrVal;
-}
-
-
-static inline UmkaStackSlot *umkaGetResult(UmkaStackSlot *result)
-{
+    const UmkaExternalCallParamLayout *paramLayout = (UmkaExternalCallParamLayout *)params[-4].ptrVal;      // For -4, see the stack layout diagram in umka_vm.c
+    if (paramLayout->numResultParams == 1)
+        result->ptrVal = params[paramLayout->firstSlotIndex[paramLayout->numParams - 1]].ptrVal;
     return result;
 }
 

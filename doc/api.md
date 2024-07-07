@@ -102,19 +102,13 @@ Calls the specific Umka function. Here, `umka` is the interpreter instance handl
 static inline UmkaStackSlot *umkaGetParam(UmkaStackSlot *params, int index);
 ```
 
-Returns the pointer to the first stack slot occupied by the parameter at position `index` (the leftmost parameter index is 0). If there is no such parameter, returns `NULL`. For the definition of `params`, see `UmkaExternFunc`.
+Returns the pointer to the first stack slot occupied by the parameter at position `index` (the leftmost parameter index is 0). If there is no such parameter, it returns `NULL`. For the definition of `params`, see `UmkaExternFunc`.
 
 ```
-static inline void *umkaAllocResult(UmkaStackSlot *params);
+static inline UmkaStackSlot *umkaGetResult(UmkaStackSlot *params, UmkaStackSlot *result);
 ```
 
-Returns the pointer to the memory area allocated for storing the returned value of a structured type. This memory area should be filled by the user, and the pointer be saved to the result slot obtained by calling `umkaGetResult`. If the returned value is not of a structured type, returns `NULL`; such returned values are stored directly in the result slot. For the definition of `params`, see `UmkaExternFunc`.
-
-```
-static inline UmkaStackSlot *umkaGetResult(UmkaStackSlot *result);
-```
-
-Returns the pointer to the stack slot allocated for storing the returned value. For the definition of `result`, see `UmkaExternFunc`.
+Returns the pointer to the stack slot allocated for storing the returned value. For a returned value of a structured type, this stack slot already contains the pointer to the memory area sufficiently large to store the actual returned value. In this case, the user must fill this memory area, but not rewrite the pointer. For the definitions of `params` and `result`, see `UmkaExternFunc`.
 
 ```
 static inline void *umkaGetInstance(UmkaStackSlot *result);
@@ -140,26 +134,24 @@ void add(UmkaStackSlot *params, UmkaStackSlot *result)
 {
     double a = umkaGetParam(params, 0)->realVal;
     double b = umkaGetParam(params, 1)->realVal;
-    umkaGetResult(result)->realVal = a + b;
+    umkaGetResult(params, result)->realVal = a + b;
 }
 
 void mulVec(UmkaStackSlot *params, UmkaStackSlot *result)
 {
     double a = umkaGetParam(params, 0)->realVal;
     double* v = (double *)umkaGetParam(params, 1);
-    double* out = umkaAllocResult(params);
+    double* out = umkaGetResult(params, result)->ptrVal;
     out[0] = a * v[0];
     out[1] = a * v[1];
-    umkaGetResult(result)->ptrVal = out;
 }
 
 void hello(UmkaStackSlot *params, UmkaStackSlot *result)
 {
     void *umka = umkaGetInstance(result);
     UmkaAPI *api = umkaGetAPI(umka);
-    umkaGetResult(result)->ptrVal = api->umkaMakeStr(umka, "Hello");
+    umkaGetResult(params, result)->ptrVal = api->umkaMakeStr(umka, "Hello");
 }
-
 ```
 
 ## Debugging and profiling
