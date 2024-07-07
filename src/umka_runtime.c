@@ -252,7 +252,7 @@ void rtlmktime(UmkaStackSlot *params, UmkaStackSlot *result)
 void rtlgetenv(UmkaStackSlot *params, UmkaStackSlot *result)
 {
     const char *name = (const char *)umkaGetParam(params, 0)->ptrVal;
-    void *umka = umkaGetResult(result)->ptrVal;
+    void *umka = umkaGetInstance(result);
 
     const char *env = getenv(name);
     umkaGetResult(result)->ptrVal = umkaMakeStr(umka, env);
