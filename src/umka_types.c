@@ -769,6 +769,29 @@ int typeParamSizeTotal(Types *types, Signature *sig)
 }
 
 
+int typeParamOffset(Types *types, Signature *sig, int index)
+{
+    int paramSizeUpToIndex = typeParamSizeUpTo(types, sig, index);
+    int paramSizeTotal     = typeParamSizeTotal(types, sig);
+    return (paramSizeTotal - paramSizeUpToIndex) + 2 * sizeof(Slot);  // + 2 slots for old base pointer and return address
+}
+
+
+ExternalCallParamLayout *typeMakeParamLayout(Types *types, Storage *storage, Signature *sig)
+{
+    ExternalCallParamLayout *layout = (ExternalCallParamLayout *)storageAdd(storage, sizeof(ExternalCallParamLayout) + sig->numParams * sizeof(int64_t));
+
+    layout->numParams = sig->numParams;
+    layout->numResultParams = typeStructured(sig->resultType) ? 1 : 0;
+    layout->numParamSlots = typeParamSizeTotal(types, sig) / sizeof(Slot);
+
+    for (int i = 0; i < sig->numParams; i++)
+        layout->firstSlotIndex[i] = typeParamOffset(types, sig, i) / sizeof(Slot) - 2;   // - 2 slots for old base pointer and return address
+
+    return layout;
+}
+
+
 const char *typeKindSpelling(TypeKind kind)
 {
     return spelling[kind];

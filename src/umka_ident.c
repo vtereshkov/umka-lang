@@ -328,10 +328,7 @@ Ident *identAllocTempVar(Idents *idents, Types *types, Modules *modules, Blocks 
 
 Ident *identAllocParam(Idents *idents, Types *types, Modules *modules, Blocks *blocks, Signature *sig, int index)
 {
-    int paramSizeUpToIndex = typeParamSizeUpTo(types, sig, index);
-    int paramSizeTotal     = typeParamSizeTotal(types, sig);
-
-    int offset = (paramSizeTotal - paramSizeUpToIndex) + 2 * sizeof(Slot);  // + 2 slots for old base pointer and return address
+    int offset =typeParamOffset(types, sig, index);
     Ident *ident = identAddLocalVar(idents, modules, blocks, sig->param[index]->name, sig->param[index]->type, false, offset);
     ident->used = true;                                                     // Do not warn about unused parameters
     return ident;
