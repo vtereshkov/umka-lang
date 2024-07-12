@@ -56,10 +56,11 @@ void compilerInit       (Compiler *comp, const char *fileName, const char *sourc
 void compilerFree       (Compiler *comp);
 void compilerCompile    (Compiler *comp);
 void compilerRun        (Compiler *comp);
-void compilerCall       (Compiler *comp, int entryOffset, int numParamSlots, Slot *params, Slot *result);
+void compilerCall       (Compiler *comp, int entryOffset, Slot *params, Slot *result);
 char *compilerAsm       (Compiler *comp);
 bool compilerAddModule  (Compiler *comp, const char *fileName, const char *sourceString);
 bool compilerAddFunc    (Compiler *comp, const char *name, ExternFunc func);
-int  compilerGetFunc    (Compiler *comp, const char *moduleName, const char *funcName);
+int  compilerGetFunc    (Compiler *comp, const char *moduleName, const char *funcName, Slot **params, Slot **result);
+void compilerAllocParams(Compiler *comp, Type *fnType, Slot **params, Slot **result);
 
 #endif // UMKA_COMPILER_H_INCLUDED

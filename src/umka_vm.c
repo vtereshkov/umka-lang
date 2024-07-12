@@ -3439,7 +3439,7 @@ static FORCE_INLINE void vmLoop(VM *vm)
 }
 
 
-void vmRun(VM *vm, int entryOffset, int numParamSlots, Slot *params, Slot *result)
+void vmRun(VM *vm, int entryOffset, Slot *params, Slot *result)
 {
     if (entryOffset < 0)
         vm->error->runtimeHandler(vm->error->context, VM_RUNTIME_ERROR, "Called function is not defined");
@@ -3450,12 +3450,20 @@ void vmRun(VM *vm, int entryOffset, int numParamSlots, Slot *params, Slot *resul
     if (entryOffset > 0)
     {
         // Push parameters
-        const int numDummyUpvaluesSlots = sizeof(Interface) / sizeof(Slot);
-        vm->fiber->top -= numDummyUpvaluesSlots + numParamSlots;
+        int numDummyUpvaluesSlots = sizeof(Interface) / sizeof(Slot);
+        int numParamSlots = numDummyUpvaluesSlots;
 
-        for (int i = 0; i < numParamSlots; i++)
+        if (params)
+        {
+            const ExternalCallParamLayout *paramLayout = (ExternalCallParamLayout *)params[-4].ptrVal;   // For -4, see the stack layout diagram in umka_vm.c
+            numParamSlots = paramLayout->numParamSlots;
+        }
+
+        vm->fiber->top -= numParamSlots;
+
+        for (int i = 0; i < numParamSlots - numDummyUpvaluesSlots; i++)
             vm->fiber->top[i] = params[i];
-        for (int i = numParamSlots; i < numDummyUpvaluesSlots + numParamSlots; i++)
+        for (int i = numParamSlots - numDummyUpvaluesSlots; i < numParamSlots; i++)
             vm->fiber->top[i].intVal = 0;
 
         // Push 'return from VM' signal as return address

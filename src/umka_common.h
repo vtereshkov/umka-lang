@@ -194,6 +194,7 @@ typedef struct
 {
     int64_t numParams;
     int64_t numResultParams;
+    int64_t numParamSlots;
     int64_t firstSlotIndex[];
 } ExternalCallParamLayout;
 

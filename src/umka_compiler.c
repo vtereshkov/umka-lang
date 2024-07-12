@@ -42,6 +42,7 @@ static void compilerSetAPI(Compiler *comp)
     comp->api.umkaGetDynArrayLen    = umkaGetDynArrayLen;
     comp->api.umkaGetVersion        = umkaGetVersion;
     comp->api.umkaGetMemUsage       = umkaGetMemUsage;
+    comp->api.umkaAllocParams       = umkaAllocParams;
 }
 
 
@@ -277,13 +278,13 @@ void compilerCompile(Compiler *comp)
 
 void compilerRun(Compiler *comp)
 {
-    vmRun(&comp->vm, 0, 0, NULL, NULL);
+    vmRun(&comp->vm, 0, NULL, NULL);
 }
 
 
-void compilerCall(Compiler *comp, int entryOffset, int numParamSlots, Slot *params, Slot *result)
+void compilerCall(Compiler *comp, int entryOffset, Slot *params, Slot *result)
 {
-    vmRun(&comp->vm, entryOffset, numParamSlots, params, result);
+    vmRun(&comp->vm, entryOffset, params, result);
 }
 
 
@@ -323,7 +324,7 @@ bool compilerAddFunc(Compiler *comp, const char *name, ExternFunc func)
 }
 
 
-int compilerGetFunc(Compiler *comp, const char *moduleName, const char *funcName)
+int compilerGetFunc(Compiler *comp, const char *moduleName, const char *funcName, Slot **params, Slot **result)
 {
     int module = 1;
     if (moduleName)
@@ -334,11 +335,28 @@ int compilerGetFunc(Compiler *comp, const char *moduleName, const char *funcName
     }
 
     Ident *fn = identFind(&comp->idents, &comp->modules, &comp->blocks, module, funcName, NULL, false);
-    if (fn && fn->kind == IDENT_CONST && fn->type->kind == TYPE_FN)
+    if (!fn || fn->kind != IDENT_CONST || fn->type->kind != TYPE_FN)
+        return -1;
+
+
+    compilerAllocParams(comp, fn->type, params, result);
+
+    fn->used = true;
+    return fn->offset;
+}
+
+
+void compilerAllocParams(Compiler *comp, Type *fnType, Slot **params, Slot **result)
+{
+    if (params)
     {
-        fn->used = true;
-        return fn->offset;
+        int paramSlots = typeParamSizeTotal(&comp->types, &fnType->sig) / sizeof(Slot);
+        *params = (Slot *)storageAdd(&comp->storage, (paramSlots + 4) * sizeof(Slot)) + 4;          // + 4 slots for compatibility with umkaGetParam()
+
+        ExternalCallParamLayout *paramLayout = typeMakeParamLayout(&comp->types, &comp->storage, &fnType->sig);
+        (*params)[-4].ptrVal = paramLayout;
     }
 
-    return -1;
+    if (result)
+        *result = (Slot *)storageAdd(&comp->storage, sizeof(Slot));
 }

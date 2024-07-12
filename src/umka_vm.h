@@ -251,7 +251,7 @@ typedef struct
 void vmInit                     (VM *vm, int stackSize /* slots */, bool fileSystemEnabled, Error *error);
 void vmFree                     (VM *vm);
 void vmReset                    (VM *vm, Instruction *code, DebugInfo *debugPerInstr);
-void vmRun                      (VM *vm, int entryOffset, int numParamSlots, Slot *params, Slot *result);
+void vmRun                      (VM *vm, int entryOffset, Slot *params, Slot *result);
 bool vmAlive                    (VM *vm);
 void vmKill                     (VM *vm);
 int vmAsm                       (int ip, Instruction *code, DebugInfo *debugPerInstr, char *buf, int size);

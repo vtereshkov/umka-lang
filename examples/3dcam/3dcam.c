@@ -45,8 +45,8 @@ int main(void)
     if (umkaOk)
     {
         printf("Umka initialized\n");
-        umkaInitBodies = umkaGetFunc(umka, NULL, "initBodies"); 
-        umkaDrawBodies = umkaGetFunc(umka, NULL, "drawBodies");
+        umkaInitBodies = umkaGetFunc(umka, NULL, "initBodies", NULL, NULL); 
+        umkaDrawBodies = umkaGetFunc(umka, NULL, "drawBodies", NULL, NULL);
     }
     else
     {
@@ -68,7 +68,7 @@ int main(void)
     camera.fovy = 60.0f;
 
     if (umkaOk)
-        umkaOk = umkaCall(umka, umkaInitBodies, 0, NULL, NULL) == 0;
+        umkaOk = umkaCall(umka, umkaInitBodies, NULL, NULL) == 0;
         
     if (!umkaOk)
     {
@@ -92,7 +92,7 @@ int main(void)
 
                 BeginMode3D(camera);
 
-                exitCode = umkaCall(umka, umkaDrawBodies, 0, NULL, NULL);
+                exitCode = umkaCall(umka, umkaDrawBodies, NULL, NULL);
                 if (!umkaAlive(umka))
                 {
                     if (exitCode != 0)

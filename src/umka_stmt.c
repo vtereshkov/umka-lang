@@ -78,18 +78,11 @@ void doResolveExtern(Compiler *comp)
                 genEntryPoint(&comp->gen, ident->prototypeOffset);
                 genEnterFrameStub(&comp->gen);
 
-                ExternalCallParamLayout *paramLayout = (ExternalCallParamLayout *)storageAdd(&comp->storage, sizeof(ExternalCallParamLayout) + ident->type->sig.numParams * sizeof(int64_t));
-
-                paramLayout->numParams = ident->type->sig.numParams;
-                paramLayout->numResultParams = typeStructured(ident->type->sig.resultType) ? 1 : 0;
-
                 // All parameters must be declared since they may require garbage collection
                 for (int i = 0; i < ident->type->sig.numParams; i++)
-                {
-                    Ident *param = identAllocParam(&comp->idents, &comp->types, &comp->modules, &comp->blocks, &ident->type->sig, i);
-                    paramLayout->firstSlotIndex[i] = param->offset / sizeof(Slot) - 2;                 // - 2 slots for old base pointer and return address
-                }
+                    identAllocParam(&comp->idents, &comp->types, &comp->modules, &comp->blocks, &ident->type->sig, i);
 
+                ExternalCallParamLayout *paramLayout = typeMakeParamLayout(&comp->types, &comp->storage, &ident->type->sig);
                 genPushGlobalPtr(&comp->gen, paramLayout);
 
                 genCallExtern(&comp->gen, fn);
@@ -98,10 +91,8 @@ void doResolveExtern(Compiler *comp)
                 identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
                 identFree(&comp->idents, blocksCurrent(&comp->blocks));
 
-                int paramSlots = align(typeParamSizeTotal(&comp->types, &ident->type->sig), sizeof(Slot)) / sizeof(Slot);
-
                 genLeaveFrameFixup(&comp->gen, 0);
-                genReturn(&comp->gen, paramSlots);
+                genReturn(&comp->gen, paramLayout->numParamSlots);
 
                 blocksLeave(&comp->blocks);
             }
