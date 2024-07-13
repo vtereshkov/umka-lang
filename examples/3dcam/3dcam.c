@@ -31,7 +31,7 @@ void rlDrawCube(UmkaStackSlot *params, UmkaStackSlot *result)
 int main(void)
 {
     // Umka initialization
-    int umkaInitBodies = 0, umkaDrawBodies = 0;
+    UmkaFuncContext umkaInitBodies = {0}, umkaDrawBodies = {0};
     void *umka = umkaAlloc();
     bool umkaOk = umkaInit(umka, "3dcam.um", NULL, 1024 * 1024, NULL, 0, NULL, false, false, NULL);
     
@@ -45,8 +45,8 @@ int main(void)
     if (umkaOk)
     {
         printf("Umka initialized\n");
-        umkaInitBodies = umkaGetFunc(umka, NULL, "initBodies", NULL, NULL); 
-        umkaDrawBodies = umkaGetFunc(umka, NULL, "drawBodies", NULL, NULL);
+        umkaGetFunc(umka, NULL, "initBodies", &umkaInitBodies); 
+        umkaGetFunc(umka, NULL, "drawBodies", &umkaDrawBodies);
     }
     else
     {
@@ -68,7 +68,7 @@ int main(void)
     camera.fovy = 60.0f;
 
     if (umkaOk)
-        umkaOk = umkaCall(umka, umkaInitBodies, NULL, NULL) == 0;
+        umkaOk = umkaCall(umka, &umkaInitBodies) == 0;
         
     if (!umkaOk)
     {
@@ -92,7 +92,7 @@ int main(void)
 
                 BeginMode3D(camera);
 
-                exitCode = umkaCall(umka, umkaDrawBodies, NULL, NULL);
+                exitCode = umkaCall(umka, &umkaDrawBodies);
                 if (!umkaAlive(umka))
                 {
                     if (exitCode != 0)

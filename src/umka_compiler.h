@@ -52,15 +52,15 @@ typedef struct
 } Compiler;
 
 
-void compilerInit       (Compiler *comp, const char *fileName, const char *sourceString, int stackSize, int argc, char **argv, bool fileSystemEnabled, bool implLibsEnabled);
-void compilerFree       (Compiler *comp);
-void compilerCompile    (Compiler *comp);
-void compilerRun        (Compiler *comp);
-void compilerCall       (Compiler *comp, int entryOffset, Slot *params, Slot *result);
-char *compilerAsm       (Compiler *comp);
-bool compilerAddModule  (Compiler *comp, const char *fileName, const char *sourceString);
-bool compilerAddFunc    (Compiler *comp, const char *name, ExternFunc func);
-int  compilerGetFunc    (Compiler *comp, const char *moduleName, const char *funcName, Slot **params, Slot **result);
-void compilerAllocParams(Compiler *comp, Type *fnType, Slot **params, Slot **result);
+void compilerInit               (Compiler *comp, const char *fileName, const char *sourceString, int stackSize, int argc, char **argv, bool fileSystemEnabled, bool implLibsEnabled);
+void compilerFree               (Compiler *comp);
+void compilerCompile            (Compiler *comp);
+void compilerRun                (Compiler *comp);
+void compilerCall               (Compiler *comp, FuncContext *fn);
+char *compilerAsm               (Compiler *comp);
+bool compilerAddModule          (Compiler *comp, const char *fileName, const char *sourceString);
+bool compilerAddFunc            (Compiler *comp, const char *name, ExternFunc func);
+bool compilerGetFunc            (Compiler *comp, const char *moduleName, const char *funcName, FuncContext *fn);
+void compilerMakeFuncContext    (Compiler *comp, Type *fnType, int entryOffset, FuncContext *fn);
 
 #endif // UMKA_COMPILER_H_INCLUDED

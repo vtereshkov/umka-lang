@@ -125,7 +125,7 @@ UMKA_API int umkaRun(void *umka)
 }
 
 
-UMKA_API int umkaCall(void *umka, int entryOffset, UmkaStackSlot *params, UmkaStackSlot *result)
+UMKA_API int umkaCall(void *umka, UmkaFuncContext *fn)
 {
     Compiler *comp = umka;
 
@@ -136,7 +136,7 @@ UMKA_API int umkaCall(void *umka, int entryOffset, UmkaStackSlot *params, UmkaSt
     if (setjmp(*jumper) == 0)
     {
         comp->error.jumperNesting++;
-        compilerCall(comp, entryOffset, (Slot *)params, (Slot *)result);
+        compilerCall(comp, (FuncContext *)fn);
         comp->error.jumperNesting--;
         return 0;
     }
@@ -188,10 +188,10 @@ UMKA_API bool umkaAddFunc(void *umka, const char *name, UmkaExternFunc func)
 }
 
 
-UMKA_API int umkaGetFunc(void *umka, const char *moduleName, const char *funcName, UmkaStackSlot **params, UmkaStackSlot **result)
+UMKA_API bool umkaGetFunc(void *umka, const char *moduleName, const char *fnName, UmkaFuncContext *fn)
 {
     Compiler *comp = umka;
-    return compilerGetFunc(comp, moduleName, funcName, (Slot **)params, (Slot **)result);
+    return compilerGetFunc(comp, moduleName, fnName, (FuncContext *)fn);
 }
 
 
@@ -305,9 +305,9 @@ UMKA_API int64_t umkaGetMemUsage(void *umka)
 }
 
 
-UMKA_API void umkaAllocParams(void *umka, void *closureType, UmkaStackSlot **params, UmkaStackSlot **result)
+UMKA_API void umkaMakeFuncContext(void *umka, void *closureType, int entryOffset, UmkaFuncContext *fn)
 {
     Compiler *comp = umka;
-    compilerAllocParams(comp, ((Type *)closureType)->field[0]->type, (Slot **)params, (Slot **)result);
+    compilerMakeFuncContext(comp, ((Type *)closureType)->field[0]->type, entryOffset, (FuncContext *)fn);
 }
 

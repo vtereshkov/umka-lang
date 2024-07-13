@@ -42,7 +42,7 @@ static void compilerSetAPI(Compiler *comp)
     comp->api.umkaGetDynArrayLen    = umkaGetDynArrayLen;
     comp->api.umkaGetVersion        = umkaGetVersion;
     comp->api.umkaGetMemUsage       = umkaGetMemUsage;
-    comp->api.umkaAllocParams       = umkaAllocParams;
+    comp->api.umkaMakeFuncContext   = umkaMakeFuncContext;
 }
 
 
@@ -278,13 +278,13 @@ void compilerCompile(Compiler *comp)
 
 void compilerRun(Compiler *comp)
 {
-    vmRun(&comp->vm, 0, NULL, NULL);
+    vmRun(&comp->vm, NULL);
 }
 
 
-void compilerCall(Compiler *comp, int entryOffset, Slot *params, Slot *result)
+void compilerCall(Compiler *comp, FuncContext *fn)
 {
-    vmRun(&comp->vm, entryOffset, params, result);
+    vmRun(&comp->vm, fn);
 }
 
 
@@ -324,7 +324,7 @@ bool compilerAddFunc(Compiler *comp, const char *name, ExternFunc func)
 }
 
 
-int compilerGetFunc(Compiler *comp, const char *moduleName, const char *funcName, Slot **params, Slot **result)
+bool compilerGetFunc(Compiler *comp, const char *moduleName, const char *funcName, FuncContext *fn)
 {
     int module = 1;
     if (moduleName)
@@ -334,29 +334,26 @@ int compilerGetFunc(Compiler *comp, const char *moduleName, const char *funcName
         module = moduleFind(&comp->modules, modulePath);
     }
 
-    Ident *fn = identFind(&comp->idents, &comp->modules, &comp->blocks, module, funcName, NULL, false);
-    if (!fn || fn->kind != IDENT_CONST || fn->type->kind != TYPE_FN)
-        return -1;
+    Ident *fnIdent = identFind(&comp->idents, &comp->modules, &comp->blocks, module, funcName, NULL, false);
+    if (!fnIdent || fnIdent->kind != IDENT_CONST || fnIdent->type->kind != TYPE_FN)
+        return false;
 
+    fnIdent->used = true;
 
-    compilerAllocParams(comp, fn->type, params, result);
-
-    fn->used = true;
-    return fn->offset;
+    compilerMakeFuncContext(comp, fnIdent->type, fnIdent->offset, fn);
+    return true;
 }
 
 
-void compilerAllocParams(Compiler *comp, Type *fnType, Slot **params, Slot **result)
+void compilerMakeFuncContext(Compiler *comp, Type *fnType, int entryOffset, FuncContext *fn)
 {
-    if (params)
-    {
-        int paramSlots = typeParamSizeTotal(&comp->types, &fnType->sig) / sizeof(Slot);
-        *params = (Slot *)storageAdd(&comp->storage, (paramSlots + 4) * sizeof(Slot)) + 4;          // + 4 slots for compatibility with umkaGetParam()
+    fn->entryOffset = entryOffset;
 
-        ExternalCallParamLayout *paramLayout = typeMakeParamLayout(&comp->types, &comp->storage, &fnType->sig);
-        (*params)[-4].ptrVal = paramLayout;
-    }
+    int paramSlots = typeParamSizeTotal(&comp->types, &fnType->sig) / sizeof(Slot);
+    fn->params = (Slot *)storageAdd(&comp->storage, (paramSlots + 4) * sizeof(Slot)) + 4;          // + 4 slots for compatibility with umkaGetParam()
 
-    if (result)
-        *result = (Slot *)storageAdd(&comp->storage, sizeof(Slot));
+    ExternalCallParamLayout *paramLayout = typeMakeParamLayout(&comp->types, &comp->storage, &fnType->sig);
+    fn->params[-4].ptrVal = paramLayout;
+
+    fn->result = (Slot *)storageAdd(&comp->storage, sizeof(Slot));
 }

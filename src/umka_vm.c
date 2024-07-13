@@ -3439,46 +3439,52 @@ static FORCE_INLINE void vmLoop(VM *vm)
 }
 
 
-void vmRun(VM *vm, int entryOffset, Slot *params, Slot *result)
+void vmRun(VM *vm, FuncContext *fn)
 {
-    if (entryOffset < 0)
-        vm->error->runtimeHandler(vm->error->context, VM_RUNTIME_ERROR, "Called function is not defined");
-
     if (!vm->fiber->alive)
         vm->error->runtimeHandler(vm->error->context, VM_RUNTIME_ERROR, "Cannot run a dead fiber");
 
-    if (entryOffset > 0)
+    if (fn)
     {
+        // Calling individual function
+        if (fn->entryOffset <= 0)
+            vm->error->runtimeHandler(vm->error->context, VM_RUNTIME_ERROR, "Called function is not defined");
+
         // Push parameters
         int numDummyUpvaluesSlots = sizeof(Interface) / sizeof(Slot);
         int numParamSlots = numDummyUpvaluesSlots;
 
-        if (params)
+        if (fn->params)
         {
-            const ExternalCallParamLayout *paramLayout = (ExternalCallParamLayout *)params[-4].ptrVal;   // For -4, see the stack layout diagram in umka_vm.c
+            const ExternalCallParamLayout *paramLayout = (ExternalCallParamLayout *)fn->params[-4].ptrVal;   // For -4, see the stack layout diagram in umka_vm.c
             numParamSlots = paramLayout->numParamSlots;
         }
 
         vm->fiber->top -= numParamSlots;
 
         for (int i = 0; i < numParamSlots - numDummyUpvaluesSlots; i++)
-            vm->fiber->top[i] = params[i];
+            vm->fiber->top[i] = fn->params[i];
         for (int i = numParamSlots - numDummyUpvaluesSlots; i < numParamSlots; i++)
             vm->fiber->top[i].intVal = 0;
 
         // Push 'return from VM' signal as return address
         (--vm->fiber->top)->intVal = VM_RETURN_FROM_VM;
-    }
 
-    // Go to the entry point
-    vm->fiber->ip = entryOffset;
+        // Go to the entry point
+        vm->fiber->ip = fn->entryOffset;
+    }
+    else
+    {
+        // Calling main()
+        vm->fiber->ip = 0;
+    }
 
     // Main loop
     vmLoop(vm);
 
     // Save result
-    if (entryOffset > 0 && result)
-        *result = vm->fiber->reg[VM_REG_RESULT];
+    if (fn && fn->result)
+        *(fn->result) = vm->fiber->reg[VM_REG_RESULT];
 }
 
 

@@ -68,7 +68,7 @@ Parameters:
 
 * `umka`: Interpreter instance handle
 
-Returned value: 0 if the program execution finishes successfully and no run-time errors were detected, otherwise returns the error code.
+Returned value: 0 if the program execution finishes successfully and no run-time errors were detected, otherwise the error code.
 
 ```
 UMKA_API void umkaFree(void *umka);
@@ -103,9 +103,19 @@ typedef union
 Umka stack slot. Used for passing parameters to functions and returning results from functions. Each parameter or result occupies at least one slot. A parameter of a structured type, when passed by value, occupies the minimal number of consecutive slots sufficient to store it.
 
 ```
+typedef struct
+{
+    int64_t entryOffset;
+    UmkaStackSlot *params;
+    UmkaStackSlot *result;
+} UmkaFuncContext;
+```
+Umka function context used to call an Umka function from C/C++. Can be filled in by `umkaGetFunc` or `umkaMakeFuncContext` and then passed to `umkaCall`.
+
+```
 typedef void (*UmkaExternFunc)(UmkaStackSlot *params, UmkaStackSlot *result);
 ```
-External C/C++ function that can be called from Umka
+External C/C++ function that can be called from Umka.
 
 Parameters:
 
@@ -128,48 +138,44 @@ Parameters:
 Returned value: `true` if the function has been successfully added.
 
 ```
-UMKA_API int umkaGetFunc(void *umka, const char *moduleName, const char *funcName, 
-                         UmkaStackSlot **params, UmkaStackSlot **result);
+UMKA_API bool umkaGetFunc(void *umka, const char *moduleName, const char *fnName, 
+                          UmkaFuncContext *fn);
 ```
-Finds an Umka function that can be called from C/C++ using `umkaCall`. Optionally allocates the stack slots for storing the parameters and returned value required by `umkaCall`.
+Finds an Umka function that can be called from C/C++ using `umkaCall`.
 
 Parameters:
 
 * `umka`: Interpreter instance handle
 * `moduleName`: Module name where the function is defined
 * `funcName`: Function name
-* `params`: Pointer to the parameter stack slots to be allocated. Can be `NULL`
-* `result`: Pointer to the returned value stack slots to be allocated. Can be `NULL`
+* `fn`: Function context to be filled in
 
-Returned value: Function entry point offset, or -1 if the function was not found.
+Returned value: `true` if the function was found and its context filled.
 
 ```
-UMKA_API void umkaAllocParams(void *umka, void *closureType, 
-                              UmkaStackSlot **params, UmkaStackSlot **result);
+UMKA_API void umkaMakeFuncContext(void *umka, void *closureType, int entryOffset, 
+                                  UmkaFuncContext *fn);
 ```
-Allocates the stack slots for storing the parameters and returned value required by `umkaCall`, if they could not be allocated by `umkaGetFunc`.
+Fills in the function context required by `umkaCall`, if it could not be filled in by `umkaGetFunc`.
 
 Parameters:
 
 * `umka`: Interpreter instance handle
 * `closureType`: Umka function type. Must be obtained by calling `typeptr` and passed to the C/C++ code
-* `params`: Pointer to the parameter stack slots to be allocated
-* `result`: Pointer to the returned value stack slots to be allocated
+* `entryOffset`: Function entry point offset
+* `fn`: Function context to be filled in
 
 ``` 
-UMKA_API int umkaCall(void *umka, int entryOffset, 
-                      UmkaStackSlot *params, UmkaStackSlot *result);
+UMKA_API int umkaCall(void *umka, UmkaFuncContext *fn);
 ```
 Calls an Umka function. 
 
 Parameters:
 
 * `umka`: Interpreter instance handle
-* `entryPoint`: Function entry point offset previously obtained by calling `umkaGetFunc`
-* `params`: Stack slots occupied by the actual parameters. Can be `NULL` if the called function takes to parameters. Otherwise, must be pre-allocated by calling either `umkaGetFunc`, or `umkaAllocParams`
-* `result`: Stack slots to be occupied by the returned value. Can be `NULL` if the called function returns no value. Otherwise, must be pre-allocated by calling either `umkaGetFunc`, or `umkaAllocParams`
+* `fn`: Function context previously filled in by `umkaGetFunc` or `umkaMakeFuncContext`
 
-Returned value: 0 if the Umka function returns successfully and no run-time errors are detected, otherwise returns the error code.
+Returned value: 0 if the Umka function returns successfully and no run-time errors are detected, otherwise the error code.
 
 ```
 static inline UmkaStackSlot *umkaGetParam(UmkaStackSlot *params, int index);
