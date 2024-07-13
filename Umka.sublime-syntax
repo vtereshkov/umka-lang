@@ -90,9 +90,6 @@ contexts:
       scope: punctuation.definition.parameters.end.umka
       pop: true
 
-    - match: '$'
-      pop: true
-
     - include: expr_traps
     - include: main
   
@@ -109,7 +106,9 @@ contexts:
   method_trap:
     # Method creation builtin override
     - match: '\b({{builtin}}){{space}}(\*?){{space}}(?=\()'
-      scope: entity.name.function.umka
+      captures:
+        2: entity.name.function.umka
+        3: keyword.operator.umka
 
     # Definition
     - match: '\b({{ident}}){{space}}(\*?){{space}}(?=\()'
@@ -124,6 +123,14 @@ contexts:
     - match: '$'
       pop: true
 
+    # Closure parameters
+    - match: '(\|[^\|]*\|){{space}}(\{)'
+      captures:
+        1: variable.parameter.umka
+        2: punctuation.definition.codeblock.begin.umka
+      push: block_scoped
+      pop: true
+
     - match: '\{'
       push: block_scoped
       scope: punctuation.definition.codeblock.begin.umka
@@ -134,11 +141,16 @@ contexts:
   switch_trap:
     - match: ':='
       scope: keyword.operator.umka
+
+    - match: 'type'
+      scope: keyword.control.umka
  
     - match: '$'
       pop: true
 
-    - match: '(?=\{)'
+    - match: '\{'
+      scope: punctuation.definition.codeblock.begin.umka
+      push: block_scoped
       pop: true
 
     - include: main
@@ -187,28 +199,23 @@ contexts:
 
     - include: main
 
-
   struct_scoped:
-    # Module override
-    - match: '\b({{ident}}){{space}}(?=::)'
-      scope: entity.name.module.umka
-
     - match: '\}'
       scope: punctuation.definition.parameters.end.umka
       pop: true
 
+    - include: main
+
     # Struct member
     - match: '\b({{ident}}\,{{space}})*({{ident}})(?={{space}}:)\b'
       scope: variable.parameter.umka
-
-    - include: main
 
   type_scoped:
     # Module override
     - match: '\b({{ident}}){{space}}(?=::)'
       scope: entity.name.module.umka
     
-    - match: '\b(?=var|const|if|for)\b'
+    - match: '(?=\b(var|const|if|for)\b)'
       set: block_scoped
 
     - match: '\{'
@@ -423,7 +430,7 @@ contexts:
       scope: punctuation.separator.umka
  
     # Hex literals
-    - match: '\b(0[Xx])[0-9A-F]+\b'
+    - match: '\b(0[Xx])[0-9A-Fa-f]+\b'
       scope: constant.numeric.umka      
 
     # Decimal literals
@@ -444,7 +451,7 @@ contexts:
     - meta_scope: string.quoted.double.umka
     - match: '\\.'
       scope: constant.character.escape.umka
-    - match: "{{ident}}(?=.um)"
+    - match: "{{ident}}(?=\\.um)"
       scope: entity.name.module.umka
     - match: '"'
       scope: punctuation.definition.string.end.umka
@@ -454,9 +461,9 @@ contexts:
     - meta_scope: string.quoted.double.umka
     - match: '\%\%'
       scope: constant.character.escape.umka
-    - match: '\%[\-\+\s\#0]?([0-9]+|\*)?(\.[0-9]*)?(hh|h|l|ll)?[diuXfFeEgGscv]'
+    - match: '\%[\-\+\s\#0]?([0-9]+|\*)?(\.[0-9]*)?(hh|h|l|ll)?[diuxXfFeEgGscv]'
       scope: constant.character.escape.umka
-    - match: '\\.'
+    - match: '(\\x[A-Fa-f0-9][A-Fa-f0-9]|\\.)'
       scope: constant.character.escape.umka
     - match: '"'
       scope: punctuation.definition.string.end.umka
@@ -464,7 +471,7 @@ contexts:
 
   single_quoted_string:
     - meta_scope: string.quoted.single.umka
-    - match: '\\.'
+    - match: '(\\x[A-Fa-f0-9][A-Fa-f0-9]|\\.)'
       scope: constant.character.escape.umka
     - match: ''''
       scope: punctuation.definition.string.end.umka
@@ -484,5 +491,5 @@ contexts:
     - include: todos
 
   todos:
-    - match: '(TODO|FIXME|BUG|HACK|NOTE|XXX)(\(.*\))?:?'
+    - match: '\b(TODO|FIXME|BUG|HACK|NOTE|XXX)\b(\(.*\))?:?'
       scope: markup.bold.umka
