@@ -185,6 +185,13 @@ static inline UmkaStackSlot *umkaGetParam(UmkaStackSlot *params, int index)
 }
 
 
+static inline UmkaAny *umkaGetUpvalue(UmkaStackSlot *params)
+{
+    const UmkaExternalCallParamLayout *paramLayout = (UmkaExternalCallParamLayout *)params[-4].ptrVal;      // For -4, see the stack layout diagram in umka_vm.c
+    return (UmkaAny *)(params + paramLayout->firstSlotIndex[0]);
+}
+
+
 static inline UmkaStackSlot *umkaGetResult(UmkaStackSlot *params, UmkaStackSlot *result)
 {
     const UmkaExternalCallParamLayout *paramLayout = (UmkaExternalCallParamLayout *)params[-4].ptrVal;      // For -4, see the stack layout diagram in umka_vm.c

@@ -1,9 +1,10 @@
 import "lib/lib.um"
 
 fn test*() {
+	a := 7
 	printf("%f %v %s\n", 
 		lib::add(3, 5), 
-		lib::sum({return i * i}, 10) == (10 * 11 * 21) / 6, 
+		lib::sum(|a| {return a * i * i}, 10) == a * (10 * 11 * 21) / 6, 
 		lib::hello()		
 	)      
 }

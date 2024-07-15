@@ -119,7 +119,7 @@ External C/C++ function that can be called from Umka.
 
 Parameters:
 
-* `params`: Stack slots that store the function parameters passed from Umka to C/C++. Use `umkaGetParam` to access individual parameters from the slots
+* `params`: Stack slots that store the function parameters passed from Umka to C/C++. Use `umkaGetParam` to access individual parameters and `umkaGetUpvalue` to access captured variables from the slots
 * `result`: Stack slots that can store the value returned from C/C++ to Umka. Use `umkaGetResult` to access the stack slot that can actually store the value
 
 ### Functions
@@ -188,6 +188,17 @@ Parameters:
 * `index`: Parameter position. The leftmost parameter is at position 0
 
 Returned value: Pointer to the first stack slot occupied by the parameter, `NULL` if there is no such parameter.
+
+```
+static inline UmkaAny *umkaGetUpvalue(UmkaStackSlot *params);
+```
+Finds the captured variables.
+
+Parameters:
+
+* `params`: Parameter stack slots
+
+Returned value: Pointer to the captured variables stored as `any`.
 
 ```
 static inline UmkaStackSlot *umkaGetResult(UmkaStackSlot *params, UmkaStackSlot *result);

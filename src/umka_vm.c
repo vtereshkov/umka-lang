@@ -3451,21 +3451,20 @@ void vmRun(VM *vm, FuncContext *fn)
             vm->error->runtimeHandler(vm->error->context, VM_RUNTIME_ERROR, "Called function is not defined");
 
         // Push parameters
-        int numDummyUpvaluesSlots = sizeof(Interface) / sizeof(Slot);
-        int numParamSlots = numDummyUpvaluesSlots;
-
+        int numParamSlots = 0;
         if (fn->params)
         {
             const ExternalCallParamLayout *paramLayout = (ExternalCallParamLayout *)fn->params[-4].ptrVal;   // For -4, see the stack layout diagram in umka_vm.c
             numParamSlots = paramLayout->numParamSlots;
         }
+        else
+            numParamSlots = sizeof(Interface) / sizeof(Slot);    // Only upvalue
 
         vm->fiber->top -= numParamSlots;
 
-        for (int i = 0; i < numParamSlots - numDummyUpvaluesSlots; i++)
-            vm->fiber->top[i] = fn->params[i];
-        for (int i = numParamSlots - numDummyUpvaluesSlots; i < numParamSlots; i++)
-            vm->fiber->top[i].intVal = 0;
+        Slot empty = {0};
+        for (int i = 0; i < numParamSlots; i++)
+            vm->fiber->top[i] = fn->params ? fn->params[i] : empty;
 
         // Push 'return from VM' signal as return address
         (--vm->fiber->top)->intVal = VM_RETURN_FROM_VM;

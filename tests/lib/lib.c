@@ -28,22 +28,25 @@ void hello(UmkaStackSlot *params, UmkaStackSlot *result)
 
 UmkaFuncContext callbackContext = {0};
 
-void sumImpl(UmkaStackSlot *params, UmkaStackSlot *result) 
+void sumImpl(UmkaStackSlot *params, UmkaStackSlot *result)
 {
-    int callback = ((UmkaClosure *)umkaGetParam(params, 0))->entryOffset;
+    UmkaClosure *callback = (UmkaClosure *)umkaGetParam(params, 0);
     void *callbackType = umkaGetParam(params, 1)->ptrVal;
     int n = umkaGetParam(params, 2)->intVal;
 
     void *umka = umkaGetInstance(result);
     UmkaAPI *api = umkaGetAPI(umka);
 
-    if (callbackContext.entryOffset != callback)
-        api->umkaMakeFuncContext(umka, callbackType, callback, &callbackContext);
+    if (callbackContext.entryOffset != callback->entryOffset)
+        api->umkaMakeFuncContext(umka, callbackType, callback->entryOffset, &callbackContext);
 
     int sum = 0;
     for (int i = 1; i <= n; i++)
     {
         umkaGetParam(callbackContext.params, 0)->intVal = i;
+        api->umkaIncRef(umka, callback->upvalue.data);
+        *umkaGetUpvalue(callbackContext.params) = callback->upvalue;
+
         api->umkaCall(umka, &callbackContext);
         sum += umkaGetResult(callbackContext.params, callbackContext.result)->intVal;
     }
