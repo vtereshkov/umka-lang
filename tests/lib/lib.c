@@ -38,14 +38,16 @@ void sumImpl(UmkaStackSlot *params, UmkaStackSlot *result)
     UmkaAPI *api = umkaGetAPI(umka);
 
     if (callbackContext.entryOffset != callback->entryOffset)
+    {
         api->umkaMakeFuncContext(umka, callbackType, callback->entryOffset, &callbackContext);
+        *umkaGetUpvalue(callbackContext.params) = callback->upvalue;
+    }
 
     int sum = 0;
     for (int i = 1; i <= n; i++)
     {
         umkaGetParam(callbackContext.params, 0)->intVal = i;
         api->umkaIncRef(umka, callback->upvalue.data);
-        *umkaGetUpvalue(callbackContext.params) = callback->upvalue;
 
         api->umkaCall(umka, &callbackContext);
         sum += umkaGetResult(callbackContext.params, callbackContext.result)->intVal;
