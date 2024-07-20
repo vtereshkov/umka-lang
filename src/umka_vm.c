@@ -130,6 +130,7 @@ static const char *builtinSpelling [] =
     "insert",
     "delete",
     "slice",
+    "sort",
     "len",
     "cap",
     "sizeof",
@@ -550,6 +551,7 @@ void vmInit(VM *vm, int stackSize, bool fileSystemEnabled, Error *error)
 {
     vm->fiber = vm->mainFiber = malloc(sizeof(Fiber));
     vm->fiber->refCntChangeCandidates = &vm->refCntChangeCandidates;
+    vm->fiber->vm = vm;
     vm->fiber->alive = true;
     vm->fiber->fileSystemEnabled = fileSystemEnabled;
 
@@ -589,6 +591,9 @@ void vmReset(VM *vm, Instruction *code, DebugInfo *debugPerInstr)
     vm->fiber->ip = 0;
     vm->fiber->top = vm->fiber->base = vm->fiber->stack + vm->fiber->stackSize - 1;
 }
+
+
+static FORCE_INLINE void vmLoop(VM *vm);
 
 
 static FORCE_INLINE void doCheckStr(const char *str, Error *error)
@@ -2249,6 +2254,72 @@ static FORCE_INLINE void doBuiltinSlice(Fiber *fiber, HeapPages *pages, Error *e
 }
 
 
+// fn sort(array: [] type, compare: fn (a, b: ^type): int)
+typedef struct
+{
+    Fiber *fiber;
+    Closure *compare;
+    Type *compareType;
+} CompareContext;
+
+
+#ifdef _WIN32
+static int qsortCompare(void *context, const void *a, const void *b)
+#else
+static int qsortCompare(const void *a, const void *b, void *context)
+#endif
+{
+    Fiber *fiber      = ((CompareContext *)context)->fiber;
+    Closure *compare  = ((CompareContext *)context)->compare;
+    Type *compareType = ((CompareContext *)context)->compareType;
+
+    Signature *compareSig = &compareType->field[0]->type->sig;
+
+    // Push upvalues
+    fiber->top -= sizeof(Interface) / sizeof(Slot);
+    *(Interface *)fiber->top = compare->upvalue;
+    doBasicChangeRefCnt(fiber, &fiber->vm->pages, fiber->top, compareSig->param[0]->type, TOK_PLUSPLUS);
+
+    // Push pointers to values to be compared
+    (--fiber->top)->ptrVal = (void *)a;
+    doBasicChangeRefCnt(fiber, &fiber->vm->pages, fiber->top->ptrVal, compareSig->param[1]->type, TOK_PLUSPLUS);
+
+    (--fiber->top)->ptrVal = (void *)b;
+    doBasicChangeRefCnt(fiber, &fiber->vm->pages, fiber->top->ptrVal, compareSig->param[2]->type, TOK_PLUSPLUS);
+
+    // Push 'return from VM' signal as return address
+    (--fiber->top)->intVal = VM_RETURN_FROM_VM;
+
+    // Call the compare function
+    int ip = fiber->ip;
+    fiber->ip = compare->entryOffset;
+    vmLoop(fiber->vm);
+    fiber->ip = ip;
+
+    return fiber->reg[VM_REG_RESULT].intVal;
+}
+
+
+static FORCE_INLINE void doBuiltinSort(Fiber *fiber, HeapPages *pages, Error *error)
+{
+    Type *compareType = (Type *)(fiber->top++)->ptrVal;
+    Closure *compare  = (Closure *)(fiber->top++)->ptrVal;
+    DynArray *array   = (DynArray *)(fiber->top++)->ptrVal;
+
+    if (!array)
+        error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Dynamic array is null");
+
+    if (!compare || compare->entryOffset <= 0)
+        error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Called function is not defined");
+
+    if (array->data && getDims(array)->len > 0)
+    {
+        CompareContext context = {fiber, compare, compareType};
+        qsort_s(array->data, getDims(array)->len, array->itemSize, qsortCompare, &context);
+    }
+}
+
+
 static FORCE_INLINE void doBuiltinLen(Fiber *fiber, Error *error)
 {
     switch (fiber->code[fiber->ip].typeKind)
@@ -3251,6 +3322,7 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         case BUILTIN_INSERT:        doBuiltinInsert(fiber, pages, error); break;
         case BUILTIN_DELETE:        doBuiltinDelete(fiber, pages, typeKind, error); break;
         case BUILTIN_SLICE:         doBuiltinSlice(fiber, pages, error); break;
+        case BUILTIN_SORT:          doBuiltinSort(fiber, pages, error); break;
         case BUILTIN_LEN:           doBuiltinLen(fiber, error); break;
         case BUILTIN_CAP:           doBuiltinCap(fiber, error); break;
         case BUILTIN_SIZEOF:        error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Illegal instruction"); return;       // Done at compile time

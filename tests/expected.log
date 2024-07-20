@@ -592,8 +592,8 @@ Error: Empty string (code -2) from "foo":
     foo: (5)
     fooTest: (11)
     test: (25)
-    main: (69)
-    <unknown>: (100)
+    main: (70)
+    <unknown>: (102)
 9
 
 
@@ -1101,6 +1101,86 @@ true true
         }
     }
 }
+
+
+>>> Sorting
+
+[7.6 2.3 0.4 -11.8]
+
+[-11.8 0.4 2.3 7.6]
+
+Sorting by name:
+[
+    {
+        "surname": "Pushkin"
+        "name": "Alexander"
+        "date": "1799"
+    }
+    {
+        "surname": "Pope"
+        "name": "Alexander"
+        "date": "1688"
+    }
+    {
+        "surname": "Chekhov"
+        "name": "Anton"
+        "date": "1860"
+    }
+    {
+        "surname": "Tolstoy"
+        "name": "Leo"
+        "date": "1828"
+    }
+]
+
+Sorting by surname:
+[
+    {
+        "surname": "Chekhov"
+        "name": "Anton"
+        "date": "1860"
+    }
+    {
+        "surname": "Pope"
+        "name": "Alexander"
+        "date": "1688"
+    }
+    {
+        "surname": "Pushkin"
+        "name": "Alexander"
+        "date": "1799"
+    }
+    {
+        "surname": "Tolstoy"
+        "name": "Leo"
+        "date": "1828"
+    }
+]
+
+Sorting by date:
+[
+    {
+        "surname": "Pope"
+        "name": "Alexander"
+        "date": "1688"
+    }
+    {
+        "surname": "Pushkin"
+        "name": "Alexander"
+        "date": "1799"
+    }
+    {
+        "surname": "Tolstoy"
+        "name": "Leo"
+        "date": "1828"
+    }
+    {
+        "surname": "Chekhov"
+        "name": "Anton"
+        "date": "1860"
+    }
+]
+
 
 
 >>> External libraries

@@ -1,4 +1,4 @@
-fn sort(a: []any, ordered: fn (x, y: any): bool): []any {
+fn customSort(a: []any, ordered: fn (x, y: any): bool): []any {
     for sorted := false; !sorted {
         sorted = true
         for i := 0; i < len(a) - 1; i++ {
@@ -13,7 +13,7 @@ fn sort(a: []any, ordered: fn (x, y: any): bool): []any {
 
 fn test*() {
     a := []str{"red", "green", "blue", "yellow", "gray", "brown", "black", "cyan", "magenta", "white"}
-    b := []str(sort([]any(a), fn (x, y: any): bool {return str(x) < str(y)}))            
+    b := []str(customSort([]any(a), fn (x, y: any): bool {return str(x) < str(y)}))            
     printf("%v\n%v\n", a, b)
 }
 
