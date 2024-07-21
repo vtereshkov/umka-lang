@@ -481,7 +481,7 @@ static FORCE_INLINE void candidatePop(RefCntChangeCandidates *candidates, void *
 }
 
 
-// I/O functions
+// Helper functions
 
 static FORCE_INLINE int fsgetc(bool string, void *stream, int *len)
 {
@@ -542,6 +542,54 @@ static FORCE_INLINE char *fsscanfString(bool string, void *stream, int *len)
 
     str[writtenLen] = '\0';
     return str;
+}
+
+
+typedef int (*QSortCompareFn)(const void *a, const void *b, void *context);
+
+
+void FORCE_INLINE qsortSwap(void *a, void *b, void *temp, int itemSize)
+{
+    memcpy(temp, a, itemSize);
+    memcpy(a, b, itemSize);
+    memcpy(b, temp, itemSize);
+}
+
+
+char FORCE_INLINE *qsortPartition(char *first, char *last, int itemSize, QSortCompareFn compare, void *context, void *temp)
+{
+    char *i = first;
+    char *j = last;
+
+    char *pivot = first;
+
+    while (i < j)
+    {
+        while (compare(i, pivot, context) <= 0 && i < last)
+            i += itemSize;
+
+        while (compare(j, pivot, context) > 0 && j > first)
+            j -= itemSize;
+
+        if (i < j)
+            qsortSwap(i, j, temp, itemSize);
+    }
+
+    qsortSwap(pivot, j, temp, itemSize);
+
+    return j;
+}
+
+
+void qsortEx(char *first, char *last, int itemSize, QSortCompareFn compare, void *context, void *temp)
+{
+    if (first >= last)
+        return;
+
+    char *partition = qsortPartition(first, last, itemSize, compare, context, temp);
+
+    qsortEx(first, partition - itemSize, itemSize, compare, context, temp);
+    qsortEx(partition + itemSize, last, itemSize, compare, context, temp);
 }
 
 
@@ -2263,11 +2311,7 @@ typedef struct
 } CompareContext;
 
 
-#ifdef _WIN32
-static int qsortCompare(void *context, const void *a, const void *b)
-#else
 static int qsortCompare(const void *a, const void *b, void *context)
-#endif
 {
     Fiber *fiber      = ((CompareContext *)context)->fiber;
     Closure *compare  = ((CompareContext *)context)->compare;
@@ -2315,7 +2359,13 @@ static FORCE_INLINE void doBuiltinSort(Fiber *fiber, HeapPages *pages, Error *er
     if (array->data && getDims(array)->len > 0)
     {
         CompareContext context = {fiber, compare, compareType};
-        qsort_s(array->data, getDims(array)->len, array->itemSize, qsortCompare, &context);
+
+        const int numTempSlots = align(array->itemSize, sizeof(Slot)) / sizeof(Slot);
+        fiber->top -= numTempSlots;
+
+        qsortEx((char *)array->data, (char *)array->data + array->itemSize * (getDims(array)->len - 1), array->itemSize, qsortCompare, &context, fiber->top);
+
+        fiber->top += numTempSlots;
     }
 }
 
