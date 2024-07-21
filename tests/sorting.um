@@ -1,0 +1,145 @@
+import "std.um"
+
+fn test1() {
+	x := []real{2.3, 7.6, -11.8, 0.4, 15.0, -7.1}
+
+	for _, ascending in []bool{false, true} {
+		sort(x, |ascending| {
+			d := a^ - b^
+			r := ascending ? 1 : -1
+			return d == 0.0 ? 0 : d > 0.0 ? r : -r
+		})
+
+		printf("%v\n\n", x)		
+	}
+}
+
+fn test2() {
+	x := []map[str]str{
+		{
+			"name": "Leo",
+			"surname": "Tolstoy",
+			"date": sprintf("%d", 1828)
+		},
+		{
+			"name": "Alexander",
+			"surname": "Pushkin",
+			"date": sprintf("%d", 1799)
+		},
+		{
+			"name": "Alexander",
+			"surname": "Pope",
+			"date": sprintf("%d", 1688)
+		},
+		{
+			"name": "Anton",
+			"surname": "Chekhov",
+			"date": sprintf("%d", 1860)
+		}
+	}
+
+	for _, field in []str{"name", "surname", "date"} {
+		sort(x, |field| {
+			if s1, s2 := a[field], b[field]; s1 > s2 {
+				return 1
+			} else if s1 < s2 {
+				return -1
+			}
+			return 0
+		})
+
+		printf("Sorting by %s:\n%llv\n\n", field, x)
+	}	
+}
+
+fn test3() {
+	x := []int{}
+	for i := 0; i < 100000; i++ {
+		x = append(x, std::rand())
+	}
+
+	sort(x, {return a^ > b^ ? 1 : a^ == b^ ? 0 : -1})
+
+	for i := 0; i < len(x) - 1; i++ {
+		std::assert(x[i + 1] >= x[i])
+	}	
+}
+
+fn test4() {
+	sort([]int{}, {std::assert(false); return 0})
+}
+
+fn test5() {
+	x := []real{2.3, 7.6, -11.8, 0.4, 15.0, -7.1}
+
+	for _, ascending in []bool{false, true} {
+		sort(x, ascending)
+		printf("%v\n\n", x)		
+	}
+}
+
+fn test6() {
+	x := []str{"red", "green", "blue", "yellow", "gray", "brown", "black", "cyan", "magenta", "white"}
+
+	for _, ascending in []bool{false, true} {
+		sort(x, ascending)
+		printf("%v\n\n", x)		
+	}
+
+	y := make([]str, 10)
+	y[5] = "hi"
+	y[8] = "bye"
+
+	sort(y, false)
+	printf("%v\n\n", y)		
+}
+
+fn test7() {
+	x := []int{}
+	for i := 0; i < 100000; i++ {
+		x = append(x, std::rand())
+	}
+
+	sort(x, true)
+
+	for i := 0; i < len(x) - 1; i++ {
+		std::assert(x[i + 1] >= x[i])
+	}	
+}
+
+fn test8() {
+	type Vec = struct {
+		x, y, z: real32
+	}
+
+	v := []Vec{}
+	for i := 0; i < 10000; i++ {
+		v = append(v, Vec{std::rand(), std::rand(), std::rand()})
+	}
+
+	sort(v, true, z)
+
+	for i := 0; i < len(v) - 1; i++ {
+		std::assert(v[i + 1].z >= v[i].z)
+	}	
+}
+
+fn test9() {
+	sort([]int{}, true)
+}
+
+fn test*() {
+	test1()
+	test2()
+	test3()
+	test4()
+	test5()
+	test6()
+	test7()
+	test8()
+	test9()
+}
+
+fn main() {
+	test()
+}

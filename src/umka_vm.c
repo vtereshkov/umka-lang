@@ -130,6 +130,8 @@ static const char *builtinSpelling [] =
     "insert",
     "delete",
     "slice",
+    "sort",
+    "sortfast",
     "len",
     "cap",
     "sizeof",
@@ -480,7 +482,7 @@ static FORCE_INLINE void candidatePop(RefCntChangeCandidates *candidates, void *
 }
 
 
-// I/O functions
+// Helper functions
 
 static FORCE_INLINE int fsgetc(bool string, void *stream, int *len)
 {
@@ -544,12 +546,61 @@ static FORCE_INLINE char *fsscanfString(bool string, void *stream, int *len)
 }
 
 
+typedef int (*QSortCompareFn)(const void *a, const void *b, void *context);
+
+
+void FORCE_INLINE qsortSwap(void *a, void *b, void *temp, int itemSize)
+{
+    memcpy(temp, a, itemSize);
+    memcpy(a, b, itemSize);
+    memcpy(b, temp, itemSize);
+}
+
+
+char FORCE_INLINE *qsortPartition(char *first, char *last, int itemSize, QSortCompareFn compare, void *context, void *temp)
+{
+    char *i = first;
+    char *j = last;
+
+    char *pivot = first;
+
+    while (i < j)
+    {
+        while (compare(i, pivot, context) <= 0 && i < last)
+            i += itemSize;
+
+        while (compare(j, pivot, context) > 0 && j > first)
+            j -= itemSize;
+
+        if (i < j)
+            qsortSwap(i, j, temp, itemSize);
+    }
+
+    qsortSwap(pivot, j, temp, itemSize);
+
+    return j;
+}
+
+
+void qsortEx(char *first, char *last, int itemSize, QSortCompareFn compare, void *context, void *temp)
+{
+    if (first >= last)
+        return;
+
+    char *partition = qsortPartition(first, last, itemSize, compare, context, temp);
+
+    qsortEx(first, partition - itemSize, itemSize, compare, context, temp);
+    qsortEx(partition + itemSize, last, itemSize, compare, context, temp);
+}
+
+
 // Virtual machine
 
 void vmInit(VM *vm, int stackSize, bool fileSystemEnabled, Error *error)
 {
     vm->fiber = vm->mainFiber = malloc(sizeof(Fiber));
     vm->fiber->refCntChangeCandidates = &vm->refCntChangeCandidates;
+    vm->fiber->vm = vm;
     vm->fiber->alive = true;
     vm->fiber->fileSystemEnabled = fileSystemEnabled;
 
@@ -589,6 +640,9 @@ void vmReset(VM *vm, Instruction *code, DebugInfo *debugPerInstr)
     vm->fiber->ip = 0;
     vm->fiber->top = vm->fiber->base = vm->fiber->stack + vm->fiber->stackSize - 1;
 }
+
+
+static FORCE_INLINE void vmLoop(VM *vm);
 
 
 static FORCE_INLINE void doCheckStr(const char *str, Error *error)
@@ -2249,6 +2303,155 @@ static FORCE_INLINE void doBuiltinSlice(Fiber *fiber, HeapPages *pages, Error *e
 }
 
 
+// fn sort(array: [] type, compare: fn (a, b: ^type): int)
+typedef struct
+{
+    Fiber *fiber;
+    Closure *compare;
+    Type *compareType;
+} CompareContext;
+
+
+static int qsortCompare(const void *a, const void *b, void *context)
+{
+    Fiber *fiber      = ((CompareContext *)context)->fiber;
+    Closure *compare  = ((CompareContext *)context)->compare;
+    Type *compareType = ((CompareContext *)context)->compareType;
+
+    Signature *compareSig = &compareType->field[0]->type->sig;
+
+    // Push upvalues
+    fiber->top -= sizeof(Interface) / sizeof(Slot);
+    *(Interface *)fiber->top = compare->upvalue;
+    doBasicChangeRefCnt(fiber, &fiber->vm->pages, fiber->top, compareSig->param[0]->type, TOK_PLUSPLUS);
+
+    // Push pointers to values to be compared
+    (--fiber->top)->ptrVal = (void *)a;
+    doBasicChangeRefCnt(fiber, &fiber->vm->pages, fiber->top->ptrVal, compareSig->param[1]->type, TOK_PLUSPLUS);
+
+    (--fiber->top)->ptrVal = (void *)b;
+    doBasicChangeRefCnt(fiber, &fiber->vm->pages, fiber->top->ptrVal, compareSig->param[2]->type, TOK_PLUSPLUS);
+
+    // Push 'return from VM' signal as return address
+    (--fiber->top)->intVal = VM_RETURN_FROM_VM;
+
+    // Call the compare function
+    int ip = fiber->ip;
+    fiber->ip = compare->entryOffset;
+    vmLoop(fiber->vm);
+    fiber->ip = ip;
+
+    return fiber->reg[VM_REG_RESULT].intVal;
+}
+
+
+static FORCE_INLINE void doBuiltinSort(Fiber *fiber, HeapPages *pages, Error *error)
+{
+    Type *compareType = (Type *)(fiber->top++)->ptrVal;
+    Closure *compare  = (Closure *)(fiber->top++)->ptrVal;
+    DynArray *array   = (DynArray *)(fiber->top++)->ptrVal;
+
+    if (!array)
+        error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Dynamic array is null");
+
+    if (!compare || compare->entryOffset <= 0)
+        error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Called function is not defined");
+
+    if (array->data && getDims(array)->len > 0)
+    {
+        CompareContext context = {fiber, compare, compareType};
+
+        const int numTempSlots = align(array->itemSize, sizeof(Slot)) / sizeof(Slot);
+        fiber->top -= numTempSlots;
+
+        qsortEx((char *)array->data, (char *)array->data + array->itemSize * (getDims(array)->len - 1), array->itemSize, qsortCompare, &context, fiber->top);
+
+        fiber->top += numTempSlots;
+    }
+}
+
+
+// fn sort(array: [] type, ascending: bool [, ident])
+typedef struct
+{
+    TypeKind comparedTypeKind;
+    int64_t offset;
+    bool ascending;
+    Error *error;
+} FastCompareContext;
+
+
+static int qsortFastCompare(const void *a, const void *b, void *context)
+{
+    FastCompareContext *fastCompareContext = (FastCompareContext *)context;
+
+    int sign = fastCompareContext->ascending ? 1 : -1;
+    const char *lhs = (const char *)a + fastCompareContext->offset;
+    const char *rhs = (const char *)b + fastCompareContext->offset;
+    Error *error = fastCompareContext->error;
+
+    switch (fastCompareContext->comparedTypeKind)
+    {
+        case TYPE_INT8:     {int64_t diff = (int64_t)(*(int8_t        *)lhs) - (int64_t)(*(int8_t        *)rhs);    return diff == 0 ? 0 : diff > 0 ? sign : -sign;}
+        case TYPE_INT16:    {int64_t diff = (int64_t)(*(int16_t       *)lhs) - (int64_t)(*(int16_t       *)rhs);    return diff == 0 ? 0 : diff > 0 ? sign : -sign;}
+        case TYPE_INT32:    {int64_t diff = (int64_t)(*(int32_t       *)lhs) - (int64_t)(*(int32_t       *)rhs);    return diff == 0 ? 0 : diff > 0 ? sign : -sign;}
+        case TYPE_INT:      {int64_t diff =          (*(int64_t       *)lhs) -          (*(int64_t       *)rhs);    return diff == 0 ? 0 : diff > 0 ? sign : -sign;}
+        case TYPE_UINT8:    {int64_t diff = (int64_t)(*(uint8_t       *)lhs) - (int64_t)(*(uint8_t       *)rhs);    return diff == 0 ? 0 : diff > 0 ? sign : -sign;}
+        case TYPE_UINT16:   {int64_t diff = (int64_t)(*(uint16_t      *)lhs) - (int64_t)(*(uint16_t      *)rhs);    return diff == 0 ? 0 : diff > 0 ? sign : -sign;}
+        case TYPE_UINT32:   {int64_t diff = (int64_t)(*(uint32_t      *)lhs) - (int64_t)(*(uint32_t      *)rhs);    return diff == 0 ? 0 : diff > 0 ? sign : -sign;}
+        case TYPE_UINT:     {int64_t diff =          (*(uint64_t      *)lhs) -          (*(uint64_t      *)rhs);    return diff == 0 ? 0 : diff > 0 ? sign : -sign;}
+        case TYPE_BOOL:     {int64_t diff = (int64_t)(*(bool          *)lhs) - (int64_t)(*(bool          *)rhs);    return diff == 0 ? 0 : diff > 0 ? sign : -sign;}
+        case TYPE_CHAR:     {int64_t diff = (int64_t)(*(unsigned char *)lhs) - (int64_t)(*(unsigned char *)rhs);    return diff == 0 ? 0 : diff > 0 ? sign : -sign;}
+        case TYPE_REAL32:   {double  diff = (double )(*(float         *)lhs) - (double )(*(float         *)rhs);    return diff == 0 ? 0 : diff > 0 ? sign : -sign;}
+        case TYPE_REAL:     {double  diff =          (*(double        *)lhs) -          (*(double        *)rhs);    return diff == 0 ? 0 : diff > 0 ? sign : -sign;}
+        case TYPE_STR:
+        {
+            char *lhsStr = *(char **)lhs;
+            if (!lhsStr)
+                lhsStr = doGetEmptyStr();
+
+            char *rhsStr = *(char **)rhs;
+            if (!rhsStr)
+                rhsStr = doGetEmptyStr();
+
+            doCheckStr(lhsStr, error);
+            doCheckStr(rhsStr, error);
+
+            return strcmp(lhsStr, rhsStr) * sign;
+        }
+        default:
+        {
+            error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Illegal type");
+            return 0;
+        }
+    }
+}
+
+
+static FORCE_INLINE void doBuiltinSortfast(Fiber *fiber, HeapPages *pages, Error *error)
+{
+    int64_t offset = (fiber->top++)->intVal;
+    bool ascending = (bool)(fiber->top++)->intVal;
+    DynArray *array = (DynArray *)(fiber->top++)->ptrVal;
+    TypeKind comparedTypeKind = fiber->code[fiber->ip].typeKind;
+
+    if (!array)
+        error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Dynamic array is null");
+
+    if (array->data && getDims(array)->len > 0)
+    {
+        FastCompareContext context = {comparedTypeKind, offset, ascending, error};
+
+        const int numTempSlots = align(array->itemSize, sizeof(Slot)) / sizeof(Slot);
+        fiber->top -= numTempSlots;
+
+        qsortEx((char *)array->data, (char *)array->data + array->itemSize * (getDims(array)->len - 1), array->itemSize, qsortFastCompare, &context, fiber->top);
+
+        fiber->top += numTempSlots;
+    }
+}
+
+
 static FORCE_INLINE void doBuiltinLen(Fiber *fiber, Error *error)
 {
     switch (fiber->code[fiber->ip].typeKind)
@@ -2426,7 +2629,6 @@ static FORCE_INLINE void doBuiltinKeys(Fiber *fiber, HeapPages *pages, Error *er
 
     (--fiber->top)->ptrVal = result;
 }
-
 
 
 // type FiberFunc = fn(parent: fiber, anyParam: ^type)
@@ -3251,6 +3453,8 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         case BUILTIN_INSERT:        doBuiltinInsert(fiber, pages, error); break;
         case BUILTIN_DELETE:        doBuiltinDelete(fiber, pages, typeKind, error); break;
         case BUILTIN_SLICE:         doBuiltinSlice(fiber, pages, error); break;
+        case BUILTIN_SORT:          doBuiltinSort(fiber, pages, error); break;
+        case BUILTIN_SORTFAST:      doBuiltinSortfast(fiber, pages, error); break;
         case BUILTIN_LEN:           doBuiltinLen(fiber, error); break;
         case BUILTIN_CAP:           doBuiltinCap(fiber, error); break;
         case BUILTIN_SIZEOF:        error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Illegal instruction"); return;       // Done at compile time

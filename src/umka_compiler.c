@@ -134,6 +134,7 @@ static void compilerDeclareBuiltinIdents(Compiler *comp)
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "insert",     comp->ptrVoidType, BUILTIN_INSERT);
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "delete",     comp->ptrVoidType, BUILTIN_DELETE);
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "slice",      comp->ptrVoidType, BUILTIN_SLICE);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "sort",       comp->voidType,    BUILTIN_SORT);
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "len",        comp->intType,     BUILTIN_LEN);
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "cap",        comp->intType,     BUILTIN_CAP);
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "sizeof",     comp->intType,     BUILTIN_SIZEOF);

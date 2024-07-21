@@ -114,6 +114,8 @@ typedef enum
     BUILTIN_INSERT,
     BUILTIN_DELETE,
     BUILTIN_SLICE,
+    BUILTIN_SORT,
+    BUILTIN_SORTFAST,
     BUILTIN_LEN,
     BUILTIN_CAP,
     BUILTIN_SIZEOF,
@@ -240,12 +242,13 @@ typedef struct tagFiber
     Slot reg[VM_NUM_REGS];
     DebugInfo *debugPerInstr;
     RefCntChangeCandidates *refCntChangeCandidates;
+    struct tagVM *vm;
     bool alive;
     bool fileSystemEnabled;
 } Fiber;
 
 
-typedef struct
+typedef struct tagVM
 {
     Fiber *fiber, *mainFiber;
     HeapPages pages;
