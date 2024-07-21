@@ -1153,6 +1153,7 @@ static void parseBuiltinSliceCall(Compiler *comp, Type **type, Const *constant)
 
 
 // fn sort(array: [] type, compare: fn (a, b: ^type): int)
+// fn sort(array: [] type, ascending: bool [, ident])
 static void parseBuiltinSortCall(Compiler *comp, Type **type, Const *constant)
 {
     if (constant)
@@ -1165,7 +1166,7 @@ static void parseBuiltinSortCall(Compiler *comp, Type **type, Const *constant)
 
     lexEat(&comp->lex, TOK_COMMA);
 
-    // Compare closure
+    // Compare closure or ascending/descending order flag
     Type *fnType = typeAdd(&comp->types, &comp->blocks, TYPE_FN);
     Type *paramType = typeAddPtrTo(&comp->types, &comp->blocks, (*type)->base);
 
@@ -1179,14 +1180,47 @@ static void parseBuiltinSortCall(Compiler *comp, Type **type, Const *constant)
     typeAddField(&comp->types, expectedCompareType, fnType, "__fn");
     typeAddField(&comp->types, expectedCompareType, comp->anyType, "__upvalues");
 
-    Type *compareType = expectedCompareType;
-    parseExpr(comp, &compareType, NULL);
-    doAssertImplicitTypeConv(comp, expectedCompareType, &compareType, NULL);
+    Type *compareOrFlagType = expectedCompareType;
+    parseExpr(comp, &compareOrFlagType, NULL);
 
-    // Compare closure type (hidden parameter)
-    genPushGlobalPtr(&comp->gen, compareType);
+    if (typeEquivalent(compareOrFlagType, comp->boolType))
+    {
+        // "Fast" form
 
-    genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_SORT);
+        // Dynamic array item type must be either a simple comparable type, or a structure whose field having the given name is of a simple comparable type
+        if (typeValidOperator((*type)->base, TOK_LESS))
+        {
+            genPushIntConst(&comp->gen, 0);
+            genCallBuiltin(&comp->gen, (*type)->base->kind, BUILTIN_SORTFAST);
+        }
+        else
+        {
+            typeAssertCompatibleBuiltin(&comp->types, *type, BUILTIN_SORT, (*type)->base->kind == TYPE_STRUCT);
+
+            // Field name
+            lexEat(&comp->lex, TOK_COMMA);
+            lexCheck(&comp->lex, TOK_IDENT);
+
+            Field *field = typeAssertFindField(&comp->types, (*type)->base, comp->lex.tok.name, NULL);
+            typeAssertValidOperator(&comp->types, field->type, TOK_LESS);
+
+            lexNext(&comp->lex);
+
+            genPushIntConst(&comp->gen, field->offset);
+            genCallBuiltin(&comp->gen, field->type->kind, BUILTIN_SORTFAST);
+        }
+    }
+    else
+    {
+        // "General" form
+
+        // Compare closure type (hidden parameter)
+        doAssertImplicitTypeConv(comp, expectedCompareType, &compareOrFlagType, NULL);
+        genPushGlobalPtr(&comp->gen, compareOrFlagType);
+
+        genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_SORT);
+    }
+
     *type = comp->voidType;
 }
 

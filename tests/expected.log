@@ -1105,9 +1105,9 @@ true true
 
 >>> Sorting
 
-[7.6 2.3 0.4 -11.8]
+[15 7.6 2.3 0.4 -7.1 -11.8]
 
-[-11.8 0.4 2.3 7.6]
+[-11.8 -7.1 0.4 2.3 7.6 15]
 
 Sorting by name:
 [
@@ -1180,6 +1180,16 @@ Sorting by date:
         "date": "1860"
     }
 ]
+
+[15 7.6 2.3 0.4 -7.1 -11.8]
+
+[-11.8 -7.1 0.4 2.3 7.6 15]
+
+["yellow" "white" "red" "magenta" "green" "gray" "cyan" "brown" "blue" "black"]
+
+["black" "blue" "brown" "cyan" "gray" "green" "magenta" "red" "white" "yellow"]
+
+["hi" "bye" "" "" "" "" "" "" "" ""]
 
 
 

@@ -1,7 +1,7 @@
 import "std.um"
 
 fn test1() {
-	x := []real{2.3, 7.6, -11.8, 0.4}
+	x := []real{2.3, 7.6, -11.8, 0.4, 15.0, -7.1}
 
 	for _, ascending in []bool{false, true} {
 		sort(x, |ascending| {
@@ -69,11 +69,75 @@ fn test4() {
 	sort([]int{}, {std::assert(false); return 0})
 }
 
+fn test5() {
+	x := []real{2.3, 7.6, -11.8, 0.4, 15.0, -7.1}
+
+	for _, ascending in []bool{false, true} {
+		sort(x, ascending)
+		printf("%v\n\n", x)		
+	}
+}
+
+fn test6() {
+	x := []str{"red", "green", "blue", "yellow", "gray", "brown", "black", "cyan", "magenta", "white"}
+
+	for _, ascending in []bool{false, true} {
+		sort(x, ascending)
+		printf("%v\n\n", x)		
+	}
+
+	y := make([]str, 10)
+	y[5] = "hi"
+	y[8] = "bye"
+
+	sort(y, false)
+	printf("%v\n\n", y)		
+}
+
+fn test7() {
+	x := []int{}
+	for i := 0; i < 100000; i++ {
+		x = append(x, std::rand())
+	}
+
+	sort(x, true)
+
+	for i := 0; i < len(x) - 1; i++ {
+		std::assert(x[i + 1] >= x[i])
+	}	
+}
+
+fn test8() {
+	type Vec = struct {
+		x, y, z: real32
+	}
+
+	v := []Vec{}
+	for i := 0; i < 10000; i++ {
+		v = append(v, Vec{std::rand(), std::rand(), std::rand()})
+	}
+
+	sort(v, true, z)
+
+	for i := 0; i < len(v) - 1; i++ {
+		std::assert(v[i + 1].z >= v[i].z)
+	}	
+}
+
+fn test9() {
+	sort([]int{}, true)
+}
+
 fn test*() {
 	test1()
 	test2()
 	test3()
 	test4()
+	test5()
+	test6()
+	test7()
+	test8()
+	test9()
 }
 
 fn main() {
