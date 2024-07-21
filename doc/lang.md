@@ -741,6 +741,15 @@ fn slice(a: ([]T | str), startIndex [, endIndex]: int): ([]T | str)
 Constructs a copy of the part of the dynamic array or string `a` starting at `startIndex` and ending before `endIndex`. If `endIndex` is omitted, it is treated as equal to `len(a)`. If `endIndex` is negative, `len(a)` is implicitly added to it.
 
 ```
+fn sort(d: []T, compare: fn (a, b: ^T): int)    // (1)
+fn sort(d: []T, ascending: bool [, fieldName])  // (2)
+```
+
+(1) Sorts the dynamic array `d` in ascending order as determined by the `compare` function. This function should return a negative number when `a^ < b^`, a positive number when `a^ > b^` and zero when `a^ == b^`.
+
+(2) Sorts the dynamic array `d` in ascending or descending order as determined by the `ascending` flag. The type `T` should be either a type for which the `<` operator is defined, or a structure type that has a field named `fieldName` and the `<` operator is defined for the type of this field. Generally performs faster than (1).   
+
+```
 fn len(a: ([...]T | []T | map[K]T | str)): int
 ```
 
