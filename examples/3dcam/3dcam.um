@@ -1,21 +1,14 @@
-import "std.um"
-
-type (
-    Vector2 = struct {x, y: real32}
-    Vector3 = struct {x, y, z: real32}
-    Color   = struct {r, g, b, a: uint8}
-) 
-
-// External functions
-fn drawPlane(centerPos: Vector3, size: Vector2, color: Color)
-fn drawCube(position: Vector3, width, height, length: real, color: Color)   
+import ( 
+    "std.um"
+    "rl.um"
+)
 
 const maxColumns = 20
 
 var cubes: [maxColumns] struct {
     height:   real
-    position: Vector3
-    color:    Color
+    position: rl::Vector3
+    color:    rl::Color
 }
 
 fn rnd(min, max: real): real {return min + (max - min) * std::frand()}
@@ -32,16 +25,16 @@ fn initBodies() {
 
 fn drawBodies() {
     // Draw ground
-    drawPlane({0, 0, 0}, {32, 32}, {50, 100, 50, 255})
+    rl::drawPlane({0, 0, 0}, {32, 32}, {50, 100, 50, 255})
 
     // Draw walls
-    drawCube({-16, 2.5,   0}, 1, 5, 32, { 90,  90,  90, 255})
-    drawCube({ 16, 2.5,   0}, 1, 5, 32, { 90,  90,  90, 255})
-    drawCube({  0, 2.5, -16}, 32, 5, 1, {120, 120, 120, 255})
-    drawCube({  0, 2.5,  16}, 32, 5, 1, {120, 120, 120, 255})    
+    rl::drawCube({-16, 2.5,   0}, 1, 5, 32, { 90,  90,  90, 255})
+    rl::drawCube({ 16, 2.5,   0}, 1, 5, 32, { 90,  90,  90, 255})
+    rl::drawCube({  0, 2.5, -16}, 32, 5, 1, {120, 120, 120, 255})
+    rl::drawCube({  0, 2.5,  16}, 32, 5, 1, {120, 120, 120, 255})    
                 
     // Draw columns
     for _, cube in cubes {
-        drawCube(cube.position, 2, cube.height, 2, cube.color)
+        rl::drawCube(cube.position, 2, cube.height, 2, cube.color)
     }
 }

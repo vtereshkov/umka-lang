@@ -39,6 +39,15 @@ int main(void)
     {
         umkaAddFunc(umka, "drawPlane", &rlDrawPlane);
         umkaAddFunc(umka, "drawCube", &rlDrawCube);
+
+        umkaAddModule(umka, "rl.um",
+            "type Vector2* = struct {x, y: real32}\n"
+            "type Vector3* = struct {x, y, z: real32}\n"
+            "type Color*   = struct {r, g, b, a: uint8}\n"
+            "fn drawPlane*(centerPos: Vector3, size: Vector2, color: Color)\n"
+            "fn drawCube*(position: Vector3, width, height, length: real, color: Color)\n"
+        );
+
         umkaOk = umkaCompile(umka);
     }
         

@@ -65,6 +65,9 @@ void doResolveExtern(Compiler *comp)
                     if (external->resolved)
                         comp->error.handler(comp->error.context, "External %s is already resolved", ident->name);
 
+                    if (!comp->lex.hasSourceString)
+                        comp->error.handler(comp->error.context, "Cannot resolve %s in this module", ident->name);
+
                     fn = external->entry;
                     external->resolved = true;
                 }

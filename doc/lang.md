@@ -589,7 +589,13 @@ A short variable declaration may redeclare variables provided they were original
 
 ### Function and method declarations
 
-A function or method declaration can be either a complete definition that includes the function block, or a *prototype* declaration if the function block is omitted. A prototype should be resolved somewhere below in the same module by duplicating the declaration, now with the function block. If a prototype is not resolved, it is considered an external C/C++ function. If such a function has not been registered via the Umka API, it is searched in the shared library (Umka module implementation library, UMI) `mod.umi`, where `mod` is the current module name. If the UMI does not exist or contains no such function, an error is triggered. 
+A function or method declaration can be either a complete definition that includes the function block, or a *prototype* declaration if the function block is omitted. The prototype should be resolved in one of the following ways (ordered by descending priority):
+
+* A complete function definition having the same signature somewhere below in the current module
+* An external C/C++ function defined in the host application and registered by calling `umkaAddFunc`. The current module must be contained in a source string registered by calling `umkaAddModule`, rather than in a physical source file
+* An external C/C++ function defined in the shared library (Umka module implementation library, UMI) named `mod.umi`, where `mod` is the current module name
+
+If the prototype is not resolved, an error is triggered. 
 
 Function and method declarations are only allowed in the module scope. In the block scope, functions should be declared as constants or variables of a function type. Methods cannot be declared in the block scope. 
 

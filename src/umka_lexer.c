@@ -118,12 +118,15 @@ int lexInit(Lexer *lex, Storage *storage, DebugInfo *debug, const char *fileName
     errno = 0;
 
     lex->error = error;
+    lex->hasSourceString = false;
     lex->buf = NULL;
     int bufLen = 0;
 
     if (sourceString)
     {
         // Read source from a string buffer
+        lex->hasSourceString = true;
+
         bufLen = strlen(sourceString);
         lex->buf = malloc(bufLen + 1);
         strcpy(lex->buf, sourceString);
