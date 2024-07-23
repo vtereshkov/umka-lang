@@ -458,7 +458,11 @@ bool moduleRegularizePath(const char *path, const char *curFolder, char *regular
                 if (numDots == 2)   // "../" or "..\"
                 {
                     if (numSeparators < 2)
+                    {
+                        free(separators);
+                        free(absolutePath);
                         return false;
+                    }
 
                     numSeparators--;
                     writeCh = separators[numSeparators - 1] + 1;
@@ -504,7 +508,11 @@ bool moduleRegularizePath(const char *path, const char *curFolder, char *regular
     }
 
     if (numDots > 0)
+    {
+        free(separators);
+        free(absolutePath);
         return false;
+    }
 
     *writeCh = 0;
 
