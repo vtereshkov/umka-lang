@@ -44,17 +44,15 @@ fn (a: ^Arr) print(): int {
 }
 
 // Fibers
-fn childFunc(parent: fiber, buf: ^int) {
-    for i := 0; i < 5; i++ {
-        std::println("Child : i=" + std::itoa(i) + " buf=" + std::itoa(buf^))
-        buf^ = i * 3
-        fibercall(parent)
-    }
-}
-
-fn parentFunc() {
+fn fibers() {
     a := new(int)
-    child := fiberspawn(childFunc, a)    
+    child := fiberspawn(|a| {
+        for i := 0; i < 5; i++ {
+            std::println("Child : i=" + std::itoa(i) + " buf=" + std::itoa(a^))
+            a^ = i * 3
+            fibercall(parent)
+        }
+    })
     for i := 0; i < 10; i++ {
         std::println("Parent: i=" + std::itoa(i) + " buf=" + std::itoa(a^))
         a^ = i * 7
@@ -113,7 +111,7 @@ fn test*() {
     printable.print()
     
     // Fibers
-    parentFunc()
+    fibers()
 
     // String representation
     printf("\nString representation:\n")

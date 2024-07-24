@@ -1460,8 +1460,7 @@ static void parseBuiltinKeysCall(Compiler *comp, Type **type, Const *constant)
 }
 
 
-// type FiberFunc = fn(parent: fiber, anyParam: ^type)
-// fn fiberspawn(childFunc: FiberFunc, anyParam: ^type): fiber
+// fn fiberspawn(childFunc: fn(parent: fiber)): fiber
 // fn fibercall(child: fiber)
 // fn fiberalive(child: fiber)
 static void parseBuiltinFiberCall(Compiler *comp, Type **type, Const *constant, BuiltinFunc builtin)
@@ -1471,23 +1470,19 @@ static void parseBuiltinFiberCall(Compiler *comp, Type **type, Const *constant, 
 
     if (builtin == BUILTIN_FIBERSPAWN)
     {
-        // Parent fiber pointer
-        Type *fiberFuncType = NULL;
+        Type *fnType = typeAdd(&comp->types, &comp->blocks, TYPE_FN);
+        typeAddParam(&comp->types, &fnType->sig, comp->anyType, "__upvalues");
+        typeAddParam(&comp->types, &fnType->sig, comp->fiberType, "parent");
+        fnType->sig.resultType = comp->voidType;
 
-        parseExpr(comp, &fiberFuncType, constant);
-        typeAssertCompatibleBuiltin(&comp->types, fiberFuncType, builtin, typeFiberFunc(fiberFuncType));
+        Type *expectedFiberClosureType = typeAdd(&comp->types, &comp->blocks, TYPE_CLOSURE);
+        typeAddField(&comp->types, expectedFiberClosureType, fnType, "__fn");
+        typeAddField(&comp->types, expectedFiberClosureType, comp->anyType, "__upvalues");
 
-        lexEat(&comp->lex, TOK_COMMA);
-
-        // Arbitrary pointer parameter
-        Type *anyParamType = NULL;
-        Type *expectedAnyParamType = fiberFuncType->sig.param[2]->type;
-
-        parseExpr(comp, &anyParamType, constant);
-        doAssertImplicitTypeConv(comp, expectedAnyParamType, &anyParamType, constant);
-
-        // Increase parameter's reference count
-        genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, expectedAnyParamType);
+        Type *fiberClosureType = expectedFiberClosureType;
+        parseExpr(comp, &fiberClosureType, constant);
+        doAssertImplicitTypeConv(comp, expectedFiberClosureType, &fiberClosureType, NULL);
+        genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, expectedFiberClosureType);
 
         *type = comp->fiberType;
     }

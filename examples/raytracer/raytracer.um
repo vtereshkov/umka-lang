@@ -148,53 +148,12 @@ fn (sc: ^Scene) trace(ray: ^Ray, depth: int): Color {
     return sc.ambientColor
 }
 
-const (width = 640; height = 480)
-
-type (
-    Pixels = [height][width][3]uint8
-
-    RenderData = struct {
-        startHeight:  int
-        stopHeight:   int
-        pos:          mat::Vec
-        azimuth:      real
-        focal:        real
-        antialiasing: real
-        numRays:      int
-        scene:        ^Scene
-        pixels:       ^Pixels
-    }
-)
-
-fn render(parent: fiber, buf: ^RenderData) {
-    sinAz, cosAz := sin(buf.azimuth), cos(buf.azimuth)
-    
-    for i := buf.startHeight; i < buf.stopHeight; i++ {
-        for j := 0; j < width; j++ {
-            dir := mat::Vec{j - width / 2, i - height / 2, buf.focal}
-
-            rotDir := mat::Vec{
-                 dir[0]*cosAz + dir[2]*sinAz,
-                 dir[1],
-                -dir[0]*sinAz + dir[2]*cosAz}
-
-            color := Color{0, 0, 0}
-
-            for r := 0; r < buf.numRays; r++ {
-                randomDir := rotDir.add(randn().mul(buf.antialiasing))
-                ray := Ray{buf.pos, randomDir.normalize()}
-                color = Color(mat::Vec(color).add(mat::Vec(buf.scene.trace(&ray, 0))))
-            }
-            color = Color(mat::Vec(color).mul(255.0 / buf.numRays))
-            
-            buf.pixels[i][j] = {round(color[0]), round(color[1]), round(color[2])}
-        }
-        printf("%3lld/%3lld\n", i + 1, height)
-        fibercall(parent)
-    }
-}
-
 fn main() {
+    const (
+        width  = 640
+        height = 480
+    )
+
     // Define scene  
     body := []Body {
         Box {
@@ -251,8 +210,6 @@ fn main() {
             
     scene := &Scene{{0.2, 0.2, 0.2}, body}
     
-    pixels := new(Pixels)            
-
     var numRays, numRenderers: int
     printf("Raytracer demo\n")
     printf("Rays per pixel (recommended 1 to 20): ");  scanf("%lld", &numRays)
@@ -261,22 +218,46 @@ fn main() {
     // Define fibers
     renderers := make([]fiber, numRenderers)
 
+    // Define eye
+    pos := mat::Vec{0, 0, 0}
+    azimuth := 30.0 * std::pi / 180.0
+    focal := 500.0
+    antialiasing := 1.0
+
+    pixels := new([height][width][3]uint8)
+
     for i, renderer^ in renderers {
-        // Define eye
-        renderData := &RenderData{
-            startHeight:  height / numRenderers * i,
-            stopHeight:   height / numRenderers * (i + 1),
-            pos:          {0, 0, 0},
-            azimuth:      30.0 * std::pi / 180.0,
-            focal:        500,
-            antialiasing: 1.0,
-            numRays:      numRays,
-            scene:        scene,
-            pixels:       pixels
-        }
-        
+        startHeight := height / numRenderers * i
+        stopHeight  := height / numRenderers * (i + 1)
+
         // Spawn fiber
-        renderer^ = fiberspawn(render, renderData)
+        renderer^ = fiberspawn(|startHeight, stopHeight, numRays, pos, azimuth, focal, antialiasing, scene, pixels| {
+            sinAz, cosAz := sin(azimuth), cos(azimuth)
+            
+            for i := startHeight; i < stopHeight; i++ {
+                for j := 0; j < width; j++ {
+                    dir := mat::Vec{j - width / 2, i - height / 2, focal}
+
+                    rotDir := mat::Vec{
+                         dir[0]*cosAz + dir[2]*sinAz,
+                         dir[1],
+                        -dir[0]*sinAz + dir[2]*cosAz}
+
+                    color := Color{0, 0, 0}
+
+                    for r := 0; r < numRays; r++ {
+                        randomDir := rotDir.add(randn().mul(antialiasing))
+                        ray := Ray{pos, randomDir.normalize()}
+                        color = Color(mat::Vec(color).add(mat::Vec(scene.trace(&ray, 0))))
+                    }
+                    color = Color(mat::Vec(color).mul(255.0 / numRays))
+                    
+                    pixels[i][j] = {round(color[0]), round(color[1]), round(color[2])}
+                }
+                printf("%3lld/%3lld\n", i + 1, height)
+                fibercall(parent)
+            }
+        })
     }  
 
     // Render scene

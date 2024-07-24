@@ -988,7 +988,7 @@ static FORCE_INLINE void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, voi
                     }
 
                     if (((Fiber *)ptr)->alive)
-                        pages->error->runtimeHandler(pages->error->context, VM_RUNTIME_ERROR, "Cannot destroy a fiber that did not return");
+                        pages->error->runtimeHandler(pages->error->context, VM_RUNTIME_ERROR, "Cannot destroy a busy fiber");
 
                     // Only one ref is left. Defer processing the parent and traverse the children before removing the ref
                     HeapPage *stackPage = pageFind(pages, ((Fiber *)ptr)->stack, true);
@@ -2631,12 +2631,13 @@ static FORCE_INLINE void doBuiltinKeys(Fiber *fiber, HeapPages *pages, Error *er
 }
 
 
-// type FiberFunc = fn(parent: fiber, anyParam: ^type)
-// fn fiberspawn(childFunc: FiberFunc, anyParam: ^type): fiber
+// fn fiberspawn(childFunc: fn(parent: fiber)): fiber
 static FORCE_INLINE void doBuiltinFiberspawn(Fiber *fiber, HeapPages *pages, Error *error)
 {
-    void *anyParam = (fiber->top++)->ptrVal;
-    int childEntryOffset = (fiber->top++)->intVal;
+    Closure *childClosure  = (Closure *)(fiber->top++)->ptrVal;
+
+    if (!childClosure || childClosure->entryOffset <= 0)
+        error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Called function is not defined");
 
     // Copy whole fiber context
     Fiber *child = chunkAlloc(pages, sizeof(Fiber), NULL, NULL, false, error);
@@ -2645,16 +2646,17 @@ static FORCE_INLINE void doBuiltinFiberspawn(Fiber *fiber, HeapPages *pages, Err
     child->stack = chunkAlloc(pages, child->stackSize * sizeof(Slot), NULL, NULL, true, error);
     child->top = child->base = child->stack + child->stackSize - 1;
 
-    // Call child fiber function
-    for (int i = 0; i < sizeof(Interface) / sizeof(Slot); i++)
-        (--child->top)->intVal = 0;                     // Push dummy upvalues
+    // Call child fiber closure
+
+    // Push upvalues
+    child->top -= sizeof(Interface) / sizeof(Slot);
+    *(Interface *)child->top = childClosure->upvalue;
 
     (--child->top)->ptrVal = fiber;                     // Push parent fiber pointer
-    (--child->top)->ptrVal = anyParam;                  // Push arbitrary pointer parameter
     (--child->top)->intVal = VM_RETURN_FROM_FIBER;      // Push 'return from fiber' signal instead of return address
-    child->ip = childEntryOffset;                       // Call
+    child->ip = childClosure->entryOffset;              // Call
 
-    // Return child fiber pointer to parent fiber as result
+    // Return child fiber pointer
     (--fiber->top)->ptrVal = child;
 }
 
@@ -3491,7 +3493,7 @@ static FORCE_INLINE void doReturn(Fiber *fiber, Fiber **newFiber)
     {
         // For fiber function, kill the fiber, extract the parent fiber pointer and switch to it
         fiber->alive = false;
-        *newFiber = (Fiber *)(fiber->top + 1)->ptrVal;
+        *newFiber = (Fiber *)fiber->top->ptrVal;
     }
     else
     {
