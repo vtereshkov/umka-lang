@@ -203,20 +203,6 @@ static inline bool typeExprListStruct(Type *type)
 }
 
 
-static inline bool typeFiberFunc(Type *type)
-{
-    return type->kind                            == TYPE_FN         &&
-           type->sig.numParams                   == 3               &&
-           type->sig.numDefaultParams            == 0               &&
-           type->sig.param[0]->type->kind        == TYPE_INTERFACE  &&
-           type->sig.param[1]->type->kind        == TYPE_FIBER      &&
-           type->sig.param[2]->type->kind        == TYPE_PTR        &&
-           type->sig.param[2]->type->base->kind  != TYPE_VOID       &&
-           type->sig.resultType->kind            == TYPE_VOID       &&
-           !type->sig.isMethod;
-}
-
-
 bool typeEquivalent             (Type *left, Type *right);
 bool typeEquivalentExceptIdent  (Type *left, Type *right);
 void typeAssertEquivalent       (Types *types, Type *left, Type *right);

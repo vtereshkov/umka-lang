@@ -199,25 +199,21 @@ for i, x in g {
 ```
 ### Multitasking
 ```
-fn childFunc(parent: fiber, buf: ^int) {
+a := new(int)
+child := fiberspawn(|a| {
     for i := 0; i < 5; i++ {
-        std::println("Child : i=" + std::itoa(i) + " buf=" + std::itoa(buf^))
-        buf^ = i * 3
+        std::println("Child : i=" + std::itoa(i) + " buf=" + std::itoa(a^))
+        a^ = i * 3
         fibercall(parent)
     }
-}
-
-fn parentFunc() {
-    a := new(int)
-    child := fiberspawn(childFunc, a)    
-    for i := 0; i < 10; i++ {
-        std::println("Parent: i=" + std::itoa(i) + " buf=" + std::itoa(a^))
-        a^ = i * 7
-        if fiberalive(child) {
-            fibercall(child)
-        }
-    }    
-}   
+})
+for i := 0; i < 10; i++ {
+    std::println("Parent: i=" + std::itoa(i) + " buf=" + std::itoa(a^))
+    a^ = i * 7
+    if fiberalive(child) {
+        fibercall(child)
+    }
+} 
 ```
 ## Umka vs Go
 ### Purpose

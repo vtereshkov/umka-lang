@@ -820,11 +820,10 @@ Returns a dynamic array of the keys that index the items of the map `m`.
 ##### Multitasking functions
 
 ```
-type FiberFunc = fn(parent: fiber, anyParam: ^T)
-fn fiberspawn(childFunc: FiberFunc, anyParam: ^T): fiber
+fn fiberspawn(childFunc: fn(parent: fiber)): fiber
 ```
 
-Creates a new fiber and assigns `childFunc` as the fiber function. `anyParam` is a pointer to heap-allocated data buffer that will be passed to `childFunc` .
+Creates a new fiber and assigns `childFunc` as the fiber function.
 
 ```
 fn fibercall(child: fiber)
