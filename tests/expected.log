@@ -183,21 +183,79 @@ Left & right trimming
 
 >>> Fibers
 
-Parent fiber: i = 0   buf = 0.00
-Child  fiber: i = 0   buf = 0.00
-Parent fiber: i = 1   buf = 0.00
-Child  fiber: i = 1   buf = 7.00
-Parent fiber: i = 2   buf = 3.00
-Child  fiber: i = 2   buf = 14.00
-Parent fiber: i = 3   buf = 6.00
-Child  fiber: i = 3   buf = 21.00
-Parent fiber: i = 4   buf = 9.00
-Child  fiber: i = 4   buf = 28.00
-Parent fiber: i = 5   buf = 12.00
-Parent fiber: i = 6   buf = 12.00
-Parent fiber: i = 7   buf = 12.00
-Parent fiber: i = 8   buf = 12.00
-Parent fiber: i = 9   buf = 12.00
+Parent: i=0 b=0
+    Child: i=0 a=0 d=0
+        Grandchild: i=0 a=0 c=0
+    Child: i=0 a=0 d=0
+        Grandchild: i=1 a=0 c=19
+    Child: i=0 a=0 d=11
+        Grandchild: i=2 a=0 c=38
+    Child: i=0 a=0 d=22
+        Grandchild: i=3 a=0 c=57
+    Child: i=0 a=0 d=33
+        Grandchild: i=4 a=0 c=76
+    Child: i=0 a=0 d=44
+        Grandchild: i=5 a=0 c=95
+    Child: i=0 a=0 d=55
+        Grandchild: i=6 a=0 c=114
+    Child: i=0 a=0 d=66
+        Grandchild: i=7 a=0 c=133
+    Child: i=0 a=0 d=77
+        Grandchild: i=8 a=0 c=152
+    Child: i=0 a=0 d=88
+        Grandchild: i=9 a=0 c=171
+Parent: i=1 b=0
+    Child: i=1 a=7 d=99
+        Grandchild: i=10 a=7 c=0
+    Child: i=1 a=7 d=110
+        Grandchild: i=11 a=7 c=19
+    Child: i=1 a=7 d=121
+        Grandchild: i=12 a=7 c=38
+    Child: i=1 a=7 d=132
+    Child: i=1 a=7 d=132
+    Child: i=1 a=7 d=132
+    Child: i=1 a=7 d=132
+    Child: i=1 a=7 d=132
+    Child: i=1 a=7 d=132
+    Child: i=1 a=7 d=132
+Parent: i=2 b=3
+    Child: i=2 a=14 d=132
+    Child: i=2 a=14 d=132
+    Child: i=2 a=14 d=132
+    Child: i=2 a=14 d=132
+    Child: i=2 a=14 d=132
+    Child: i=2 a=14 d=132
+    Child: i=2 a=14 d=132
+    Child: i=2 a=14 d=132
+    Child: i=2 a=14 d=132
+    Child: i=2 a=14 d=132
+Parent: i=3 b=6
+    Child: i=3 a=21 d=132
+    Child: i=3 a=21 d=132
+    Child: i=3 a=21 d=132
+    Child: i=3 a=21 d=132
+    Child: i=3 a=21 d=132
+    Child: i=3 a=21 d=132
+    Child: i=3 a=21 d=132
+    Child: i=3 a=21 d=132
+    Child: i=3 a=21 d=132
+    Child: i=3 a=21 d=132
+Parent: i=4 b=9
+    Child: i=4 a=28 d=132
+    Child: i=4 a=28 d=132
+    Child: i=4 a=28 d=132
+    Child: i=4 a=28 d=132
+    Child: i=4 a=28 d=132
+    Child: i=4 a=28 d=132
+    Child: i=4 a=28 d=132
+    Child: i=4 a=28 d=132
+    Child: i=4 a=28 d=132
+    Child: i=4 a=28 d=132
+Parent: i=5 b=12
+Parent: i=6 b=12
+Parent: i=7 b=12
+Parent: i=8 b=12
+Parent: i=9 b=12
 
 
 >>> Functional tools

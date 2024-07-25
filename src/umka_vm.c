@@ -2634,7 +2634,8 @@ static FORCE_INLINE void doBuiltinKeys(Fiber *fiber, HeapPages *pages, Error *er
 // fn fiberspawn(childFunc: fn(parent: fiber)): fiber
 static FORCE_INLINE void doBuiltinFiberspawn(Fiber *fiber, HeapPages *pages, Error *error)
 {
-    Closure *childClosure  = (Closure *)(fiber->top++)->ptrVal;
+    Type *childClosureType = (Type *)(fiber->top++)->ptrVal;
+    Closure *childClosure = (Closure *)(fiber->top++)->ptrVal;
 
     if (!childClosure || childClosure->entryOffset <= 0)
         error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Called function is not defined");
@@ -2646,15 +2647,22 @@ static FORCE_INLINE void doBuiltinFiberspawn(Fiber *fiber, HeapPages *pages, Err
     child->stack = chunkAlloc(pages, child->stackSize * sizeof(Slot), NULL, NULL, true, error);
     child->top = child->base = child->stack + child->stackSize - 1;
 
-    // Call child fiber closure
+    Signature *childClosureSig = &childClosureType->field[0]->type->sig;
 
     // Push upvalues
     child->top -= sizeof(Interface) / sizeof(Slot);
     *(Interface *)child->top = childClosure->upvalue;
+    doBasicChangeRefCnt(child, pages, child->top, childClosureSig->param[0]->type, TOK_PLUSPLUS);
 
-    (--child->top)->ptrVal = fiber;                     // Push parent fiber pointer
-    (--child->top)->intVal = VM_RETURN_FROM_FIBER;      // Push 'return from fiber' signal instead of return address
-    child->ip = childClosure->entryOffset;              // Call
+    // Push parent fiber pointer
+    (--child->top)->ptrVal = fiber;
+    doBasicChangeRefCnt(child, pages, child->top->ptrVal, childClosureSig->param[1]->type, TOK_PLUSPLUS);
+
+    // Push 'return from fiber' signal instead of return address
+    (--child->top)->intVal = VM_RETURN_FROM_FIBER;
+
+     // Call child fiber closure
+    child->ip = childClosure->entryOffset;
 
     // Return child fiber pointer
     (--fiber->top)->ptrVal = child;

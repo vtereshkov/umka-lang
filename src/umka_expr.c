@@ -1470,6 +1470,7 @@ static void parseBuiltinFiberCall(Compiler *comp, Type **type, Const *constant, 
 
     if (builtin == BUILTIN_FIBERSPAWN)
     {
+        // Child fiber closure
         Type *fnType = typeAdd(&comp->types, &comp->blocks, TYPE_FN);
         typeAddParam(&comp->types, &fnType->sig, comp->anyType, "__upvalues");
         typeAddParam(&comp->types, &fnType->sig, comp->fiberType, "parent");
@@ -1482,7 +1483,9 @@ static void parseBuiltinFiberCall(Compiler *comp, Type **type, Const *constant, 
         Type *fiberClosureType = expectedFiberClosureType;
         parseExpr(comp, &fiberClosureType, constant);
         doAssertImplicitTypeConv(comp, expectedFiberClosureType, &fiberClosureType, NULL);
-        genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, expectedFiberClosureType);
+
+        // Child fiber closure type (hidden parameter)
+        genPushGlobalPtr(&comp->gen, fiberClosureType);
 
         *type = comp->fiberType;
     }
