@@ -149,9 +149,7 @@ static void compilerDeclareBuiltinIdents(Compiler *comp)
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "keys",       comp->ptrVoidType, BUILTIN_KEYS);
 
     // Fibers
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "fiberspawn", comp->ptrVoidType, BUILTIN_FIBERSPAWN);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "fibercall",  comp->voidType,    BUILTIN_FIBERCALL);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "fiberalive", comp->boolType,    BUILTIN_FIBERALIVE);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "resume",     comp->voidType,    BUILTIN_RESUME);
 
     // Misc
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "memusage",   comp->intType,     BUILTIN_MEMUSAGE);

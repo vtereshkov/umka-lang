@@ -231,7 +231,7 @@ fn main() {
         stopHeight  := height / numRenderers * (i + 1)
 
         // Spawn fiber
-        renderer^ = fiberspawn(|startHeight, stopHeight, numRays, pos, azimuth, focal, antialiasing, scene, pixels| {
+        renderer^ = make(fiber, |startHeight, stopHeight, numRays, pos, azimuth, focal, antialiasing, scene, pixels| {
             sinAz, cosAz := sin(azimuth), cos(azimuth)
             
             for i := startHeight; i < stopHeight; i++ {
@@ -255,7 +255,7 @@ fn main() {
                     pixels[i][j] = {round(color[0]), round(color[1]), round(color[2])}
                 }
                 printf("%3lld/%3lld\n", i + 1, height)
-                fibercall(parent)
+                resume(parent)
             }
         })
     }  
@@ -266,8 +266,8 @@ fn main() {
     for true {
         working := false
         for _, renderer in renderers {
-            if fiberalive(renderer) { 
-                fibercall(renderer)
+            if valid(renderer) { 
+                resume(renderer)
                 working = true
             }
         }

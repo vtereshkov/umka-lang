@@ -130,9 +130,7 @@ typedef enum
     BUILTIN_KEYS,
 
     // Fibers
-    BUILTIN_FIBERSPAWN,
-    BUILTIN_FIBERCALL,
-    BUILTIN_FIBERALIVE,
+    BUILTIN_RESUME,
 
     // Misc
     BUILTIN_MEMUSAGE,

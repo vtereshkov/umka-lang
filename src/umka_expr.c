@@ -925,33 +925,65 @@ static void parseBuiltinNewCall(Compiler *comp, Type **type, Const *constant)
 }
 
 
-// fn make(type: Type [, len: int]): type
+// fn make(type: Type, len: int): type
+// fn make(type: Type): type
+// fn make(type: Type, childFunc: fn(parent: fiber)): type
 static void parseBuiltinMakeCall(Compiler *comp, Type **type, Const *constant)
 {
     if (constant)
         comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
 
-    // Dynamic array type
     *type = parseType(comp, NULL);
-    typeAssertCompatibleBuiltin(&comp->types, *type, BUILTIN_MAKE, (*type)->kind == TYPE_DYNARRAY || (*type)->kind == TYPE_MAP);
-
-    genPushGlobalPtr(&comp->gen, *type);
+    typeAssertCompatibleBuiltin(&comp->types, *type, BUILTIN_MAKE, (*type)->kind == TYPE_DYNARRAY || (*type)->kind == TYPE_MAP || (*type)->kind == TYPE_FIBER);
 
     if ((*type)->kind == TYPE_DYNARRAY)
     {
-        // Dynamic array length
         lexEat(&comp->lex, TOK_COMMA);
 
+        // Dynamic array type
+        genPushGlobalPtr(&comp->gen, *type);
+
+        // Dynamic array length
         Type *lenType = comp->intType;
         parseExpr(comp, &lenType, NULL);
         typeAssertCompatible(&comp->types, comp->intType, lenType);
-    }
-    else // TYPE_MAP
-        genPushIntConst(&comp->gen, 0);
 
-    // Pointer to result (hidden parameter)
-    int resultOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, *type);
-    genPushLocalPtr(&comp->gen, resultOffset);
+        // Pointer to result (hidden parameter)
+        int resultOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, *type);
+        genPushLocalPtr(&comp->gen, resultOffset);
+    }
+    else if ((*type)->kind == TYPE_MAP)
+    {
+        // Map type
+        genPushGlobalPtr(&comp->gen, *type);
+
+        // Pointer to result (hidden parameter)
+        int resultOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, *type);
+        genPushLocalPtr(&comp->gen, resultOffset);
+    }
+    else if ((*type)->kind == TYPE_FIBER)
+    {
+        lexEat(&comp->lex, TOK_COMMA);
+
+        // Child fiber closure
+        Type *fnType = typeAdd(&comp->types, &comp->blocks, TYPE_FN);
+        typeAddParam(&comp->types, &fnType->sig, comp->anyType, "__upvalues");
+        typeAddParam(&comp->types, &fnType->sig, comp->fiberType, "parent");
+        fnType->sig.resultType = comp->voidType;
+
+        Type *expectedFiberClosureType = typeAdd(&comp->types, &comp->blocks, TYPE_CLOSURE);
+        typeAddField(&comp->types, expectedFiberClosureType, fnType, "__fn");
+        typeAddField(&comp->types, expectedFiberClosureType, comp->anyType, "__upvalues");
+
+        Type *fiberClosureType = expectedFiberClosureType;
+        parseExpr(comp, &fiberClosureType, constant);
+        doAssertImplicitTypeConv(comp, expectedFiberClosureType, &fiberClosureType, NULL);
+
+        // Child fiber closure type (hidden parameter)
+        genPushGlobalPtr(&comp->gen, fiberClosureType);
+    }
+    else
+        comp->error.handler(comp->error.context, "Illegal type");
 
     genCallBuiltin(&comp->gen, (*type)->kind, BUILTIN_MAKE);
 }
@@ -1460,47 +1492,17 @@ static void parseBuiltinKeysCall(Compiler *comp, Type **type, Const *constant)
 }
 
 
-// fn fiberspawn(childFunc: fn(parent: fiber)): fiber
-// fn fibercall(child: fiber)
-// fn fiberalive(child: fiber)
-static void parseBuiltinFiberCall(Compiler *comp, Type **type, Const *constant, BuiltinFunc builtin)
+// fn resume(child: fiber)
+static void parseBuiltinResumeCall(Compiler *comp, Type **type, Const *constant)
 {
     if (constant)
         comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
 
-    if (builtin == BUILTIN_FIBERSPAWN)
-    {
-        // Child fiber closure
-        Type *fnType = typeAdd(&comp->types, &comp->blocks, TYPE_FN);
-        typeAddParam(&comp->types, &fnType->sig, comp->anyType, "__upvalues");
-        typeAddParam(&comp->types, &fnType->sig, comp->fiberType, "parent");
-        fnType->sig.resultType = comp->voidType;
+    parseExpr(comp, type, constant);
+    doAssertImplicitTypeConv(comp, comp->fiberType, type, constant);
 
-        Type *expectedFiberClosureType = typeAdd(&comp->types, &comp->blocks, TYPE_CLOSURE);
-        typeAddField(&comp->types, expectedFiberClosureType, fnType, "__fn");
-        typeAddField(&comp->types, expectedFiberClosureType, comp->anyType, "__upvalues");
-
-        Type *fiberClosureType = expectedFiberClosureType;
-        parseExpr(comp, &fiberClosureType, constant);
-        doAssertImplicitTypeConv(comp, expectedFiberClosureType, &fiberClosureType, NULL);
-
-        // Child fiber closure type (hidden parameter)
-        genPushGlobalPtr(&comp->gen, fiberClosureType);
-
-        *type = comp->fiberType;
-    }
-    else    // BUILTIN_FIBERCALL, BUILTIN_FIBERALIVE
-    {
-        parseExpr(comp, type, constant);
-        doAssertImplicitTypeConv(comp, comp->fiberType, type, constant);
-
-        if (builtin == BUILTIN_FIBERALIVE)
-            *type = comp->boolType;
-        else
-            *type = comp->voidType;
-    }
-
-    genCallBuiltin(&comp->gen, TYPE_NONE, builtin);
+    genCallBuiltin(&comp->gen, TYPE_NONE, BUILTIN_RESUME);
+    *type = comp->voidType;
 }
 
 
@@ -1594,9 +1596,7 @@ static void parseBuiltinCall(Compiler *comp, Type **type, Const *constant, Built
         case BUILTIN_KEYS:          parseBuiltinKeysCall(comp, type, constant);             break;
 
         // Fibers
-        case BUILTIN_FIBERSPAWN:
-        case BUILTIN_FIBERCALL:
-        case BUILTIN_FIBERALIVE:    parseBuiltinFiberCall(comp, type, constant, builtin);   break;
+        case BUILTIN_RESUME:        parseBuiltinResumeCall(comp, type, constant);           break;
 
         // Misc
         case BUILTIN_MEMUSAGE:      parseBuiltinMemusageCall(comp, type, constant);         break;
@@ -2057,7 +2057,6 @@ static void parseMapLiteral(Compiler *comp, Type **type, Const *constant)
     doZeroVar(comp, mapIdent);
 
     genPushGlobalPtr(&comp->gen, *type);
-    genPushIntConst(&comp->gen, 0);
     doPushVarPtr(comp, mapIdent);
     genCallBuiltin(&comp->gen, (*type)->kind, BUILTIN_MAKE);
 

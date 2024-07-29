@@ -200,18 +200,18 @@ for i, x in g {
 ### Multitasking
 ```
 a := new(int)
-child := fiberspawn(|a| {
+child := make(fiber, |a| {
     for i := 0; i < 5; i++ {
         std::println("Child : i=" + std::itoa(i) + " buf=" + std::itoa(a^))
         a^ = i * 3
-        fibercall(parent)
+        resume(parent)
     }
 })
 for i := 0; i < 10; i++ {
     std::println("Parent: i=" + std::itoa(i) + " buf=" + std::itoa(a^))
     a^ = i * 7
-    if fiberalive(child) {
-        fibercall(child)
+    if valid(child) {
+        resume(child)
     }
 } 
 ```

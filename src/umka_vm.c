@@ -142,9 +142,7 @@ static const char *builtinSpelling [] =
     "valid",
     "validkey",
     "keys",
-    "fiberspawn",
-    "fibercall",
-    "fiberalive",
+    "resume",
     "memusage",
     "exit"
 };
@@ -1244,6 +1242,39 @@ static FORCE_INLINE void doGetMapKeys(Map *map, void *keys, Error *error)
 }
 
 
+static FORCE_INLINE Fiber *doAllocFiber(Fiber *parent, Closure *childClosure, Type *childClosureType, HeapPages *pages, Error *error)
+{
+    if (!childClosure || childClosure->entryOffset <= 0)
+        error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Called function is not defined");
+
+    // Copy whole fiber context
+    Fiber *child = chunkAlloc(pages, sizeof(Fiber), NULL, NULL, false, error);
+
+    *child = *parent;
+    child->stack = chunkAlloc(pages, child->stackSize * sizeof(Slot), NULL, NULL, true, error);
+    child->top = child->base = child->stack + child->stackSize - 1;
+
+    Signature *childClosureSig = &childClosureType->field[0]->type->sig;
+
+    // Push upvalues
+    child->top -= sizeof(Interface) / sizeof(Slot);
+    *(Interface *)child->top = childClosure->upvalue;
+    doBasicChangeRefCnt(child, pages, child->top, childClosureSig->param[0]->type, TOK_PLUSPLUS);
+
+    // Push parent fiber pointer
+    (--child->top)->ptrVal = parent;
+    doBasicChangeRefCnt(child, pages, child->top->ptrVal, childClosureSig->param[1]->type, TOK_PLUSPLUS);
+
+    // Push 'return from fiber' signal instead of return address
+    (--child->top)->intVal = VM_RETURN_FROM_FIBER;
+
+     // Call child fiber closure
+    child->ip = childClosure->entryOffset;
+
+    return child;
+}
+
+
 static FORCE_INLINE int doPrintIndented(char *buf, int maxLen, int depth, bool pretty, char ch)
 {
     enum {INDENT_WIDTH = 4};
@@ -1880,19 +1911,43 @@ static FORCE_INLINE void doBuiltinNew(Fiber *fiber, HeapPages *pages, Error *err
 }
 
 
-// fn make(type: Type [, len: int]): type
+// fn make(type: Type, len: int): type
+// fn make(type: Type): type
+// fn make(type: Type, childFunc: fn(parent: fiber)): type
 static FORCE_INLINE void doBuiltinMake(Fiber *fiber, HeapPages *pages, Error *error)
 {
-    void *result = (fiber->top++)->ptrVal;
-    int len      = (fiber->top++)->intVal;
-    Type *type   = (Type *)(fiber->top++)->ptrVal;
+    TypeKind typeKind = fiber->code[fiber->ip].typeKind;
 
-    if (type->kind == TYPE_DYNARRAY)
-        doAllocDynArray(pages, (DynArray *)result, type, len, error);
-    else // TYPE_MAP
-        doAllocMap(pages, (Map *)result, type, error);
+    if (typeKind == TYPE_DYNARRAY)
+    {
+        DynArray *result = (DynArray *)(fiber->top++)->ptrVal;
+        int len = (fiber->top++)->intVal;
+        Type *type = (Type *)(fiber->top++)->ptrVal;
 
-    (--fiber->top)->ptrVal = result;
+        doAllocDynArray(pages, result, type, len, error);
+
+        (--fiber->top)->ptrVal = result;
+    }
+    else if (typeKind == TYPE_MAP)
+    {
+        Map *result = (Map *)(fiber->top++)->ptrVal;
+        Type *type = (Type *)(fiber->top++)->ptrVal;
+
+        doAllocMap(pages, result, type, error);
+
+        (--fiber->top)->ptrVal = result;
+    }
+    else if (typeKind == TYPE_FIBER)
+    {
+        Type *childClosureType = (Type *)(fiber->top++)->ptrVal;
+        Closure *childClosure = (Closure *)(fiber->top++)->ptrVal;
+
+        Fiber *result = doAllocFiber(fiber, childClosure, childClosureType, pages, error);
+
+        (--fiber->top)->ptrVal = result;
+    }
+    else
+        error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Illegal type");
 }
 
 
@@ -2568,13 +2623,13 @@ static FORCE_INLINE void doBuiltinValid(Fiber *fiber, Error *error)
         case TYPE_CLOSURE:
         {
             Closure *closure = (Closure *)fiber->top->ptrVal;
-            isValid = closure->entryOffset > 0;
+            isValid = closure && closure->entryOffset > 0;
             break;
         }
         case TYPE_FIBER:
         {
             Fiber *child = (Fiber *)fiber->top->ptrVal;
-            isValid = child;
+            isValid = child && child->alive;
             break;
         }
         default:
@@ -2631,61 +2686,12 @@ static FORCE_INLINE void doBuiltinKeys(Fiber *fiber, HeapPages *pages, Error *er
 }
 
 
-// fn fiberspawn(childFunc: fn(parent: fiber)): fiber
-static FORCE_INLINE void doBuiltinFiberspawn(Fiber *fiber, HeapPages *pages, Error *error)
-{
-    Type *childClosureType = (Type *)(fiber->top++)->ptrVal;
-    Closure *childClosure = (Closure *)(fiber->top++)->ptrVal;
-
-    if (!childClosure || childClosure->entryOffset <= 0)
-        error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Called function is not defined");
-
-    // Copy whole fiber context
-    Fiber *child = chunkAlloc(pages, sizeof(Fiber), NULL, NULL, false, error);
-
-    *child = *fiber;
-    child->stack = chunkAlloc(pages, child->stackSize * sizeof(Slot), NULL, NULL, true, error);
-    child->top = child->base = child->stack + child->stackSize - 1;
-
-    Signature *childClosureSig = &childClosureType->field[0]->type->sig;
-
-    // Push upvalues
-    child->top -= sizeof(Interface) / sizeof(Slot);
-    *(Interface *)child->top = childClosure->upvalue;
-    doBasicChangeRefCnt(child, pages, child->top, childClosureSig->param[0]->type, TOK_PLUSPLUS);
-
-    // Push parent fiber pointer
-    (--child->top)->ptrVal = fiber;
-    doBasicChangeRefCnt(child, pages, child->top->ptrVal, childClosureSig->param[1]->type, TOK_PLUSPLUS);
-
-    // Push 'return from fiber' signal instead of return address
-    (--child->top)->intVal = VM_RETURN_FROM_FIBER;
-
-     // Call child fiber closure
-    child->ip = childClosure->entryOffset;
-
-    // Return child fiber pointer
-    (--fiber->top)->ptrVal = child;
-}
-
-
-// fn fibercall(child: fiber)
-static FORCE_INLINE void doBuiltinFibercall(Fiber *fiber, Fiber **newFiber, HeapPages *pages, Error *error)
+// fn resume(child: fiber)
+static FORCE_INLINE void doBuiltinResume(Fiber *fiber, Fiber **newFiber, HeapPages *pages, Error *error)
 {
     *newFiber = (Fiber *)(fiber->top++)->ptrVal;
     if (!(*newFiber) || !(*newFiber)->alive)
         error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Fiber is null");
-}
-
-
-// fn fiberalive(child: fiber)
-static FORCE_INLINE void doBuiltinFiberalive(Fiber *fiber, HeapPages *pages, Error *error)
-{
-    Fiber *child = (Fiber *)fiber->top->ptrVal;
-    if (!child)
-        error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Fiber is null");
-
-    fiber->top->intVal = child->alive;
 }
 
 
@@ -3386,8 +3392,9 @@ static FORCE_INLINE void doCallExtern(Fiber *fiber, Error *error)
 
 static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages *pages, Error *error)
 {
-    // Preserve instruction pointer, in case any of the standard calls end up calling Umka again.
+    // Preserve instruction pointer, in case any of the standard calls end up calling Umka again
     int ip = fiber->ip;
+
     BuiltinFunc builtin = fiber->code[fiber->ip].operand.builtinVal;
     TypeKind typeKind   = fiber->code[fiber->ip].typeKind;
 
@@ -3479,14 +3486,13 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         case BUILTIN_KEYS:          doBuiltinKeys(fiber, pages, error); break;
 
         // Fibers
-        case BUILTIN_FIBERSPAWN:    doBuiltinFiberspawn(fiber, pages, error); break;
-        case BUILTIN_FIBERCALL:     doBuiltinFibercall(fiber, newFiber, pages, error); break;
-        case BUILTIN_FIBERALIVE:    doBuiltinFiberalive(fiber, pages, error); break;
+        case BUILTIN_RESUME:        doBuiltinResume(fiber, newFiber, pages, error); break;
 
         // Misc
         case BUILTIN_MEMUSAGE:      doBuiltinMemusage(fiber, pages, error); break;
         case BUILTIN_EXIT:          doBuiltinExit(fiber, error); return;
     }
+
     fiber->ip = ip;
     fiber->ip++;
 }

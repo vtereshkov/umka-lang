@@ -2,16 +2,16 @@ fn test*() {
     a := new(int)
     b := new(int)
     
-    child := fiberspawn(|a, b| {
+    child := make(fiber, |a, b| {
 
         c := new(int)
         d := new(int)
     
-        grandchild := fiberspawn(|a, b, c, d| {
+        grandchild := make(fiber, |a, c, d| {
             for i := 0; i < 13; i++ {
                 printf("        Grandchild: i=%d a=%d c=%d\n", i, a^, c^)
                 d^ = i * 11
-                fibercall(parent)
+                resume(parent)
             }
         })
     
@@ -19,21 +19,21 @@ fn test*() {
             for j := 0; j < 10; j++ {
                 printf("    Child: i=%d a=%d d=%d\n", i, a^, d^)
                 c^ = j * 19
-                if fiberalive(grandchild) {
-                    fibercall(grandchild)
+                if valid(grandchild) {
+                    resume(grandchild)
                 }
             }
 
             b^ = i * 3
-            fibercall(parent)
+            resume(parent)
         }
     })
     
     for i := 0; i < 10; i++ {
         printf("Parent: i=%d b=%d\n", i, b^)
         a^ = i * 7
-        if fiberalive(child) {
-            fibercall(child)
+        if valid(child) {
+            resume(child)
         }
     }    
 }
