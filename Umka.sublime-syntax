@@ -5,7 +5,7 @@ file_extensions:
   - um
 scope: source.umka
 variables:
-  builtin: (append|atan|atan2|cap|ceil|copy|cos|delete|exit|exp|fabs|floor|fprintf|fscanf|insert|keys|len|log|make|memusage|new|printf|resume|round|scanf|selfhasptr|selftypeeq|sin|sizeof|sizeofself|slice|sprintf|sqrt|sscanf|trunc|typeptr|valid|validkey)
+  builtin: (append|atan|atan2|cap|ceil|copy|cos|delete|exit|exp|fabs|floor|fprintf|fscanf|insert|keys|len|log|make|memusage|new|printf|resume|round|scanf|selfhasptr|selftypeeq|sin|sizeof|sizeofself|slice|sort|sprintf|sqrt|sscanf|trunc|typeptr|valid|validkey)
   ident: '[A-Za-z_][A-Za-z_0-9]*'
   typeident: '_*[A-Z][A-Za-z_0-9]*'
   space: '\s*'
@@ -215,7 +215,11 @@ contexts:
     - match: '\b({{ident}}){{space}}(?=::)'
       scope: entity.name.module.umka
     
-    - match: '(?=\b(var|const|if|for)\b)'
+    - match: '(?=\b(var|const|if|for|switch|type|return|break|continue)\b)'
+      set: block_scoped
+
+    - match: '\+\+|--'
+      scope: keyword.operator.umka
       set: block_scoped
 
     - match: '\{'
@@ -227,11 +231,12 @@ contexts:
       pop: true
  
     # Trap decl
-    - match: '\b*({{ident}})(?={{space}}:=)\b'
+    - match: '\b*({{ident}}){{space}}(?=:=)\b'
       scope: variable.other.umka
+      set: block_scoped
 
     # Struct fields
-    - match: '\b*({{ident}})(?={{space}}:)\b'
+    - match: '\b*({{ident}}){{space}}(?=:)\b'
       scope: variable.parameter.umka
 
     - include: main
@@ -475,7 +480,7 @@ contexts:
       scope: constant.character.escape.umka
     - match: ''''
       scope: punctuation.definition.string.end.umka
-      pop: true      
+      pop: true
 
   line_comment:
     - meta_scope: comment.line.umka
@@ -491,5 +496,11 @@ contexts:
     - include: todos
 
   todos:
-    - match: '\b(TODO|FIXME|BUG|HACK|NOTE|XXX)\b(\(.*\))?:?'
+    - match: '\b(TODO|FIXME|BUG|HACK|IMPORTANT|NOTE|WIP|XXX)\b(\(.*\))?:?'
+      scope: markup.bold.umka
+
+    - match: '\>\>\>.*'
+      scope: markup.bold.heading
+
+    - match: '\@([A-Z][A-Z0-9]*)\b(\(.*\))?:?'
       scope: markup.bold.umka
