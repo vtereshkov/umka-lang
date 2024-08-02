@@ -161,6 +161,10 @@ static void parseSingleAssignmentStmt(Compiler *comp, Type *type, Const *varPtrC
     Const rightConstantBuf, *rightConstant = varPtrConst ? &rightConstantBuf : NULL;
 
     parseExpr(comp, &rightType, rightConstant);
+
+    if (typeExprListStruct(rightType))
+        comp->error.handler(comp->error.context, "1 expression expected but %d found", rightType->numItems);
+
     doAssertImplicitTypeConv(comp, type, &rightType, rightConstant);
 
     if (varPtrConst)                                // Initialize global variable

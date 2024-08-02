@@ -407,10 +407,16 @@ static void doPtrToInterfaceConv(Compiler *comp, Type *dest, Type **src, Const *
 
                 Ident *srcMethod = identFind(&comp->idents, &comp->modules, &comp->blocks, rcvTypeModule, name, *src, true);
                 if (!srcMethod)
-                    comp->error.handler(comp->error.context, "Method %s is not implemented", name);
+                {
+                    char srcBuf[DEFAULT_STR_LEN + 1], destBuf[DEFAULT_STR_LEN + 1];
+                    comp->error.handler(comp->error.context, "Cannot convert %s to %s: method %s is not implemented", typeSpelling(*src, srcBuf), typeSpelling(dest, destBuf), name);
+                }
 
                 if (!typeCompatible(dest->field[i]->type, srcMethod->type))
-                    comp->error.handler(comp->error.context, "Method %s has incompatible signature", name);
+                {
+                    char srcBuf[DEFAULT_STR_LEN + 1], destBuf[DEFAULT_STR_LEN + 1];
+                    comp->error.handler(comp->error.context, "Cannot convert %s to %s: method %s has incompatible signature", typeSpelling(*src, srcBuf), typeSpelling(dest, destBuf), name);
+                }
 
                 genPushIntConst(&comp->gen, srcMethod->offset);                 // Push src value
             }
@@ -454,10 +460,16 @@ static void doInterfaceToInterfaceConv(Compiler *comp, Type *dest, Type **src, C
         const char *name = dest->field[i]->name;
         Field *srcMethod = typeFindField(*src, name, NULL);
         if (!srcMethod)
-            comp->error.handler(comp->error.context, "Method %s is not implemented", name);
+        {
+            char srcBuf[DEFAULT_STR_LEN + 1], destBuf[DEFAULT_STR_LEN + 1];
+            comp->error.handler(comp->error.context, "Cannot convert %s to %s: method %s is not implemented", typeSpelling(*src, srcBuf), typeSpelling(dest, destBuf), name);
+        }
 
         if (!typeCompatible(dest->field[i]->type, srcMethod->type))
-            comp->error.handler(comp->error.context, "Method %s has incompatible signature", name);
+        {
+            char srcBuf[DEFAULT_STR_LEN + 1], destBuf[DEFAULT_STR_LEN + 1];
+            comp->error.handler(comp->error.context, "Cannot convert %s to %s: method %s has incompatible signature", typeSpelling(*src, srcBuf), typeSpelling(dest, destBuf), name);
+        }
 
         genDup(&comp->gen);                                                 // Duplicate src pointer
         genGetFieldPtr(&comp->gen, srcMethod->offset);                      // Get src.method pointer
