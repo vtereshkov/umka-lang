@@ -419,6 +419,20 @@ static bool optimizeCallBuiltin(CodeGen *gen, TypeKind typeKind, BuiltinFunc bui
 }
 
 
+static bool optimizeGoFromTo(CodeGen *gen, int start, int dest)
+{
+    Instruction *prev = getPrevInstr(gen, 1);
+
+    // Optimization GOTO (ip + 1) -> 0
+    if (prev && start == gen->ip - 1 && dest == gen->ip)
+    {
+        genRemoveInstr(gen);
+        return true;
+    }
+    return false;
+}
+
+
 // Atomic VM instructions
 
 void genNop(CodeGen *gen)
@@ -803,28 +817,37 @@ static int genRestorePos(CodeGen *gen)
 
 void genGoFromTo(CodeGen *gen, int start, int dest)
 {
-    int next = gen->ip;
-    gen->ip = start;
-    genGoto(gen, dest);
-    gen->ip = next;
+    if (!optimizeGoFromTo(gen, start, dest))
+    {
+        int next = gen->ip;
+        gen->ip = start;
+        genGoto(gen, dest);
+        gen->ip = next;
+    }
 }
 
 
 void genGoFromToIf(CodeGen *gen, int start, int dest)
 {
-    int next = gen->ip;
-    gen->ip = start;
-    genGotoIf(gen, dest);
-    gen->ip = next;
+    if (!optimizeGoFromTo(gen, start, dest))
+    {
+        int next = gen->ip;
+        gen->ip = start;
+        genGotoIf(gen, dest);
+        gen->ip = next;
+    }
 }
 
 
 void genGoFromToIfNot(CodeGen *gen, int start, int dest)
 {
-    int next = gen->ip;
-    gen->ip = start;
-    genGotoIfNot(gen, dest);
-    gen->ip = next;
+    if (!optimizeGoFromTo(gen, start, dest))
+    {
+        int next = gen->ip;
+        gen->ip = start;
+        genGotoIfNot(gen, dest);
+        gen->ip = next;
+    }
 }
 
 
@@ -1031,7 +1054,7 @@ void genGotosAddStub(CodeGen *gen, Gotos *gotos)
 
 void genGotosEpilog(CodeGen *gen, Gotos *gotos)
 {
-    for (int i = 0; i < gotos->numGotos; i++)
+    for (int i = gotos->numGotos - 1; i >= 0; i--)
         genGoFromTo(gen, gotos->start[i], gen->ip);         // Goto block/function end (fixup)
 }
 
