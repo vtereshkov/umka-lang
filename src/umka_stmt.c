@@ -17,10 +17,10 @@ void doGarbageCollection(Compiler *comp, int block)
     for (Ident *ident = comp->idents.first; ident; ident = ident->next)
         if (ident->kind == IDENT_VAR && typeGarbageCollected(ident->type) && ident->block == block && !(ident->temporary && !ident->used) && strcmp(ident->name, "__result") != 0)
         {
-            doPushVarPtr(comp, ident);
-            genDeref(&comp->gen, ident->type->kind);
-            genChangeRefCnt(&comp->gen, TOK_MINUSMINUS, ident->type);
-            genPop(&comp->gen);
+            if (ident->block == 0)
+                genChangeRefCntGlobal(&comp->gen, TOK_MINUSMINUS, ident->ptr, ident->type);
+            else
+                genChangeRefCntLocal(&comp->gen, TOK_MINUSMINUS, ident->offset, ident->type);
         }
 }
 
