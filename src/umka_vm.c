@@ -3824,7 +3824,7 @@ int vmAsm(int ip, Instruction *code, DebugInfo *debugPerInstr, char *buf, int si
         case OP_CHANGE_REF_CNT_LOCAL:
         {
             char typeBuf[DEFAULT_STR_LEN + 1];
-            chars += snprintf(buf + chars, nonneg(size - chars), " %lld %s", instr->operand.intVal, typeSpelling(instr->type, typeBuf));
+            chars += snprintf(buf + chars, nonneg(size - chars), " %lld %s", (long long int)instr->operand.intVal, typeSpelling(instr->type, typeBuf));
             break;
         }
         default: break;
