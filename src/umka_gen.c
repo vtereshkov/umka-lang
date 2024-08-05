@@ -162,14 +162,6 @@ static bool optimizePop(CodeGen *gen)
         return true;
     }
 
-    // Optimization: CHANGE_REF_CNT + POP -> CHANGE_REF_CNT; POP
-    if (prev && prev->opcode == OP_CHANGE_REF_CNT && prev->inlineOpcode == OP_NOP)
-    {
-        prev->inlineOpcode = OP_POP;
-        genUnnotify(gen);
-        return true;
-    }
-
     return false;
 }
 

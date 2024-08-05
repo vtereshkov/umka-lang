@@ -2863,9 +2863,6 @@ static FORCE_INLINE void doChangeRefCnt(Fiber *fiber, HeapPages *pages)
 
     doBasicChangeRefCnt(fiber, pages, ptr, type, tokKind);
 
-    if (fiber->code[fiber->ip].inlineOpcode == OP_POP)
-        fiber->top++;
-
     fiber->ip++;
 }
 
@@ -3832,9 +3829,6 @@ int vmAsm(int ip, Instruction *code, DebugInfo *debugPerInstr, char *buf, int si
 
     if (instr->inlineOpcode == OP_DEREF)
         chars += snprintf(buf + chars, nonneg(size - chars), "; DEREF");
-
-    else if (instr->inlineOpcode == OP_POP)
-        chars += snprintf(buf + chars, nonneg(size - chars), "; POP");
 
     return chars;
 }
