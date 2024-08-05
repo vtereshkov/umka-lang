@@ -162,14 +162,6 @@ static bool optimizePop(CodeGen *gen)
         return true;
     }
 
-    // Optimization: CHANGE_REF_CNT + POP -> CHANGE_REF_CNT; POP
-    if (prev && prev->opcode == OP_CHANGE_REF_CNT && prev->inlineOpcode == OP_NOP)
-    {
-        prev->inlineOpcode = OP_POP;
-        genUnnotify(gen);
-        return true;
-    }
-
     return false;
 }
 
@@ -583,7 +575,27 @@ void genChangeRefCnt(CodeGen *gen, TokenKind tokKind, Type *type)
 {
     if (typeGarbageCollected(type))
     {
-        const Instruction instr = {.opcode = OP_CHANGE_REF_CNT, .tokKind = tokKind, .typeKind = TYPE_NONE, .operand.ptrVal = type};
+        const Instruction instr = {.opcode = OP_CHANGE_REF_CNT, .tokKind = tokKind, .type = type};
+        genAddInstr(gen, &instr);
+    }
+}
+
+
+void genChangeRefCntGlobal(CodeGen *gen, TokenKind tokKind, void *ptrVal, Type *type)
+{
+    if (typeGarbageCollected(type))
+    {
+        const Instruction instr = {.opcode = OP_CHANGE_REF_CNT_GLOBAL, .tokKind = tokKind, .operand.ptrVal = ptrVal, .type = type};
+        genAddInstr(gen, &instr);
+    }
+}
+
+
+void genChangeRefCntLocal(CodeGen *gen, TokenKind tokKind, int offset, Type *type)
+{
+    if (typeGarbageCollected(type))
+    {
+        const Instruction instr = {.opcode = OP_CHANGE_REF_CNT_LOCAL, .tokKind = tokKind, .operand.intVal = offset, .type = type};
         genAddInstr(gen, &instr);
     }
 }
@@ -593,7 +605,7 @@ void genChangeRefCntAssign(CodeGen *gen, Type *type)
 {
     if (typeGarbageCollected(type))
     {
-        const Instruction instr = {.opcode = OP_CHANGE_REF_CNT_ASSIGN, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.ptrVal = type};
+        const Instruction instr = {.opcode = OP_CHANGE_REF_CNT_ASSIGN, .tokKind = TOK_NONE, .type = type};
         genAddInstr(gen, &instr);
     }
     else
@@ -605,7 +617,7 @@ void genSwapChangeRefCntAssign(CodeGen *gen, Type *type)
 {
     if (typeGarbageCollected(type))
     {
-        const Instruction instr = {.opcode = OP_CHANGE_REF_CNT_ASSIGN, .inlineOpcode = OP_SWAP, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.ptrVal = type};
+        const Instruction instr = {.opcode = OP_CHANGE_REF_CNT_ASSIGN, .inlineOpcode = OP_SWAP, .tokKind = TOK_NONE, .type = type};
         genAddInstr(gen, &instr);
     }
     else
@@ -617,7 +629,7 @@ void genChangeLeftRefCntAssign(CodeGen *gen, Type *type)
 {
     if (typeGarbageCollected(type))
     {
-        const Instruction instr = {.opcode = OP_CHANGE_REF_CNT_ASSIGN, .tokKind = TOK_MINUSMINUS, .typeKind = TYPE_NONE, .operand.ptrVal = type};
+        const Instruction instr = {.opcode = OP_CHANGE_REF_CNT_ASSIGN, .tokKind = TOK_MINUSMINUS, .type = type};
         genAddInstr(gen, &instr);
     }
     else
@@ -664,7 +676,7 @@ void genGetDynArrayPtr(CodeGen *gen)
 
 void genGetMapPtr(CodeGen *gen, Type *mapType)
 {
-    const Instruction instr = {.opcode = OP_GET_MAP_PTR, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.ptrVal = mapType};
+    const Instruction instr = {.opcode = OP_GET_MAP_PTR, .tokKind = TOK_NONE, .type = mapType};
     genAddInstr(gen, &instr);
 }
 
@@ -681,7 +693,7 @@ void genGetFieldPtr(CodeGen *gen, int fieldOffset)
 
 void genAssertType(CodeGen *gen, Type *type)
 {
-    const Instruction instr = {.opcode = OP_ASSERT_TYPE, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.ptrVal = type};
+    const Instruction instr = {.opcode = OP_ASSERT_TYPE, .tokKind = TOK_NONE, .type = type};
     genAddInstr(gen, &instr);
 }
 
@@ -768,14 +780,14 @@ void genReturn(CodeGen *gen, int paramSlots)
 
 void genEnterFrame(CodeGen *gen, int localVarSlots)
 {
-    const Instruction instr = {.opcode = OP_ENTER_FRAME, .tokKind = TOK_NONE, TYPE_NONE, .operand.intVal = localVarSlots};
+    const Instruction instr = {.opcode = OP_ENTER_FRAME, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = localVarSlots};
     genAddInstr(gen, &instr);
 }
 
 
 void genLeaveFrame(CodeGen *gen)
 {
-    const Instruction instr = {.opcode = OP_LEAVE_FRAME, .tokKind = TOK_NONE, TYPE_NONE, .operand.intVal = 0};
+    const Instruction instr = {.opcode = OP_LEAVE_FRAME, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = 0};
     genAddInstr(gen, &instr);
 }
 

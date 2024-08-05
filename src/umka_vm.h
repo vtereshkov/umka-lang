@@ -50,6 +50,8 @@ typedef enum
     OP_DEREF,
     OP_ASSIGN,
     OP_CHANGE_REF_CNT,
+    OP_CHANGE_REF_CNT_GLOBAL,
+    OP_CHANGE_REF_CNT_LOCAL,
     OP_CHANGE_REF_CNT_ASSIGN,
     OP_UNARY,
     OP_BINARY,
@@ -155,7 +157,8 @@ typedef struct
     Opcode opcode;
     Opcode inlineOpcode;         // Inlined instruction (DEREF, POP, SWAP): PUSH + DEREF, CHANGE_REF_CNT + POP, SWAP + ASSIGN etc.
     TokenKind tokKind;           // Unary/binary operation token
-    TypeKind typeKind;           // Slot type kind
+    TypeKind typeKind;
+    Type *type;
     Slot operand;
 } Instruction;
 

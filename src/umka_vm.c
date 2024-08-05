@@ -71,6 +71,8 @@ static const char *opcodeSpelling [] =
     "DEREF",
     "ASSIGN",
     "CHANGE_REF_CNT",
+    "CHANGE_REF_CNT_GLOBAL",
+    "CHANGE_REF_CNT_LOCAL",
     "CHANGE_REF_CNT_ASSIGN",
     "UNARY",
     "BINARY",
@@ -2857,12 +2859,39 @@ static FORCE_INLINE void doChangeRefCnt(Fiber *fiber, HeapPages *pages)
 {
     void *ptr         = fiber->top->ptrVal;
     TokenKind tokKind = fiber->code[fiber->ip].tokKind;
-    Type *type        = (Type *)fiber->code[fiber->ip].operand.ptrVal;
+    Type *type        = fiber->code[fiber->ip].type;
 
     doBasicChangeRefCnt(fiber, pages, ptr, type, tokKind);
 
-    if (fiber->code[fiber->ip].inlineOpcode == OP_POP)
-        fiber->top++;
+    fiber->ip++;
+}
+
+
+static FORCE_INLINE void doChangeRefCntGlobal(Fiber *fiber, HeapPages *pages, Error *error)
+{
+    TokenKind tokKind = fiber->code[fiber->ip].tokKind;
+    Type *type        = fiber->code[fiber->ip].type;
+    void *ptr         = fiber->code[fiber->ip].operand.ptrVal;
+
+    Slot slot = {.ptrVal = ptr};
+
+    doBasicDeref(&slot, type->kind, error);
+    doBasicChangeRefCnt(fiber, pages, slot.ptrVal, type, tokKind);
+
+    fiber->ip++;
+}
+
+
+static FORCE_INLINE void doChangeRefCntLocal(Fiber *fiber, HeapPages *pages, Error *error)
+{
+    TokenKind tokKind = fiber->code[fiber->ip].tokKind;
+    Type *type        = fiber->code[fiber->ip].type;
+    int offset        = fiber->code[fiber->ip].operand.intVal;
+
+    Slot slot = {.ptrVal = (int8_t *)fiber->base + offset};
+
+    doBasicDeref(&slot, type->kind, error);
+    doBasicChangeRefCnt(fiber, pages, slot.ptrVal, type, tokKind);
 
     fiber->ip++;
 }
@@ -2875,7 +2904,7 @@ static FORCE_INLINE void doChangeRefCntAssign(Fiber *fiber, HeapPages *pages, Er
 
     Slot rhs   = *fiber->top++;
     void *lhs  = (fiber->top++)->ptrVal;
-    Type *type = (Type *)fiber->code[fiber->ip].operand.ptrVal;
+    Type *type = fiber->code[fiber->ip].type;
 
     // Increase right-hand side ref count
     if (fiber->code[fiber->ip].tokKind != TOK_MINUSMINUS)      // "--" means that the right-hand side ref count should not be increased
@@ -3204,8 +3233,7 @@ static FORCE_INLINE void doGetMapPtr(Fiber *fiber, HeapPages *pages, Error *erro
 {
     Slot key  = *fiber->top++;
     Map *map  = (Map *)(fiber->top++)->ptrVal;
-
-    Type *mapType = (Type *)fiber->code[fiber->ip].operand.ptrVal;
+    Type *mapType = fiber->code[fiber->ip].type;
 
     if (!map)
         error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Map is null");
@@ -3255,7 +3283,7 @@ static FORCE_INLINE void doGetFieldPtr(Fiber *fiber, Error *error)
 static FORCE_INLINE void doAssertType(Fiber *fiber)
 {
     Interface *interface  = (Interface *)(fiber->top++)->ptrVal;
-    Type *type            = (Type *)fiber->code[fiber->ip].operand.ptrVal;
+    Type *type            = fiber->code[fiber->ip].type;
 
     (--fiber->top)->ptrVal = (interface->selfType && typeEquivalent(type, interface->selfType)) ? interface->self : NULL;
     fiber->ip++;
@@ -3606,6 +3634,8 @@ static FORCE_INLINE void vmLoop(VM *vm)
             case OP_DEREF:                          doDeref(fiber, error);                        break;
             case OP_ASSIGN:                         doAssign(fiber, error);                       break;
             case OP_CHANGE_REF_CNT:                 doChangeRefCnt(fiber, pages);                 break;
+            case OP_CHANGE_REF_CNT_GLOBAL:          doChangeRefCntGlobal(fiber, pages, error);    break;
+            case OP_CHANGE_REF_CNT_LOCAL:           doChangeRefCntLocal(fiber, pages, error);     break;
             case OP_CHANGE_REF_CNT_ASSIGN:          doChangeRefCntAssign(fiber, pages, error);    break;
             case OP_UNARY:                          doUnary(fiber, error);                        break;
             case OP_BINARY:                         doBinary(fiber, pages, error);                break;
@@ -3779,7 +3809,19 @@ int vmAsm(int ip, Instruction *code, DebugInfo *debugPerInstr, char *buf, int si
         case OP_ASSERT_TYPE:
         {
             char typeBuf[DEFAULT_STR_LEN + 1];
-            chars += snprintf(buf + chars, nonneg(size - chars), " %s", typeSpelling((Type *)instr->operand.ptrVal, typeBuf));
+            chars += snprintf(buf + chars, nonneg(size - chars), " %s", typeSpelling(instr->type, typeBuf));
+            break;
+        }
+        case OP_CHANGE_REF_CNT_GLOBAL:
+        {
+            char typeBuf[DEFAULT_STR_LEN + 1];
+            chars += snprintf(buf + chars, nonneg(size - chars), " %p %s", instr->operand.ptrVal, typeSpelling(instr->type, typeBuf));
+            break;
+        }
+        case OP_CHANGE_REF_CNT_LOCAL:
+        {
+            char typeBuf[DEFAULT_STR_LEN + 1];
+            chars += snprintf(buf + chars, nonneg(size - chars), " %lld %s", (long long int)instr->operand.intVal, typeSpelling(instr->type, typeBuf));
             break;
         }
         default: break;
@@ -3787,9 +3829,6 @@ int vmAsm(int ip, Instruction *code, DebugInfo *debugPerInstr, char *buf, int si
 
     if (instr->inlineOpcode == OP_DEREF)
         chars += snprintf(buf + chars, nonneg(size - chars), "; DEREF");
-
-    else if (instr->inlineOpcode == OP_POP)
-        chars += snprintf(buf + chars, nonneg(size - chars), "; POP");
 
     return chars;
 }
