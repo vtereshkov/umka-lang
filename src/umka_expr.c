@@ -794,8 +794,7 @@ static void parseBuiltinIOCall(Compiler *comp, Type **type, Const *constant, Bui
     if (constant)
         comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
 
-    // printf() parameters: count, stream, format, value, type
-    // scanf() parameters:  count, stream, format, value
+    // Parameters: count, stream, format, value
 
     // Count (number of characters for printf(), number of items for scanf())
     genPushIntConst(&comp->gen, 0);
@@ -827,31 +826,18 @@ static void parseBuiltinIOCall(Compiler *comp, Type **type, Const *constant, Bui
         if (builtin == BUILTIN_PRINTF || builtin == BUILTIN_FPRINTF || builtin == BUILTIN_SPRINTF)
         {
             typeAssertCompatibleBuiltin(&comp->types, *type, builtin, (*type)->kind != TYPE_VOID);
-            genPushGlobalPtr(&comp->gen, *type);                    // Push type
-            genCallBuiltin(&comp->gen, (*type)->kind, builtin);
-            genPop(&comp->gen);                                     // Remove type
+            genCallTypedBuiltin(&comp->gen, *type, builtin);
         }
         else  // BUILTIN_SCANF, BUILTIN_FSCANF, BUILTIN_SSCANF
         {
             typeAssertCompatibleBuiltin(&comp->types, *type, builtin, (*type)->kind == TYPE_PTR && (typeOrdinal((*type)->base) || typeReal((*type)->base) || (*type)->base->kind == TYPE_STR));
-            genCallBuiltin(&comp->gen, (*type)->base->kind, builtin);
+            genCallTypedBuiltin(&comp->gen, (*type)->base, builtin);
         }
-        genPop(&comp->gen); // Remove parameter
-
     } // while
 
     // The rest of format string
     genPushIntConst(&comp->gen, 0);
-    if (builtin == BUILTIN_PRINTF || builtin == BUILTIN_FPRINTF || builtin == BUILTIN_SPRINTF)
-    {
-        genPushGlobalPtr(&comp->gen, comp->voidType);           // Push type
-        genCallBuiltin(&comp->gen, TYPE_VOID, builtin);
-        genPop(&comp->gen);                                     // Remove type
-    }
-    else
-        genCallBuiltin(&comp->gen, TYPE_VOID, builtin);
-
-    genPop(&comp->gen);  // Remove parameter
+    genCallTypedBuiltin(&comp->gen, comp->voidType, builtin);
 
     genPop(&comp->gen);  // Remove format string
 

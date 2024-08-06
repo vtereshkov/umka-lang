@@ -771,6 +771,16 @@ void genCallBuiltin(CodeGen *gen, TypeKind typeKind, BuiltinFunc builtin)
 }
 
 
+void genCallTypedBuiltin(CodeGen *gen, Type *type, BuiltinFunc builtin)
+{
+    if (!optimizeCallBuiltin(gen, type->kind, builtin))
+    {
+        const Instruction instr = {.opcode = OP_CALL_BUILTIN, .tokKind = TOK_NONE, .type = type, .operand.builtinVal = builtin};
+        genAddInstr(gen, &instr);
+    }
+}
+
+
 void genReturn(CodeGen *gen, int paramSlots)
 {
     const Instruction instr = {.opcode = OP_RETURN, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = paramSlots};

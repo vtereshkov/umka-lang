@@ -1687,16 +1687,23 @@ static FORCE_INLINE int doPrintSlot(bool string, void *stream, int maxLen, const
 }
 
 
+enum
+{
+    STACK_OFFSET_COUNT  = 3,
+    STACK_OFFSET_STREAM = 2,
+    STACK_OFFSET_FORMAT = 1,
+    STACK_OFFSET_VALUE  = 0
+};
+
+
 static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool console, bool string, Error *error)
 {
-    enum {STACK_OFFSET_COUNT = 4, STACK_OFFSET_STREAM = 3, STACK_OFFSET_FORMAT = 2, STACK_OFFSET_VALUE = 1, STACK_OFFSET_TYPE = 0};
-
     const int prevLen  = fiber->top[STACK_OFFSET_COUNT].intVal;
     void *stream       = console ? stdout : fiber->top[STACK_OFFSET_STREAM].ptrVal;
     const char *format = (const char *)fiber->top[STACK_OFFSET_FORMAT].ptrVal;
     Slot value         = fiber->top[STACK_OFFSET_VALUE];
-    Type *type         = (Type *)fiber->top[STACK_OFFSET_TYPE].ptrVal;
 
+    Type *type         = fiber->code[fiber->ip].type;
     TypeKind typeKind  = type->kind;
 
     if (!string && (!stream || (!fiber->fileSystemEnabled && !console)))
@@ -1815,6 +1822,8 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
     fiber->top[STACK_OFFSET_COUNT].intVal += len;
     fiber->top[STACK_OFFSET_STREAM].ptrVal = stream;
 
+    fiber->top++;   // Remove value
+
     if (isCurFormatBufInHeap)
         free(curFormat);
 
@@ -1825,11 +1834,12 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
 
 static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool console, bool string, Error *error)
 {
-    enum {STACK_OFFSET_COUNT = 3, STACK_OFFSET_STREAM = 2, STACK_OFFSET_FORMAT = 1, STACK_OFFSET_VALUE = 0};
-
     void *stream       = console ? stdin : (void *)fiber->top[STACK_OFFSET_STREAM].ptrVal;
     const char *format = (const char *)fiber->top[STACK_OFFSET_FORMAT].ptrVal;
-    TypeKind typeKind  = fiber->code[fiber->ip].typeKind;
+    Slot value         = fiber->top[STACK_OFFSET_VALUE];
+
+    Type *type         = fiber->code[fiber->ip].type;
+    TypeKind typeKind  = type->kind;
 
     if (!stream || (!fiber->fileSystemEnabled && !console && !string))
         error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "scanf() source is null");
@@ -1863,14 +1873,14 @@ static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool con
         cnt = fsscanf(string, stream, curFormat, &len);
     else
     {
-        if (!fiber->top->ptrVal)
+        if (!value.ptrVal)
             error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "scanf() destination is null");
 
         // Strings need special handling, as the required buffer size is unknown
         if (typeKind == TYPE_STR)
         {
             char *src = fsscanfString(string, stream, &len);
-            char **dest = (char **)fiber->top->ptrVal;
+            char **dest = (char **)value.ptrVal;
 
             // Decrease old string ref count
             Type destType = {.kind = TYPE_STR};
@@ -1884,13 +1894,15 @@ static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool con
             cnt = (*dest)[0] ? 1 : 0;
         }
         else
-            cnt = fsscanf(string, stream, curFormat, (void *)fiber->top->ptrVal, &len);
+            cnt = fsscanf(string, stream, curFormat, (void *)value.ptrVal, &len);
     }
 
     fiber->top[STACK_OFFSET_FORMAT].ptrVal = (char *)fiber->top[STACK_OFFSET_FORMAT].ptrVal + formatLen;
     fiber->top[STACK_OFFSET_COUNT].intVal += cnt;
     if (string)
         fiber->top[STACK_OFFSET_STREAM].ptrVal = (char *)fiber->top[STACK_OFFSET_STREAM].ptrVal + len;
+
+    fiber->top++;   // Remove value
 
     if (isCurFormatBufInHeap)
         free(curFormat);
@@ -3761,7 +3773,12 @@ int vmAsm(int ip, Instruction *code, DebugInfo *debugPerInstr, char *buf, int si
     if (instr->tokKind != TOK_NONE)
         chars += snprintf(buf + chars, nonneg(size - chars), " %s", lexSpelling(instr->tokKind));
 
-    if (instr->typeKind != TYPE_NONE)
+    if (instr->type)
+    {
+        char typeBuf[DEFAULT_STR_LEN + 1];
+        chars += snprintf(buf + chars, nonneg(size - chars), " %s", typeSpelling(instr->type, typeBuf));
+    }
+    else if (instr->typeKind != TYPE_NONE)
         chars += snprintf(buf + chars, nonneg(size - chars), " %s", typeKindSpelling(instr->typeKind));
 
     switch (instr->opcode)
@@ -3786,6 +3803,7 @@ int vmAsm(int ip, Instruction *code, DebugInfo *debugPerInstr, char *buf, int si
         case OP_ZERO:
         case OP_ASSIGN:
         case OP_BINARY:
+        case OP_CHANGE_REF_CNT_LOCAL:
         case OP_GET_FIELD_PTR:
         case OP_GOTO:
         case OP_GOTO_IF:
@@ -3801,29 +3819,10 @@ int vmAsm(int ip, Instruction *code, DebugInfo *debugPerInstr, char *buf, int si
         }
         case OP_PUSH_LOCAL_PTR_ZERO:
         case OP_GET_ARRAY_PTR:          chars += snprintf(buf + chars, nonneg(size - chars), " %d %d", (int)instr->operand.int32Val[0], (int)instr->operand.int32Val[1]); break;
+        case OP_CHANGE_REF_CNT_GLOBAL:
         case OP_CALL_EXTERN:            chars += snprintf(buf + chars, nonneg(size - chars), " %p",    instr->operand.ptrVal); break;
         case OP_CALL_BUILTIN:           chars += snprintf(buf + chars, nonneg(size - chars), " %s",    builtinSpelling[instr->operand.builtinVal]); break;
-        case OP_CHANGE_REF_CNT:
-        case OP_CHANGE_REF_CNT_ASSIGN:
-        case OP_GET_MAP_PTR:
-        case OP_ASSERT_TYPE:
-        {
-            char typeBuf[DEFAULT_STR_LEN + 1];
-            chars += snprintf(buf + chars, nonneg(size - chars), " %s", typeSpelling(instr->type, typeBuf));
-            break;
-        }
-        case OP_CHANGE_REF_CNT_GLOBAL:
-        {
-            char typeBuf[DEFAULT_STR_LEN + 1];
-            chars += snprintf(buf + chars, nonneg(size - chars), " %p %s", instr->operand.ptrVal, typeSpelling(instr->type, typeBuf));
-            break;
-        }
-        case OP_CHANGE_REF_CNT_LOCAL:
-        {
-            char typeBuf[DEFAULT_STR_LEN + 1];
-            chars += snprintf(buf + chars, nonneg(size - chars), " %lld %s", (long long int)instr->operand.intVal, typeSpelling(instr->type, typeBuf));
-            break;
-        }
+
         default: break;
     }
 

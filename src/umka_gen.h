@@ -91,15 +91,16 @@ void genAssertRange  (CodeGen *gen, TypeKind typeKind);
 void genWeakenPtr    (CodeGen *gen);
 void genStrengthenPtr(CodeGen *gen);
 
-void genGoto  (CodeGen *gen, int dest);
-void genGotoIf(CodeGen *gen, int dest);
-void genGotoIfNot(CodeGen *gen, int dest);
+void genGoto        (CodeGen *gen, int dest);
+void genGotoIf      (CodeGen *gen, int dest);
+void genGotoIfNot   (CodeGen *gen, int dest);
 
-void genCall        (CodeGen *gen, int entry);
-void genCallIndirect(CodeGen *gen, int paramSlots);
-void genCallExtern  (CodeGen *gen, void *entry);
-void genCallBuiltin (CodeGen *gen, TypeKind typeKind, BuiltinFunc builtin);
-void genReturn      (CodeGen *gen, int paramSlots);
+void genCall                (CodeGen *gen, int entry);
+void genCallIndirect        (CodeGen *gen, int paramSlots);
+void genCallExtern          (CodeGen *gen, void *entry);
+void genCallBuiltin         (CodeGen *gen, TypeKind typeKind, BuiltinFunc builtin);
+void genCallTypedBuiltin    (CodeGen *gen, Type *type, BuiltinFunc builtin);
+void genReturn              (CodeGen *gen, int paramSlots);
 
 void genEnterFrame(CodeGen *gen, int localVarSlots);
 void genLeaveFrame(CodeGen *gen);
