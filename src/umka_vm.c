@@ -1115,7 +1115,7 @@ static void doGetMapKeyBytes(Slot key, Type *keyType, Error *error, char **keyBy
 }
 
 
-static FORCE_INLINE MapNode *doGetMapNode(Map *map, Slot key, bool createMissingNodes, HeapPages *pages, Error *error, MapNode ***nodePtrInParent)
+static FORCE_INLINE MapNode **doGetMapNode(Map *map, Slot key, bool createMissingNodes, HeapPages *pages, Error *error)
 {
     if (!map || !map->root)
         error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Map is null");
@@ -1133,9 +1133,6 @@ static FORCE_INLINE MapNode *doGetMapNode(Map *map, Slot key, bool createMissing
         error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Map key has zero length");
 
     MapNode **node = &map->root;
-
-    if (nodePtrInParent)
-        *nodePtrInParent = NULL;
 
     while (*node)
     {
@@ -1161,19 +1158,16 @@ static FORCE_INLINE MapNode *doGetMapNode(Map *map, Slot key, bool createMissing
         else if (keyDiff < 0)
             node = &(*node)->left;
         else
-            return *node;
-
-        if (nodePtrInParent)
-            *nodePtrInParent = node;
+            return node;
     }
 
-    if (!createMissingNodes)
-        return NULL;
+    if (createMissingNodes)
+    {
+        Type *nodeType = map->type->base;
+        *node = (MapNode *)chunkAlloc(pages, typeSizeNoCheck(nodeType), nodeType, NULL, false, error);
+    }
 
-    Type *nodeType = map->type->base;
-    *node = (MapNode *)chunkAlloc(pages, typeSizeNoCheck(nodeType), nodeType, NULL, false, error);
-
-    return *node;
+    return node;
 }
 
 
@@ -1472,7 +1466,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int dept
 
                     len += snprintf(buf + len, maxLen, ": ");
 
-                    MapNode *node = doGetMapNode(map, keySlot, false, NULL, error, NULL);
+                    MapNode *node = *doGetMapNode(map, keySlot, false, NULL, error);
                     if (!node)
                         error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Map node is null");
 
@@ -2288,33 +2282,33 @@ static FORCE_INLINE void doBuiltinDeleteMap(Fiber *fiber, HeapPages *pages, Erro
     if (!map || !map->root)
         error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Map is null");
 
-    MapNode **nodePtrInParent = NULL;
-    MapNode *node = doGetMapNode(map, key, false, pages, error, &nodePtrInParent);
+    MapNode **nodeInParent = doGetMapNode(map, key, false, pages, error);
+    MapNode *node = *nodeInParent;
 
     if (node)
     {
-        *nodePtrInParent = NULL;
+        *nodeInParent = NULL;
 
         if (node->left)
         {
-            *nodePtrInParent = node->left;
+            *nodeInParent = node->left;
             node->left = NULL;
         }
 
         if (node->right)
         {
-            if (!*nodePtrInParent)
+            if (!*nodeInParent)
             {
-                *nodePtrInParent = node->right;
+                *nodeInParent = node->right;
             }
             else
             {
                 Slot rightKey = {.ptrVal = node->right->key};
                 doBasicDeref(&rightKey, typeMapKey(map->type)->kind, error);
-                MapNode **rightPtrInNewParent = NULL;
-                if (doGetMapNode(map, rightKey, false, pages, error, &rightPtrInNewParent))
+                MapNode **rightInNewParent = doGetMapNode(map, rightKey, false, pages, error);
+                if (*rightInNewParent)
                     error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Map subtree already exists");
-                *rightPtrInNewParent = node->right;
+                *rightInNewParent = node->right;
             }
             node->right = NULL;
         }
@@ -2712,7 +2706,7 @@ static FORCE_INLINE void doBuiltinValidkey(Fiber *fiber, HeapPages *pages, Error
 
     if (map->root)
     {
-        MapNode *node = doGetMapNode(map, key, false, pages, error, NULL);
+        MapNode *node = *doGetMapNode(map, key, false, pages, error);
         isValid = node && node->data;
     }
 
@@ -3301,7 +3295,7 @@ static FORCE_INLINE void doGetMapPtr(Fiber *fiber, HeapPages *pages, Error *erro
     Type *keyType = typeMapKey(map->type);
     Type *itemType = typeMapItem(map->type);
 
-    MapNode *node = doGetMapNode(map, key, true, pages, error, NULL);
+    MapNode *node = *doGetMapNode(map, key, true, pages, error);
     if (!node->data)
     {
         // When allocating dynamic arrays, we mark with type the data chunk, not the header chunk
@@ -3917,7 +3911,7 @@ void *vmGetMapNodeData(VM *vm, Map *map, Slot key)
     if (!map || !map->root)
         return NULL;
 
-    const MapNode *node = doGetMapNode(map, key, false, NULL, vm->error, NULL);
+    const MapNode *node = *doGetMapNode(map, key, false, NULL, vm->error);
     return node ? node->data : NULL;
 }
 
