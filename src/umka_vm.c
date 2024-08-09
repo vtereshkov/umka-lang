@@ -1132,29 +1132,48 @@ static FORCE_INLINE MapNode *doGetMapNode(Map *map, Slot key, bool createMissing
     if (keySize == 0)
         error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Map key has zero length");
 
-    MapNode *node = map->root;
+    MapNode **node = &map->root;
 
-    for (int64_t bitPos = 0; bitPos < keySize * 8; bitPos++)
+    if (nodePtrInParent)
+        *nodePtrInParent = NULL;
+
+    while (*node)
     {
-        const bool bit = getBit(keyBytes, bitPos);
+        Slot nodeKeyBytesBuffer = {0};
+        char *nodeKeyBytes = (char *)&nodeKeyBytesBuffer;
+        int nodeKeySize = 0;
 
-        MapNode **child = bit ? &node->left : &node->right;
-        if (!(*child))
+        if ((*node)->key)
         {
-            if (!createMissingNodes)
-                return NULL;
-
-            Type *nodeType = map->type->base;
-            *child = (MapNode *)chunkAlloc(pages, typeSizeNoCheck(nodeType), nodeType, NULL, false, error);
+            Slot nodeKeySlot = {.ptrVal = (*node)->key};
+            doBasicDeref(&nodeKeySlot, typeMapKey(map->type)->kind, error);
+            doGetMapKeyBytes(nodeKeySlot, typeMapKey(map->type), error, &nodeKeyBytes, &nodeKeySize);
         }
 
-        if (nodePtrInParent)
-            *nodePtrInParent = child;
+        int keyDiff = 0;
+        if (keySize != nodeKeySize)
+            keyDiff = keySize - nodeKeySize;
+        else
+            keyDiff = memcmp(keyBytes, nodeKeyBytes, keySize);
 
-        node = *child;
+        if (keyDiff > 0)
+            node = &(*node)->right;
+        else if (keyDiff < 0)
+            node = &(*node)->left;
+        else
+            return *node;
+
+        if (nodePtrInParent)
+            *nodePtrInParent = node;
     }
 
-    return node;
+    if (!createMissingNodes)
+        return NULL;
+
+    Type *nodeType = map->type->base;
+    *node = (MapNode *)chunkAlloc(pages, typeSizeNoCheck(nodeType), nodeType, NULL, false, error);
+
+    return *node;
 }
 
 
@@ -1214,6 +1233,9 @@ static MapNode *doCopyMapNode(Map *map, MapNode *node, Fiber *fiber, HeapPages *
 
 static void doGetMapKeysRecursively(Map *map, MapNode *node, void *keys, int *numKeys, Error *error)
 {
+    if (node->left)
+        doGetMapKeysRecursively(map, node->left, keys, numKeys, error);
+
     if (node->key)
     {
         Type *keyType = typeMapKey(map->type);
@@ -1226,9 +1248,6 @@ static void doGetMapKeysRecursively(Map *map, MapNode *node, void *keys, int *nu
 
         (*numKeys)++;
     }
-
-    if (node->left)
-        doGetMapKeysRecursively(map, node->left, keys, numKeys, error);
 
     if (node->right)
         doGetMapKeysRecursively(map, node->right, keys, numKeys, error);
@@ -2274,8 +2293,34 @@ static FORCE_INLINE void doBuiltinDeleteMap(Fiber *fiber, HeapPages *pages, Erro
 
     if (node)
     {
-        doBasicChangeRefCnt(fiber, pages, *nodePtrInParent, typeMapNodePtr(map->type), TOK_MINUSMINUS);
         *nodePtrInParent = NULL;
+
+        if (node->left)
+        {
+            *nodePtrInParent = node->left;
+            node->left = NULL;
+        }
+
+        if (node->right)
+        {
+            if (!*nodePtrInParent)
+            {
+                *nodePtrInParent = node->right;
+            }
+            else
+            {
+                Slot rightKey = {.ptrVal = node->right->key};
+                doBasicDeref(&rightKey, typeMapKey(map->type)->kind, error);
+                MapNode **rightPtrInNewParent = NULL;
+                if (doGetMapNode(map, rightKey, false, pages, error, &rightPtrInNewParent))
+                    error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Map subtree already exists");
+                *rightPtrInNewParent = node->right;
+            }
+            node->right = NULL;
+        }
+
+        doBasicChangeRefCnt(fiber, pages, node, typeMapNodePtr(map->type), TOK_MINUSMINUS);
+
         if (--map->root->len < 0)
             error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Map length is negative");
     }
