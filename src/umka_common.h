@@ -260,12 +260,6 @@ static inline int64_t align(int64_t size, int64_t alignment)
 }
 
 
-static inline bool getBit(const char *buf, int64_t bitPos)
-{
-    return (buf[bitPos / 8] >> (bitPos % 8)) & 1;
-}
-
-
 static inline StrDimensions *getStrDims(const char *str)
 {
     return (StrDimensions *)(str - sizeof(StrDimensions));

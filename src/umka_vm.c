@@ -668,7 +668,7 @@ static FORCE_INLINE void doHook(Fiber *fiber, HookFunc *hooks, HookEvent event)
 }
 
 
-static FORCE_INLINE void doBasicSwap(Slot *slot)
+static FORCE_INLINE void doSwapImpl(Slot *slot)
 {
     Slot val = slot[0];
     slot[0] = slot[1];
@@ -676,7 +676,7 @@ static FORCE_INLINE void doBasicSwap(Slot *slot)
 }
 
 
-static FORCE_INLINE void doBasicDeref(Slot *slot, TypeKind typeKind, Error *error)
+static FORCE_INLINE void doDerefImpl(Slot *slot, TypeKind typeKind, Error *error)
 {
     if (!slot->ptrVal)
         error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Pointer is null");
@@ -717,7 +717,7 @@ static FORCE_INLINE void doBasicDeref(Slot *slot, TypeKind typeKind, Error *erro
 }
 
 
-static FORCE_INLINE void doBasicAssign(void *lhs, Slot rhs, TypeKind typeKind, int structSize, Error *error)
+static FORCE_INLINE void doAssignImpl(void *lhs, Slot rhs, TypeKind typeKind, int structSize, Error *error)
 {
     if (!lhs)
         error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Pointer is null");
@@ -817,7 +817,7 @@ static FORCE_INLINE void doAddStructFieldsRefCntCandidates(RefCntChangeCandidate
 }
 
 
-static FORCE_INLINE void doBasicChangeRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, Type *type, TokenKind tokKind)
+static FORCE_INLINE void doChangeRefCntImpl(Fiber *fiber, HeapPages *pages, void *ptr, Type *type, TokenKind tokKind)
 {
     // Update ref counts for pointers (including static/dynamic array items and structure/interface fields) if allocated dynamically
     // All garbage collected composite types are represented by pointers by default
@@ -1087,7 +1087,7 @@ static void doGetMapKeyBytes(Slot key, Type *keyType, Error *error, char **keyBy
         case TYPE_WEAKPTR:
         {
             // keyBytes must point to a pre-allocated 8-byte buffer
-            doBasicAssign(*keyBytes, key, keyType->kind, 0, error);
+            doAssignImpl(*keyBytes, key, keyType->kind, 0, error);
             *keySize = typeSizeNoCheck(keyType);
             break;
         }
@@ -1143,7 +1143,7 @@ static FORCE_INLINE MapNode **doGetMapNode(Map *map, Slot key, bool createMissin
         if ((*node)->key)
         {
             Slot nodeKeySlot = {.ptrVal = (*node)->key};
-            doBasicDeref(&nodeKeySlot, typeMapKey(map->type)->kind, error);
+            doDerefImpl(&nodeKeySlot, typeMapKey(map->type)->kind, error);
             doGetMapKeyBytes(nodeKeySlot, typeMapKey(map->type), error, &nodeKeyBytes, &nodeKeySize);
         }
 
@@ -1187,15 +1187,15 @@ static MapNode *doCopyMapNode(Map *map, MapNode *node, Fiber *fiber, HeapPages *
         int keySize = typeSizeNoCheck(keyType);
 
         Slot srcKey = {.ptrVal = node->key};
-        doBasicDeref(&srcKey, keyType->kind, error);
+        doDerefImpl(&srcKey, keyType->kind, error);
 
         // When allocating dynamic arrays, we mark with type the data chunk, not the header chunk
         result->key = chunkAlloc(pages, typeSizeNoCheck(keyType), keyType->kind == TYPE_DYNARRAY ? NULL : keyType, NULL, false, error);
 
         if (typeGarbageCollected(keyType))
-            doBasicChangeRefCnt(fiber, pages, srcKey.ptrVal, keyType, TOK_PLUSPLUS);
+            doChangeRefCntImpl(fiber, pages, srcKey.ptrVal, keyType, TOK_PLUSPLUS);
 
-        doBasicAssign(result->key, srcKey, keyType->kind, keySize, error);
+        doAssignImpl(result->key, srcKey, keyType->kind, keySize, error);
     }
 
     if (node->data)
@@ -1204,15 +1204,15 @@ static MapNode *doCopyMapNode(Map *map, MapNode *node, Fiber *fiber, HeapPages *
         int itemSize = typeSizeNoCheck(itemType);
 
         Slot srcItem = {.ptrVal = node->data};
-        doBasicDeref(&srcItem, itemType->kind, error);
+        doDerefImpl(&srcItem, itemType->kind, error);
 
         // When allocating dynamic arrays, we mark with type the data chunk, not the header chunk
         result->data = chunkAlloc(pages, typeSizeNoCheck(itemType), itemType->kind == TYPE_DYNARRAY ? NULL : itemType, NULL, false, error);
 
         if (typeGarbageCollected(itemType))
-            doBasicChangeRefCnt(fiber, pages, srcItem.ptrVal, itemType, TOK_PLUSPLUS);
+            doChangeRefCntImpl(fiber, pages, srcItem.ptrVal, itemType, TOK_PLUSPLUS);
 
-        doBasicAssign(result->data, srcItem, itemType->kind, itemSize, error);
+        doAssignImpl(result->data, srcItem, itemType->kind, itemSize, error);
     }
 
     if (node->left)
@@ -1237,8 +1237,8 @@ static void doGetMapKeysRecursively(Map *map, MapNode *node, void *keys, int *nu
         void *destKey = (char *)keys + keySize * (*numKeys);
 
         Slot srcKey = {.ptrVal = node->key};
-        doBasicDeref(&srcKey, keyType->kind, error);
-        doBasicAssign(destKey, srcKey, keyType->kind, keySize, error);
+        doDerefImpl(&srcKey, keyType->kind, error);
+        doAssignImpl(destKey, srcKey, keyType->kind, keySize, error);
 
         (*numKeys)++;
     }
@@ -1274,11 +1274,11 @@ static FORCE_INLINE Fiber *doAllocFiber(Fiber *parent, Closure *childClosure, Ty
     // Push upvalues
     child->top -= sizeof(Interface) / sizeof(Slot);
     *(Interface *)child->top = childClosure->upvalue;
-    doBasicChangeRefCnt(child, pages, child->top, childClosureSig->param[0]->type, TOK_PLUSPLUS);
+    doChangeRefCntImpl(child, pages, child->top, childClosureSig->param[0]->type, TOK_PLUSPLUS);
 
     // Push parent fiber pointer
     (--child->top)->ptrVal = parent;
-    doBasicChangeRefCnt(child, pages, child->top->ptrVal, childClosureSig->param[1]->type, TOK_PLUSPLUS);
+    doChangeRefCntImpl(child, pages, child->top->ptrVal, childClosureSig->param[1]->type, TOK_PLUSPLUS);
 
     // Push 'return from fiber' signal instead of return address
     (--child->top)->intVal = VM_RETURN_FROM_FIBER;
@@ -1378,7 +1378,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int dept
             if (dereferenced && slot->ptrVal && type->base->kind != TYPE_VOID)
             {
                 Slot dataSlot = {.ptrVal = slot->ptrVal};
-                doBasicDeref(&dataSlot, type->base->kind, error);
+                doDerefImpl(&dataSlot, type->base->kind, error);
 
                 len += snprintf(buf + len, maxLen, " -> ");
                 len += doPrintIndented(buf + len, maxLen, depth, pretty, '(');
@@ -1404,7 +1404,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int dept
             for (int i = 0; i < type->numItems; i++)
             {
                 Slot itemSlot = {.ptrVal = itemPtr};
-                doBasicDeref(&itemSlot, type->base->kind, error);
+                doDerefImpl(&itemSlot, type->base->kind, error);
                 len += doFillReprBuf(&itemSlot, type->base, buf + len, maxLen, depth + 1, pretty, dereferenced, error);
 
                 if (i < type->numItems - 1)
@@ -1428,7 +1428,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int dept
                 for (int i = 0; i < getDims(array)->len; i++)
                 {
                     Slot itemSlot = {.ptrVal = itemPtr};
-                    doBasicDeref(&itemSlot, type->base->kind, error);
+                    doDerefImpl(&itemSlot, type->base->kind, error);
                     len += doFillReprBuf(&itemSlot, type->base, buf + len, maxLen, depth + 1, pretty, dereferenced, error);
 
                     if (i < getDims(array)->len - 1)
@@ -1461,7 +1461,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int dept
                 for (int i = 0; i < map->root->len; i++)
                 {
                     Slot keySlot = {.ptrVal = keyPtr};
-                    doBasicDeref(&keySlot, keyType->kind, error);
+                    doDerefImpl(&keySlot, keyType->kind, error);
                     len += doFillReprBuf(&keySlot, keyType, buf + len, maxLen, depth + 1, pretty, dereferenced, error);
 
                     len += snprintf(buf + len, maxLen, ": ");
@@ -1471,7 +1471,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int dept
                         error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Map node is null");
 
                     Slot itemSlot = {.ptrVal = node->data};
-                    doBasicDeref(&itemSlot, itemType->kind, error);
+                    doDerefImpl(&itemSlot, itemType->kind, error);
                     len += doFillReprBuf(&itemSlot, itemType, buf + len, maxLen, depth + 1, pretty, dereferenced, error);
 
                     if (i < map->root->len - 1)
@@ -1498,7 +1498,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int dept
             for (int i = 0; i < type->numItems; i++)
             {
                 Slot fieldSlot = {.ptrVal = (char *)slot->ptrVal + type->field[i]->offset};
-                doBasicDeref(&fieldSlot, type->field[i]->type->kind, error);
+                doDerefImpl(&fieldSlot, type->field[i]->type->kind, error);
                 if (!skipNames)
                     len += snprintf(buf + len, maxLen, "%s: ", type->field[i]->name);
                 len += doFillReprBuf(&fieldSlot, type->field[i]->type, buf + len, maxLen, depth + 1, pretty, dereferenced, error);
@@ -1517,7 +1517,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int dept
             if (interface->self)
             {
                 Slot selfSlot = {.ptrVal = interface->self};
-                doBasicDeref(&selfSlot, interface->selfType->base->kind, error);
+                doDerefImpl(&selfSlot, interface->selfType->base->kind, error);
 
                 if (pretty)
                 {
@@ -1821,7 +1821,7 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
 
             // Decrease old string ref count
             Type strType = {.kind = TYPE_STR};
-            doBasicChangeRefCnt(fiber, pages, stream, &strType, TOK_MINUSMINUS);
+            doChangeRefCntImpl(fiber, pages, stream, &strType, TOK_MINUSMINUS);
 
             stream = newStream;
         }
@@ -1897,7 +1897,7 @@ static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool con
 
             // Decrease old string ref count
             Type destType = {.kind = TYPE_STR};
-            doBasicChangeRefCnt(fiber, pages, *dest, &destType, TOK_MINUSMINUS);
+            doChangeRefCntImpl(fiber, pages, *dest, &destType, TOK_MINUSMINUS);
 
             // Allocate new string
             *dest = doAllocStr(pages, strlen(src), error);
@@ -1990,7 +1990,7 @@ static FORCE_INLINE void doBuiltinMakefromarr(Fiber *fiber, HeapPages *pages, Er
 
     // Increase result items' ref counts, as if they have been assigned one by one
     Type staticArrayType = {.kind = TYPE_ARRAY, .base = dest->type->base, .numItems = getDims(dest)->len, .next = NULL};
-    doBasicChangeRefCnt(fiber, pages, dest->data, &staticArrayType, TOK_PLUSPLUS);
+    doChangeRefCntImpl(fiber, pages, dest->data, &staticArrayType, TOK_PLUSPLUS);
 
     (--fiber->top)->ptrVal = dest;
 }
@@ -2033,7 +2033,7 @@ static FORCE_INLINE void doBuiltinMaketoarr(Fiber *fiber, HeapPages *pages, Erro
         memcpy(dest, src->data, getDims(src)->len * src->itemSize);
 
         // Increase result items' ref counts, as if they have been assigned one by one
-        doBasicChangeRefCnt(fiber, pages, dest, destType, TOK_PLUSPLUS);
+        doChangeRefCntImpl(fiber, pages, dest, destType, TOK_PLUSPLUS);
     }
 
     (--fiber->top)->ptrVal = dest;
@@ -2095,7 +2095,7 @@ static FORCE_INLINE void doBuiltinCopyDynArray(Fiber *fiber, HeapPages *pages, E
 
         // Increase result items' ref counts, as if they have been assigned one by one
         Type staticArrayType = {.kind = TYPE_ARRAY, .base = result->type->base, .numItems = getDims(result)->len, .next = NULL};
-        doBasicChangeRefCnt(fiber, pages, result->data, &staticArrayType, TOK_PLUSPLUS);
+        doChangeRefCntImpl(fiber, pages, result->data, &staticArrayType, TOK_PLUSPLUS);
     }
 
     (--fiber->top)->ptrVal = result;
@@ -2168,14 +2168,14 @@ static FORCE_INLINE void doBuiltinAppend(Fiber *fiber, HeapPages *pages, Error *
 
     if (newLen <= getDims(array)->capacity)
     {
-        doBasicChangeRefCnt(fiber, pages, array, array->type, TOK_PLUSPLUS);
+        doChangeRefCntImpl(fiber, pages, array, array->type, TOK_PLUSPLUS);
         *result = *array;
 
         memmove((char *)result->data + getDims(array)->len * array->itemSize, (char *)rhs, rhsLen * array->itemSize);
 
         // Increase result items' ref counts, as if they have been assigned one by one
         Type staticArrayType = {.kind = TYPE_ARRAY, .base = result->type->base, .numItems = rhsLen, .next = NULL};
-        doBasicChangeRefCnt(fiber, pages, (char *)result->data + getDims(array)->len * array->itemSize, &staticArrayType, TOK_PLUSPLUS);
+        doChangeRefCntImpl(fiber, pages, (char *)result->data + getDims(array)->len * array->itemSize, &staticArrayType, TOK_PLUSPLUS);
 
         getDims(result)->len = newLen;
     }
@@ -2188,7 +2188,7 @@ static FORCE_INLINE void doBuiltinAppend(Fiber *fiber, HeapPages *pages, Error *
 
         // Increase result items' ref counts, as if they have been assigned one by one
         Type staticArrayType = {.kind = TYPE_ARRAY, .base = result->type->base, .numItems = newLen, .next = NULL};
-        doBasicChangeRefCnt(fiber, pages, result->data, &staticArrayType, TOK_PLUSPLUS);
+        doChangeRefCntImpl(fiber, pages, result->data, &staticArrayType, TOK_PLUSPLUS);
     }
 
     (--fiber->top)->ptrVal = result;
@@ -2215,7 +2215,7 @@ static FORCE_INLINE void doBuiltinInsert(Fiber *fiber, HeapPages *pages, Error *
 
     if (getDims(array)->len + 1 <= getDims(array)->capacity)
     {
-        doBasicChangeRefCnt(fiber, pages, array, array->type, TOK_PLUSPLUS);
+        doChangeRefCntImpl(fiber, pages, array, array->type, TOK_PLUSPLUS);
         *result = *array;
 
         memmove((char *)result->data + (index + 1) * result->itemSize, (char *)result->data + index * result->itemSize, (getDims(array)->len - index) * result->itemSize);
@@ -2223,7 +2223,7 @@ static FORCE_INLINE void doBuiltinInsert(Fiber *fiber, HeapPages *pages, Error *
 
         // Increase result items' ref counts, as if they have been assigned one by one
         Type staticArrayType = {.kind = TYPE_ARRAY, .base = result->type->base, .numItems = 1, .next = NULL};
-        doBasicChangeRefCnt(fiber, pages, (char *)result->data + index * result->itemSize, &staticArrayType, TOK_PLUSPLUS);
+        doChangeRefCntImpl(fiber, pages, (char *)result->data + index * result->itemSize, &staticArrayType, TOK_PLUSPLUS);
 
         getDims(result)->len++;
     }
@@ -2237,7 +2237,7 @@ static FORCE_INLINE void doBuiltinInsert(Fiber *fiber, HeapPages *pages, Error *
 
         // Increase result items' ref counts, as if they have been assigned one by one
         Type staticArrayType = {.kind = TYPE_ARRAY, .base = result->type->base, .numItems = getDims(result)->len, .next = NULL};
-        doBasicChangeRefCnt(fiber, pages, result->data, &staticArrayType, TOK_PLUSPLUS);
+        doChangeRefCntImpl(fiber, pages, result->data, &staticArrayType, TOK_PLUSPLUS);
     }
 
     (--fiber->top)->ptrVal = result;
@@ -2257,12 +2257,12 @@ static FORCE_INLINE void doBuiltinDeleteDynArray(Fiber *fiber, HeapPages *pages,
     if (index < 0 || index > getDims(array)->len - 1)
         error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Index %lld is out of range 0...%lld", index, getDims(array)->len - 1);
 
-    doBasicChangeRefCnt(fiber, pages, array, array->type, TOK_PLUSPLUS);
+    doChangeRefCntImpl(fiber, pages, array, array->type, TOK_PLUSPLUS);
     *result = *array;
 
     // Decrease result item's ref count
     Type staticArrayType = {.kind = TYPE_ARRAY, .base = result->type->base, .numItems = 1, .next = NULL};
-    doBasicChangeRefCnt(fiber, pages, (char *)result->data + index * result->itemSize, &staticArrayType, TOK_MINUSMINUS);
+    doChangeRefCntImpl(fiber, pages, (char *)result->data + index * result->itemSize, &staticArrayType, TOK_MINUSMINUS);
 
     memmove((char *)result->data + index * result->itemSize, (char *)result->data + (index + 1) * result->itemSize, (getDims(array)->len - index - 1) * result->itemSize);
 
@@ -2287,39 +2287,37 @@ static FORCE_INLINE void doBuiltinDeleteMap(Fiber *fiber, HeapPages *pages, Erro
 
     if (node)
     {
-        *nodeInParent = NULL;
-
-        if (node->left)
-        {
+        if (node->left && !node->right)
             *nodeInParent = node->left;
-            node->left = NULL;
-        }
-
-        if (node->right)
+        else if (!node->left && node->right)
+            *nodeInParent = node->right;
+        else if (node->left && node->right)
         {
-            if (!*nodeInParent)
-            {
-                *nodeInParent = node->right;
-            }
-            else
-            {
-                Slot rightKey = {.ptrVal = node->right->key};
-                doBasicDeref(&rightKey, typeMapKey(map->type)->kind, error);
-                MapNode **rightInNewParent = doGetMapNode(map, rightKey, false, pages, error);
-                if (*rightInNewParent)
-                    error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Map subtree already exists");
-                *rightInNewParent = node->right;
-            }
-            node->right = NULL;
-        }
+            MapNode **successorInParent = &node->right;
+            while ((*successorInParent)->left)
+                successorInParent = &(*successorInParent)->left;
 
-        doBasicChangeRefCnt(fiber, pages, node, typeMapNodePtr(map->type), TOK_MINUSMINUS);
+            MapNode *successor = *successorInParent;
+            *successorInParent = successor->right;
+
+            successor->left = node->left;
+            successor->right = node->right;
+
+            *nodeInParent = successor;
+        }
+        else
+            *nodeInParent = NULL;
+
+        node->left = NULL;
+        node->right = NULL;
+
+        doChangeRefCntImpl(fiber, pages, node, typeMapNodePtr(map->type), TOK_MINUSMINUS);
 
         if (--map->root->len < 0)
             error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Map length is negative");
     }
 
-    doBasicChangeRefCnt(fiber, pages, map->root, typeMapNodePtr(map->type), TOK_PLUSPLUS);
+    doChangeRefCntImpl(fiber, pages, map->root, typeMapNodePtr(map->type), TOK_PLUSPLUS);
     result->type = map->type;
     result->root = map->root;
 
@@ -2395,7 +2393,7 @@ static FORCE_INLINE void doBuiltinSlice(Fiber *fiber, HeapPages *pages, Error *e
 
         // Increase result items' ref counts, as if they have been assigned one by one
         Type staticArrayType = {.kind = TYPE_ARRAY, .base = result->type->base, .numItems = getDims(result)->len, .next = NULL};
-        doBasicChangeRefCnt(fiber, pages, result->data, &staticArrayType, TOK_PLUSPLUS);
+        doChangeRefCntImpl(fiber, pages, result->data, &staticArrayType, TOK_PLUSPLUS);
 
         (--fiber->top)->ptrVal = result;
     }
@@ -2431,14 +2429,14 @@ static int qsortCompare(const void *a, const void *b, void *context)
     // Push upvalues
     fiber->top -= sizeof(Interface) / sizeof(Slot);
     *(Interface *)fiber->top = compare->upvalue;
-    doBasicChangeRefCnt(fiber, &fiber->vm->pages, fiber->top, compareSig->param[0]->type, TOK_PLUSPLUS);
+    doChangeRefCntImpl(fiber, &fiber->vm->pages, fiber->top, compareSig->param[0]->type, TOK_PLUSPLUS);
 
     // Push pointers to values to be compared
     (--fiber->top)->ptrVal = (void *)a;
-    doBasicChangeRefCnt(fiber, &fiber->vm->pages, fiber->top->ptrVal, compareSig->param[1]->type, TOK_PLUSPLUS);
+    doChangeRefCntImpl(fiber, &fiber->vm->pages, fiber->top->ptrVal, compareSig->param[1]->type, TOK_PLUSPLUS);
 
     (--fiber->top)->ptrVal = (void *)b;
-    doBasicChangeRefCnt(fiber, &fiber->vm->pages, fiber->top->ptrVal, compareSig->param[2]->type, TOK_PLUSPLUS);
+    doChangeRefCntImpl(fiber, &fiber->vm->pages, fiber->top->ptrVal, compareSig->param[2]->type, TOK_PLUSPLUS);
 
     // Push 'return from VM' signal as return address
     (--fiber->top)->intVal = VM_RETURN_FROM_VM;
@@ -2732,7 +2730,7 @@ static FORCE_INLINE void doBuiltinKeys(Fiber *fiber, HeapPages *pages, Error *er
 
         // Increase result items' ref counts, as if they have been assigned one by one
         Type staticArrayType = {.kind = TYPE_ARRAY, .base = result->type->base, .numItems = getDims(result)->len, .next = NULL};
-        doBasicChangeRefCnt(fiber, pages, result->data, &staticArrayType, TOK_PLUSPLUS);
+        doChangeRefCntImpl(fiber, pages, result->data, &staticArrayType, TOK_PLUSPLUS);
     }
 
     (--fiber->top)->ptrVal = result;
@@ -2770,7 +2768,7 @@ static FORCE_INLINE void doPush(Fiber *fiber, Error *error)
     (--fiber->top)->intVal = fiber->code[fiber->ip].operand.intVal;
 
     if (fiber->code[fiber->ip].inlineOpcode == OP_DEREF)
-        doBasicDeref(fiber->top, fiber->code[fiber->ip].typeKind, error);
+        doDerefImpl(fiber->top, fiber->code[fiber->ip].typeKind, error);
 
     fiber->ip++;
 }
@@ -2809,7 +2807,7 @@ static FORCE_INLINE void doPushLocalPtrZero(Fiber *fiber)
 static FORCE_INLINE void doPushLocal(Fiber *fiber, Error *error)
 {
     (--fiber->top)->ptrVal = (int8_t *)fiber->base + fiber->code[fiber->ip].operand.intVal;
-    doBasicDeref(fiber->top, fiber->code[fiber->ip].typeKind, error);
+    doDerefImpl(fiber->top, fiber->code[fiber->ip].typeKind, error);
     fiber->ip++;
 }
 
@@ -2872,7 +2870,7 @@ static FORCE_INLINE void doDup(Fiber *fiber)
 
 static FORCE_INLINE void doSwap(Fiber *fiber)
 {
-    doBasicSwap(fiber->top);
+    doSwapImpl(fiber->top);
     fiber->ip++;
 }
 
@@ -2888,7 +2886,7 @@ static FORCE_INLINE void doZero(Fiber *fiber)
 
 static FORCE_INLINE void doDeref(Fiber *fiber, Error *error)
 {
-    doBasicDeref(fiber->top, fiber->code[fiber->ip].typeKind, error);
+    doDerefImpl(fiber->top, fiber->code[fiber->ip].typeKind, error);
     fiber->ip++;
 }
 
@@ -2896,12 +2894,12 @@ static FORCE_INLINE void doDeref(Fiber *fiber, Error *error)
 static FORCE_INLINE void doAssign(Fiber *fiber, Error *error)
 {
     if (fiber->code[fiber->ip].inlineOpcode == OP_SWAP)
-        doBasicSwap(fiber->top);
+        doSwapImpl(fiber->top);
 
     Slot rhs = *fiber->top++;
     void *lhs = (fiber->top++)->ptrVal;
 
-    doBasicAssign(lhs, rhs, fiber->code[fiber->ip].typeKind, fiber->code[fiber->ip].operand.intVal, error);
+    doAssignImpl(lhs, rhs, fiber->code[fiber->ip].typeKind, fiber->code[fiber->ip].operand.intVal, error);
     fiber->ip++;
 }
 
@@ -2912,7 +2910,7 @@ static FORCE_INLINE void doChangeRefCnt(Fiber *fiber, HeapPages *pages)
     TokenKind tokKind = fiber->code[fiber->ip].tokKind;
     Type *type        = fiber->code[fiber->ip].type;
 
-    doBasicChangeRefCnt(fiber, pages, ptr, type, tokKind);
+    doChangeRefCntImpl(fiber, pages, ptr, type, tokKind);
 
     fiber->ip++;
 }
@@ -2926,8 +2924,8 @@ static FORCE_INLINE void doChangeRefCntGlobal(Fiber *fiber, HeapPages *pages, Er
 
     Slot slot = {.ptrVal = ptr};
 
-    doBasicDeref(&slot, type->kind, error);
-    doBasicChangeRefCnt(fiber, pages, slot.ptrVal, type, tokKind);
+    doDerefImpl(&slot, type->kind, error);
+    doChangeRefCntImpl(fiber, pages, slot.ptrVal, type, tokKind);
 
     fiber->ip++;
 }
@@ -2941,8 +2939,8 @@ static FORCE_INLINE void doChangeRefCntLocal(Fiber *fiber, HeapPages *pages, Err
 
     Slot slot = {.ptrVal = (int8_t *)fiber->base + offset};
 
-    doBasicDeref(&slot, type->kind, error);
-    doBasicChangeRefCnt(fiber, pages, slot.ptrVal, type, tokKind);
+    doDerefImpl(&slot, type->kind, error);
+    doChangeRefCntImpl(fiber, pages, slot.ptrVal, type, tokKind);
 
     fiber->ip++;
 }
@@ -2951,7 +2949,7 @@ static FORCE_INLINE void doChangeRefCntLocal(Fiber *fiber, HeapPages *pages, Err
 static FORCE_INLINE void doChangeRefCntAssign(Fiber *fiber, HeapPages *pages, Error *error)
 {
     if (fiber->code[fiber->ip].inlineOpcode == OP_SWAP)
-        doBasicSwap(fiber->top);
+        doSwapImpl(fiber->top);
 
     Slot rhs   = *fiber->top++;
     void *lhs  = (fiber->top++)->ptrVal;
@@ -2959,14 +2957,14 @@ static FORCE_INLINE void doChangeRefCntAssign(Fiber *fiber, HeapPages *pages, Er
 
     // Increase right-hand side ref count
     if (fiber->code[fiber->ip].tokKind != TOK_MINUSMINUS)      // "--" means that the right-hand side ref count should not be increased
-        doBasicChangeRefCnt(fiber, pages, rhs.ptrVal, type, TOK_PLUSPLUS);
+        doChangeRefCntImpl(fiber, pages, rhs.ptrVal, type, TOK_PLUSPLUS);
 
     // Decrease left-hand side ref count
     Slot lhsDeref = {.ptrVal = lhs};
-    doBasicDeref(&lhsDeref, type->kind, error);
-    doBasicChangeRefCnt(fiber, pages, lhsDeref.ptrVal, type, TOK_MINUSMINUS);
+    doDerefImpl(&lhsDeref, type->kind, error);
+    doChangeRefCntImpl(fiber, pages, lhsDeref.ptrVal, type, TOK_MINUSMINUS);
 
-    doBasicAssign(lhs, rhs, type->kind, typeSizeNoCheck(type), error);
+    doAssignImpl(lhs, rhs, type->kind, typeSizeNoCheck(type), error);
     fiber->ip++;
 }
 
@@ -3074,7 +3072,7 @@ static FORCE_INLINE void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
                 {
                     buf = lhsStr;
                     Type strType = {.kind = TYPE_STR};
-                    doBasicChangeRefCnt(fiber, pages, buf, &strType, TOK_PLUSPLUS);
+                    doChangeRefCntImpl(fiber, pages, buf, &strType, TOK_PLUSPLUS);
                 }
                 else
                 {
@@ -3251,7 +3249,7 @@ static FORCE_INLINE void doGetArrayPtr(Fiber *fiber, Error *error)
     fiber->top->ptrVal = data + itemSize * index;
 
     if (fiber->code[fiber->ip].inlineOpcode == OP_DEREF)
-        doBasicDeref(fiber->top, fiber->code[fiber->ip].typeKind, error);
+        doDerefImpl(fiber->top, fiber->code[fiber->ip].typeKind, error);
 
     fiber->ip++;
 }
@@ -3274,7 +3272,7 @@ static FORCE_INLINE void doGetDynArrayPtr(Fiber *fiber, Error *error)
     (--fiber->top)->ptrVal = (char *)array->data + itemSize * index;
 
     if (fiber->code[fiber->ip].inlineOpcode == OP_DEREF)
-        doBasicDeref(fiber->top, fiber->code[fiber->ip].typeKind, error);
+        doDerefImpl(fiber->top, fiber->code[fiber->ip].typeKind, error);
 
     fiber->ip++;
 }
@@ -3304,9 +3302,9 @@ static FORCE_INLINE void doGetMapPtr(Fiber *fiber, HeapPages *pages, Error *erro
 
         // Increase key ref count
         if (typeGarbageCollected(keyType))
-            doBasicChangeRefCnt(fiber, pages, key.ptrVal, keyType, TOK_PLUSPLUS);
+            doChangeRefCntImpl(fiber, pages, key.ptrVal, keyType, TOK_PLUSPLUS);
 
-        doBasicAssign(node->key, key, keyType->kind, typeSizeNoCheck(keyType), error);
+        doAssignImpl(node->key, key, keyType->kind, typeSizeNoCheck(keyType), error);
         map->root->len++;
     }
 
@@ -3325,7 +3323,7 @@ static FORCE_INLINE void doGetFieldPtr(Fiber *fiber, Error *error)
     fiber->top->ptrVal = (char *)fiber->top->ptrVal + fieldOffset;
 
     if (fiber->code[fiber->ip].inlineOpcode == OP_DEREF)
-        doBasicDeref(fiber->top, fiber->code[fiber->ip].typeKind, error);
+        doDerefImpl(fiber->top, fiber->code[fiber->ip].typeKind, error);
 
     fiber->ip++;
 }
@@ -3501,7 +3499,7 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         case BUILTIN_NARROW:
         {
             Slot rhs = *fiber->top;
-            doBasicAssign(fiber->top, rhs, typeKind, 0, error);
+            doAssignImpl(fiber->top, rhs, typeKind, 0, error);
             break;
         }
         case BUILTIN_ROUND:         fiber->top->intVal = (int64_t)round(fiber->top->realVal); break;
@@ -3932,7 +3930,7 @@ void vmMakeDynArray(VM *vm, DynArray *array, Type *type, int len)
     if (!array)
         return;
 
-    doBasicChangeRefCnt(vm->fiber, &vm->pages, array, type, TOK_MINUSMINUS);
+    doChangeRefCntImpl(vm->fiber, &vm->pages, array, type, TOK_MINUSMINUS);
     doAllocDynArray(&vm->pages, array, type, len, vm->error);
 }
 
