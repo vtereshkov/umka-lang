@@ -1,65 +1,67 @@
+import "std.um"
+
 fn test1() {
-	printf("\nTest 1\n")
+    printf("\nTest 1\n")
 
-	var m: map[str]str
+    var m: map[str]str
 
-	m["Hello" + " World"] = "English" + " EN"
-	m["Salut" + " le Monde"] = "French" + " FR"
+    m["Hello" + " World"] = "English" + " EN"
+    m["Salut" + " le Monde"] = "French" + " FR"
 
-	printf("%v\n", validkey(m, "Salut le Monde"))
+    printf("%v\n", validkey(m, "Salut le Monde"))
 
-	m = delete(m, "Salut le Monde")
+    m = delete(m, "Salut le Monde")
 
-	printf("%v\n", validkey(m, "Salut le Monde"))
+    printf("%v\n", validkey(m, "Salut le Monde"))
 
-	a := m["Hello" + " World"]
-	b := m["Privet" + " Mir"]
-	c := m["Salut" + " le Monde"]
-	
-	printf("%v %v %v\n", a, b, c)
-	printf("%v\n", keys(m))
-	printf("%v\n", valid(m))
-	printf("%v\n", m)	
+    a := m["Hello" + " World"]
+    b := m["Privet" + " Mir"]
+    c := m["Salut" + " le Monde"]
+    
+    printf("%v %v %v\n", a, b, c)
+    printf("%v\n", keys(m))
+    printf("%v\n", valid(m))
+    printf("%v\n", m)   
 }
 
 
 fn test2() {
-	printf("\nTest 2\n")
+    printf("\nTest 2\n")
 
-	type Pt = struct {
-		x, y: int
-	}
+    type Pt = struct {
+        x, y: int
+    }
 
-	var p: ^str
+    var p: ^str
 
-	{
-		m2 := make(map[Pt]str)
+    {
+        m2 := make(map[Pt]str)
 
-		m2[Pt{5, 7}] = "Good"
-		m2[Pt{42, 23}] = "Better"
+        m2[Pt{5, 7}] = "Good"
+        m2[Pt{42, 23}] = "Better"
 
-		printf("%v %v %v\n", m2[Pt{42, 23}], m2[Pt{11, 12}], m2[Pt{5, 7}])
+        printf("%v %v %v\n", m2[Pt{42, 23}], m2[Pt{11, 12}], m2[Pt{5, 7}])
 
-		k := keys(m2)
-		printf("%d %v\n", len(m2), k)
-		printf("%v\n", m2)
+        k := keys(m2)
+        printf("%d %v\n", len(m2), k)
+        printf("%v\n", m2)
 
-		p = &m2[Pt{42, 23}]
-	}
+        p = &m2[Pt{42, 23}]
+    }
 
-	printf("%v\n", p^)	
+    printf("%v\n", p^)  
 }
 
 
 fn test3() {
-	printf("\nTest 3\n")
+    printf("\nTest 3\n")
 
-	var m3: map[int]int
-	printf("%v\n", valid(m3))
+    var m3: map[int]int
+    printf("%v\n", valid(m3))
 
-	m3[1915] = 20
-	printf("%v %v\n", valid(m3), m3[1915])
-	printf("%v\n", m3)
+    m3[1915] = 20
+    printf("%v %v\n", valid(m3), m3[1915])
+    printf("%v\n", m3)
 }
 
 
@@ -72,26 +74,26 @@ fn foo(): ^map[[2]int]str {
 
 
 fn test4() {
-	printf("\nTest 4\n")
+    printf("\nTest 4\n")
   
   m4 := foo()
 
-	m4[[2]int{2, 5}] = "OK"
-	m4[[2]int{7, 9}] = "Also OK"
+    m4[[2]int{2, 5}] = "OK"
+    m4[[2]int{7, 9}] = "Also OK"
 
-	printf("%v\n", m4[[2]int{2, 5}])
-	printf("%v\n", m4^)
+    printf("%v\n", m4[[2]int{2, 5}])
+    printf("%v\n", m4^)
 
-	for key, item in m4 {
-		printf("%v %v\n", key, item)
-	}	
+    for key, item in m4 {
+        printf("%v %v\n", key, item)
+    }   
 }
 
 
 fn test5() {
-	printf("\nTest 5\n")
+    printf("\nTest 5\n")
 
-	type Any = any
+    type Any = any
   m := make(map[int]Any)
   m[17] = 42
   m[19] = 53
@@ -101,34 +103,70 @@ fn test5() {
 
 
 fn test6() {
-	printf("\nTest 6\n")
+    printf("\nTest 6\n")
 
-	m := map[str][]real{
-		"pi": []real{3.14, 6.28}, 
-		"e": []real{2.72, 5.44}, 
-		"ten": []real{10, 20}
-	}
+    m := map[str][]real{
+        "pi": []real{3.14, 6.28}, 
+        "e": []real{2.72, 5.44}, 
+        "ten": []real{10, 20}
+    }
 
-	n := copy(m)
-	m["one"] = []real{1.0, 2.0}
-	o := delete(copy(m), "pi")
+    n := copy(m)
+    m["one"] = []real{1.0, 2.0}
+    o := delete(copy(m), "pi")
 
-	printf("%v\n", m)
-	printf("%v\n", n)
-	printf("%v\n", o)
+    printf("%v\n", m)
+    printf("%v\n", n)
+    printf("%v\n", o)
+}
+
+
+fn test7(n: int) {
+    printf("\nTest 7\n")
+
+    var m: map[int]int
+
+    cnt := 0
+
+    for i := 0; i < n; i++ {
+        k := std::rand() % n
+        if !validkey(m, k) {
+            cnt++
+        } 
+        m[k] = -k
+    }
+
+    std::assert(cnt == len(m))
+
+    for l := len(m); len(m) > l / 2 {
+        ks := keys(m)
+        ki := std::rand() % len(m)
+        m = delete(m, ks[ki])
+        cnt--
+    }
+
+    std::assert(cnt == len(m))
+
+    for k, v in m {
+        std::assert(v == -k)
+        cnt--
+    }
+
+    std::assert(cnt == 0) 
 }
 
 
 fn test*() {
-	test1()
-	test2()
-	test3()
-	test4()
-	test5()
-	test6()
+    test1()
+    test2()
+    test3()
+    test4()
+    test5()
+    test6()
+    test7(10000)
 }
 
 
 fn main() {
-	test()
+    test()
 }

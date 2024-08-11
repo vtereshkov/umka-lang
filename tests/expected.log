@@ -2,9 +2,9 @@
 
 >>> Printing
 
-7 [42 43] 6.000000 {"World": 0.333333 "Hello": 3.14}
-7 [42 43] 6.000000 {"World": 0.333333 "Hello": 3.14}
-7 [42 43] 6.000000 {"World": 0.333333 "Hello": 3.14}
+7 [42 43] 6.000000 {"Hello": 3.14 "World": 0.333333}
+7 [42 43] 6.000000 {"Hello": 3.14 "World": 0.333333}
+7 [42 43] 6.000000 {"Hello": 3.14 "World": 0.333333}
 
 
 >>> Binary file I/O
@@ -311,279 +311,279 @@ Test 1
 Population of Russia was 146.73 million. Now it is 146.75 million
 
 {
-    "OCEANIA": 43.155
-    "Oman": 4.713
-    "WORLD": 7772.85
-    "Western-Sahara": 0.597
-    "WESTERN-EUROPE": 195.479
-    "WESTERN-ASIA": 280.927
-    "WESTERN-AFRICA": 401.115
-    "Guyana": 0.787
-    "Guinea-Bissau": 1.927
-    "Guinea": 12.56
-    "Guam": 0.175
-    "Guatemala": 18.066
-    "Guadeloupe": 0.375
-    "Georgia": 3.715
-    "Germany": 83.3
-    "Gambia": 2.417
-    "Gabon": 2.231
-    "Greece": 10.7
-    "Grenada": 0.113
-    "Ghana": 31.073
-    "Kosovo": 1.791
-    "Korea-South": 51.781
-    "Korea-North": 25.779
-    "Kuwait": 4.691
-    "Kenya": 53.528
-    "Kyrgyzstan": 6.594
-    "Kiribati": 0.125
-    "Kazakhstan": 18.732
-    "Somalia": 15.893
-    "South-Sudan": 11.194
-    "South-Africa": 59.628
-    "Solomon-Islands": 0.715
-    "SOUTH-ASIA": 1967.13
-    "SOUTH-AMERICA": 429.191
-    "SOUTHEAST-ASIA": 661.845
-    "SOUTHERN-EUROPE": 153.251
-    "SOUTHERN-AFRICA": 67.732
-    "Sweden": 10.377
-    "Switzerland": 8.634
-    "Suriname": 0.605
-    "Sudan": 43.849
-    "Seychelles": 0.098
-    "Senegal": 16.744
-    "Serbia": 6.957
-    "Syria": 19.398
-    "Sierra-Leone": 7.977
-    "Singapore": 5.769
-    "Sao-Tome-and-Principe": 0.21
-    "Samoa": 0.2
-    "Saudi-Arabia": 35.041
-    "Saint-Lucia": 0.182
-    "San-Marino": 0.034
-    "Sri-Lanka": 21.937
-    "Slovenia": 2.103
-    "Slovakia": 5.462
-    "St.-Kitts-Nevis": 0.054
-    "St.-Vincent-and-the-Grenadines": 0.111
-    "Spain": 47.635
-    "Costa-Rica": 5.111
-    "Comoros": 0.87
-    "Congo-Dem.-Rep.": 89.568
-    "Congo": 5.518
-    "Colombia": 49.444
-    "Cote-d'Ivoire": 26.175
-    "Curacao": 0.155
-    "Cuba": 11.281
-    "Central-African-Republic": 4.83
-    "CENTRAL-ASIA": 74.961
-    "CENTRAL-AMERICA": 178.611
-    "Cyprus": 1.207
-    "Cameroon": 26.598
-    "Cambodia": 15.497
-    "Canada": 38.19
-    "Cape-Verde": 0.556
-    "CARIBBEAN": 43.233
-    "Czechia": 10.716
-    "Croatia": 4.02
-    "China-Macao-SAR": 0.686
-    "China-Hong-Kong-SAR": 7.494
-    "China": 1402.38
-    "Chile": 19.47
-    "Channel-Islands": 0.172
-    "Chad": 16.877
-    "Mongolia": 3.361
-    "Monaco": 0.038
-    "Montenegro": 0.622
-    "Mozambique": 31.166
-    "Morocco": 35.952
-    "Moldova": 3.535
-    "Mexico": 127.792
-    "Myanmar": 54.704
-    "MIDDLE-AFRICA": 179.757
-    "Mauritius": 1.265
-    "Mauritania": 4.65
-    "Mayotte": 0.284
-    "Marshall-Islands": 0.057
-    "Martinique": 0.356
-    "Mali": 20.251
-    "Malawi": 19.13
-    "Malaysia": 32.781
-    "Malta": 0.522
-    "Maldives": 0.541
-    "Madagascar": 27.691
-    "Uganda": 45.741
-    "Ukraine": 41.778
-    "United-Kingdom": 67.16
-    "United-States": 329.878
-    "United-Arab-Emirates": 9.778
-    "Uzbekistan": 34.174
-    "Uruguay": 3.531
-    "eSwatini": 1.104
-    "Egypt": 100.803
-    "Estonia": 1.331
-    "Ecuador": 17.511
-    "EUROPE": 746.622
-    "Equatorial-Guinea": 1.403
-    "EAST-ASIA": 1641.06
-    "EASTERN-EUROPE": 291.902
-    "EASTERN-AFRICA": 444.97
-    "Eritrea": 3.546
-    "El-Salvador": 6.481
-    "Ethiopia": 114.916
-    "Yemen": 29.826
-    "Israel": 9.216
-    "Iceland": 0.368
-    "Indonesia": 271.739
-    "India": 1400.1
-    "Ireland": 5.003
-    "Iraq": 39.725
-    "Iran": 84.15
-    "Italy": 60.296
-    "Qatar": 2.839
     "ASIA": 4625.93
-    "Austria": 8.914
-    "Australia": 25.754
-    "Angola": 32.522
-    "Antigua-and-Barbuda": 0.098
-    "Andorra": 0.082
-    "Afghanistan": 38.928
-    "AFRICA": 1337.92
-    "Azerbaijan": 10.108
-    "Argentina": 45.377
-    "Armenia": 2.956
-    "Algeria": 44.357
-    "Albania": 2.838
-    "Norway": 5.387
-    "North-Macedonia": 2.08
-    "NORTHERN-EUROPE": 105.99
-    "NORTHERN-AMERICA": 368.193
-    "NORTHERN-AFRICA": 244.344
-    "New-Caledonia": 0.295
-    "New-Zealand": 4.987
-    "Netherlands": 17.467
-    "Nepal": 29.996
-    "Nigeria": 206.14
-    "Niger": 24.189
-    "Nicaragua": 6.596
-    "Namibia": 2.541
-    "Nauru": 0.011
-    "Venezuela": 28.645
-    "Vietnam": 96.209
-    "Vanuatu": 0.321
-    "Federated-States-of-Micronesia": 0.106
-    "Finland": 5.529
+    "Chad": 16.877
+    "Cuba": 11.281
     "Fiji": 0.896
-    "French-Guiana": 0.294
-    "French-Polynesia": 0.28
-    "France": 64.94
-    "Zimbabwe": 14.863
-    "Zambia": 18.384
-    "Jordan": 10.679
-    "Jamaica": 2.809
-    "Japan": 125.967
-    "Romania": 19.241
-    "Rwanda": 12.952
-    "Russia": 146.748
-    "Reunion": 0.861
-    "Bosnia-Herzegovina": 3.281
-    "Bolivia": 11.633
-    "Botswana": 2.317
-    "Burkina-Faso": 20.903
-    "Burundi": 11.866
-    "Bulgaria": 6.927
+    "Guam": 0.175
+    "Iran": 84.15
+    "Iraq": 39.725
+    "Laos": 7.242
+    "Mali": 20.251
+    "Oman": 4.713
+    "Peru": 32.824
+    "Togo": 8.279
     "Benin": 12.209
-    "Belgium": 11.515
+    "Chile": 19.47
+    "China": 1402.38
+    "Congo": 5.518
+    "Egypt": 100.803
+    "Gabon": 2.231
+    "Ghana": 31.073
+    "Haiti": 11.403
+    "India": 1400.1
+    "Italy": 60.296
+    "Japan": 125.967
+    "Kenya": 53.528
+    "Libya": 6.891
+    "Malta": 0.522
+    "Nauru": 0.011
+    "Nepal": 29.996
+    "Niger": 24.189
+    "Palau": 0.018
+    "Qatar": 2.839
+    "Samoa": 0.2
+    "Spain": 47.635
+    "Sudan": 43.849
+    "Syria": 19.398
+    "Tonga": 0.099
+    "WORLD": 7772.85
+    "Yemen": 29.826
+    "AFRICA": 1337.92
+    "Angola": 32.522
     "Belize": 0.419
-    "Belarus": 9.375
-    "Bangladesh": 169.809
-    "Barbados": 0.287
+    "Bhutan": 0.73
+    "Brazil": 211.812
+    "Brunei": 0.469
+    "Canada": 38.19
+    "Cyprus": 1.207
+    "EUROPE": 746.622
+    "France": 64.94
+    "Gambia": 2.417
+    "Greece": 10.7
+    "Guinea": 12.56
+    "Guyana": 0.787
+    "Israel": 9.216
+    "Jordan": 10.679
+    "Kosovo": 1.791
+    "Kuwait": 4.691
+    "Latvia": 1.902
+    "Malawi": 19.13
+    "Mexico": 127.792
+    "Monaco": 0.038
+    "Norway": 5.387
+    "Panama": 4.283
+    "Poland": 38.368
+    "Russia": 146.748
+    "Rwanda": 12.952
+    "Serbia": 6.957
+    "Sweden": 10.377
+    "Taiwan": 23.61
+    "Turkey": 83.737
+    "Tuvalu": 0.01
+    "Uganda": 45.741
+    "Zambia": 18.384
+    "Albania": 2.838
+    "Algeria": 44.357
+    "Andorra": 0.082
+    "Armenia": 2.956
+    "Austria": 8.914
     "Bahamas": 0.393
     "Bahrain": 1.465
-    "Brunei": 0.469
-    "Brazil": 211.812
-    "Bhutan": 0.73
-    "Luxembourg": 0.632
-    "Lesotho": 2.142
-    "Lebanon": 6.825
-    "Liechtenstein": 0.039
-    "Liberia": 5.058
-    "Libya": 6.891
-    "Lithuania": 2.794
-    "Laos": 7.242
-    "Latvia": 1.902
-    "LATIN-AMERICA-AND-THE-CARIBBEAN": 651.036
-    "Togo": 8.279
-    "Tonga": 0.099
-    "Tunisia": 11.896
-    "Tuvalu": 0.01
-    "Turkmenistan": 6.031
-    "Turkey": 83.737
-    "Timor-Leste": 1.318
-    "Taiwan": 23.61
-    "Tanzania": 59.734
-    "Tajikistan": 9.429
-    "Trinidad-and-Tobago": 1.369
-    "Thailand": 66.534
-    "Dominican-Republic": 10.5
-    "Dominica": 0.072
+    "Belarus": 9.375
+    "Belgium": 11.515
+    "Bolivia": 11.633
+    "Burundi": 11.866
+    "Comoros": 0.87
+    "Croatia": 4.02
+    "Curacao": 0.155
+    "Czechia": 10.716
     "Denmark": 5.829
-    "Djibouti": 0.988
-    "Honduras": 9.864
+    "Ecuador": 17.511
+    "Eritrea": 3.546
+    "Estonia": 1.331
+    "Finland": 5.529
+    "Georgia": 3.715
+    "Germany": 83.3
+    "Grenada": 0.113
     "Hungary": 9.767
-    "Haiti": 11.403
-    "Portugal": 10.255
-    "Poland": 38.368
-    "Puerto-Rico": 3.189
-    "Peru": 32.824
+    "Iceland": 0.368
+    "Ireland": 5.003
+    "Jamaica": 2.809
+    "Lebanon": 6.825
+    "Lesotho": 2.142
+    "Liberia": 5.058
+    "Mayotte": 0.284
+    "Moldova": 3.535
+    "Morocco": 35.952
+    "Myanmar": 54.704
+    "Namibia": 2.541
+    "Nigeria": 206.14
+    "OCEANIA": 43.155
+    "Reunion": 0.861
+    "Romania": 19.241
+    "Senegal": 16.744
+    "Somalia": 15.893
+    "Tunisia": 11.896
+    "Ukraine": 41.778
+    "Uruguay": 3.531
+    "Vanuatu": 0.321
+    "Vietnam": 96.209
+    "Barbados": 0.287
+    "Botswana": 2.317
+    "Bulgaria": 6.927
+    "Cambodia": 15.497
+    "Cameroon": 26.598
+    "Colombia": 49.444
+    "Djibouti": 0.988
+    "Dominica": 0.072
+    "Ethiopia": 114.916
+    "Honduras": 9.864
+    "Kiribati": 0.125
+    "Malaysia": 32.781
+    "Maldives": 0.541
+    "Mongolia": 3.361
     "Pakistan": 220.94
-    "Panama": 4.283
     "Paraguay": 7.255
-    "Palestinian-Territory": 5.008
-    "Palau": 0.018
-    "Papua-New-Guinea": 8.95
+    "Portugal": 10.255
+    "Slovakia": 5.462
+    "Slovenia": 2.103
+    "Suriname": 0.605
+    "Tanzania": 59.734
+    "Thailand": 66.534
+    "Zimbabwe": 14.863
+    "eSwatini": 1.104
+    "Argentina": 45.377
+    "Australia": 25.754
+    "CARIBBEAN": 43.233
+    "EAST-ASIA": 1641.06
+    "Guatemala": 18.066
+    "Indonesia": 271.739
+    "Lithuania": 2.794
+    "Mauritius": 1.265
+    "Nicaragua": 6.596
+    "Singapore": 5.769
+    "Sri-Lanka": 21.937
+    "Venezuela": 28.645
+    "Azerbaijan": 10.108
+    "Bangladesh": 169.809
+    "Cape-Verde": 0.556
+    "Costa-Rica": 5.111
+    "Guadeloupe": 0.375
+    "Kazakhstan": 18.732
+    "Kyrgyzstan": 6.594
+    "Luxembourg": 0.632
+    "Madagascar": 27.691
+    "Martinique": 0.356
+    "Mauritania": 4.65
+    "Montenegro": 0.622
+    "Mozambique": 31.166
+    "SOUTH-ASIA": 1967.13
+    "San-Marino": 0.034
+    "Seychelles": 0.098
+    "Tajikistan": 9.429
+    "Uzbekistan": 34.174
+    "Afghanistan": 38.928
+    "El-Salvador": 6.481
+    "Korea-North": 25.779
+    "Korea-South": 51.781
+    "Netherlands": 17.467
+    "New-Zealand": 4.987
     "Philippines": 109.581
+    "Puerto-Rico": 3.189
+    "Saint-Lucia": 0.182
+    "South-Sudan": 11.194
+    "Switzerland": 8.634
+    "Timor-Leste": 1.318
+    "Burkina-Faso": 20.903
+    "CENTRAL-ASIA": 74.961
+    "Saudi-Arabia": 35.041
+    "Sierra-Leone": 7.977
+    "South-Africa": 59.628
+    "Turkmenistan": 6.031
+    "WESTERN-ASIA": 280.927
+    "Cote-d'Ivoire": 26.175
+    "French-Guiana": 0.294
+    "Guinea-Bissau": 1.927
+    "Liechtenstein": 0.039
+    "MIDDLE-AFRICA": 179.757
+    "New-Caledonia": 0.295
+    "SOUTH-AMERICA": 429.191
+    "United-States": 329.878
+    "EASTERN-AFRICA": 444.97
+    "EASTERN-EUROPE": 291.902
+    "SOUTHEAST-ASIA": 661.845
+    "United-Kingdom": 67.16
+    "WESTERN-AFRICA": 401.115
+    "WESTERN-EUROPE": 195.479
+    "Western-Sahara": 0.597
+    "CENTRAL-AMERICA": 178.611
+    "Channel-Islands": 0.172
+    "China-Macao-SAR": 0.686
+    "Congo-Dem.-Rep.": 89.568
+    "NORTHERN-AFRICA": 244.344
+    "NORTHERN-EUROPE": 105.99
+    "North-Macedonia": 2.08
+    "SOUTHERN-AFRICA": 67.732
+    "SOUTHERN-EUROPE": 153.251
+    "Solomon-Islands": 0.715
+    "St.-Kitts-Nevis": 0.054
+    "French-Polynesia": 0.28
+    "Marshall-Islands": 0.057
+    "NORTHERN-AMERICA": 368.193
+    "Papua-New-Guinea": 8.95
+    "Equatorial-Guinea": 1.403
+    "Bosnia-Herzegovina": 3.281
+    "Dominican-Republic": 10.5
+    "Antigua-and-Barbuda": 0.098
+    "China-Hong-Kong-SAR": 7.494
+    "Trinidad-and-Tobago": 1.369
+    "United-Arab-Emirates": 9.778
+    "Palestinian-Territory": 5.008
+    "Sao-Tome-and-Principe": 0.21
+    "Central-African-Republic": 4.83
+    "Federated-States-of-Micronesia": 0.106
+    "St.-Vincent-and-the-Grenadines": 0.111
+    "LATIN-AMERICA-AND-THE-CARIBBEAN": 651.036
 }
 
 Countries and regions more populous than Russia:
-                                   WORLD: 7772.85
-                          WESTERN-EUROPE: 195.48
-                            WESTERN-ASIA: 280.93
-                          WESTERN-AFRICA: 401.12
-                              SOUTH-ASIA: 1967.13
-                           SOUTH-AMERICA: 429.19
-                          SOUTHEAST-ASIA: 661.85
-                         SOUTHERN-EUROPE: 153.25
-                         CENTRAL-AMERICA: 178.61
-                                   China: 1402.38
-                           MIDDLE-AFRICA: 179.76
-                           United-States: 329.88
-                                  EUROPE: 746.62
-                               EAST-ASIA: 1641.06
-                          EASTERN-EUROPE: 291.90
-                          EASTERN-AFRICA: 444.97
-                               Indonesia: 271.74
-                                   India: 1400.10
                                     ASIA: 4625.93
+                                   China: 1402.38
+                                   India: 1400.10
+                                   WORLD: 7772.85
                                   AFRICA: 1337.92
-                        NORTHERN-AMERICA: 368.19
-                         NORTHERN-AFRICA: 244.34
-                                 Nigeria: 206.14
-                              Bangladesh: 169.81
                                   Brazil: 211.81
-         LATIN-AMERICA-AND-THE-CARIBBEAN: 651.04
+                                  EUROPE: 746.62
+                                 Nigeria: 206.14
                                 Pakistan: 220.94
+                               EAST-ASIA: 1641.06
+                               Indonesia: 271.74
+                              Bangladesh: 169.81
+                              SOUTH-ASIA: 1967.13
+                            WESTERN-ASIA: 280.93
+                           MIDDLE-AFRICA: 179.76
+                           SOUTH-AMERICA: 429.19
+                           United-States: 329.88
+                          EASTERN-AFRICA: 444.97
+                          EASTERN-EUROPE: 291.90
+                          SOUTHEAST-ASIA: 661.85
+                          WESTERN-AFRICA: 401.12
+                          WESTERN-EUROPE: 195.48
+                         CENTRAL-AMERICA: 178.61
+                         NORTHERN-AFRICA: 244.34
+                         SOUTHERN-EUROPE: 153.25
+                        NORTHERN-AMERICA: 368.19
+         LATIN-AMERICA-AND-THE-CARIBBEAN: 651.04
 
 Test 2
 Pushkin
 
 Pushkin
-Goethe
 Shakespeare
 Tolstoy
-{[1749 1832]: "Goethe" [1564 1616]: "Shakespeare" [1828 1910]: "Tolstoy"}
+Goethe
+{[1564 1616]: "Shakespeare" [1828 1910]: "Tolstoy" [1749 1832]: "Goethe"}
 
 Test 3
 Test passed
@@ -596,14 +596,14 @@ Test 1
 true
 false
 "English EN" "" ""
-["Salut le Monde" "Hello World" "Privet Mir"]
+["Privet Mir" "Hello World" "Salut le Monde"]
 true
-{"Salut le Monde": "" "Hello World": "English EN" "Privet Mir": ""}
+{"Privet Mir": "" "Hello World": "English EN" "Salut le Monde": ""}
 
 Test 2
 "Better" "" "Good"
-3 [{x: 11 y: 12} {x: 5 y: 7} {x: 42 y: 23}]
-{{x: 11 y: 12}: "" {x: 5 y: 7}: "Good" {x: 42 y: 23}: "Better"}
+3 [{x: 5 y: 7} {x: 11 y: 12} {x: 42 y: 23}]
+{{x: 5 y: 7}: "Good" {x: 11 y: 12}: "" {x: 42 y: 23}: "Better"}
 "Better"
 
 Test 3
@@ -613,19 +613,21 @@ true 20
 
 Test 4
 "OK"
-{[7 9]: "Also OK" [13 15]: "So-so" [57 89]: "Nice" [2 5]: "OK"}
+{[2 5]: "OK" [7 9]: "Also OK" [13 15]: "So-so" [57 89]: "Nice"}
+[2 5] "OK"
 [7 9] "Also OK"
 [13 15] "So-so"
 [57 89] "Nice"
-[2 5] "OK"
 
 Test 5
-{19: 53 17: 42}
+{17: 42 19: 53}
 
 Test 6
-{"one": [1 2] "e": [2.72 5.44] "ten": [10 20] "pi": [3.14 6.28]}
-{"e": [2.72 5.44] "ten": [10 20] "pi": [3.14 6.28]}
-{"one": [1 2] "e": [2.72 5.44] "ten": [10 20]}
+{"e": [2.72 5.44] "pi": [3.14 6.28] "one": [1 2] "ten": [10 20]}
+{"e": [2.72 5.44] "pi": [3.14 6.28] "ten": [10 20]}
+{"e": [2.72 5.44] "one": [1 2] "ten": [10 20]}
+
+Test 7
 
 
 >>> Multiple returns
@@ -951,9 +953,9 @@ len = 0  cap = 2
 {}
 len = 0
 
-{"Hehe": "Huhu" "Haha": "Hoho"}
-    Item "Hehe" = "Huhu"
+{"Haha": "Hoho" "Hehe": "Huhu"}
     Item "Haha" = "Hoho"
+    Item "Hehe" = "Huhu"
 len = 2
 
 {"Hello": "World"}
@@ -997,7 +999,7 @@ foo: World
 [2 4 -3.14]
 [[12 13] [44 47] [0 -6]]
 {w: 200 h: 100}
-{[11 3]: ["Psst!"] [3 7]: [] [5 7]: ["Hello" "World"]}
+{[3 7]: [] [5 7]: ["Hello" "World"] [11 3]: ["Psst!"]}
 [3 8 14]
 ["Haha" "Hoho"]
 [2 4]
@@ -1076,9 +1078,9 @@ f(): 42 "OK!" true
 [1 7 13 19 25 31 37 43 49 55]
 [100 700 1300 1900 2500 3100 3700 4300 4900 5500]
 
-{"English": {x: 0.3 y: 0.4} "French": {x: 0.5 y: 0.6} "Russian": {x: 0.1 y: 0.2}}
-{"English": {x: 0.3 y: 0.4} "French": {x: 0.5 y: 0.6} "Russian": {x: 0.1 y: 0.2}}
-{"English": {x: 0.3 y: 0.31} "French": {x: 0.5 y: 0.51} "Russian": {x: 0.1 y: 0.11}}
+{"French": {x: 0.5 y: 0.6} "English": {x: 0.3 y: 0.4} "Russian": {x: 0.1 y: 0.2}}
+{"French": {x: 0.5 y: 0.6} "English": {x: 0.3 y: 0.4} "Russian": {x: 0.1 y: 0.2}}
+{"French": {x: 0.5 y: 0.51} "English": {x: 0.3 y: 0.31} "Russian": {x: 0.1 y: 0.11}}
 
 
 >>> Enumerations
@@ -1170,72 +1172,72 @@ true true
 Sorting by name:
 [
     {
-        "surname": "Pushkin"
-        "name": "Alexander"
         "date": "1799"
-    }
-    {
-        "surname": "Pope"
         "name": "Alexander"
+        "surname": "Pushkin"
+    }
+    {
         "date": "1688"
+        "name": "Alexander"
+        "surname": "Pope"
     }
     {
-        "surname": "Chekhov"
-        "name": "Anton"
         "date": "1860"
+        "name": "Anton"
+        "surname": "Chekhov"
     }
     {
-        "surname": "Tolstoy"
-        "name": "Leo"
         "date": "1828"
+        "name": "Leo"
+        "surname": "Tolstoy"
     }
 ]
 
 Sorting by surname:
 [
     {
-        "surname": "Chekhov"
-        "name": "Anton"
         "date": "1860"
+        "name": "Anton"
+        "surname": "Chekhov"
     }
     {
-        "surname": "Pope"
-        "name": "Alexander"
         "date": "1688"
-    }
-    {
-        "surname": "Pushkin"
         "name": "Alexander"
-        "date": "1799"
+        "surname": "Pope"
     }
     {
-        "surname": "Tolstoy"
-        "name": "Leo"
+        "date": "1799"
+        "name": "Alexander"
+        "surname": "Pushkin"
+    }
+    {
         "date": "1828"
+        "name": "Leo"
+        "surname": "Tolstoy"
     }
 ]
 
 Sorting by date:
 [
     {
-        "surname": "Pope"
-        "name": "Alexander"
         "date": "1688"
-    }
-    {
-        "surname": "Pushkin"
         "name": "Alexander"
+        "surname": "Pope"
+    }
+    {
         "date": "1799"
+        "name": "Alexander"
+        "surname": "Pushkin"
     }
     {
-        "surname": "Tolstoy"
-        "name": "Leo"
         "date": "1828"
+        "name": "Leo"
+        "surname": "Tolstoy"
     }
     {
-        "surname": "Chekhov"
-        "name": "Anton"
         "date": "1860"
+        "name": "Anton"
+        "surname": "Chekhov"
     }
 ]
 
