@@ -1115,6 +1115,27 @@ static void doGetMapKeyBytes(Slot key, Type *keyType, Error *error, char **keyBy
 }
 
 
+static FORCE_INLINE void doRebalanceMapNodes(MapNode **nodeInParent)
+{
+    // A naive tree rotation to prevent degeneration into a linked list
+    MapNode *node = *nodeInParent;
+
+    if (node && !node->left && node->right && !node->right->left && node->right->right)
+    {
+        *nodeInParent = node->right;
+        node->right = NULL;
+        (*nodeInParent)->left = node;
+    }
+
+    if (node && node->left && !node->right && node->left->left && !node->left->right)
+    {
+        *nodeInParent = node->left;
+        node->left = NULL;
+        (*nodeInParent)->right = node;
+    }
+}
+
+
 static FORCE_INLINE MapNode **doGetMapNode(Map *map, Slot key, bool createMissingNodes, HeapPages *pages, Error *error)
 {
     if (!map || !map->root)
@@ -1159,6 +1180,8 @@ static FORCE_INLINE MapNode **doGetMapNode(Map *map, Slot key, bool createMissin
             node = &(*node)->left;
         else
             return node;
+
+        doRebalanceMapNodes(node);
     }
 
     if (createMissingNodes)
