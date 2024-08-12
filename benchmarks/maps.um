@@ -1,0 +1,20 @@
+import "std.um"
+
+fn test*(n: int, randomize: bool) {
+    var m: map[int]int
+
+    for i := 0; i < n; i++ {
+        k := randomize ? std::rand() % n : i
+        m[k] = -k
+    }
+
+    for k, v in m {
+        std::assert(v == -k)
+    }
+}
+
+fn main() {
+    test(100000, false)
+    test(100000, true)
+}
+

@@ -4,6 +4,7 @@ import (
     "trees.um"
     "nbody.um"
     "matrices.um"
+    "maps.um"
 )
 
 fn benchmark(f: fn ()) {
@@ -17,4 +18,6 @@ fn main() {
     printf("\n\n>>> Binary trees\n\n");             benchmark({trees::test()})
     printf("\n\n>>> N body problem\n\n");           benchmark({nbody::test(100000)})
     printf("\n\n>>> Matrix multiplication\n\n");    benchmark({matrices::test()})
+    printf("\n\n>>> Maps (in order)\n\n");          benchmark({maps::test(100000, false)})
+    printf("\n\n>>> Maps (randomized)\n\n");        benchmark({maps::test(100000, true)})
 }
