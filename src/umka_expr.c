@@ -2148,8 +2148,12 @@ static void parseClosureLiteral(Compiler *comp, Type **type, Const *constant)
                 lexCheck(&comp->lex, TOK_IDENT);
 
                 Ident *capturedIdent = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, comp->lex.tok.name, NULL);
+
                 if (capturedIdent->kind != IDENT_VAR)
                     comp->error.handler(comp->error.context, "%s is not a variable", capturedIdent->name);
+
+                if (identIsOuterLocalVar(&comp->blocks, capturedIdent))
+                    comp->error.handler(comp->error.context, "%s is not specified as a captured variable", capturedIdent->name);
 
                 typeAddField(&comp->types, upvaluesStructType, capturedIdent->type, capturedIdent->name);
 
