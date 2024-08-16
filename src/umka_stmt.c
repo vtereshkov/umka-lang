@@ -510,7 +510,7 @@ static void parseIfStmt(Compiler *comp)
 
 
 // exprCase = "case" expr {"," expr} ":" stmtList.
-static void parseExprCase(Compiler *comp, Type *selectorType)
+static void parseExprCase(Compiler *comp, Type *selectorType, ConstArray *existingConstants)
 {
     lexEat(&comp->lex, TOK_CASE);
 
@@ -520,7 +520,14 @@ static void parseExprCase(Compiler *comp, Type *selectorType)
         Const constant;
         Type *type = selectorType;
         parseExpr(comp, &type, &constant);
-        typeAssertCompatible(&comp->types, selectorType, type);
+        doAssertImplicitTypeConv(comp, selectorType, &type, &constant);
+
+        if (typeOverflow(selectorType->kind, constant))
+            comp->error.handler(comp->error.context, "Overflow of %s", typeKindSpelling(selectorType->kind));
+
+        if (constArrayFind(&comp->consts, existingConstants, constant) >= 0)
+            comp->error.handler(comp->error.context, "Duplicate case constant");
+        constArrayAppend(existingConstants, constant);
 
         genCaseExprEpilog(&comp->gen, &constant);
 
@@ -549,7 +556,7 @@ static void parseExprCase(Compiler *comp, Type *selectorType)
 
 
 // typeCase = "case" type ":" stmtList.
-static void parseTypeCase(Compiler *comp, Type *selectorType, const char *concreteVarName)
+static void parseTypeCase(Compiler *comp, Type *selectorType, const char *concreteVarName, ConstArray *existingConcreteTypes)
 {
     lexEat(&comp->lex, TOK_CASE);
 
@@ -557,6 +564,11 @@ static void parseTypeCase(Compiler *comp, Type *selectorType, const char *concre
     Type *concreteType = parseType(comp, NULL);
     if (concreteType->kind == TYPE_INTERFACE)
         comp->error.handler(comp->error.context, "Non-interface type expected");
+
+    Const concreteTypeAsConst = {.ptrVal = concreteType};
+    if (constArrayFindEquivalentType(&comp->consts, existingConcreteTypes, concreteTypeAsConst) >= 0)
+        comp->error.handler(comp->error.context, "Duplicate case type");
+    constArrayAppend(existingConcreteTypes, concreteTypeAsConst);
 
     Type *concretePtrType = concreteType;
     if (concreteType->kind != TYPE_PTR)
@@ -646,15 +658,20 @@ static void parseExprSwitchStmt(Compiler *comp)
     lexEat(&comp->lex, TOK_LBRACE);
 
     int numCases = 0;
+    ConstArray existingConstants;
+    constArrayAlloc(&existingConstants, type);
+
     while (comp->lex.tok.kind == TOK_CASE)
     {
-        parseExprCase(comp, type);
+        parseExprCase(comp, type, &existingConstants);
         numCases++;
     }
 
     // [default]
     if (comp->lex.tok.kind == TOK_DEFAULT)
         parseDefault(comp);
+
+    constArrayFree(&existingConstants);
 
     lexEat(&comp->lex, TOK_RBRACE);
 
@@ -699,15 +716,20 @@ static void parseTypeSwitchStmt(Compiler *comp)
     lexEat(&comp->lex, TOK_LBRACE);
 
     int numCases = 0;
+    ConstArray existingConcreteTypes;
+    constArrayAlloc(&existingConcreteTypes, comp->ptrVoidType);
+
     while (comp->lex.tok.kind == TOK_CASE)
     {
-        parseTypeCase(comp, type, concreteVarName);
+        parseTypeCase(comp, type, concreteVarName, &existingConcreteTypes);
         numCases++;
     }
 
     // [default]
     if (comp->lex.tok.kind == TOK_DEFAULT)
         parseDefault(comp);
+
+    constArrayFree(&existingConcreteTypes);
 
     lexEat(&comp->lex, TOK_RBRACE);
 

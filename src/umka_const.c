@@ -1,5 +1,6 @@
 #define __USE_MINGW_ANSI_STDIO 1
 
+#include <stdlib.h>
 #include <string.h>
 #include <math.h>
 
@@ -255,5 +256,55 @@ void constCallBuiltin(Consts *consts, Const *arg, const Const *arg2, TypeKind ar
         default: consts->error->handler(consts->error->context, "Illegal function");
     }
 
+}
+
+
+void constArrayAlloc(ConstArray *array, Type *type)
+{
+    array->type = type;
+    array->len = 0;
+    array->capacity = 4;
+    array->data = malloc(array->capacity * sizeof(Const));
+}
+
+
+void constArrayAppend(ConstArray *array, Const val)
+{
+    if (array->len == array->capacity)
+    {
+        array->capacity *= 2;
+        array->data = realloc(array->data, array->capacity * sizeof(Const));
+    }
+    array->data[array->len++] = val;
+}
+
+
+int constArrayFind(Consts *consts, ConstArray *array, Const val)
+{
+    for (int i = 0; i < array->len; i++)
+    {
+        Const result = array->data[i];
+        constBinary(consts, &result, &val, TOK_EQEQ, array->type->kind);
+        if (result.intVal)
+            return i;
+    }
+    return -1;
+}
+
+
+int constArrayFindEquivalentType(Consts *consts, ConstArray *array, Const val)
+{
+    for (int i = 0; i < array->len; i++)
+    {
+        if (typeEquivalent((Type *)array->data[i].ptrVal, (Type *)val.ptrVal))
+            return i;
+    }
+    return -1;
+}
+
+
+void constArrayFree(ConstArray *array)
+{
+    free(array->data);
 }
 
