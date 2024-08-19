@@ -599,6 +599,7 @@ void qsortEx(char *first, char *last, int itemSize, QSortCompareFn compare, void
 void vmInit(VM *vm, int stackSize, bool fileSystemEnabled, Error *error)
 {
     vm->fiber = vm->mainFiber = malloc(sizeof(Fiber));
+    vm->fiber->parent = NULL;
     vm->fiber->refCntChangeCandidates = &vm->refCntChangeCandidates;
     vm->fiber->vm = vm;
     vm->fiber->alive = true;
@@ -1292,16 +1293,14 @@ static FORCE_INLINE Fiber *doAllocFiber(Fiber *parent, Closure *childClosure, Ty
     child->stack = chunkAlloc(pages, child->stackSize * sizeof(Slot), NULL, NULL, true, error);
     child->top = child->base = child->stack + child->stackSize - 1;
 
+    child->parent = parent;
+
     Signature *childClosureSig = &childClosureType->field[0]->type->sig;
 
     // Push upvalues
     child->top -= sizeof(Interface) / sizeof(Slot);
     *(Interface *)child->top = childClosure->upvalue;
     doChangeRefCntImpl(child, pages, child->top, childClosureSig->param[0]->type, TOK_PLUSPLUS);
-
-    // Push parent fiber pointer
-    (--child->top)->ptrVal = parent;
-    doChangeRefCntImpl(child, pages, child->top->ptrVal, childClosureSig->param[1]->type, TOK_PLUSPLUS);
 
     // Push 'return from fiber' signal instead of return address
     (--child->top)->intVal = VM_RETURN_FROM_FIBER;
@@ -1963,7 +1962,7 @@ static FORCE_INLINE void doBuiltinNew(Fiber *fiber, HeapPages *pages, Error *err
 
 // fn make(type: Type, len: int): type
 // fn make(type: Type): type
-// fn make(type: Type, childFunc: fn(parent: fiber)): type
+// fn make(type: Type, childFunc: fn()): type
 static FORCE_INLINE void doBuiltinMake(Fiber *fiber, HeapPages *pages, Error *error)
 {
     TypeKind typeKind = fiber->code[fiber->ip].typeKind;
@@ -2760,12 +2759,16 @@ static FORCE_INLINE void doBuiltinKeys(Fiber *fiber, HeapPages *pages, Error *er
 }
 
 
-// fn resume(child: fiber)
+// fn resume([child: fiber])
 static FORCE_INLINE void doBuiltinResume(Fiber *fiber, Fiber **newFiber, HeapPages *pages, Error *error)
 {
-    *newFiber = (Fiber *)(fiber->top++)->ptrVal;
-    if (!(*newFiber) || !(*newFiber)->alive)
-        error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Fiber is null");
+    Fiber *child = (Fiber *)(fiber->top++)->ptrVal;
+    if (child && child->alive)
+        *newFiber = child;
+    else if (!child && fiber->parent)
+        *newFiber = fiber->parent;
+    else
+        *newFiber = fiber;
 }
 
 
@@ -3607,7 +3610,7 @@ static FORCE_INLINE void doReturn(Fiber *fiber, Fiber **newFiber)
     {
         // For fiber function, kill the fiber, extract the parent fiber pointer and switch to it
         fiber->alive = false;
-        *newFiber = (Fiber *)fiber->top->ptrVal;
+        *newFiber = fiber->parent;
     }
     else
     {

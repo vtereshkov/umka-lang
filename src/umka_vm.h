@@ -155,7 +155,7 @@ typedef union
 typedef struct
 {
     Opcode opcode;
-    Opcode inlineOpcode;         // Inlined instruction (DEREF, POP, SWAP): PUSH + DEREF, CHANGE_REF_CNT + POP, SWAP + ASSIGN etc.
+    Opcode inlineOpcode;         // Inlined instruction (DEREF, SWAP): PUSH + DEREF, SWAP + ASSIGN etc.
     TokenKind tokKind;           // Unary/binary operation token
     TypeKind typeKind;
     Type *type;
@@ -241,6 +241,7 @@ typedef struct tagFiber
     Slot *stack, *top, *base;
     int stackSize;
     Slot reg[VM_NUM_REGS];
+    struct tagFiber *parent;
     DebugInfo *debugPerInstr;
     RefCntChangeCandidates *refCntChangeCandidates;
     struct tagVM *vm;
