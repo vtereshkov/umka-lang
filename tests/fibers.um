@@ -11,7 +11,7 @@ fn test*() {
             for i := 0; i < 13; i++ {
                 printf("        Grandchild: i=%d a=%d c=%d\n", i, a^, c^)
                 d^ = i * 11
-                resume(parent)
+                resume()
             }
         })
     
@@ -19,22 +19,18 @@ fn test*() {
             for j := 0; j < 10; j++ {
                 printf("    Child: i=%d a=%d d=%d\n", i, a^, d^)
                 c^ = j * 19
-                if valid(grandchild) {
-                    resume(grandchild)
-                }
+                resume(grandchild)
             }
 
             b^ = i * 3
-            resume(parent)
+            resume()
         }
     })
     
     for i := 0; i < 10; i++ {
         printf("Parent: i=%d b=%d\n", i, b^)
         a^ = i * 7
-        if valid(child) {
-            resume(child)
-        }
+        resume(child)
     }    
 }
 

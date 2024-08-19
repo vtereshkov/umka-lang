@@ -704,14 +704,14 @@ Allocates memory for a variable of type `T`, initializes it with zeros (or with 
 ```
 fn make([]T, length: int): []T                // (1)
 fn make(map[K]T): map[K]T                     // (2)
-fn make(fiber, f: fn(parent: fiber)): fiber   // (3)
+fn make(fiber, f: fn()): fiber                // (3)
 ```
 
 (1) Constructs a dynamic array of `length` items of type `T` initialized with zeroes. 
 
 (2) Constructs an empty map with item type `T` indexed by keys of type `K`.
 
-(3) Constructs a fiber and prepares it for calling the function `f`. This function receives the current fiber as `parent`. The actual execution starts on the first call to `resume`.
+(3) Constructs a fiber and prepares it for calling the function `f`. The actual execution starts on the first call to `resume`.
 
 ```
 fn copy(a: []T): []T              // (1)
@@ -823,10 +823,10 @@ Returns a dynamic array of the keys that index the items of the map `m`.
 ##### Multitasking functions
 
 ```
-fn resume(fib: fiber)
+fn resume([fib: fiber])
 ```
 
-Starts or resumes the execution of the fiber `fib`. 
+Starts or resumes the execution of the fiber `fib`. If `fib` is omitted, the parent fiber of the current fiber is resumed. If the fiber to be resumed is dead or does not exist, the current fiber continues execution.
 
 ##### Miscellaneous functions
 

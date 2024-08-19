@@ -925,7 +925,7 @@ static void parseBuiltinNewCall(Compiler *comp, Type **type, Const *constant)
 
 // fn make(type: Type, len: int): type
 // fn make(type: Type): type
-// fn make(type: Type, childFunc: fn(parent: fiber)): type
+// fn make(type: Type, childFunc: fn()): type
 static void parseBuiltinMakeCall(Compiler *comp, Type **type, Const *constant)
 {
     if (constant)
@@ -966,7 +966,6 @@ static void parseBuiltinMakeCall(Compiler *comp, Type **type, Const *constant)
         // Child fiber closure
         Type *fnType = typeAdd(&comp->types, &comp->blocks, TYPE_FN);
         typeAddParam(&comp->types, &fnType->sig, comp->anyType, "__upvalues");
-        typeAddParam(&comp->types, &fnType->sig, comp->fiberType, "parent");
         fnType->sig.resultType = comp->voidType;
 
         Type *expectedFiberClosureType = typeAdd(&comp->types, &comp->blocks, TYPE_CLOSURE);
@@ -1490,14 +1489,23 @@ static void parseBuiltinKeysCall(Compiler *comp, Type **type, Const *constant)
 }
 
 
-// fn resume(child: fiber)
+// fn resume([child: fiber])
 static void parseBuiltinResumeCall(Compiler *comp, Type **type, Const *constant)
 {
     if (constant)
         comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
 
-    parseExpr(comp, type, constant);
-    doAssertImplicitTypeConv(comp, comp->fiberType, type, constant);
+    if (comp->lex.tok.kind != TOK_RPAR)
+    {
+        // Child fiber
+        parseExpr(comp, type, constant);
+        doAssertImplicitTypeConv(comp, comp->fiberType, type, constant);
+    }
+    else
+    {
+        // Parent fiber (implied)
+        genPushGlobalPtr(&comp->gen, NULL);
+    }
 
     genCallBuiltin(&comp->gen, TYPE_NONE, BUILTIN_RESUME);
     *type = comp->voidType;
