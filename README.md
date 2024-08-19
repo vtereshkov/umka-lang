@@ -204,7 +204,7 @@ child := make(fiber, |a| {
     for i := 0; i < 5; i++ {
         std::println("Child : i=" + std::itoa(i) + " buf=" + std::itoa(a^))
         a^ = i * 3
-        resume(parent)
+        resume()
     }
 })
 for i := 0; i < 10; i++ {
