@@ -482,13 +482,6 @@ void genPushReg(CodeGen *gen, int regIndex)
 }
 
 
-void genPushStruct(CodeGen *gen, int size)
-{
-    const Instruction instr = {.opcode = OP_PUSH_STRUCT, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = size};
-    genAddInstr(gen, &instr);
-}
-
-
 void genPushUpvalue(CodeGen *gen)
 {
     const Instruction instr = {.opcode = OP_PUSH_UPVALUE, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = 0};
@@ -568,6 +561,13 @@ void genSwapAssign(CodeGen *gen, TypeKind typeKind, int structSize)
         const Instruction instr = {.opcode = OP_ASSIGN, .inlineOpcode = OP_SWAP, .tokKind = TOK_NONE, .typeKind = typeKind, .operand.intVal = structSize};
         genAddInstr(gen, &instr);
     }
+}
+
+
+void genAssignParam(CodeGen *gen, TypeKind typeKind, int structSize)
+{
+    const Instruction instr = {.opcode = OP_ASSIGN_PARAM, .tokKind = TOK_NONE, .typeKind = typeKind, .operand.intVal = structSize};
+    genAddInstr(gen, &instr);
 }
 
 

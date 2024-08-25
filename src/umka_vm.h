@@ -40,7 +40,6 @@ typedef enum
     OP_PUSH_LOCAL_PTR_ZERO,
     OP_PUSH_LOCAL,
     OP_PUSH_REG,
-    OP_PUSH_STRUCT,
     OP_PUSH_UPVALUE,
     OP_POP,
     OP_POP_REG,
@@ -49,6 +48,7 @@ typedef enum
     OP_ZERO,
     OP_DEREF,
     OP_ASSIGN,
+    OP_ASSIGN_PARAM,
     OP_CHANGE_REF_CNT,
     OP_CHANGE_REF_CNT_GLOBAL,
     OP_CHANGE_REF_CNT_LOCAL,
@@ -90,7 +90,6 @@ typedef enum
     // Math
     BUILTIN_REAL,           // Integer to real at stack top (right operand)
     BUILTIN_REAL_LHS,       // Integer to real at stack top + 1 (left operand) - implicit calls only
-    BUILTIN_NARROW,         // 64-bit slot to narrower representation
     BUILTIN_ROUND,
     BUILTIN_TRUNC,
     BUILTIN_CEIL,

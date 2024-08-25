@@ -69,6 +69,7 @@ void genZero  (CodeGen *gen, int size);
 void genDeref        (CodeGen *gen, TypeKind typeKind);
 void genAssign       (CodeGen *gen, TypeKind typeKind, int structSize);
 void genSwapAssign   (CodeGen *gen, TypeKind typeKind, int structSize);
+void genAssignParam  (CodeGen *gen, TypeKind typeKind, int structSize);
 
 void genChangeRefCnt            (CodeGen *gen, TokenKind tokKind, Type *type);
 void genChangeRefCntGlobal      (CodeGen *gen, TokenKind tokKind, void *ptrVal, Type *type);

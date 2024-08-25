@@ -179,6 +179,16 @@ static inline bool typeReal(Type *type)
 }
 
 
+static inline bool typeNarrow(Type *type)
+{
+    // Types that occupy less than 64 bits but are still represented by 64-bit temporaries
+    return type->kind == TYPE_INT8  || type->kind == TYPE_INT16  || type->kind == TYPE_INT32  ||
+           type->kind == TYPE_UINT8 || type->kind == TYPE_UINT16 || type->kind == TYPE_UINT32 ||
+           type->kind == TYPE_CHAR  || type->kind == TYPE_BOOL   ||
+           type->kind == TYPE_REAL32;
+}
+
+
 static inline bool typeStructured(Type *type)
 {
     return type->kind == TYPE_ARRAY  || type->kind == TYPE_DYNARRAY  || type->kind == TYPE_MAP ||

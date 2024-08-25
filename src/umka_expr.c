@@ -35,13 +35,6 @@ void doPushVarPtr(Compiler *comp, Ident *ident)
 
 static void doPassParam(Compiler *comp, Type *formalParamType)
 {
-    // Process non-64-bit ordinal and real types
-    if ((typeOrdinal(formalParamType) || typeReal(formalParamType)) && typeSizeNoCheck(formalParamType) < typeSizeNoCheck(comp->intType))
-    {
-        genAssertRange(&comp->gen, formalParamType->kind);                      // Check overflow
-        genCallBuiltin(&comp->gen, formalParamType->kind, BUILTIN_NARROW);      // Convert 64-bit slot to narrower representation
-    }
-
     if (doTryRemoveCopyResultToTempVar(comp))
     {
         // Optimization: if the actual parameter is a function call, assume its reference count to be already increased before return
@@ -53,9 +46,9 @@ static void doPassParam(Compiler *comp, Type *formalParamType)
         genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, formalParamType);
     }
 
-    // Copy structured parameter if passed by value
-    if (typeStructured(formalParamType))
-        genPushStruct(&comp->gen, typeSize(&comp->types, formalParamType));
+    // Non-trivial assignment to parameters
+    if (typeNarrow(formalParamType) || typeStructured(formalParamType))
+        genAssignParam(&comp->gen, formalParamType->kind, typeSize(&comp->types, formalParamType));
 }
 
 
