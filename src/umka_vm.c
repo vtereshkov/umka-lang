@@ -61,7 +61,6 @@ static const char *opcodeSpelling [] =
     "PUSH_LOCAL_PTR_ZERO",
     "PUSH_LOCAL",
     "PUSH_REG",
-    "PUSH_STRUCT",
     "PUSH_UPVALUE",
     "POP",
     "POP_REG",
@@ -70,6 +69,7 @@ static const char *opcodeSpelling [] =
     "ZERO",
     "DEREF",
     "ASSIGN",
+    "ASSIGN_PARAM",
     "CHANGE_REF_CNT",
     "CHANGE_REF_CNT_GLOBAL",
     "CHANGE_REF_CNT_LOCAL",
@@ -108,7 +108,6 @@ static const char *builtinSpelling [] =
     "sscanf",
     "real",
     "real_lhs",
-    "narrow",
     "round",
     "trunc",
     "ceil",
@@ -2845,22 +2844,6 @@ static FORCE_INLINE void doPushReg(Fiber *fiber)
 }
 
 
-static FORCE_INLINE void doPushStruct(Fiber *fiber, Error *error)
-{
-    void *src = (fiber->top++)->ptrVal;
-    int size = fiber->code[fiber->ip].operand.intVal;
-    int slots = align(size, sizeof(Slot)) / sizeof(Slot);
-
-    if (fiber->top - slots - fiber->stack < VM_MIN_FREE_STACK)
-        error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Stack overflow");
-
-    fiber->top -= slots;
-    memcpy(fiber->top, src, size);
-
-    fiber->ip++;
-}
-
-
 static FORCE_INLINE void doPushUpvalue(Fiber *fiber, HeapPages *pages, Error *error)
 {
     Closure *closure = (Closure *)(fiber->top++)->ptrVal;
@@ -2926,6 +2909,25 @@ static FORCE_INLINE void doAssign(Fiber *fiber, Error *error)
     void *lhs = (fiber->top++)->ptrVal;
 
     doAssignImpl(lhs, rhs, fiber->code[fiber->ip].typeKind, fiber->code[fiber->ip].operand.intVal, error);
+    fiber->ip++;
+}
+
+
+static FORCE_INLINE void doAssignParam(Fiber *fiber, Error *error)
+{
+    Slot rhs = *fiber->top;
+
+    int paramSize = fiber->code[fiber->ip].operand.intVal;
+    int paramSlots = align(paramSize, sizeof(Slot)) / sizeof(Slot);
+    if (paramSlots != 1)
+    {
+        if (fiber->top - (paramSlots - 1) - fiber->stack < VM_MIN_FREE_STACK)
+            error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Stack overflow");
+
+        fiber->top -= paramSlots - 1;
+    }
+
+    doAssignImpl(fiber->top, rhs, fiber->code[fiber->ip].typeKind, paramSize, error);
     fiber->ip++;
 }
 
@@ -3522,12 +3524,6 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
                 (fiber->top + depth)->realVal = (fiber->top + depth)->intVal;
             break;
         }
-        case BUILTIN_NARROW:
-        {
-            Slot rhs = *fiber->top;
-            doAssignImpl(fiber->top, rhs, typeKind, 0, error);
-            break;
-        }
         case BUILTIN_ROUND:         fiber->top->intVal = (int64_t)round(fiber->top->realVal); break;
         case BUILTIN_TRUNC:         fiber->top->intVal = (int64_t)trunc(fiber->top->realVal); break;
         case BUILTIN_CEIL:          fiber->top->intVal = (int64_t)ceil (fiber->top->realVal); break;
@@ -3699,7 +3695,6 @@ static FORCE_INLINE void vmLoop(VM *vm)
             case OP_PUSH_LOCAL_PTR_ZERO:            doPushLocalPtrZero(fiber);                    break;
             case OP_PUSH_LOCAL:                     doPushLocal(fiber, error);                    break;
             case OP_PUSH_REG:                       doPushReg(fiber);                             break;
-            case OP_PUSH_STRUCT:                    doPushStruct(fiber, error);                   break;
             case OP_PUSH_UPVALUE:                   doPushUpvalue(fiber, pages, error);           break;
             case OP_POP:                            doPop(fiber);                                 break;
             case OP_POP_REG:                        doPopReg(fiber);                              break;
@@ -3708,6 +3703,7 @@ static FORCE_INLINE void vmLoop(VM *vm)
             case OP_ZERO:                           doZero(fiber);                                break;
             case OP_DEREF:                          doDeref(fiber, error);                        break;
             case OP_ASSIGN:                         doAssign(fiber, error);                       break;
+            case OP_ASSIGN_PARAM:                   doAssignParam(fiber, error);                  break;
             case OP_CHANGE_REF_CNT:                 doChangeRefCnt(fiber, pages);                 break;
             case OP_CHANGE_REF_CNT_GLOBAL:          doChangeRefCntGlobal(fiber, pages, error);    break;
             case OP_CHANGE_REF_CNT_LOCAL:           doChangeRefCntLocal(fiber, pages, error);     break;
@@ -3860,11 +3856,11 @@ int vmAsm(int ip, Instruction *code, DebugInfo *debugPerInstr, char *buf, int si
         case OP_PUSH_LOCAL_PTR:
         case OP_PUSH_LOCAL:
         case OP_PUSH_REG:
-        case OP_PUSH_STRUCT:
         case OP_POP:
         case OP_POP_REG:
         case OP_ZERO:
         case OP_ASSIGN:
+        case OP_ASSIGN_PARAM:
         case OP_BINARY:
         case OP_CHANGE_REF_CNT_LOCAL:
         case OP_GET_FIELD_PTR:
