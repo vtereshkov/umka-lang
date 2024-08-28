@@ -4,10 +4,10 @@ type Rune* = int32
 
 const (
     errRune* = Rune(0xFFFD)
-    errStr* = "\xEF\xBF\xBD"
-
-    headerOnes = [6]uint8{0x00, 0x00, 0xC0, 0xE0, 0xF0, 0xF8}                               
+    errStr* = "\xEF\xBF\xBD"                               
 )
+
+headerOnes := [6]uint8{0x00, 0x00, 0xC0, 0xE0, 0xF0, 0xF8}
 
 fn (r: ^Rune) size*(): int {
     if r^ <= 0x7F     {return 1}
