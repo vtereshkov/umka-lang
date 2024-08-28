@@ -615,6 +615,9 @@ static void parseConstDeclItem(Compiler *comp, Type **type, Const *constant)
         lexEat(&comp->lex, TOK_EQ);
         *type = NULL;
         parseExpr(comp, type, constant);
+
+        if (!typeOrdinal(*type) && !typeReal(*type) && (*type)->kind != TYPE_STR && (*type)->kind != TYPE_CLOSURE)
+            comp->error.handler(comp->error.context, "Constant must be ordinal, or real, or string, or closure");
     }
 
     identAddConst(&comp->idents, &comp->modules, &comp->blocks, name, *type, exported, *constant);

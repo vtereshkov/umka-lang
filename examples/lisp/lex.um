@@ -23,7 +23,7 @@ type (
 )
 
 
-const spelling = [4]str{
+spelling := [4]str{
     "nothing", 
     "atom", 
     "(", 

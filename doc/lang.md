@@ -498,7 +498,7 @@ any
 
 ### Constant declarations
 
-A constant declaration generally requires an explicit constant value. However, if a constant declaration is preceded by another integer constant declaration within the same declaration list, its explicit value can be omitted. In this case, the value will be set to the preceding constant value incremented by 1. 
+There are ordinal constants, real constants, string constants and closure constants. A constant declaration generally requires an explicit constant value. However, if a constant declaration is preceded by another integer constant declaration within the same declaration list, its explicit value can be omitted. In this case, the value will be set to the preceding constant value incremented by 1. 
 
 Syntax:
 

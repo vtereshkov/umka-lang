@@ -26,7 +26,7 @@ type (
     }    
 )
 
-const stdErrMsg = [6]str{
+stdErrMsg := []str{
     "",
     "Assertion failed",
     "Wrong buffer size",
