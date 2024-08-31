@@ -48,30 +48,41 @@ static void compilerSetAPI(Compiler *comp)
 
 static void compilerDeclareBuiltinTypes(Compiler *comp)
 {
-    comp->voidType          = typeAdd(&comp->types, &comp->blocks, TYPE_VOID);
-    comp->nullType          = typeAdd(&comp->types, &comp->blocks, TYPE_NULL);
-    comp->int8Type          = typeAdd(&comp->types, &comp->blocks, TYPE_INT8);
-    comp->int16Type         = typeAdd(&comp->types, &comp->blocks, TYPE_INT16);
-    comp->int32Type         = typeAdd(&comp->types, &comp->blocks, TYPE_INT32);
-    comp->intType           = typeAdd(&comp->types, &comp->blocks, TYPE_INT);
-    comp->uint8Type         = typeAdd(&comp->types, &comp->blocks, TYPE_UINT8);
-    comp->uint16Type        = typeAdd(&comp->types, &comp->blocks, TYPE_UINT16);
-    comp->uint32Type        = typeAdd(&comp->types, &comp->blocks, TYPE_UINT32);
-    comp->uintType          = typeAdd(&comp->types, &comp->blocks, TYPE_UINT);
-    comp->boolType          = typeAdd(&comp->types, &comp->blocks, TYPE_BOOL);
-    comp->charType          = typeAdd(&comp->types, &comp->blocks, TYPE_CHAR);
-    comp->real32Type        = typeAdd(&comp->types, &comp->blocks, TYPE_REAL32);
-    comp->realType          = typeAdd(&comp->types, &comp->blocks, TYPE_REAL);
-    comp->strType           = typeAdd(&comp->types, &comp->blocks, TYPE_STR);
-    comp->fiberType         = typeAdd(&comp->types, &comp->blocks, TYPE_FIBER);
+    comp->voidType    = typeAdd(&comp->types, &comp->blocks, TYPE_VOID);
+    comp->nullType    = typeAdd(&comp->types, &comp->blocks, TYPE_NULL);
+    comp->int8Type    = typeAdd(&comp->types, &comp->blocks, TYPE_INT8);
+    comp->int16Type   = typeAdd(&comp->types, &comp->blocks, TYPE_INT16);
+    comp->int32Type   = typeAdd(&comp->types, &comp->blocks, TYPE_INT32);
+    comp->intType     = typeAdd(&comp->types, &comp->blocks, TYPE_INT);
+    comp->uint8Type   = typeAdd(&comp->types, &comp->blocks, TYPE_UINT8);
+    comp->uint16Type  = typeAdd(&comp->types, &comp->blocks, TYPE_UINT16);
+    comp->uint32Type  = typeAdd(&comp->types, &comp->blocks, TYPE_UINT32);
+    comp->uintType    = typeAdd(&comp->types, &comp->blocks, TYPE_UINT);
+    comp->boolType    = typeAdd(&comp->types, &comp->blocks, TYPE_BOOL);
+    comp->charType    = typeAdd(&comp->types, &comp->blocks, TYPE_CHAR);
+    comp->real32Type  = typeAdd(&comp->types, &comp->blocks, TYPE_REAL32);
+    comp->realType    = typeAdd(&comp->types, &comp->blocks, TYPE_REAL);
+    comp->strType     = typeAdd(&comp->types, &comp->blocks, TYPE_STR);
 
-    comp->ptrVoidType       = typeAddPtrTo(&comp->types, &comp->blocks, comp->voidType);
-    comp->ptrNullType       = typeAddPtrTo(&comp->types, &comp->blocks, comp->nullType);
+    comp->ptrVoidType = typeAddPtrTo(&comp->types, &comp->blocks, comp->voidType);
+    comp->ptrNullType = typeAddPtrTo(&comp->types, &comp->blocks, comp->nullType);
 
-    comp->anyType           = typeAdd(&comp->types, &comp->blocks, TYPE_INTERFACE);
+    // any
+    comp->anyType = typeAdd(&comp->types, &comp->blocks, TYPE_INTERFACE);
 
     typeAddField(&comp->types, comp->anyType, comp->ptrVoidType, "__self");
     typeAddField(&comp->types, comp->anyType, comp->ptrVoidType, "__selftype");
+
+    // fiber
+    comp->fiberType = typeAdd(&comp->types, &comp->blocks, TYPE_FIBER);
+
+    Type *fnType = typeAdd(&comp->types, &comp->blocks, TYPE_FN);
+    typeAddParam(&comp->types, &fnType->sig, comp->anyType, "__upvalues");
+    fnType->sig.resultType = comp->voidType;
+
+    comp->fiberType->base = typeAdd(&comp->types, &comp->blocks, TYPE_CLOSURE);
+    typeAddField(&comp->types, comp->fiberType->base, fnType, "__fn");
+    typeAddField(&comp->types, comp->fiberType->base, comp->anyType, "__upvalues");
 }
 
 

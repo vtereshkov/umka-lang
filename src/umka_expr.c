@@ -95,9 +95,8 @@ static void doTryImplicitDeref(Compiler *comp, Type **type)
 static void doEscapeToHeap(Compiler *comp, Type *ptrType, bool useRefCnt)
 {
     // Allocate heap
-    genPushGlobalPtr(&comp->gen, ptrType->base);
     genPushIntConst(&comp->gen, typeSize(&comp->types, ptrType->base));
-    genCallBuiltin(&comp->gen, TYPE_PTR, BUILTIN_NEW);
+    genCallTypedBuiltin(&comp->gen, ptrType->base, BUILTIN_NEW);
     doCopyResultToTempVar(comp, ptrType);
 
     // Save heap pointer
@@ -161,7 +160,7 @@ static void doCharToStrConv(Compiler *comp, Type *dest, Type **src, Const *const
         if (lhs)
             genSwap(&comp->gen);
 
-        genCallBuiltin(&comp->gen, TYPE_CHAR, BUILTIN_MAKETOSTR);
+        genCallTypedBuiltin(&comp->gen, *src, BUILTIN_MAKETOSTR);
         doCopyResultToTempVar(comp, dest);
 
         if (lhs)
@@ -180,11 +179,7 @@ static void doDynArrayToStrConv(Compiler *comp, Type *dest, Type **src, Const *c
     if (lhs)
         genSwap(&comp->gen);
 
-    // fn maketostr(src: char | []char): str
-
-    genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_MAKETOSTR);
-
-    // Copy result to a temporary local variable to collect it as garbage when leaving the block
+    genCallTypedBuiltin(&comp->gen, *src, BUILTIN_MAKETOSTR);
     doCopyResultToTempVar(comp, dest);
 
     if (lhs)
@@ -205,16 +200,9 @@ static void doStrToDynArrayConv(Compiler *comp, Type *dest, Type **src, Const *c
     }
     else
     {
-        // fn makefromstr(src: str, type: Type): []char
-
-        genPushGlobalPtr(&comp->gen, dest);                                 // Dynamic array type
-
         int resultOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, dest);
         genPushLocalPtr(&comp->gen, resultOffset);                          // Pointer to result (hidden parameter)
-
-        genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_MAKEFROMSTR);
-
-        // Copy result to a temporary local variable to collect it as garbage when leaving the block
+        genCallTypedBuiltin(&comp->gen, dest, BUILTIN_MAKEFROMSTR);
         doCopyResultToTempVar(comp, dest);
     }
 
@@ -230,16 +218,9 @@ static void doDynArrayToArrayConv(Compiler *comp, Type *dest, Type **src, Const 
     if (lhs)
         genSwap(&comp->gen);
 
-    // fn maketoarr(src: []ItemType, type: Type): [...]ItemType
-
-    genPushGlobalPtr(&comp->gen, dest);                                 // Array type
-
     int resultOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, dest);
     genPushLocalPtr(&comp->gen, resultOffset);                          // Pointer to result (hidden parameter)
-
-    genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_MAKETOARR);
-
-    // Copy result to a temporary local variable to collect it as garbage when leaving the block
+    genCallTypedBuiltin(&comp->gen, dest, BUILTIN_MAKETOARR);
     doCopyResultToTempVar(comp, dest);
 
     if (lhs)
@@ -259,17 +240,11 @@ static void doArrayToDynArrayConv(Compiler *comp, Type *dest, Type **src, Const 
     }
     else
     {
-        // fn makefromarr(src: [...]ItemType, type: Type, len: int): type
-
-        genPushGlobalPtr(&comp->gen, dest);                                 // Dynamic array type
-        genPushIntConst(&comp->gen, (*src)->numItems);                      // Dynamic array length
-
         int resultOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, dest);
+
+        genPushIntConst(&comp->gen, (*src)->numItems);                      // Dynamic array length
         genPushLocalPtr(&comp->gen, resultOffset);                          // Pointer to result (hidden parameter)
-
-        genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_MAKEFROMARR);
-
-        // Copy result to a temporary local variable to collect it as garbage when leaving the block
+        genCallTypedBuiltin(&comp->gen, dest, BUILTIN_MAKEFROMARR);
         doCopyResultToTempVar(comp, dest);
     }
 
@@ -294,10 +269,9 @@ static void doDynArrayToDynArrayConv(Compiler *comp, Type *dest, Type **src, Con
     Ident *destArray = identAllocTempVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, dest, false);
     doZeroVar(comp, destArray);
 
-    genPushGlobalPtr(&comp->gen, dest);
     genPushLocal(&comp->gen, TYPE_INT, lenOffset);
     doPushVarPtr(comp, destArray);
-    genCallBuiltin(&comp->gen, dest->kind, BUILTIN_MAKE);
+    genCallTypedBuiltin(&comp->gen, dest, BUILTIN_MAKE);
     genPop(&comp->gen);
 
     // Loop initialization: index = length - 1
@@ -893,11 +867,8 @@ static void parseBuiltinNewCall(Compiler *comp, Type **type, Const *constant)
     *type = parseType(comp, NULL);
     typeAssertCompatibleBuiltin(&comp->types, *type, BUILTIN_NEW, (*type)->kind != TYPE_VOID && (*type)->kind != TYPE_NULL);
 
-    int size = typeSize(&comp->types, *type);
-
-    genPushGlobalPtr(&comp->gen, *type);
-    genPushIntConst(&comp->gen, size);
-    genCallBuiltin(&comp->gen, TYPE_PTR, BUILTIN_NEW);
+    genPushIntConst(&comp->gen, typeSize(&comp->types, *type));
+    genCallTypedBuiltin(&comp->gen, *type, BUILTIN_NEW);
 
     // Initializer expression
     if (comp->lex.tok.kind == TOK_COMMA)
@@ -931,9 +902,6 @@ static void parseBuiltinMakeCall(Compiler *comp, Type **type, Const *constant)
     {
         lexEat(&comp->lex, TOK_COMMA);
 
-        // Dynamic array type
-        genPushGlobalPtr(&comp->gen, *type);
-
         // Dynamic array length
         Type *lenType = comp->intType;
         parseExpr(comp, &lenType, NULL);
@@ -945,9 +913,6 @@ static void parseBuiltinMakeCall(Compiler *comp, Type **type, Const *constant)
     }
     else if ((*type)->kind == TYPE_MAP)
     {
-        // Map type
-        genPushGlobalPtr(&comp->gen, *type);
-
         // Pointer to result (hidden parameter)
         int resultOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, *type);
         genPushLocalPtr(&comp->gen, resultOffset);
@@ -957,25 +922,14 @@ static void parseBuiltinMakeCall(Compiler *comp, Type **type, Const *constant)
         lexEat(&comp->lex, TOK_COMMA);
 
         // Child fiber closure
-        Type *fnType = typeAdd(&comp->types, &comp->blocks, TYPE_FN);
-        typeAddParam(&comp->types, &fnType->sig, comp->anyType, "__upvalues");
-        fnType->sig.resultType = comp->voidType;
-
-        Type *expectedFiberClosureType = typeAdd(&comp->types, &comp->blocks, TYPE_CLOSURE);
-        typeAddField(&comp->types, expectedFiberClosureType, fnType, "__fn");
-        typeAddField(&comp->types, expectedFiberClosureType, comp->anyType, "__upvalues");
-
-        Type *fiberClosureType = expectedFiberClosureType;
+        Type *fiberClosureType = comp->fiberType->base;
         parseExpr(comp, &fiberClosureType, constant);
-        doAssertImplicitTypeConv(comp, expectedFiberClosureType, &fiberClosureType, NULL);
-
-        // Child fiber closure type (hidden parameter)
-        genPushGlobalPtr(&comp->gen, fiberClosureType);
+        doAssertImplicitTypeConv(comp, comp->fiberType->base, &fiberClosureType, NULL);
     }
     else
         comp->error.handler(comp->error.context, "Illegal type");
 
-    genCallBuiltin(&comp->gen, (*type)->kind, BUILTIN_MAKE);
+    genCallTypedBuiltin(&comp->gen, *type, BUILTIN_MAKE);
 }
 
 
@@ -995,7 +949,7 @@ static void parseBuiltinCopyCall(Compiler *comp, Type **type, Const *constant)
     int resultOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, *type);
     genPushLocalPtr(&comp->gen, resultOffset);
 
-    genCallBuiltin(&comp->gen, (*type)->kind, BUILTIN_COPY);
+    genCallTypedBuiltin(&comp->gen, *type, BUILTIN_COPY);
 }
 
 
@@ -1043,14 +997,11 @@ static void parseBuiltinAppendCall(Compiler *comp, Type **type, Const *constant)
     // 'Append single item' flag (hidden parameter)
     genPushIntConst(&comp->gen, singleItem);
 
-    // Dynamic array type (hidden parameter)
-    genPushGlobalPtr(&comp->gen, *type);
-
     // Pointer to result (hidden parameter)
     int resultOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, *type);
     genPushLocalPtr(&comp->gen, resultOffset);
 
-    genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_APPEND);
+    genCallTypedBuiltin(&comp->gen, *type, BUILTIN_APPEND);
 }
 
 
@@ -1089,14 +1040,11 @@ static void parseBuiltinInsertCall(Compiler *comp, Type **type, Const *constant)
         genPushLocalPtr(&comp->gen, itemOffset);
     }
 
-    // Dynamic array type (hidden parameter)
-    genPushGlobalPtr(&comp->gen, *type);
-
     // Pointer to result (hidden parameter)
     int resultOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, *type);
     genPushLocalPtr(&comp->gen, resultOffset);
 
-    genCallBuiltin(&comp->gen, (*type)->kind, BUILTIN_INSERT);
+    genCallTypedBuiltin(&comp->gen, *type, BUILTIN_INSERT);
 }
 
 
@@ -1125,7 +1073,7 @@ static void parseBuiltinDeleteCall(Compiler *comp, Type **type, Const *constant)
     int resultOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, *type);
     genPushLocalPtr(&comp->gen, resultOffset);
 
-    genCallBuiltin(&comp->gen, (*type)->kind, BUILTIN_DELETE);
+    genCallTypedBuiltin(&comp->gen, *type, BUILTIN_DELETE);
 }
 
 
@@ -1158,9 +1106,6 @@ static void parseBuiltinSliceCall(Compiler *comp, Type **type, Const *constant)
     else
         genPushIntConst(&comp->gen, INT_MIN);
 
-    // Dynamic array or string type (hidden parameter)
-    genPushGlobalPtr(&comp->gen, *type);
-
     if ((*type)->kind == TYPE_DYNARRAY)
     {
         // Pointer to result (hidden parameter)
@@ -1170,7 +1115,7 @@ static void parseBuiltinSliceCall(Compiler *comp, Type **type, Const *constant)
     else
         genPushGlobalPtr(&comp->gen, NULL);
 
-    genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_SLICE);
+    genCallTypedBuiltin(&comp->gen, *type, BUILTIN_SLICE);
 }
 
 
@@ -2055,9 +2000,8 @@ static void parseMapLiteral(Compiler *comp, Type **type, Const *constant)
     Ident *mapIdent = identAllocTempVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, *type, false);
     doZeroVar(comp, mapIdent);
 
-    genPushGlobalPtr(&comp->gen, *type);
     doPushVarPtr(comp, mapIdent);
-    genCallBuiltin(&comp->gen, (*type)->kind, BUILTIN_MAKE);
+    genCallTypedBuiltin(&comp->gen, *type, BUILTIN_MAKE);
 
     // Parse map
     if (comp->lex.tok.kind != TOK_RBRACE)
