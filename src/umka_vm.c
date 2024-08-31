@@ -1947,7 +1947,7 @@ static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool con
 static FORCE_INLINE void doBuiltinNew(Fiber *fiber, HeapPages *pages, Error *error)
 {
     int size     = (fiber->top++)->intVal;
-    Type *type   = (Type *)(fiber->top++)->ptrVal;
+    Type *type   = fiber->code[fiber->ip].type;
 
     // For dynamic arrays, we mark with type the data chunk, not the header chunk
     if (type && type->kind == TYPE_DYNARRAY)
@@ -1964,34 +1964,28 @@ static FORCE_INLINE void doBuiltinNew(Fiber *fiber, HeapPages *pages, Error *err
 // fn make(type: Type, childFunc: fn()): type
 static FORCE_INLINE void doBuiltinMake(Fiber *fiber, HeapPages *pages, Error *error)
 {
-    TypeKind typeKind = fiber->code[fiber->ip].typeKind;
+    Type *type = fiber->code[fiber->ip].type;
 
-    if (typeKind == TYPE_DYNARRAY)
+    if (type->kind == TYPE_DYNARRAY)
     {
         DynArray *result = (DynArray *)(fiber->top++)->ptrVal;
         int len = (fiber->top++)->intVal;
-        Type *type = (Type *)(fiber->top++)->ptrVal;
 
         doAllocDynArray(pages, result, type, len, error);
-
         (--fiber->top)->ptrVal = result;
     }
-    else if (typeKind == TYPE_MAP)
+    else if (type->kind == TYPE_MAP)
     {
         Map *result = (Map *)(fiber->top++)->ptrVal;
-        Type *type = (Type *)(fiber->top++)->ptrVal;
 
         doAllocMap(pages, result, type, error);
-
         (--fiber->top)->ptrVal = result;
     }
-    else if (typeKind == TYPE_FIBER)
+    else if (type->kind == TYPE_FIBER)
     {
-        Type *childClosureType = (Type *)(fiber->top++)->ptrVal;
         Closure *childClosure = (Closure *)(fiber->top++)->ptrVal;
 
-        Fiber *result = doAllocFiber(fiber, childClosure, childClosureType, pages, error);
-
+        Fiber *result = doAllocFiber(fiber, childClosure, type->base, pages, error);
         (--fiber->top)->ptrVal = result;
     }
     else
@@ -1999,14 +1993,16 @@ static FORCE_INLINE void doBuiltinMake(Fiber *fiber, HeapPages *pages, Error *er
 }
 
 
-// fn makefromarr(src: [...]ItemType, type: Type, len: int): type
+// fn makefromarr(src: [...]ItemType, len: int): []ItemType
 static FORCE_INLINE void doBuiltinMakefromarr(Fiber *fiber, HeapPages *pages, Error *error)
 {
-    doBuiltinMake(fiber, pages, error);
-
     DynArray *dest = (DynArray *)(fiber->top++)->ptrVal;
+    int len        = (fiber->top++)->intVal;
     void *src      = (fiber->top++)->ptrVal;
 
+    Type *destType = fiber->code[fiber->ip].type;
+
+    doAllocDynArray(pages, dest, destType, len, error);
     memcpy(dest->data, src, getDims(dest)->len * dest->itemSize);
 
     // Increase result items' ref counts, as if they have been assigned one by one
@@ -2017,12 +2013,13 @@ static FORCE_INLINE void doBuiltinMakefromarr(Fiber *fiber, HeapPages *pages, Er
 }
 
 
-// fn makefromstr(src: str, type: Type): []char
+// fn makefromstr(src: str): []char
 static FORCE_INLINE void doBuiltinMakefromstr(Fiber *fiber, HeapPages *pages, Error *error)
 {
-    DynArray *dest   = (DynArray   *)(fiber->top++)->ptrVal;
-    Type *destType   = (Type       *)(fiber->top++)->ptrVal;
-    const char *src  = (const char *)(fiber->top++)->ptrVal;
+    DynArray *dest  = (DynArray   *)(fiber->top++)->ptrVal;
+    const char *src = (const char *)(fiber->top++)->ptrVal;
+
+    Type *destType = fiber->code[fiber->ip].type;
 
     if (!src)
         src = doGetEmptyStr();
@@ -2034,12 +2031,13 @@ static FORCE_INLINE void doBuiltinMakefromstr(Fiber *fiber, HeapPages *pages, Er
 }
 
 
-// fn maketoarr(src: []ItemType, type: Type): [...]ItemType
+// fn maketoarr(src: []ItemType): [...]ItemType
 static FORCE_INLINE void doBuiltinMaketoarr(Fiber *fiber, HeapPages *pages, Error *error)
 {
     void *dest     = (fiber->top++)->ptrVal;
-    Type *destType = (Type     *)(fiber->top++)->ptrVal;
     DynArray *src  = (DynArray *)(fiber->top++)->ptrVal;
+
+    Type *destType = fiber->code[fiber->ip].type;
 
     if (!src)
         error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Dynamic array is null");
@@ -2062,11 +2060,12 @@ static FORCE_INLINE void doBuiltinMaketoarr(Fiber *fiber, HeapPages *pages, Erro
 
 
 // fn maketostr(src: char | []char): str
-static FORCE_INLINE void doBuiltinMaketostr(Fiber *fiber, HeapPages *pages, TypeKind typeKind, Error *error)
+static FORCE_INLINE void doBuiltinMaketostr(Fiber *fiber, HeapPages *pages, Error *error)
 {
     char *dest = doGetEmptyStr();
 
-    if (typeKind == TYPE_CHAR)
+    Type *type = fiber->code[fiber->ip].type;
+    if (type->kind == TYPE_CHAR)
     {
         // Character to string
         const char src = (char)((fiber->top++)->intVal);
@@ -2144,23 +2143,25 @@ static FORCE_INLINE void doBuiltinCopyMap(Fiber *fiber, HeapPages *pages, Error 
 }
 
 
-static FORCE_INLINE void doBuiltinCopy(Fiber *fiber, HeapPages *pages, TypeKind typeKind, Error *error)
+static FORCE_INLINE void doBuiltinCopy(Fiber *fiber, HeapPages *pages, Error *error)
 {
-    if (typeKind == TYPE_DYNARRAY)
+    Type *type  = fiber->code[fiber->ip].type;
+    if (type->kind == TYPE_DYNARRAY)
         doBuiltinCopyDynArray(fiber, pages, error);
     else
         doBuiltinCopyMap(fiber, pages, error);
 }
 
 
-// fn append(array: [] type, item: (^type | [] type), single: bool, type: Type): [] type
+// fn append(array: [] type, item: (^type | [] type), single: bool): [] type
 static FORCE_INLINE void doBuiltinAppend(Fiber *fiber, HeapPages *pages, Error *error)
 {
     DynArray *result = (DynArray *)(fiber->top++)->ptrVal;
-    Type *arrayType  = (Type     *)(fiber->top++)->ptrVal;
     bool single      = (bool      )(fiber->top++)->intVal;
     void *item       = (fiber->top++)->ptrVal;
     DynArray *array  = (DynArray *)(fiber->top++)->ptrVal;
+
+    Type *arrayType  = fiber->code[fiber->ip].type;
 
     if (!array)
         error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Dynamic array is null");
@@ -2216,14 +2217,15 @@ static FORCE_INLINE void doBuiltinAppend(Fiber *fiber, HeapPages *pages, Error *
 }
 
 
-// fn insert(array: [] type, index: int, item: type, type: Type): [] type
+// fn insert(array: [] type, index: int, item: type): [] type
 static FORCE_INLINE void doBuiltinInsert(Fiber *fiber, HeapPages *pages, Error *error)
 {
     DynArray *result = (DynArray *)(fiber->top++)->ptrVal;
-    Type *arrayType  = (Type     *)(fiber->top++)->ptrVal;
     void *item       = (fiber->top++)->ptrVal;
     int64_t index    = (fiber->top++)->intVal;
     DynArray *array  = (DynArray *)(fiber->top++)->ptrVal;
+
+    Type *arrayType  = fiber->code[fiber->ip].type;
 
     if (!array)
         error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Dynamic array is null");
@@ -2346,9 +2348,10 @@ static FORCE_INLINE void doBuiltinDeleteMap(Fiber *fiber, HeapPages *pages, Erro
 }
 
 
-static FORCE_INLINE void doBuiltinDelete(Fiber *fiber, HeapPages *pages, TypeKind typeKind, Error *error)
+static FORCE_INLINE void doBuiltinDelete(Fiber *fiber, HeapPages *pages, Error *error)
 {
-    if (typeKind == TYPE_DYNARRAY)
+    Type *type  = fiber->code[fiber->ip].type;
+    if (type->kind == TYPE_DYNARRAY)
         doBuiltinDeleteDynArray(fiber, pages, error);
     else
         doBuiltinDeleteMap(fiber, pages, error);
@@ -2359,10 +2362,11 @@ static FORCE_INLINE void doBuiltinDelete(Fiber *fiber, HeapPages *pages, TypeKin
 static FORCE_INLINE void doBuiltinSlice(Fiber *fiber, HeapPages *pages, Error *error)
 {
     DynArray *result   = (DynArray *)(fiber->top++)->ptrVal;
-    Type *argType      = (Type     *)(fiber->top++)->ptrVal;
     int64_t endIndex   = (fiber->top++)->intVal;
     int64_t startIndex = (fiber->top++)->intVal;
     void *arg          = (fiber->top++)->ptrVal;
+
+    Type *argType  = fiber->code[fiber->ip].type;
 
     DynArray *array = NULL;
     const char *str = NULL;
@@ -3563,11 +3567,11 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         case BUILTIN_MAKEFROMARR:   doBuiltinMakefromarr(fiber, pages, error); break;
         case BUILTIN_MAKEFROMSTR:   doBuiltinMakefromstr(fiber, pages, error); break;
         case BUILTIN_MAKETOARR:     doBuiltinMaketoarr(fiber, pages, error); break;
-        case BUILTIN_MAKETOSTR:     doBuiltinMaketostr(fiber, pages, typeKind, error); break;
-        case BUILTIN_COPY:          doBuiltinCopy(fiber, pages, typeKind, error); break;
+        case BUILTIN_MAKETOSTR:     doBuiltinMaketostr(fiber, pages, error); break;
+        case BUILTIN_COPY:          doBuiltinCopy(fiber, pages, error); break;
         case BUILTIN_APPEND:        doBuiltinAppend(fiber, pages, error); break;
         case BUILTIN_INSERT:        doBuiltinInsert(fiber, pages, error); break;
-        case BUILTIN_DELETE:        doBuiltinDelete(fiber, pages, typeKind, error); break;
+        case BUILTIN_DELETE:        doBuiltinDelete(fiber, pages, error); break;
         case BUILTIN_SLICE:         doBuiltinSlice(fiber, pages, error); break;
         case BUILTIN_SORT:          doBuiltinSort(fiber, pages, error); break;
         case BUILTIN_SORTFAST:      doBuiltinSortfast(fiber, pages, error); break;

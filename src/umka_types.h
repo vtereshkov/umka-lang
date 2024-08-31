@@ -91,7 +91,7 @@ typedef struct tagType
 {
     TypeKind kind;
     int block;
-    struct tagType *base;                       // For pointers, arrays and maps (for maps, denotes the tree node type)
+    struct tagType *base;                       // For pointers, arrays, maps and fibers (for maps, denotes the tree node type; for fibers, denotes the fiber closure type)
     int numItems;                               // For arrays, structures and interfaces
     bool isExprList;                            // For structures that represent expression lists
     bool isVariadicParamList;                   // For dynamic arrays of interfaces that represent variadic parameter lists
