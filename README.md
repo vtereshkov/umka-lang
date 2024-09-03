@@ -61,6 +61,10 @@ _400 x 400 matrix multiplication (AMD A4-3300M @ 1.9 GHz, Windows 7)_
 
 ![](resources/tophat.png)
 
+* [Money, please!](https://skejeton.itch.io/moneyplease): A visual novel/puzzle game. Designed and developed in 96 hours for GMTK Game Jam 2024
+
+![](resources/moneyplease.png) 
+
 * [I LOVE FEM](https://github.com/vtereshkov/fem): A tophat-based 2D finite element method demo
 
 ![](resources/fem.png)
