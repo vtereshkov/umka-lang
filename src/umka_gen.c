@@ -183,6 +183,21 @@ static bool optimizeSwapAssign(CodeGen *gen, TypeKind typeKind, int structSize)
 }
 
 
+static bool optimizeChangeRefCnt(CodeGen *gen, Type *type)
+{
+    Instruction *prev = getPrevInstr(gen, 1);
+
+    // Optimization: PUSH ^ + CHANGE_REF_CNT -> PUSH ^
+    if (prev && prev->opcode == OP_PUSH && prev->inlineOpcode == OP_NOP && prev->typeKind == TYPE_PTR && (type->kind == TYPE_PTR || type->kind == TYPE_STR))
+    {
+        genUnnotify(gen);
+        return true;
+    }
+
+    return false;
+}
+
+
 static bool optimizeDeref(CodeGen *gen, TypeKind typeKind)
 {
     Instruction *prev = getPrevInstr(gen, 1);
@@ -573,7 +588,7 @@ void genAssignParam(CodeGen *gen, TypeKind typeKind, int structSize)
 
 void genChangeRefCnt(CodeGen *gen, TokenKind tokKind, Type *type)
 {
-    if (typeGarbageCollected(type))
+    if (typeGarbageCollected(type) && !optimizeChangeRefCnt(gen, type))
     {
         const Instruction instr = {.opcode = OP_CHANGE_REF_CNT, .tokKind = tokKind, .type = type};
         genAddInstr(gen, &instr);

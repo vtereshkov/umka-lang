@@ -17,10 +17,18 @@ static void parseDynArrayLiteral(Compiler *comp, Type **type, Const *constant);
 
 void doPushConst(Compiler *comp, Type *type, Const *constant)
 {
-    if (typeReal(type))
-        genPushRealConst(&comp->gen, constant->realVal);
-    else
+    if (type->kind == TYPE_UINT)
+        genPushUIntConst(&comp->gen, constant->uintVal);
+    else if (typeOrdinal(type) || type->kind == TYPE_FN)
         genPushIntConst(&comp->gen, constant->intVal);
+    else if (typeReal(type))
+        genPushRealConst(&comp->gen, constant->realVal);
+    else if (type->kind == TYPE_PTR || type->kind == TYPE_STR || type->kind == TYPE_FIBER || typeStructured(type))
+        genPushGlobalPtr(&comp->gen, constant->ptrVal);
+    else if (type->kind == TYPE_WEAKPTR)
+        genPushUIntConst(&comp->gen, constant->weakPtrVal);
+    else
+        comp->error.handler(comp->error.context, "Illegal type");
 }
 
 
