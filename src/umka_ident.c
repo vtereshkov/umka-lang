@@ -165,6 +165,7 @@ static Ident *identAdd(Idents *idents, Modules *modules, Blocks *blocks, IdentKi
             typeCompatible(ident->type, type) &&
             ident->prototypeOffset >= 0)
         {
+            typeDeepCopy(ident->type, type);
             return ident;
         }
 
