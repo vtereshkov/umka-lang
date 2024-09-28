@@ -320,21 +320,20 @@ const pi* = 3.14159265358979323846
 
 // Random numbers
 
-const (
-    junkBits = 8
-    randSeedMax = 0xFFFFFFFF
-    randMax* = randSeedMax >> junkBits
-)
+const randMax* = 0xFFFFFFFF
 
-randSeed := 0
+randSeed := uint(1)
 
 fn srand*(seed: int) {
     randSeed = seed
 }
 
 fn rand*(): int {
-    randSeed = (1664525 * randSeed + 1013904223) & randSeedMax
-    return randSeed >> junkBits
+    // xorshift
+    randSeed ~= randSeed << 13
+    randSeed ~= randSeed >> 7
+    randSeed ~= randSeed << 17
+    return randSeed & randMax
 }
 
 fn frand*(): real {
