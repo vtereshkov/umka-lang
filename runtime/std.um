@@ -320,7 +320,7 @@ const pi* = 3.14159265358979323846
 
 // Random numbers
 
-const randMax* = 0xFFFFFFFF
+const randMax* = 0x7FFFFFFF
 
 randSeed := uint(1)
 

@@ -331,7 +331,7 @@ static const char *runtimeModuleSources[] = {
 "\n"
 "// Random numbers\n"
 "\n"
-"const randMax* = 0xFFFFFFFF\n"
+"const randMax* = 0x7FFFFFFF\n"
 "\n"
 "randSeed := uint(1)\n"
 "\n"
