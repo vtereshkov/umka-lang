@@ -325,7 +325,9 @@ const randMax* = 0x7FFFFFFF
 randSeed := uint(1)
 
 fn srand*(seed: int) {
-    randSeed = seed
+    if seed > 0 {
+        randSeed = seed
+    }
 }
 
 fn rand*(): int {
