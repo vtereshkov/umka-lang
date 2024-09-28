@@ -324,12 +324,6 @@ const randMax* = 0x7FFFFFFF
 
 randSeed := uint(1)
 
-fn srand*(seed: int) {
-    if seed > 0 {
-        randSeed = seed
-    }
-}
-
 fn rand*(): int {
     // xorshift
     randSeed ~= randSeed << 13
@@ -340,6 +334,13 @@ fn rand*(): int {
 
 fn frand*(): real {
     return real(rand()) / randMax
+}
+
+fn srand*(seed: int) {
+    if seed > 0 {
+        randSeed = seed
+        rand()
+    }
 }
 
 // Time
