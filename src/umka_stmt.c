@@ -12,16 +12,33 @@ static void parseStmtList(Compiler *comp);
 static void parseBlock(Compiler *comp);
 
 
-void doGarbageCollection(Compiler *comp, int block)
+static void doGarbageCollectionAt(Compiler *comp, int blockStackPos)
 {
     for (Ident *ident = comp->idents.first; ident; ident = ident->next)
-        if (ident->kind == IDENT_VAR && typeGarbageCollected(ident->type) && ident->block == block && !(ident->temporary && !ident->used) && strcmp(ident->name, "__result") != 0)
+        if (ident->kind == IDENT_VAR && typeGarbageCollected(ident->type) && ident->block == comp->blocks.item[blockStackPos].block && !(ident->temporary && !ident->used) && strcmp(ident->name, "__result") != 0)
         {
+            // Skip unused upvalues
+            if (strcmp(ident->name, "__upvalues") == 0)
+            {
+                if (!comp->blocks.item[blockStackPos].fn)
+                    comp->error.handler(comp->error.context, "Upvalues can only be declared in the function scope");
+
+                if (!comp->blocks.item[blockStackPos].hasUpvalues)
+                    continue;
+            }
+
             if (ident->block == 0)
                 genChangeRefCntGlobal(&comp->gen, TOK_MINUSMINUS, ident->ptr, ident->type);
             else
                 genChangeRefCntLocal(&comp->gen, TOK_MINUSMINUS, ident->offset, ident->type);
         }
+}
+
+
+void doGarbageCollection(Compiler *comp)
+{
+    // Collect garbage in the current scope
+    doGarbageCollectionAt(comp, comp->blocks.top);
 }
 
 
@@ -32,7 +49,7 @@ void doGarbageCollectionDownToBlock(Compiler *comp, int block)
     {
         if (comp->blocks.item[i].block == block)
             break;
-        doGarbageCollection(comp, comp->blocks.item[i].block);
+        doGarbageCollectionAt(comp, i);
     }
 }
 
@@ -77,7 +94,7 @@ void doResolveExtern(Compiler *comp)
                 if (!fn)
                     comp->error.handler(comp->error.context, "Unresolved prototype of %s", ident->name);
 
-                blocksEnter(&comp->blocks, ident);
+                blocksEnterFn(&comp->blocks, ident, false);
                 genEntryPoint(&comp->gen, ident->prototypeOffset);
                 genEnterFrameStub(&comp->gen);
 
@@ -90,7 +107,7 @@ void doResolveExtern(Compiler *comp)
 
                 genCallExtern(&comp->gen, fn);
 
-                doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+                doGarbageCollection(comp);
                 identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
                 identFree(&comp->idents, blocksCurrent(&comp->blocks));
 
@@ -465,7 +482,7 @@ static void parseIfStmt(Compiler *comp)
     lexEat(&comp->lex, TOK_IF);
 
     // Additional scope embracing shortVarDecl and statement body
-    blocksEnter(&comp->blocks, NULL);
+    blocksEnter(&comp->blocks);
 
     // [shortVarDecl ";"]
     if (doShortVarDeclLookahead(comp))
@@ -503,7 +520,7 @@ static void parseIfStmt(Compiler *comp)
     }
 
     // Additional scope embracing shortVarDecl and statement body
-    doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+    doGarbageCollection(comp);
     identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
     blocksLeave(&comp->blocks);
 }
@@ -542,12 +559,12 @@ static void parseExprCase(Compiler *comp, Type *selectorType, ConstArray *existi
     genCaseBlockProlog(&comp->gen);
 
     // Additional scope embracing stmtList
-    blocksEnter(&comp->blocks, NULL);
+    blocksEnter(&comp->blocks);
 
     parseStmtList(comp);
 
     // Additional scope embracing stmtList
-    doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+    doGarbageCollection(comp);
     identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
     blocksLeave(&comp->blocks);
 
@@ -587,7 +604,7 @@ static void parseTypeCase(Compiler *comp, Type *selectorType, const char *concre
     lexEat(&comp->lex, TOK_COLON);
 
     // Additional scope embracing stmtList
-    blocksEnter(&comp->blocks, NULL);
+    blocksEnter(&comp->blocks);
 
     // Allocate and initialize concrete-type variable
     Ident *concreteIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, concreteVarName, concreteType, false);
@@ -603,7 +620,7 @@ static void parseTypeCase(Compiler *comp, Type *selectorType, const char *concre
     parseStmtList(comp);
 
     // Additional scope embracing stmtList
-    doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+    doGarbageCollection(comp);
     identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
     blocksLeave(&comp->blocks);
 
@@ -620,12 +637,12 @@ static void parseDefault(Compiler *comp)
     lexEat(&comp->lex, TOK_COLON);
 
     // Additional scope embracing stmtList
-    blocksEnter(&comp->blocks, NULL);
+    blocksEnter(&comp->blocks);
 
     parseStmtList(comp);
 
     // Additional scope embracing stmtList
-    doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+    doGarbageCollection(comp);
     identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
     blocksLeave(&comp->blocks);
 }
@@ -637,7 +654,7 @@ static void parseExprSwitchStmt(Compiler *comp)
     lexEat(&comp->lex, TOK_SWITCH);
 
     // Additional scope embracing shortVarDecl and statement body
-    blocksEnter(&comp->blocks, NULL);
+    blocksEnter(&comp->blocks);
 
     // [shortVarDecl ";"]
     if (doShortVarDeclLookahead(comp))
@@ -678,7 +695,7 @@ static void parseExprSwitchStmt(Compiler *comp)
     genSwitchEpilog(&comp->gen, numCases);
 
     // Additional scope embracing shortVarDecl and statement body
-    doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+    doGarbageCollection(comp);
     identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
     blocksLeave(&comp->blocks);
 }
@@ -690,7 +707,7 @@ static void parseTypeSwitchStmt(Compiler *comp)
     lexEat(&comp->lex, TOK_SWITCH);
 
     // Additional scope embracing ident and statement body
-    blocksEnter(&comp->blocks, NULL);
+    blocksEnter(&comp->blocks);
 
     // ident
     lexCheck(&comp->lex, TOK_IDENT);
@@ -738,7 +755,7 @@ static void parseTypeSwitchStmt(Compiler *comp)
     genPop(&comp->gen);     // Remove expr
 
     // Additional scope embracing ident and statement body
-    doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+    doGarbageCollection(comp);
     identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
     blocksLeave(&comp->blocks);
 }
@@ -767,7 +784,7 @@ static void parseForHeader(Compiler *comp)
     genForCondProlog(&comp->gen);
 
     // Additional scope embracing expr (needed for timely garbage collection in expr, since it is computed at each iteration)
-    blocksEnter(&comp->blocks, NULL);
+    blocksEnter(&comp->blocks);
 
     // expr
     Type *type = comp->boolType;
@@ -775,7 +792,7 @@ static void parseForHeader(Compiler *comp)
     typeAssertCompatible(&comp->types, comp->boolType, type);
 
     // Additional scope embracing expr
-    doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+    doGarbageCollection(comp);
     identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
     blocksLeave(&comp->blocks);
 
@@ -785,13 +802,13 @@ static void parseForHeader(Compiler *comp)
     if (comp->lex.tok.kind == TOK_SEMICOLON || comp->lex.tok.kind == TOK_IMPLICIT_SEMICOLON)
     {
         // Additional scope embracing simpleStmt (needed for timely garbage collection in simpleStmt, since it is executed at each iteration)
-        blocksEnter(&comp->blocks, NULL);
+        blocksEnter(&comp->blocks);
 
         lexNext(&comp->lex);
         parseSimpleStmt(comp);
 
         // Additional scope embracing simpleStmt
-        doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+        doGarbageCollection(comp);
         identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
         blocksLeave(&comp->blocks);
     }
@@ -1012,7 +1029,7 @@ static void parseForStmt(Compiler *comp)
     lexEat(&comp->lex, TOK_FOR);
 
     // Additional scope embracing shortVarDecl in forHeader/forEachHeader and statement body
-    blocksEnter(&comp->blocks, NULL);
+    blocksEnter(&comp->blocks);
 
     // 'break'/'continue' prologs
     Gotos breaks, *outerBreaks = comp->gen.breaks;
@@ -1045,7 +1062,7 @@ static void parseForStmt(Compiler *comp)
     comp->gen.breaks = outerBreaks;
 
     // Additional scope embracing shortVarDecl in forHeader/forEachHeader and statement body
-    doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+    doGarbageCollection(comp);
     identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
     blocksLeave(&comp->blocks);
 }
@@ -1185,11 +1202,11 @@ static void parseStmtList(Compiler *comp)
 static void parseBlock(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_LBRACE);
-    blocksEnter(&comp->blocks, NULL);
+    blocksEnter(&comp->blocks);
 
     parseStmtList(comp);
 
-    doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+    doGarbageCollection(comp);
     identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
     identFree(&comp->idents, blocksCurrent(&comp->blocks));
 
@@ -1202,7 +1219,7 @@ static void parseBlock(Compiler *comp)
 void parseFnBlock(Compiler *comp, Ident *fn, Type *upvaluesStructType)
 {
     lexEat(&comp->lex, TOK_LBRACE);
-    blocksEnter(&comp->blocks, fn);
+    blocksEnterFn(&comp->blocks, fn, upvaluesStructType != NULL);
 
     char *prevDebugFnName = comp->lex.debug->fnName;
 
@@ -1275,7 +1292,7 @@ void parseFnBlock(Compiler *comp, Ident *fn, Type *upvaluesStructType)
     genGotosEpilog(&comp->gen, comp->gen.returns);
     comp->gen.returns = outerReturns;
 
-    doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+    doGarbageCollection(comp);
     identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
     identFree(&comp->idents, blocksCurrent(&comp->blocks));
 

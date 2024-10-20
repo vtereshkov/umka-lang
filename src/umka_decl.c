@@ -936,6 +936,6 @@ void parseProgram(Compiler *comp)
         genCall(&comp->gen, mainFn->offset);
     }
 
-    doGarbageCollection(comp, 0);
+    doGarbageCollection(comp);
     genHalt(&comp->gen);
 }
