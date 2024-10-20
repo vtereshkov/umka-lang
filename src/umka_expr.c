@@ -301,7 +301,7 @@ static void doDynArrayToDynArrayConv(Compiler *comp, Type *dest, Type **src, Con
     genWhileCondEpilog(&comp->gen);
 
     // Additional scope embracing temporary variables declaration
-    blocksEnter(&comp->blocks, NULL);
+    blocksEnter(&comp->blocks);
 
     // Loop body: destArray[index] = destItemType(srcArray[index]); index--
     genDup(&comp->gen);
@@ -328,7 +328,7 @@ static void doDynArrayToDynArrayConv(Compiler *comp, Type *dest, Type **src, Con
     genUnary(&comp->gen, TOK_MINUSMINUS, TYPE_INT);
 
     // Additional scope embracing temporary variables declaration
-    doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+    doGarbageCollection(comp);
     identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
     blocksLeave(&comp->blocks);
 
@@ -2793,13 +2793,13 @@ static void parseLogicalTerm(Compiler *comp, Type **type, Const *constant)
         {
             genShortCircuitProlog(&comp->gen);
 
-            blocksEnter(&comp->blocks, NULL);
+            blocksEnter(&comp->blocks);
 
             Type *rightType = *type;
             parseRelation(comp, &rightType, NULL);
             doApplyOperator(comp, type, &rightType, NULL, NULL, op, false, true);
 
-            doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+            doGarbageCollection(comp);
             identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
             blocksLeave(&comp->blocks);
 
@@ -2837,13 +2837,13 @@ static void parseLogicalExpr(Compiler *comp, Type **type, Const *constant)
         {
             genShortCircuitProlog(&comp->gen);
 
-            blocksEnter(&comp->blocks, NULL);
+            blocksEnter(&comp->blocks);
 
             Type *rightType = *type;
             parseLogicalTerm(comp, &rightType, NULL);
             doApplyOperator(comp, type, &rightType, NULL, NULL, op, false, true);
 
-            doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+            doGarbageCollection(comp);
             identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
             blocksLeave(&comp->blocks);
 
@@ -2886,7 +2886,7 @@ void parseExpr(Compiler *comp, Type **type, Const *constant)
             genIfCondEpilog(&comp->gen);
 
             // Left-hand side expression
-            blocksEnter(&comp->blocks, NULL);
+            blocksEnter(&comp->blocks);
 
             parseExpr(comp, &leftType, NULL);
 
@@ -2905,7 +2905,7 @@ void parseExpr(Compiler *comp, Type **type, Const *constant)
                 genSwapAssign(&comp->gen, result->type->kind, typeSize(&comp->types, result->type));
             }
 
-            doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+            doGarbageCollection(comp);
             identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
             blocksLeave(&comp->blocks);
 
@@ -2914,7 +2914,7 @@ void parseExpr(Compiler *comp, Type **type, Const *constant)
             genElseProlog(&comp->gen);
 
             // Right-hand side expression
-            blocksEnter(&comp->blocks, NULL);
+            blocksEnter(&comp->blocks);
 
             rightType = leftType;
             parseExpr(comp, &rightType, NULL);
@@ -2929,7 +2929,7 @@ void parseExpr(Compiler *comp, Type **type, Const *constant)
                 genSwapAssign(&comp->gen, result->type->kind, typeSize(&comp->types, result->type));
             }
 
-            doGarbageCollection(comp, blocksCurrent(&comp->blocks));
+            doGarbageCollection(comp);
             identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
             blocksLeave(&comp->blocks);
 

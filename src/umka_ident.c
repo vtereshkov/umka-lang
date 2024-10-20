@@ -283,7 +283,7 @@ int identAllocStack(Idents *idents, Types *types, Blocks *blocks, Type *type)
             break;
         }
     if (!localVarSize)
-        idents->error->handler(idents->error->context, "No heap frame");
+        idents->error->handler(idents->error->context, "Stack frame is not found");
 
     *localVarSize = align(*localVarSize + typeSize(types, type), typeAlignment(types, type));
     return -2 * sizeof(Slot) - (*localVarSize);  // 2 extra slots for the stack frame ref count and parameter layout table

@@ -538,7 +538,7 @@ void blocksInit(Blocks *blocks, Error *error)
     blocks->module = -1;
     blocks->error = error;
 
-    blocksEnter(blocks, false);
+    blocksEnter(blocks);
 }
 
 
@@ -547,7 +547,7 @@ void blocksFree(Blocks *blocks)
 }
 
 
-void blocksEnter(Blocks *blocks, struct tagIdent *fn)
+void blocksEnterFn(Blocks *blocks, struct tagIdent *fn, bool hasUpvalues)
 {
     if (blocks->top >= MAX_BLOCK_NESTING)
         blocks->error->handler(blocks->error->context, "Block nesting is too deep");
@@ -557,6 +557,13 @@ void blocksEnter(Blocks *blocks, struct tagIdent *fn)
     blocks->item[blocks->top].fn = fn;
     blocks->item[blocks->top].localVarSize = 0;
     blocks->item[blocks->top].hasReturn = false;
+    blocks->item[blocks->top].hasUpvalues = hasUpvalues;
+}
+
+
+void blocksEnter(Blocks *blocks)
+{
+    blocksEnterFn(blocks, NULL, false);
 }
 
 

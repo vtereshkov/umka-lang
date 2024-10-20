@@ -3,7 +3,7 @@
 
 #include "umka_compiler.h"
 
-void doGarbageCollection(Compiler *comp, int block);
+void doGarbageCollection(Compiler *comp);
 void doGarbageCollectionDownToBlock(Compiler *comp, int block);
 
 void doZeroVar(Compiler *comp, Ident *ident);
