@@ -295,7 +295,8 @@ int typeParamSizeUpTo   (Types *types, Signature *sig, int index);
 int typeParamSizeTotal  (Types *types, Signature *sig);
 int typeParamOffset     (Types *types, Signature *sig, int index);
 
-ExternalCallParamLayout *typeMakeParamLayout(Types *types, Storage *storage, Signature *sig);
+ParamLayout            *typeMakeParamLayout           (Types *types, Storage *storage, Signature *sig);
+ParamAndLocalVarLayout *typeMakeParamAndLocalVarLayout(Storage *storage, ParamLayout *paramLayout, int localVarSlots);
 
 const char *typeKindSpelling(TypeKind kind);
 char *typeSpelling          (Type *type, char *buf);

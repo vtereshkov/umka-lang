@@ -197,7 +197,14 @@ typedef struct
     int64_t numResultParams;
     int64_t numParamSlots;
     int64_t firstSlotIndex[];
-} ExternalCallParamLayout;
+} ParamLayout;
+
+
+typedef struct
+{
+    ParamLayout *paramLayout;
+    int64_t localVarSlots;
+} ParamAndLocalVarLayout;
 
 
 void errorReportInit(ErrorReport *report, const char *fileName, const char *fnName, int line, int pos, int code, const char *format, va_list args);

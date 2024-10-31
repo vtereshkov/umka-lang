@@ -340,13 +340,17 @@ static FORCE_INLINE void stackChangeFrameRefCnt(Fiber *fiber, HeapPages *pages, 
     if (ptr >= (void *)fiber->top && ptr < (void *)(fiber->stack + fiber->stackSize))
     {
         Slot *base = fiber->base;
-        while (ptr > (void *)base)
+        const ParamLayout *paramLayout = base[-2].ptrVal;
+
+        while (ptr > (void *)(base + 1 + paramLayout->numParamSlots))   // + 1 for return address
         {
             if (!stackUnwind(fiber, &base, NULL))
                 pages->error->runtimeHandler(pages->error->context, VM_RUNTIME_ERROR, "Illegal stack pointer");
+
+            paramLayout = base[-2].ptrVal;
         }
 
-        int64_t *stackFrameRefCnt = &(base - 1)->intVal;
+        int64_t *stackFrameRefCnt = &base[-1].intVal;
         *stackFrameRefCnt += delta;
     }
 }
@@ -3623,10 +3627,10 @@ static FORCE_INLINE void doReturn(Fiber *fiber, Fiber **newFiber)
 
 static FORCE_INLINE void doEnterFrame(Fiber *fiber, HeapPages *pages, HookFunc *hooks, Error *error)
 {
-    int localVarSlots = fiber->code[fiber->ip].operand.intVal;
+    ParamAndLocalVarLayout *layout = fiber->code[fiber->ip].operand.ptrVal;
 
     // Allocate stack frame
-    if (fiber->top - localVarSlots - fiber->stack < VM_MIN_FREE_STACK)
+    if (fiber->top - layout->localVarSlots - fiber->stack < VM_MIN_FREE_STACK)
         error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Stack overflow");
 
     // Push old stack frame base pointer, set new one
@@ -3637,13 +3641,13 @@ static FORCE_INLINE void doEnterFrame(Fiber *fiber, HeapPages *pages, HookFunc *
     (--fiber->top)->intVal = 0;
 
     // Push parameter layout table pointer
-    (--fiber->top)->ptrVal = NULL;
+    (--fiber->top)->ptrVal = layout->paramLayout;
 
     // Move stack top
-    fiber->top -= localVarSlots;
+    fiber->top -= layout->localVarSlots;
 
     // Zero the whole stack frame
-    memset(fiber->top, 0, localVarSlots * sizeof(Slot));
+    memset(fiber->top, 0, layout->localVarSlots * sizeof(Slot));
 
     // Call 'call' hook, if any
     doHook(fiber, hooks, HOOK_CALL);
@@ -3655,7 +3659,7 @@ static FORCE_INLINE void doEnterFrame(Fiber *fiber, HeapPages *pages, HookFunc *
 static FORCE_INLINE void doLeaveFrame(Fiber *fiber, HeapPages *pages, HookFunc *hooks, Error *error)
 {
     // Check stack frame ref count
-    int64_t stackFrameRefCnt = (fiber->base - 1)->intVal;
+    int64_t stackFrameRefCnt = fiber->base[-1].intVal;
     if (stackFrameRefCnt != 0)
         error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Pointer to a local variable escapes from the function");
 
@@ -3779,7 +3783,7 @@ void vmRun(VM *vm, FuncContext *fn)
         int numParamSlots = 0;
         if (fn->params)
         {
-            const ExternalCallParamLayout *paramLayout = (ExternalCallParamLayout *)fn->params[-4].ptrVal;   // For -4, see the stack layout diagram in umka_vm.c
+            const ParamLayout *paramLayout = (ParamLayout *)fn->params[-4].ptrVal;   // For -4, see the stack layout diagram in umka_vm.c
             numParamSlots = paramLayout->numParamSlots;
         }
         else
@@ -3871,7 +3875,6 @@ int vmAsm(int ip, Instruction *code, DebugInfo *debugPerInstr, char *buf, int si
         case OP_GOTO:
         case OP_GOTO_IF:
         case OP_GOTO_IF_NOT:
-        case OP_ENTER_FRAME:
         case OP_CALL_INDIRECT:
         case OP_RETURN:                 chars += snprintf(buf + chars, nonneg(size - chars), " %lld",  (long long int)instr->operand.intVal); break;
         case OP_CALL:
@@ -3883,6 +3886,7 @@ int vmAsm(int ip, Instruction *code, DebugInfo *debugPerInstr, char *buf, int si
         case OP_PUSH_LOCAL_PTR_ZERO:
         case OP_GET_ARRAY_PTR:          chars += snprintf(buf + chars, nonneg(size - chars), " %d %d", (int)instr->operand.int32Val[0], (int)instr->operand.int32Val[1]); break;
         case OP_CHANGE_REF_CNT_GLOBAL:
+        case OP_ENTER_FRAME:
         case OP_CALL_EXTERN:            chars += snprintf(buf + chars, nonneg(size - chars), " %p",    instr->operand.ptrVal); break;
         case OP_CALL_BUILTIN:           chars += snprintf(buf + chars, nonneg(size - chars), " %s",    builtinSpelling[instr->operand.builtinVal]); break;
 
