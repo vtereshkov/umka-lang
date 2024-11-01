@@ -102,14 +102,13 @@ void doResolveExtern(Compiler *comp)
                 for (int i = 0; i < ident->type->sig.numParams; i++)
                     identAllocParam(&comp->idents, &comp->types, &comp->modules, &comp->blocks, &ident->type->sig, i);
 
-                ParamLayout *paramLayout = typeMakeParamLayout(&comp->types, &comp->storage, &ident->type->sig);
-                genPushGlobalPtr(&comp->gen, paramLayout);
-
                 genCallExtern(&comp->gen, fn);
 
                 doGarbageCollection(comp);
                 identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
                 identFree(&comp->idents, blocksCurrent(&comp->blocks));
+
+                ParamLayout *paramLayout = typeMakeParamLayout(&comp->types, &comp->storage, &ident->type->sig);
 
                 genLeaveFrameFixup(&comp->gen, typeMakeParamAndLocalVarLayout(&comp->storage, paramLayout, 0));
                 genReturn(&comp->gen, paramLayout->numParamSlots);

@@ -3490,9 +3490,6 @@ static FORCE_INLINE void doCallExtern(Fiber *fiber, Error *error)
 {
     ExternFunc fn = (ExternFunc)fiber->code[fiber->ip].operand.ptrVal;
 
-    Slot *paramLayout = fiber->base - 2;
-    paramLayout->ptrVal = (fiber->top++)->ptrVal;
-
     fiber->reg[VM_REG_RESULT].ptrVal = error->context;    // Upon entry, the result slot stores the Umka instance
 
     int ip = fiber->ip;
