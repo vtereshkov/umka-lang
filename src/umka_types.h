@@ -189,6 +189,12 @@ static inline bool typeNarrow(Type *type)
 }
 
 
+static inline bool typeKindSigned(TypeKind typeKind)
+{
+    return typeKind == TYPE_INT8 || typeKind == TYPE_INT16 || typeKind == TYPE_INT32 || typeKind == TYPE_INT;
+}
+
+
 static inline bool typeStructured(Type *type)
 {
     return type->kind == TYPE_ARRAY  || type->kind == TYPE_DYNARRAY  || type->kind == TYPE_MAP ||
@@ -246,20 +252,20 @@ void typeAssertValidOperator(Types *types, Type *type, TokenKind op);
 void typeEnableForward(Types *types, bool enable);
 
 
-static inline bool typeOverflow(TypeKind typeKind, Const val)
+static inline bool typeConvOverflow(TypeKind destTypeKind, TypeKind srcTypeKind, Const val)
 {
-    switch (typeKind)
+    switch (destTypeKind)
     {
         case TYPE_VOID:     return true;
         case TYPE_INT8:     return val.intVal  < -128            || val.intVal  > 127;
         case TYPE_INT16:    return val.intVal  < -32768          || val.intVal  > 32767;
         case TYPE_INT32:    return val.intVal  < -2147483647 - 1 || val.intVal  > 2147483647;
-        case TYPE_INT:      return false;
+        case TYPE_INT:      return val.intVal  < 0 && srcTypeKind == TYPE_UINT;
         case TYPE_UINT8:    return val.intVal  < 0               || val.intVal  > 255;
         case TYPE_UINT16:   return val.intVal  < 0               || val.intVal  > 65535;
         case TYPE_UINT32:   return val.intVal  < 0               || val.intVal  > 4294967295;
-        case TYPE_UINT:     return false;
-        case TYPE_BOOL:     return false;
+        case TYPE_UINT:     return val.intVal  < 0 && typeKindSigned(srcTypeKind);
+        case TYPE_BOOL:     return val.intVal  < 0               || val.intVal  > 1;
         case TYPE_CHAR:     return val.intVal  < 0               || val.intVal  > 255;
         case TYPE_REAL32:   return val.realVal < -FLT_MAX        || val.realVal > FLT_MAX;
         case TYPE_REAL:     return val.realVal < -DBL_MAX        || val.realVal > DBL_MAX;
@@ -276,6 +282,12 @@ static inline bool typeOverflow(TypeKind typeKind, Const val)
         case TYPE_FN:       return false;
         default:            return true;
     }
+}
+
+
+static inline bool typeOverflow(TypeKind typeKind, Const val)
+{
+    return typeConvOverflow(typeKind, TYPE_VOID, val);
 }
 
 

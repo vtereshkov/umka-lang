@@ -87,7 +87,7 @@ void genGetMapPtr     (CodeGen *gen, Type *mapType);
 void genGetFieldPtr   (CodeGen *gen, int fieldOffset);
 
 void genAssertType   (CodeGen *gen, Type *type);
-void genAssertRange  (CodeGen *gen, TypeKind typeKind);
+void genAssertRange  (CodeGen *gen, TypeKind destTypeKind, Type *srcType);
 
 void genWeakenPtr    (CodeGen *gen);
 void genStrengthenPtr(CodeGen *gen);
