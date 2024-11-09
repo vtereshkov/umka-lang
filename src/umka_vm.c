@@ -1776,7 +1776,7 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
         else
             arg.intVal = value.intVal;
 
-        if (typeOverflow(expectedTypeKind, arg))
+        if (typeConvOverflow(expectedTypeKind, type->kind, arg))
             error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Overflow of %s", typeKindSpelling(expectedTypeKind));
     }
 
