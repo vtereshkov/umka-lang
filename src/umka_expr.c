@@ -125,11 +125,11 @@ static void doOrdinalToOrdinalOrRealToRealConv(Compiler *comp, Type *dest, Type 
 {
     if (constant)
     {
-        if (typeOverflow(dest->kind, *constant))
+        if (typeConvOverflow(dest->kind, (*src)->kind, *constant))
             comp->error.handler(comp->error.context, "Overflow of %s", typeKindSpelling(dest->kind));
     }
     else
-        genAssertRange(&comp->gen, dest->kind);
+        genAssertRange(&comp->gen, dest->kind, *src);
 
     *src = dest;
 }
@@ -542,8 +542,14 @@ static void doImplicitTypeConvEx(Compiler *comp, Type *dest, Type **src, Const *
 {
     // lhs/rhs can only be set to true for operands of binary operators
 
+    // Signed to 64-bit unsigned integer or vice versa (64-bit overflow check only, not applied to operands of binary operators)
+    if (!lhs && !rhs && ((dest->kind == TYPE_UINT && typeKindSigned((*src)->kind)) || (typeKindSigned(dest->kind) && (*src)->kind == TYPE_UINT)))
+    {
+        doOrdinalToOrdinalOrRealToRealConv(comp, dest, src, constant);
+    }
+
     // Integer to real
-    if (typeReal(dest) && typeInteger(*src))
+    else if (typeReal(dest) && typeInteger(*src))
     {
         doIntToRealConv(comp, dest, src, constant, lhs);
     }

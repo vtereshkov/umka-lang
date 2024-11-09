@@ -1118,7 +1118,7 @@ static void parseReturnStmt(Compiler *comp)
 
     // Check non-64-bit ordinal and real types for overflow
     if (sig->resultType->kind != type->kind && typeNarrow(sig->resultType))
-        genAssertRange(&comp->gen, sig->resultType->kind);
+        genAssertRange(&comp->gen, sig->resultType->kind, type);
 
     // Copy structure to __result
     if (typeStructured(sig->resultType))

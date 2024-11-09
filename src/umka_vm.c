@@ -1776,7 +1776,7 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
         else
             arg.intVal = value.intVal;
 
-        if (typeOverflow(expectedTypeKind, arg))
+        if (typeConvOverflow(expectedTypeKind, type->kind, arg))
             error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Overflow of %s", typeKindSpelling(expectedTypeKind));
     }
 
@@ -3377,16 +3377,17 @@ static FORCE_INLINE void doAssertType(Fiber *fiber)
 
 static FORCE_INLINE void doAssertRange(Fiber *fiber, Error *error)
 {
-    TypeKind typeKind = fiber->code[fiber->ip].typeKind;
+    TypeKind destTypeKind = fiber->code[fiber->ip].typeKind;
+    Type *srcType         = fiber->code[fiber->ip].type;
 
     Const arg;
-    if (typeKindReal(typeKind))
+    if (typeKindReal(destTypeKind))
         arg.realVal = fiber->top->realVal;
     else
         arg.intVal = fiber->top->intVal;
 
-    if (typeOverflow(typeKind, arg))
-        error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Overflow of %s", typeKindSpelling(typeKind));
+    if (typeConvOverflow(destTypeKind, srcType->kind, arg))
+        error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Overflow of %s", typeKindSpelling(destTypeKind));
 
     fiber->ip++;
 }
@@ -3842,7 +3843,8 @@ int vmAsm(int ip, Instruction *code, DebugInfo *debugPerInstr, char *buf, int si
         char typeBuf[DEFAULT_STR_LEN + 1];
         chars += snprintf(buf + chars, nonneg(size - chars), " %s", typeSpelling(instr->type, typeBuf));
     }
-    else if (instr->typeKind != TYPE_NONE)
+
+    if (instr->typeKind != TYPE_NONE && (!instr->type || instr->opcode == OP_ASSERT_RANGE))
         chars += snprintf(buf + chars, nonneg(size - chars), " %s", typeKindSpelling(instr->typeKind));
 
     switch (instr->opcode)
