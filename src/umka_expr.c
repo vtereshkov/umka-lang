@@ -542,8 +542,8 @@ static void doImplicitTypeConvEx(Compiler *comp, Type *dest, Type **src, Const *
 {
     // lhs/rhs can only be set to true for operands of binary operators
 
-    // int8, int16, int32, int to uint or uint to int (overflow check - only relevant for uint as the only type that may overflow the 64-bit internal representation of any ordinal type)
-    if ((dest->kind == TYPE_UINT && typeKindSigned((*src)->kind)) || (dest->kind == TYPE_INT && (*src)->kind == TYPE_UINT))
+    // Signed to 64-bit unsigned integer or vice versa (64-bit overflow check only, not applied to operands of binary operators)
+    if (!lhs && !rhs && ((dest->kind == TYPE_UINT && typeKindSigned((*src)->kind)) || (typeKindSigned(dest->kind) && (*src)->kind == TYPE_UINT)))
     {
         doOrdinalToOrdinalOrRealToRealConv(comp, dest, src, constant);
     }

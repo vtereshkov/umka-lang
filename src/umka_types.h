@@ -254,17 +254,20 @@ void typeEnableForward(Types *types, bool enable);
 
 static inline bool typeConvOverflow(TypeKind destTypeKind, TypeKind srcTypeKind, Const val)
 {
+    const bool fromVeryBigUInt = val.intVal < 0 && srcTypeKind == TYPE_UINT;
+    const bool fromNegativeInt = val.intVal < 0 && typeKindSigned(srcTypeKind);
+
     switch (destTypeKind)
     {
         case TYPE_VOID:     return true;
-        case TYPE_INT8:     return val.intVal  < -128            || val.intVal  > 127;
-        case TYPE_INT16:    return val.intVal  < -32768          || val.intVal  > 32767;
-        case TYPE_INT32:    return val.intVal  < -2147483647 - 1 || val.intVal  > 2147483647;
-        case TYPE_INT:      return val.intVal  < 0 && srcTypeKind == TYPE_UINT;
+        case TYPE_INT8:     return val.intVal  < -128            || val.intVal  > 127        || fromVeryBigUInt;
+        case TYPE_INT16:    return val.intVal  < -32768          || val.intVal  > 32767      || fromVeryBigUInt;
+        case TYPE_INT32:    return val.intVal  < -2147483647 - 1 || val.intVal  > 2147483647 || fromVeryBigUInt;
+        case TYPE_INT:      return fromVeryBigUInt;
         case TYPE_UINT8:    return val.intVal  < 0               || val.intVal  > 255;
         case TYPE_UINT16:   return val.intVal  < 0               || val.intVal  > 65535;
         case TYPE_UINT32:   return val.intVal  < 0               || val.intVal  > 4294967295;
-        case TYPE_UINT:     return val.intVal  < 0 && typeKindSigned(srcTypeKind);
+        case TYPE_UINT:     return fromNegativeInt;
         case TYPE_BOOL:     return val.intVal  < 0               || val.intVal  > 1;
         case TYPE_CHAR:     return val.intVal  < 0               || val.intVal  > 255;
         case TYPE_REAL32:   return val.realVal < -FLT_MAX        || val.realVal > FLT_MAX;
