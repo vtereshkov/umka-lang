@@ -284,7 +284,7 @@ bool typeGarbageCollected(Type *type)
         return true;
 
     if (type->kind == TYPE_ARRAY)
-        return typeGarbageCollected(type->base);
+        return type->numItems > 0 && typeGarbageCollected(type->base);
 
     if (type->kind == TYPE_STRUCT)
         for (int i = 0; i < type->numItems; i++)
