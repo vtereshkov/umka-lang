@@ -2745,8 +2745,9 @@ static FORCE_INLINE void doBuiltinValidkey(Fiber *fiber, HeapPages *pages, Error
 static FORCE_INLINE void doBuiltinKeys(Fiber *fiber, HeapPages *pages, Error *error)
 {
     DynArray *result = (DynArray *)(fiber->top++)->ptrVal;
-    Type *resultType = (Type *)(fiber->top++)->ptrVal;
     Map *map         = (Map *)(fiber->top++)->ptrVal;
+
+    Type *resultType = fiber->code[fiber->ip].type;
 
     if (!map)
         error->runtimeHandler(error->context, VM_RUNTIME_ERROR, "Map is null");
