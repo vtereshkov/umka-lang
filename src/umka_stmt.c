@@ -922,15 +922,12 @@ static void parseForInHeader(Compiler *comp)
         // Call keys()
         int resultOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, keysType);
         doPushVarPtr(comp, collectionIdent);        // Map
-        genPushGlobalPtr(&comp->gen, keysType);     // Result type (hidden parameter)
         genPushLocalPtr(&comp->gen, resultOffset);  // Pointer to result (hidden parameter)
-
-        genCallBuiltin(&comp->gen, collectionType->kind, BUILTIN_KEYS);
-        doCopyResultToTempVar(comp, keysType);
+        genCallTypedBuiltin(&comp->gen, keysType, BUILTIN_KEYS);
 
         // Assign map keys
         doPushVarPtr(comp, keysIdent);
-        genSwapChangeRefCntAssign(&comp->gen, keysType);
+        genSwapAssign(&comp->gen, keysType->kind, typeSize(&comp->types, keysType));
     }
 
     Ident *itemIdent = NULL;

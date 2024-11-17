@@ -100,23 +100,17 @@ static void doTryImplicitDeref(Compiler *comp, Type **type)
 }
 
 
-static void doEscapeToHeap(Compiler *comp, Type *ptrType, bool useRefCnt)
+static void doEscapeToHeap(Compiler *comp, Type *ptrType)
 {
     // Allocate heap
     genPushIntConst(&comp->gen, typeSize(&comp->types, ptrType->base));
     genCallTypedBuiltin(&comp->gen, ptrType->base, BUILTIN_NEW);
     doCopyResultToTempVar(comp, ptrType);
 
-    // Save heap pointer
+    // Copy to heap and use heap pointer
     genDup(&comp->gen);
     genPopReg(&comp->gen, VM_REG_COMMON_0);
-
-    // Copy to heap and use heap pointer
-    if (useRefCnt)
-        genSwapChangeRefCntAssign(&comp->gen, ptrType->base);
-    else
-        genSwapAssign(&comp->gen, ptrType->base->kind, typeSize(&comp->types, ptrType->base));
-
+    genSwapChangeRefCntAssign(&comp->gen, ptrType->base);
     genPushReg(&comp->gen, VM_REG_COMMON_0);
 }
 
@@ -465,7 +459,7 @@ static void doValueToInterfaceConv(Compiler *comp, Type *dest, Type **src, Const
         comp->error.handler(comp->error.context, "Conversion to interface is not allowed in constant expressions");
 
     *src = typeAddPtrTo(&comp->types, &comp->blocks, *src);
-    doEscapeToHeap(comp, *src, true);
+    doEscapeToHeap(comp, *src);
     doPtrToInterfaceConv(comp, dest, src, constant);
 }
 
@@ -1430,13 +1424,12 @@ static void parseBuiltinKeysCall(Compiler *comp, Type **type, Const *constant)
     // Result type (hidden parameter)
     Type *keysType = typeAdd(&comp->types, &comp->blocks, TYPE_DYNARRAY);
     keysType->base = typeMapKey(*type);
-    genPushGlobalPtr(&comp->gen, keysType);
 
     // Pointer to result (hidden parameter)
     int resultOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, keysType);
     genPushLocalPtr(&comp->gen, resultOffset);
 
-    genCallBuiltin(&comp->gen, (*type)->kind, BUILTIN_KEYS);
+    genCallTypedBuiltin(&comp->gen, keysType, BUILTIN_KEYS);
     *type = keysType;
 }
 
@@ -2672,7 +2665,7 @@ static void parseFactor(Compiler *comp, Type **type, Const *constant)
                 comp->error.handler(comp->error.context, "Cannot take address");
 
             if (isCompLit)
-                doEscapeToHeap(comp, typeAddPtrTo(&comp->types, &comp->blocks, *type), true);
+                doEscapeToHeap(comp, typeAddPtrTo(&comp->types, &comp->blocks, *type));
 
             // A value type is already a pointer, a structured type needs to have it added
             if (typeStructured(*type))
