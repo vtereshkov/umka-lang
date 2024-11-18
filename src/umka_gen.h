@@ -55,13 +55,13 @@ void genPushGlobalPtr   (CodeGen *gen, void *ptrVal);
 void genPushLocalPtr    (CodeGen *gen, int offset);
 void genPushLocalPtrZero(CodeGen *gen, int offset, int size);
 void genPushLocal       (CodeGen *gen, TypeKind typeKind, int offset);
-void genPushReg         (CodeGen *gen, int regIndex);
+void genPushReg         (CodeGen *gen, RegisterIndex regIndex);
 void genPushStruct      (CodeGen *gen, int size);
 void genPushUpvalue     (CodeGen *gen);
 void genPushZero        (CodeGen *gen, int slots);
 
 void genPop   (CodeGen *gen);
-void genPopReg(CodeGen *gen, int regIndex);
+void genPopReg(CodeGen *gen, RegisterIndex regIndex);
 void genDup   (CodeGen *gen);
 void genSwap  (CodeGen *gen);
 void genZero  (CodeGen *gen, int size);

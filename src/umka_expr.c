@@ -109,9 +109,9 @@ static void doEscapeToHeap(Compiler *comp, Type *ptrType)
 
     // Copy to heap and use heap pointer
     genDup(&comp->gen);
-    genPopReg(&comp->gen, VM_REG_COMMON_0);
+    genPopReg(&comp->gen, REG_HEAP_COPY);
     genSwapChangeRefCntAssign(&comp->gen, ptrType->base);
-    genPushReg(&comp->gen, VM_REG_COMMON_0);
+    genPushReg(&comp->gen, REG_HEAP_COPY);
 }
 
 
@@ -1594,7 +1594,7 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
     else if ((*type)->sig.isMethod)
     {
         // Method receiver
-        genPushReg(&comp->gen, VM_REG_SELF);
+        genPushReg(&comp->gen, REG_SELF);
 
         // Increase receiver's reference count
         genChangeRefCnt(&comp->gen, TOK_PLUSPLUS, (*type)->sig.param[0]->type);
@@ -2392,7 +2392,7 @@ static void parseFieldSelector(Compiler *comp, Type **type, Const *constant, boo
         lexNext(&comp->lex);
 
         // Save concrete method's receiver to dedicated register and push method's entry point
-        genPopReg(&comp->gen, VM_REG_SELF);
+        genPopReg(&comp->gen, REG_SELF);
         doPushConst(comp, method->type, &method->constant);
 
         *type = method->type;
@@ -2419,7 +2419,7 @@ static void parseFieldSelector(Compiler *comp, Type **type, Const *constant, boo
             genDup(&comp->gen);
             genGetFieldPtr(&comp->gen, -field->type->sig.offsetFromSelf);
             genDeref(&comp->gen, TYPE_PTR);
-            genPopReg(&comp->gen, VM_REG_SELF);
+            genPopReg(&comp->gen, REG_SELF);
         }
 
         if (typeStructured(field->type))
@@ -2452,7 +2452,7 @@ static void parseCallSelector(Compiler *comp, Type **type, Const *constant, bool
 
     // Push result
     if ((*type)->kind != TYPE_VOID)
-        genPushReg(&comp->gen, VM_REG_RESULT);
+        genPushReg(&comp->gen, REG_RESULT);
 
     // Copy result to a temporary local variable to collect it as garbage when leaving the block
     if (typeGarbageCollected(*type))

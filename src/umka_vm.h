@@ -6,30 +6,39 @@
 #include "umka_types.h"
 
 
-enum
+typedef enum
 {
-    VM_NUM_REGS          = 16,
+    REG_RESULT,
+    REG_SELF,
+    REG_HEAP_COPY,
+    REG_SWITCH_EXPR,
+    REG_SWITCH_ACCUM,
+    REG_EXPR_LIST,
 
-    // General-purpose registers
-    VM_REG_RESULT        = 0,
-    VM_REG_SELF          = 1,
-    VM_REG_COMMON_0      = 2,
-    VM_REG_COMMON_1      = VM_REG_COMMON_0 + 1,
-    VM_REG_COMMON_2      = VM_REG_COMMON_0 + 2,
-    VM_REG_COMMON_3      = VM_REG_COMMON_0 + 3,
+    NUM_REGS
+} RegisterIndex;
 
-    VM_MIN_FREE_STACK    = 1024,                    // Slots
-    VM_MIN_HEAP_CHUNK    = 64,                      // Bytes
-    VM_MIN_HEAP_PAGE     = 1024 * 1024,             // Bytes
 
-    VM_RETURN_FROM_VM    = -2,                      // Used instead of return address in functions called by umkaCall()
-    VM_RETURN_FROM_FIBER = -1                       // Used instead of return address in fiber function calls
+enum    // Memory manager settings
+{
+    MEM_MIN_FREE_STACK = 1024,                    // Slots
+    MEM_MIN_HEAP_CHUNK = 64,                      // Bytes
+    MEM_MIN_HEAP_PAGE  = 1024 * 1024,             // Bytes
 };
 
-enum
+
+enum    // Special values for return addresses
 {
-    VM_RUNTIME_ERROR = -1
+    RETURN_FROM_VM    = -2,                      // Used instead of return address in functions called by umkaCall()
+    RETURN_FROM_FIBER = -1                       // Used instead of return address in fiber function calls
 };
+
+
+enum    // Runtime error codes
+{
+    ERR_RUNTIME = -1
+};
+
 
 typedef enum
 {
@@ -239,7 +248,7 @@ typedef struct tagFiber
     int ip;
     Slot *stack, *top, *base;
     int stackSize;
-    Slot reg[VM_NUM_REGS];
+    Slot reg[NUM_REGS];
     struct tagFiber *parent;
     DebugInfo *debugPerInstr;
     RefCntChangeCandidates *refCntChangeCandidates;

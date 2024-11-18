@@ -118,13 +118,13 @@ static bool optimizePushLocalPtr(CodeGen *gen, int offset)
 }
 
 
-static bool optimizePushReg(CodeGen *gen, int regIndex)
+static bool optimizePushReg(CodeGen *gen, RegisterIndex regIndex)
 {
     Instruction *prev = getPrevInstr(gen, 1);
 
     // Optimization: POP_REG SELF + PUSH_REG SELF -> 0
-    // This is an inequivalent replacement since it cannot update VM_REG_SELF, but the updated register is never actually used
-    if (prev && prev->opcode == OP_POP_REG && prev->operand.intVal == VM_REG_SELF && regIndex == VM_REG_SELF)
+    // This is an inequivalent replacement since it cannot update REG_SELF, but the updated register is never actually used
+    if (prev && prev->opcode == OP_POP_REG && prev->operand.intVal == REG_SELF && regIndex == REG_SELF)
     {
         genRemoveInstr(gen);
         return true;
@@ -487,7 +487,7 @@ void genPushLocal(CodeGen *gen, TypeKind typeKind, int offset)
 }
 
 
-void genPushReg(CodeGen *gen, int regIndex)
+void genPushReg(CodeGen *gen, RegisterIndex regIndex)
 {
     if (!optimizePushReg(gen, regIndex))
     {
@@ -524,7 +524,7 @@ void genPop(CodeGen *gen)
 }
 
 
-void genPopReg(CodeGen *gen, int regIndex)
+void genPopReg(CodeGen *gen, RegisterIndex regIndex)
 {
     const Instruction instr = {.opcode = OP_POP_REG, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = regIndex};
     genAddInstr(gen, &instr);
@@ -894,27 +894,27 @@ void genIfElseEpilog(CodeGen *gen)
 
 void genSwitchCondEpilog(CodeGen *gen)
 {
-    genPopReg(gen, VM_REG_COMMON_0);                        // Save switch expression
+    genPopReg(gen, REG_SWITCH_EXPR);                        // Save switch expression
     genPushIntConst(gen, 0);                                // Initialize comparison accumulator
-    genPopReg(gen, VM_REG_COMMON_1);
+    genPopReg(gen, REG_SWITCH_ACCUM);
 }
 
 
 void genCaseExprEpilog(CodeGen *gen, Const *constant)
 {
-    genPushReg(gen, VM_REG_COMMON_0);                       // Compare switch expression with case constant
+    genPushReg(gen, REG_SWITCH_EXPR);                       // Compare switch expression with case constant
     genPushIntConst(gen, constant->intVal);
     genBinary(gen, TOK_EQEQ, TYPE_INT, 0);
 
-    genPushReg(gen, VM_REG_COMMON_1);                       // Update comparison accumulator
+    genPushReg(gen, REG_SWITCH_ACCUM);                       // Update comparison accumulator
     genBinary(gen, TOK_OR, TYPE_BOOL, 0);
-    genPopReg(gen, VM_REG_COMMON_1);
+    genPopReg(gen, REG_SWITCH_ACCUM);
 }
 
 
 void genCaseBlockProlog(CodeGen *gen)
 {
-    genPushReg(gen, VM_REG_COMMON_1);                       // Push comparison accumulator
+    genPushReg(gen, REG_SWITCH_ACCUM);                       // Push comparison accumulator
     genGotoIf(gen, gen->ip + 2);                            // Goto "case" block start
     genSavePos(gen);
     genNop(gen);                                            // Goto next "case" or "default" (stub)
