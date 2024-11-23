@@ -1977,17 +1977,16 @@ static void parseDynArrayLiteral(Compiler *comp, Type **type, Const *constant)
     else
     {
         // Allocate array
-        Ident *staticArray = identAllocTempVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, staticArrayType, false);
-        doZeroVar(comp, staticArray);
+        const int staticArrayOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, staticArrayType);
 
         // Assign items
         for (int i = staticArrayType->numItems - 1; i >= 0; i--)
         {
-            genPushLocalPtr(&comp->gen, staticArray->offset + i * itemSize);
-            genSwapChangeRefCntAssign(&comp->gen, staticArrayType->base);
+            genPushLocalPtr(&comp->gen, staticArrayOffset + i * itemSize);
+            genSwapAssign(&comp->gen, staticArrayType->base->kind, typeSizeNoCheck(staticArrayType->base));
         }
 
-        doPushVarPtr(comp, staticArray);
+        genPushLocalPtr(&comp->gen, staticArrayOffset);
     }
 
     // Convert to dynamic array
