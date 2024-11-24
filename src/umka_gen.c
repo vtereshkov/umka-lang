@@ -166,6 +166,21 @@ static bool optimizePop(CodeGen *gen)
 }
 
 
+static bool optimizePopReg(CodeGen *gen, RegisterIndex regIndex)
+{
+    Instruction *prev = getPrevInstr(gen, 1);
+
+    // Optimization: PUSH_REG n + POP_REG n -> 0
+    if (prev && prev->opcode == OP_PUSH_REG && prev->operand.intVal == regIndex)
+    {
+        genRemoveInstr(gen);
+        return true;
+    }
+
+    return false;
+}
+
+
 static bool optimizeSwapAssign(CodeGen *gen, TypeKind typeKind, int structSize)
 {
     Instruction *prev = getPrevInstr(gen, 1);
@@ -526,8 +541,11 @@ void genPop(CodeGen *gen)
 
 void genPopReg(CodeGen *gen, RegisterIndex regIndex)
 {
-    const Instruction instr = {.opcode = OP_POP_REG, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = regIndex};
-    genAddInstr(gen, &instr);
+    if (!optimizePopReg(gen, regIndex))
+    {
+        const Instruction instr = {.opcode = OP_POP_REG, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = regIndex};
+        genAddInstr(gen, &instr);
+    }
 }
 
 
