@@ -913,27 +913,24 @@ void genIfElseEpilog(CodeGen *gen)
 void genSwitchCondEpilog(CodeGen *gen)
 {
     genPopReg(gen, REG_SWITCH_EXPR);                        // Save switch expression
-    genPushIntConst(gen, 0);                                // Initialize comparison accumulator
-    genPopReg(gen, REG_SWITCH_ACCUM);
 }
 
 
-void genCaseExprEpilog(CodeGen *gen, Const *constant)
+void genCaseConstantCheck(CodeGen *gen, Const *constant)
 {
-    genPushReg(gen, REG_SWITCH_EXPR);                       // Compare switch expression with case constant
+    genPushReg(gen, REG_SWITCH_EXPR);                       // Compare switch expression to case constant
     genPushIntConst(gen, constant->intVal);
     genBinary(gen, TOK_EQEQ, TYPE_INT, 0);
-
-    genPushReg(gen, REG_SWITCH_ACCUM);                       // Update comparison accumulator
-    genBinary(gen, TOK_OR, TYPE_BOOL, 0);
-    genPopReg(gen, REG_SWITCH_ACCUM);
+    genSavePos(gen);
+    genNop(gen);                                            // Goto "case" block start (stub)
 }
 
 
-void genCaseBlockProlog(CodeGen *gen)
+void genCaseBlockProlog(CodeGen *gen, int numCaseConstants)
 {
-    genPushReg(gen, REG_SWITCH_ACCUM);                       // Push comparison accumulator
-    genGotoIf(gen, gen->ip + 2);                            // Goto "case" block start
+    for (int i = 0; i < numCaseConstants; i++)
+        genGoFromToIf(gen, genRestorePos(gen), gen->ip + 1); // Goto "case" block start (fixup)
+
     genSavePos(gen);
     genNop(gen);                                            // Goto next "case" or "default" (stub)
 }

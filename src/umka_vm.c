@@ -149,6 +149,16 @@ static const char *builtinSpelling [] =
 };
 
 
+static const char *regSpelling [] =
+{
+    "RESULT",
+    "SELF",
+    "HEAP_COPY",
+    "SWITCH_EXPR",
+    "EXPR_LIST"
+};
+
+
 // Memory management
 
 static void pageInit(HeapPages *pages, Fiber *fiber, Error *error)
@@ -3860,12 +3870,12 @@ int vmAsm(int ip, Instruction *code, DebugInfo *debugPerInstr, char *buf, int si
                 chars += snprintf(buf + chars, nonneg(size - chars), " %lld", (long long int)instr->operand.intVal);
             break;
         }
+        case OP_PUSH_REG:
+        case OP_POP_REG:                chars += snprintf(buf + chars, nonneg(size - chars), " %s",  regSpelling[instr->operand.intVal]); break;
         case OP_PUSH_ZERO:
         case OP_PUSH_LOCAL_PTR:
         case OP_PUSH_LOCAL:
-        case OP_PUSH_REG:
         case OP_POP:
-        case OP_POP_REG:
         case OP_ZERO:
         case OP_ASSIGN:
         case OP_ASSIGN_PARAM:

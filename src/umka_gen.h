@@ -110,19 +110,19 @@ void genHalt(CodeGen *gen);
 
 // Compound VM instructions
 
-void genGoFromTo(CodeGen *gen, int start, int dest);
-void genGoFromToIf(CodeGen *gen, int start, int dest);
+void genGoFromTo    (CodeGen *gen, int start, int dest);
+void genGoFromToIf  (CodeGen *gen, int start, int dest);
 
 void genIfCondEpilog(CodeGen *gen);
-void genIfEpilog(CodeGen *gen);
+void genIfEpilog    (CodeGen *gen);
 void genElseProlog  (CodeGen *gen);
 void genIfElseEpilog(CodeGen *gen);
 
-void genSwitchCondEpilog(CodeGen *gen);
-void genCaseExprEpilog  (CodeGen *gen, Const *constant);
-void genCaseBlockProlog (CodeGen *gen);
-void genCaseBlockEpilog (CodeGen *gen);
-void genSwitchEpilog    (CodeGen *gen, int numCases);
+void genSwitchCondEpilog    (CodeGen *gen);
+void genCaseConstantCheck   (CodeGen *gen, Const *constant);
+void genCaseBlockProlog     (CodeGen *gen, int numCaseConstants);
+void genCaseBlockEpilog     (CodeGen *gen);
+void genSwitchEpilog        (CodeGen *gen, int numCases);
 
 void genWhileCondProlog(CodeGen *gen);
 void genWhileCondEpilog(CodeGen *gen);

@@ -531,6 +531,8 @@ static void parseExprCase(Compiler *comp, Type *selectorType, ConstArray *existi
     lexEat(&comp->lex, TOK_CASE);
 
     // expr {"," expr}
+    int numCaseConstants = 0;
+
     while (1)
     {
         Const constant;
@@ -545,7 +547,8 @@ static void parseExprCase(Compiler *comp, Type *selectorType, ConstArray *existi
             comp->error.handler(comp->error.context, "Duplicate case constant");
         constArrayAppend(existingConstants, constant);
 
-        genCaseExprEpilog(&comp->gen, &constant);
+        genCaseConstantCheck(&comp->gen, &constant);
+        numCaseConstants++;
 
         if (comp->lex.tok.kind != TOK_COMMA)
             break;
@@ -555,7 +558,7 @@ static void parseExprCase(Compiler *comp, Type *selectorType, ConstArray *existi
     // ":" stmtList
     lexEat(&comp->lex, TOK_COLON);
 
-    genCaseBlockProlog(&comp->gen);
+    genCaseBlockProlog(&comp->gen, numCaseConstants);
 
     // Additional scope embracing stmtList
     blocksEnter(&comp->blocks);

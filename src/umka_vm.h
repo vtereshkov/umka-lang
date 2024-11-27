@@ -12,7 +12,6 @@ typedef enum
     REG_SELF,
     REG_HEAP_COPY,
     REG_SWITCH_EXPR,
-    REG_SWITCH_ACCUM,
     REG_EXPR_LIST,
 
     NUM_REGS
