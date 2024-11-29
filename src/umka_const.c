@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 #include <math.h>
 
 #include "umka_const.h"
@@ -179,6 +180,8 @@ void constBinary(Consts *consts, Const *lhs, const Const *rhs, TokenKind tokKind
             {
                 if (rhs->intVal == 0)
                     consts->error->handler(consts->error->context, "Division by zero");
+                if (lhs->intVal == LLONG_MIN && rhs->intVal == -1)
+                    consts->error->handler(consts->error->context, "Overflow of int");
                 lhs->intVal /= rhs->intVal;
                 break;
             }
@@ -186,6 +189,8 @@ void constBinary(Consts *consts, Const *lhs, const Const *rhs, TokenKind tokKind
             {
                 if (rhs->intVal == 0)
                     consts->error->handler(consts->error->context, "Division by zero");
+                if (lhs->intVal == LLONG_MIN && rhs->intVal == -1)
+                    consts->error->handler(consts->error->context, "Overflow of int");
                 lhs->intVal %= rhs->intVal;
                 break;
             }

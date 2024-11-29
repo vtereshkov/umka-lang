@@ -3080,20 +3080,21 @@ static FORCE_INLINE void doUnary(Fiber *fiber, Error *error)
 static FORCE_INLINE void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
 {
     Slot rhs = *fiber->top++;
+    Slot *lhs = fiber->top;
 
     if (fiber->code[fiber->ip].typeKind == TYPE_PTR)
     {
         switch (fiber->code[fiber->ip].tokKind)
         {
-            case TOK_EQEQ:      fiber->top->intVal = fiber->top->ptrVal == rhs.ptrVal; break;
-            case TOK_NOTEQ:     fiber->top->intVal = fiber->top->ptrVal != rhs.ptrVal; break;
+            case TOK_EQEQ:      lhs->intVal = lhs->ptrVal == rhs.ptrVal; break;
+            case TOK_NOTEQ:     lhs->intVal = lhs->ptrVal != rhs.ptrVal; break;
 
             default:            error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal instruction"); return;
         }
     }
     else if (fiber->code[fiber->ip].typeKind == TYPE_STR)
     {
-        char *lhsStr = (char *)fiber->top->ptrVal;
+        char *lhsStr = (char *)lhs->ptrVal;
         if (!lhsStr)
             lhsStr = doGetEmptyStr();
 
@@ -3130,16 +3131,16 @@ static FORCE_INLINE void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
                 memmove(buf + lhsLen, rhsStr, rhsLen + 1);
                 getStrDims(buf)->len = lhsLen + rhsLen;
 
-                fiber->top->ptrVal = buf;
+                lhs->ptrVal = buf;
                 break;
             }
 
-            case TOK_EQEQ:      fiber->top->intVal = strcmp(lhsStr, rhsStr) == 0; break;
-            case TOK_NOTEQ:     fiber->top->intVal = strcmp(lhsStr, rhsStr) != 0; break;
-            case TOK_GREATER:   fiber->top->intVal = strcmp(lhsStr, rhsStr)  > 0; break;
-            case TOK_LESS:      fiber->top->intVal = strcmp(lhsStr, rhsStr)  < 0; break;
-            case TOK_GREATEREQ: fiber->top->intVal = strcmp(lhsStr, rhsStr) >= 0; break;
-            case TOK_LESSEQ:    fiber->top->intVal = strcmp(lhsStr, rhsStr) <= 0; break;
+            case TOK_EQEQ:      lhs->intVal = strcmp(lhsStr, rhsStr) == 0; break;
+            case TOK_NOTEQ:     lhs->intVal = strcmp(lhsStr, rhsStr) != 0; break;
+            case TOK_GREATER:   lhs->intVal = strcmp(lhsStr, rhsStr)  > 0; break;
+            case TOK_LESS:      lhs->intVal = strcmp(lhsStr, rhsStr)  < 0; break;
+            case TOK_GREATEREQ: lhs->intVal = strcmp(lhsStr, rhsStr) >= 0; break;
+            case TOK_LESSEQ:    lhs->intVal = strcmp(lhsStr, rhsStr) <= 0; break;
 
             default:            error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal instruction"); return;
         }
@@ -3150,8 +3151,8 @@ static FORCE_INLINE void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
 
         switch (fiber->code[fiber->ip].tokKind)
         {
-            case TOK_EQEQ:      fiber->top->intVal = memcmp(fiber->top->ptrVal, rhs.ptrVal, structSize) == 0; break;
-            case TOK_NOTEQ:     fiber->top->intVal = memcmp(fiber->top->ptrVal, rhs.ptrVal, structSize) != 0; break;
+            case TOK_EQEQ:      lhs->intVal = memcmp(lhs->ptrVal, rhs.ptrVal, structSize) == 0; break;
+            case TOK_NOTEQ:     lhs->intVal = memcmp(lhs->ptrVal, rhs.ptrVal, structSize) != 0; break;
 
             default:            error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal instruction"); return;
         }
@@ -3160,30 +3161,30 @@ static FORCE_INLINE void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
     {
         switch (fiber->code[fiber->ip].tokKind)
         {
-            case TOK_PLUS:  fiber->top->realVal += rhs.realVal; break;
-            case TOK_MINUS: fiber->top->realVal -= rhs.realVal; break;
-            case TOK_MUL:   fiber->top->realVal *= rhs.realVal; break;
+            case TOK_PLUS:  lhs->realVal += rhs.realVal; break;
+            case TOK_MINUS: lhs->realVal -= rhs.realVal; break;
+            case TOK_MUL:   lhs->realVal *= rhs.realVal; break;
             case TOK_DIV:
             {
                 if (rhs.realVal == 0)
                     error->runtimeHandler(error->context, ERR_RUNTIME, "Division by zero");
-                fiber->top->realVal /= rhs.realVal;
+                lhs->realVal /= rhs.realVal;
                 break;
             }
             case TOK_MOD:
             {
                 if (rhs.realVal == 0)
                     error->runtimeHandler(error->context, ERR_RUNTIME, "Division by zero");
-                fiber->top->realVal = fmod(fiber->top->realVal, rhs.realVal);
+                lhs->realVal = fmod(lhs->realVal, rhs.realVal);
                 break;
             }
 
-            case TOK_EQEQ:      fiber->top->intVal = fiber->top->realVal == rhs.realVal; break;
-            case TOK_NOTEQ:     fiber->top->intVal = fiber->top->realVal != rhs.realVal; break;
-            case TOK_GREATER:   fiber->top->intVal = fiber->top->realVal >  rhs.realVal; break;
-            case TOK_LESS:      fiber->top->intVal = fiber->top->realVal <  rhs.realVal; break;
-            case TOK_GREATEREQ: fiber->top->intVal = fiber->top->realVal >= rhs.realVal; break;
-            case TOK_LESSEQ:    fiber->top->intVal = fiber->top->realVal <= rhs.realVal; break;
+            case TOK_EQEQ:      lhs->intVal = lhs->realVal == rhs.realVal; break;
+            case TOK_NOTEQ:     lhs->intVal = lhs->realVal != rhs.realVal; break;
+            case TOK_GREATER:   lhs->intVal = lhs->realVal >  rhs.realVal; break;
+            case TOK_LESS:      lhs->intVal = lhs->realVal <  rhs.realVal; break;
+            case TOK_GREATEREQ: lhs->intVal = lhs->realVal >= rhs.realVal; break;
+            case TOK_LESSEQ:    lhs->intVal = lhs->realVal <= rhs.realVal; break;
 
             default:            error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal instruction"); return;
         }
@@ -3192,36 +3193,36 @@ static FORCE_INLINE void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
     {
         switch (fiber->code[fiber->ip].tokKind)
         {
-            case TOK_PLUS:  fiber->top->uintVal += rhs.uintVal; break;
-            case TOK_MINUS: fiber->top->uintVal -= rhs.uintVal; break;
-            case TOK_MUL:   fiber->top->uintVal *= rhs.uintVal; break;
+            case TOK_PLUS:  lhs->uintVal += rhs.uintVal; break;
+            case TOK_MINUS: lhs->uintVal -= rhs.uintVal; break;
+            case TOK_MUL:   lhs->uintVal *= rhs.uintVal; break;
             case TOK_DIV:
             {
                 if (rhs.uintVal == 0)
                     error->runtimeHandler(error->context, ERR_RUNTIME, "Division by zero");
-                fiber->top->uintVal /= rhs.uintVal;
+                lhs->uintVal /= rhs.uintVal;
                 break;
             }
             case TOK_MOD:
             {
                 if (rhs.uintVal == 0)
                     error->runtimeHandler(error->context, ERR_RUNTIME, "Division by zero");
-                fiber->top->uintVal %= rhs.uintVal;
+                lhs->uintVal %= rhs.uintVal;
                 break;
             }
 
-            case TOK_SHL:   fiber->top->uintVal <<= rhs.uintVal; break;
-            case TOK_SHR:   fiber->top->uintVal >>= rhs.uintVal; break;
-            case TOK_AND:   fiber->top->uintVal &= rhs.uintVal; break;
-            case TOK_OR:    fiber->top->uintVal |= rhs.uintVal; break;
-            case TOK_XOR:   fiber->top->uintVal ^= rhs.uintVal; break;
+            case TOK_SHL:   lhs->uintVal <<= rhs.uintVal; break;
+            case TOK_SHR:   lhs->uintVal >>= rhs.uintVal; break;
+            case TOK_AND:   lhs->uintVal &= rhs.uintVal; break;
+            case TOK_OR:    lhs->uintVal |= rhs.uintVal; break;
+            case TOK_XOR:   lhs->uintVal ^= rhs.uintVal; break;
 
-            case TOK_EQEQ:      fiber->top->uintVal = fiber->top->uintVal == rhs.uintVal; break;
-            case TOK_NOTEQ:     fiber->top->uintVal = fiber->top->uintVal != rhs.uintVal; break;
-            case TOK_GREATER:   fiber->top->uintVal = fiber->top->uintVal >  rhs.uintVal; break;
-            case TOK_LESS:      fiber->top->uintVal = fiber->top->uintVal <  rhs.uintVal; break;
-            case TOK_GREATEREQ: fiber->top->uintVal = fiber->top->uintVal >= rhs.uintVal; break;
-            case TOK_LESSEQ:    fiber->top->uintVal = fiber->top->uintVal <= rhs.uintVal; break;
+            case TOK_EQEQ:      lhs->uintVal = lhs->uintVal == rhs.uintVal; break;
+            case TOK_NOTEQ:     lhs->uintVal = lhs->uintVal != rhs.uintVal; break;
+            case TOK_GREATER:   lhs->uintVal = lhs->uintVal >  rhs.uintVal; break;
+            case TOK_LESS:      lhs->uintVal = lhs->uintVal <  rhs.uintVal; break;
+            case TOK_GREATEREQ: lhs->uintVal = lhs->uintVal >= rhs.uintVal; break;
+            case TOK_LESSEQ:    lhs->uintVal = lhs->uintVal <= rhs.uintVal; break;
 
             default:            error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal instruction"); return;
         }
@@ -3230,36 +3231,40 @@ static FORCE_INLINE void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
     {
         switch (fiber->code[fiber->ip].tokKind)
         {
-            case TOK_PLUS:  fiber->top->intVal += rhs.intVal; break;
-            case TOK_MINUS: fiber->top->intVal -= rhs.intVal; break;
-            case TOK_MUL:   fiber->top->intVal *= rhs.intVal; break;
+            case TOK_PLUS:  lhs->intVal += rhs.intVal; break;
+            case TOK_MINUS: lhs->intVal -= rhs.intVal; break;
+            case TOK_MUL:   lhs->intVal *= rhs.intVal; break;
             case TOK_DIV:
             {
                 if (rhs.intVal == 0)
                     error->runtimeHandler(error->context, ERR_RUNTIME, "Division by zero");
-                fiber->top->intVal /= rhs.intVal;
+                if (lhs->intVal == LLONG_MIN && rhs.intVal == -1)
+                    error->runtimeHandler(error->context, ERR_RUNTIME, "Overflow of int");
+                lhs->intVal /= rhs.intVal;
                 break;
             }
             case TOK_MOD:
             {
                 if (rhs.intVal == 0)
                     error->runtimeHandler(error->context, ERR_RUNTIME, "Division by zero");
-                fiber->top->intVal %= rhs.intVal;
+                if (lhs->intVal == LLONG_MIN && rhs.intVal == -1)
+                    error->runtimeHandler(error->context, ERR_RUNTIME, "Overflow of int");
+                lhs->intVal %= rhs.intVal;
                 break;
             }
 
-            case TOK_SHL:   fiber->top->intVal <<= rhs.intVal; break;
-            case TOK_SHR:   fiber->top->intVal >>= rhs.intVal; break;
-            case TOK_AND:   fiber->top->intVal &= rhs.intVal; break;
-            case TOK_OR:    fiber->top->intVal |= rhs.intVal; break;
-            case TOK_XOR:   fiber->top->intVal ^= rhs.intVal; break;
+            case TOK_SHL:   lhs->intVal <<= rhs.intVal; break;
+            case TOK_SHR:   lhs->intVal >>= rhs.intVal; break;
+            case TOK_AND:   lhs->intVal &= rhs.intVal; break;
+            case TOK_OR:    lhs->intVal |= rhs.intVal; break;
+            case TOK_XOR:   lhs->intVal ^= rhs.intVal; break;
 
-            case TOK_EQEQ:      fiber->top->intVal = fiber->top->intVal == rhs.intVal; break;
-            case TOK_NOTEQ:     fiber->top->intVal = fiber->top->intVal != rhs.intVal; break;
-            case TOK_GREATER:   fiber->top->intVal = fiber->top->intVal >  rhs.intVal; break;
-            case TOK_LESS:      fiber->top->intVal = fiber->top->intVal <  rhs.intVal; break;
-            case TOK_GREATEREQ: fiber->top->intVal = fiber->top->intVal >= rhs.intVal; break;
-            case TOK_LESSEQ:    fiber->top->intVal = fiber->top->intVal <= rhs.intVal; break;
+            case TOK_EQEQ:      lhs->intVal = lhs->intVal == rhs.intVal; break;
+            case TOK_NOTEQ:     lhs->intVal = lhs->intVal != rhs.intVal; break;
+            case TOK_GREATER:   lhs->intVal = lhs->intVal >  rhs.intVal; break;
+            case TOK_LESS:      lhs->intVal = lhs->intVal <  rhs.intVal; break;
+            case TOK_GREATEREQ: lhs->intVal = lhs->intVal >= rhs.intVal; break;
+            case TOK_LESSEQ:    lhs->intVal = lhs->intVal <= rhs.intVal; break;
 
             default:            error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal instruction"); return;
         }
