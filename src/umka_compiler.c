@@ -128,6 +128,7 @@ static void compilerDeclareBuiltinIdents(Compiler *comp)
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "trunc",      comp->intType,     BUILTIN_TRUNC);
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "ceil",       comp->intType,     BUILTIN_CEIL);
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "floor",      comp->intType,     BUILTIN_FLOOR);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "abs",        comp->intType,     BUILTIN_ABS);
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "fabs",       comp->realType,    BUILTIN_FABS);
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "sqrt",       comp->realType,    BUILTIN_SQRT);
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "sin",        comp->realType,    BUILTIN_SIN);

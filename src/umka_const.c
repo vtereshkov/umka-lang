@@ -4,6 +4,7 @@
 #include <string.h>
 #include <limits.h>
 #include <math.h>
+#include <inttypes.h>
 
 #include "umka_const.h"
 
@@ -230,6 +231,13 @@ void constCallBuiltin(Consts *consts, Const *arg, const Const *arg2, TypeKind ar
         case BUILTIN_TRUNC:     arg->intVal  = (int64_t)trunc(arg->realVal); break;
         case BUILTIN_CEIL:      arg->intVal  = (int64_t)ceil (arg->realVal); break;
         case BUILTIN_FLOOR:     arg->intVal  = (int64_t)floor(arg->realVal); break;
+        case BUILTIN_ABS:
+        {
+            if (arg->intVal == LLONG_MIN)
+                consts->error->handler(consts->error->context, "abs() domain error");
+            arg->intVal = llabs(arg->intVal);
+            break;
+        }
         case BUILTIN_FABS:      arg->realVal = fabs(arg->realVal); break;
         case BUILTIN_SQRT:
         {

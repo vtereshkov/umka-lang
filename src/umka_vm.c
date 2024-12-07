@@ -19,6 +19,7 @@
 #include <math.h>
 #include <limits.h>
 #include <ctype.h>
+#include <inttypes.h>
 
 #include "umka_vm.h"
 
@@ -112,6 +113,7 @@ static const char *builtinSpelling [] =
     "trunc",
     "ceil",
     "floor",
+    "abs",
     "fabs",
     "sqrt",
     "sin",
@@ -3550,6 +3552,13 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         case BUILTIN_TRUNC:         fiber->top->intVal = (int64_t)trunc(fiber->top->realVal); break;
         case BUILTIN_CEIL:          fiber->top->intVal = (int64_t)ceil (fiber->top->realVal); break;
         case BUILTIN_FLOOR:         fiber->top->intVal = (int64_t)floor(fiber->top->realVal); break;
+        case BUILTIN_ABS:
+        {
+            if (fiber->top->intVal == LLONG_MIN)
+                error->runtimeHandler(error->context, ERR_RUNTIME, "abs() domain error");
+            fiber->top->intVal = llabs(fiber->top->intVal);
+            break;
+        }
         case BUILTIN_FABS:          fiber->top->realVal = fabs(fiber->top->realVal); break;
         case BUILTIN_SQRT:
         {

@@ -683,6 +683,7 @@ fn round(x: real): int          // Rounding to the nearest integer
 fn trunc(x: real): int          // Rounding towards zero
 fn ceil (x: real): int          // Rounding upwards
 fn floor(x: real): int          // Rounding downwards
+fn abs (x: int): int            // Absolute value
 fn fabs (x: real): real         // Absolute value
 fn sqrt (x: real): real         // Square root
 fn sin  (x: real): real         // Sine

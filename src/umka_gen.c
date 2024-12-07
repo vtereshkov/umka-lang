@@ -388,6 +388,12 @@ static bool optimizeCallBuiltin(CodeGen *gen, TypeKind typeKind, BuiltinFunc bui
                 }
                 break;
             }
+            case BUILTIN_ABS:
+            {
+                arg.intVal = prev->operand.intVal;
+                resultTypeKind = TYPE_INT;
+                break;
+            }
             case BUILTIN_ROUND:
             case BUILTIN_TRUNC:
             case BUILTIN_CEIL:

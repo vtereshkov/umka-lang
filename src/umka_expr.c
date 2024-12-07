@@ -833,9 +833,11 @@ static void parseBuiltinIOCall(Compiler *comp, Type **type, Const *constant, Bui
 
 static void parseBuiltinMathCall(Compiler *comp, Type **type, Const *constant, BuiltinFunc builtin)
 {
-    *type = comp->realType;
+    Type *argType = (builtin == BUILTIN_ABS) ? comp->intType : comp->realType;
+
+    *type = argType;
     parseExpr(comp, type, constant);
-    doAssertImplicitTypeConv(comp, comp->realType, type, constant);
+    doAssertImplicitTypeConv(comp, argType, type, constant);
 
     Const constant2Val = {.realVal = 0};
     Const *constant2 = NULL;
@@ -854,11 +856,11 @@ static void parseBuiltinMathCall(Compiler *comp, Type **type, Const *constant, B
     }
 
     if (constant)
-        constCallBuiltin(&comp->consts, constant, constant2, TYPE_REAL, builtin);
+        constCallBuiltin(&comp->consts, constant, constant2, argType->kind, builtin);
     else
-        genCallBuiltin(&comp->gen, TYPE_REAL, builtin);
+        genCallBuiltin(&comp->gen, argType->kind, builtin);
 
-    if (builtin == BUILTIN_ROUND || builtin == BUILTIN_TRUNC || builtin == BUILTIN_CEIL || builtin == BUILTIN_FLOOR)
+    if (builtin == BUILTIN_ROUND || builtin == BUILTIN_TRUNC || builtin == BUILTIN_CEIL || builtin == BUILTIN_FLOOR || builtin == BUILTIN_ABS)
         *type = comp->intType;
     else
         *type = comp->realType;
@@ -1515,6 +1517,7 @@ static void parseBuiltinCall(Compiler *comp, Type **type, Const *constant, Built
         case BUILTIN_TRUNC:
         case BUILTIN_CEIL:
         case BUILTIN_FLOOR:
+        case BUILTIN_ABS:
         case BUILTIN_FABS:
         case BUILTIN_SQRT:
         case BUILTIN_SIN:
