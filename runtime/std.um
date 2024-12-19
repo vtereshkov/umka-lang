@@ -174,8 +174,7 @@ fn feof*(f: File): bool {
     if f == null {
         return true
     }
-    eof := bool(rtlfeof(f))               
-    return eof
+    return rtlfeof(f) != 0
 }
 
 fn rtlfflush(f: File): int
