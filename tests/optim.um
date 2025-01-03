@@ -1,0 +1,28 @@
+fn g(): bool {
+	return false
+}
+
+fn f(): bool {
+	b := true
+	g()
+	return b || g()
+}
+
+fn test1() {
+	printf("%v\n", f())
+}
+
+fn test2() {
+    x := 3.141
+    x = true ? 1 : -1
+    printf("%g\n", x)
+}
+
+fn test*() {
+	test1()
+	test2()
+}
+
+fn main() {
+	test()
+}

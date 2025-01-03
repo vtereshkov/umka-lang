@@ -652,8 +652,8 @@ Error: Empty string (code -2) from "foo":
     foo: (5)
     fooTest: (11)
     test: (25)
-    main: (70)
-    <unknown>: (102)
+    main: (71)
+    <unknown>: (104)
 9
 
 
@@ -1251,6 +1251,12 @@ Sorting by date:
 
 ["hi" "bye" "" "" "" "" "" "" "" ""]
 
+
+
+>>> Peephole optimizations
+
+true
+1
 
 
 >>> External libraries
