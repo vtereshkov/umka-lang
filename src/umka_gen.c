@@ -28,12 +28,20 @@ static bool genJustNotified(CodeGen *gen, GenNotificationKind kind)
 }
 
 
+static void genUpdateLastJump(CodeGen *gen, int ip)
+{
+    if (ip > gen->lastJump)
+        gen->lastJump = ip;
+}
+
+
 void genInit(CodeGen *gen, DebugInfo *debug, Error *error)
 {
     gen->capacity = 1000;
     gen->ip = 0;
     gen->code = malloc(gen->capacity * sizeof(Instruction));
     gen->top = -1;
+    gen->lastJump = 0;
     gen->breaks = gen->continues = gen->returns = NULL;
     gen->debug = debug;
     gen->debugPerInstr = malloc(gen->capacity * sizeof(DebugInfo));
@@ -81,13 +89,9 @@ static void genRemoveInstr(CodeGen *gen)
 
 static Instruction *getPrevInstr(CodeGen *gen, int depth)
 {
-    if (gen->ip < depth)
-        return NULL;
-
     // No branching within the peephole
-    if (gen->top >= 0)
-        if (gen->ip < gen->stack[gen->top] + depth)
-            return NULL;
+    if (gen->ip - depth < gen->lastJump)
+        return NULL;
 
     return &gen->code[gen->ip - depth];
 }
@@ -760,6 +764,9 @@ void genStrengthenPtr(CodeGen *gen)
 
 void genGoto(CodeGen *gen, int dest)
 {
+    genUpdateLastJump(gen, gen->ip);
+    genUpdateLastJump(gen, dest);
+
     const Instruction instr = {.opcode = OP_GOTO, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = dest};
     genAddInstr(gen, &instr);
 }
@@ -767,6 +774,9 @@ void genGoto(CodeGen *gen, int dest)
 
 void genGotoIf(CodeGen *gen, int dest)
 {
+    genUpdateLastJump(gen, gen->ip);
+    genUpdateLastJump(gen, dest);
+
     const Instruction instr = {.opcode = OP_GOTO_IF, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = dest};
     genAddInstr(gen, &instr);
 }
@@ -774,6 +784,9 @@ void genGotoIf(CodeGen *gen, int dest)
 
 void genGotoIfNot(CodeGen *gen, int dest)
 {
+    genUpdateLastJump(gen, gen->ip);
+    genUpdateLastJump(gen, dest);
+
     const Instruction instr = {.opcode = OP_GOTO_IF_NOT, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = dest};
     genAddInstr(gen, &instr);
 }
@@ -852,6 +865,7 @@ void genHalt(CodeGen *gen)
 
 static void genSavePos(CodeGen *gen)
 {
+    genUpdateLastJump(gen, gen->ip);
     gen->stack[++gen->top] = gen->ip;
 }
 
