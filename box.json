@@ -1,6 +1,6 @@
 {
     "name": "umka",
-    "version": "v1.5.1",
+    "version": "v1.5.2",
     "author": "Vasiliy Tereshkov <vtereshkov@mail.ru>",
     "license": "BSD-2",
     "description": "The Umka Programming language",

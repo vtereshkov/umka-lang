@@ -46,6 +46,7 @@ import (
     "enums.um"
     "fwdtypes.um"
     "sorting.um"
+    "optim.um"
     "extlib.um"
 )
 
@@ -97,5 +98,6 @@ fn main() {
     printf("\n\n>>> Enumerations\n\n");             enums::test()
     printf("\n\n>>> Forward declarations\n\n");     fwdtypes::test()
     printf("\n\n>>> Sorting\n\n");                  sorting::test()
+    printf("\n\n>>> Peephole optimizations\n\n");   optim::test()
     printf("\n\n>>> External libraries\n\n");       extlib::test()
 }

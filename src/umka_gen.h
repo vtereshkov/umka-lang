@@ -34,6 +34,7 @@ typedef struct
     int ip, capacity;
     int stack[MAX_BLOCK_NESTING];
     int top;
+    int lastJump;
     Gotos *breaks, *continues, *returns;
     DebugInfo *debug, *debugPerInstr;
     GenNotification lastNotification;
