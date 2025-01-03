@@ -1,9 +1,11 @@
 #define __USE_MINGW_ANSI_STDIO 1
 
+#include <assert.h>
+#include <float.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
 #include <errno.h>
 
 #include "umka_common.h"
@@ -205,6 +207,17 @@ static char lexChar(Lexer *lex)
         }
     }
     return lex->buf[lex->bufPos];
+}
+
+
+static char lexCharIf(Lexer *lex, char ch)
+{
+    if (lex->buf[lex->bufPos] == ch)
+    {
+        lexChar(lex);
+        return true;
+    }
+    return false;
 }
 
 
@@ -663,44 +676,135 @@ static void lexOperator(Lexer *lex)
 }
 
 
-static void lexNumber(Lexer *lex)
+static int _baseCharVal(char c, int base)
 {
-    lex->tok.kind = TOK_NONE;
-    char ch = lex->buf[lex->bufPos];
-    char *tail;
-
-    // Integer number
-    lex->tok.kind = TOK_INTNUMBER;
-    lex->tok.uintVal = strtoull(lex->buf + lex->bufPos, &tail, 0);
-
-    if (errno == ERANGE)
-        lex->error->handler(lex->error->context, "Number is too large");
-
-    if (tail == lex->buf + lex->bufPos && ch != '.')
-    {
-        lex->tok.kind = TOK_NONE;
-        return;
+    switch (base) {
+        case 10: return c >= '0' && c <= '9' ? c - '0' : -1;
+        case 16: return c >= '0' && c <= '9' ? c - '0' : 
+                        c >= 'a' && c <= 'f' ? c - 'a' + 10 :
+                        c >= 'A' && c <= 'F' ? c - 'A' + 10 : -1;
     }
 
-    // Real number
-    if (tail[0] == '.' || tail[0] == 'E' || tail[0] == 'e')
+    assert(false);
+
+    return -1;
+}
+
+
+static enum {ROK, REMPTY, RRANGE, RTRAIL} _parseDigitSeq(const char *src, const char **tail, int base, size_t *len, size_t *out)
+{
+    *tail = src;
+    *len = 0;
+    *out = 0;
+
+    if (_baseCharVal(*src, base) == -1)
+        return REMPTY;
+
+    while (_baseCharVal(*src, base) != -1)
     {
-        lex->tok.kind = TOK_REALNUMBER;
-        lex->tok.realVal = strtod(lex->buf + lex->bufPos, &tail);
+        size_t newval = *out * base + _baseCharVal(*src, base);
+        if ((*out * base) / base != *out || newval < *out)
+            return RRANGE;
+        *out = newval;
+        
+        src++;
+        (*len)++;
 
-        if (lex->tok.realVal == HUGE_VAL)
-            lex->error->handler(lex->error->context, "Number is too large");
-
-        if (tail == lex->buf + lex->bufPos)
+        if (*src == '_')
         {
-            lex->tok.kind = TOK_NONE;
-            return;
+            if (_baseCharVal(*(src+1), base) != -1)
+                src++;
+            else
+                return RTRAIL;
         }
     }
 
-    int len = tail - (lex->buf + lex->bufPos);
-    lex->bufPos += len;
-    lex->pos += len;
+    *tail = src;
+    return ROK;
+}
+
+
+static size_t _lexDigitSeq(Lexer *lex, size_t *len, int base)
+{
+    const char *tail;
+    size_t result;
+    switch (_parseDigitSeq(lex->buf+lex->bufPos, &tail, base, len, &result))
+    {
+        case REMPTY: lex->error->handler(lex->error->context, "Invalid number"); 
+        case RRANGE: lex->error->handler(lex->error->context, "Number is too large"); 
+        case RTRAIL: lex->error->handler(lex->error->context, "Trailing number divider");
+    }
+
+    lex->pos += tail - (lex->buf + lex->bufPos);
+    lex->bufPos = tail - lex->buf;
+
+    return result;
+}
+
+
+static void lexNumber(Lexer *lex)
+{
+    lex->tok.kind = TOK_NONE;
+
+    size_t wholeLen = 0, whole = 0, decLen = 0, dec = 0, expLen = 0, exp = 0;
+    bool expNegative = false, isReal = false;
+    int base = 10;
+    
+    if (lex->buf[lex->bufPos] == '0' && lex->buf[lex->bufPos+1] == 'x')
+    {
+        lexChar(lex);
+        lexChar(lex);
+        lexCharIf(lex, '_');
+        base = 16;
+    }
+    
+    if (!(lex->buf[lex->bufPos] == '.' && base == 10))
+    {
+        whole = _lexDigitSeq(lex, &wholeLen, base);
+    }
+    
+    if (base == 10) 
+    {
+        if (lexCharIf(lex, '.'))
+        {
+            isReal = true;  
+
+            if (_baseCharVal(lex->buf[lex->bufPos], 10) != -1)
+                dec = _lexDigitSeq(lex, &decLen, 10);
+        }
+        
+        if (lexCharIf(lex, 'e') || lexCharIf(lex, 'E'))
+        {
+            isReal = true;
+
+            if (lexCharIf(lex, '-'))
+                expNegative = true;
+            else 
+                lexCharIf(lex, '+');
+
+            exp = _lexDigitSeq(lex, &expLen, 10);
+        }
+    }
+
+    if (isReal) 
+    {
+        lex->tok.kind = TOK_REALNUMBER;
+        lex->tok.realVal = whole;
+        lex->tok.realVal += dec/pow(10, decLen); 
+
+        if (expNegative)
+            lex->tok.realVal /= pow(10, exp);
+        else
+            lex->tok.realVal *= pow(10, exp);
+
+        if (lex->tok.realVal < -DBL_MAX || lex->tok.realVal > DBL_MAX)
+            lex->error->handler(lex->error->context, "Number is too large");
+    }
+    else
+    {
+        lex->tok.kind = TOK_INTNUMBER;
+        lex->tok.uintVal = whole;
+    }
 }
 
 
