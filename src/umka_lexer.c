@@ -757,6 +757,12 @@ static void lexNumber(Lexer *lex)
         lexCharIf(lex, '_');
         base = 16;
     }
+
+    if (lex->buf[lex->bufPos] == '.' && _baseCharVal(lex->buf[lex->bufPos+1], 10) == -1)
+    {
+        // Single dot is not a number
+        return;
+    }
     
     if (!(lex->buf[lex->bufPos] == '.' && base == 10))
     {
