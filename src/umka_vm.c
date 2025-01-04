@@ -1690,28 +1690,25 @@ static FORCE_INLINE void doCheckFormatString(const char *format, int *formatLen,
                 case 'e':
                 case 'E':
                 case 'g':
-                case 'G': 
+                case 'G':
                 {
                     switch (*size)
                     {
-                        case FORMAT_SIZE_NORMAL: *typeKind = TYPE_REAL32; break;
-                        case FORMAT_SIZE_LONG:   *typeKind = TYPE_REAL; break;
-                        default: error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal size specifier"); break;
+                        case FORMAT_SIZE_NORMAL:        *typeKind = TYPE_REAL32;    break;
+                        case FORMAT_SIZE_LONG:          *typeKind = TYPE_REAL;      break;
+                        default:                        error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal size specifier"); break;
                     }
                     break;
-                } 
-                case 's': 
-                case 'c': 
+                }
+                case 's':
+                case 'c':
                 {
                     *typeKind = format[i] == 's' ? TYPE_STR : TYPE_CHAR;
-
                     if (*size != FORMAT_SIZE_NORMAL)
-                    {
                         error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal size specifier");
-                    }
                     break;
-                } 
-                case 'v': *typeKind = TYPE_INTERFACE;  /* Actually any type */                  break;
+                }
+                case 'v': *typeKind = TYPE_INTERFACE;  /* Actually any type */      break;
 
                 default : error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal type character %c in format string", format[i]);
             }

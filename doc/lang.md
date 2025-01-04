@@ -42,7 +42,9 @@ Point_1
 
 ### Numbers
 
-Numbers in Umka can be integer (decimal or hexadecimal) or real, underscores can be used to separate digits.
+Numbers in Umka can be integer (decimal or hexadecimal) or real. 
+
+Underscores can be used to separate digits.
 
 Syntax:
 
@@ -58,6 +60,7 @@ Examples:
 
 ```
 16
+100_000_000
 0xA6
 0xffff
 3.14
