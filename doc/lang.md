@@ -42,14 +42,14 @@ Point_1
 
 ### Numbers
 
-Numbers in Umka can be integer (decimal or hexadecimal) or real.
+Numbers in Umka can be integer (decimal or hexadecimal) or real, underscores can be used to separate digits.
 
 Syntax:
 
 ```
 intNumber   = decNumber | hexHumber.
-decNumber   = digit {digit}.
-hexNumber   = "0" ("X | "x") hexDigit {hexDigit}.
+decNumber   = digit {["_"] digit}. 
+hexNumber   = "0" ("X | "x") ["_"] hexDigit {["_"] hexDigit}.
 realNumber  = decNumber ["." decNumber] [("E" | "e") decNumber].
 hexDigit    = digit | "A".."F" | "a".."f".
 ```
@@ -1560,8 +1560,8 @@ typeCast            = type "(" expr ")".
 enumConst           = [type] "." ident.
 ident               = (letter | "_") {letter | "_" | digit}.
 intNumber           = decNumber | hexHumber.
-decNumber           = digit {digit}.
-hexNumber           = "0" ("X | "x") hexDigit {hexDigit}.
+decNumber           = digit {["_"] digit}.
+hexNumber           = "0" ("X | "x") ["_"] hexDigit {["_"] hexDigit}.
 realNumber          = decNumber ["." decNumber] [("E" | "e") decNumber].
 charLiteral         = "'" (char | escSeq) "'".
 stringLiteral       = """ {char | escSeq} """.
