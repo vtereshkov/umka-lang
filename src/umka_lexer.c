@@ -693,17 +693,21 @@ static uint64_t _lexDigitSeq(Lexer *lex, int base, int *len, bool isFrac)
     uint64_t out = 0;
     *len = 0;
 
-    if (_baseCharVal(lex->buf[lex->bufPos], base) == -1)
+    if (_lexBaseCharVal(lex->buf[lex->bufPos], base) == -1)
         lex->error->handler(lex->error->context, "Invalid number");
 
-    while (_baseCharVal(lex->buf[lex->bufPos], base) != -1)
+    while (_lexBaseCharVal(lex->buf[lex->bufPos], base) != -1)
     {
         uint64_t newVal = out * base + _lexBaseCharVal(lex->buf[lex->bufPos], base);
         if ((out * base) / base != out || newVal < out)
+        {
             if (isFrac)
                 lex->error->handler(lex->error->context, "Number is too large");
+        }
         else 
+        {
             out = newVal;
+        }
         
         lexChar(lex);
         (*len)++;
@@ -716,6 +720,8 @@ static uint64_t _lexDigitSeq(Lexer *lex, int base, int *len, bool isFrac)
                 lex->error->handler(lex->error->context, "'_' must be placed between digits"); 
         }
     }
+
+    return out;
 }
 
 
@@ -743,7 +749,7 @@ static void lexNumber(Lexer *lex)
     
     if (!(lex->buf[lex->bufPos] == '.' && base == 10))
     {
-        whole = _lexDigitSeq(lex, &wholeLen, base, false);
+        whole = _lexDigitSeq(lex, base, &wholeLen, false);
     }
     
     if (base == 10) 
@@ -753,7 +759,7 @@ static void lexNumber(Lexer *lex)
             isReal = true;  
 
             if (_lexBaseCharVal(lex->buf[lex->bufPos], 10) != -1)
-                frac = _lexDigitSeq(lex, &fracLen, 10, true);
+                frac = _lexDigitSeq(lex, 10, &fracLen, true);
         }
         
         if (lexCharIf(lex, 'e') || lexCharIf(lex, 'E'))
@@ -765,7 +771,7 @@ static void lexNumber(Lexer *lex)
             else 
                 lexCharIf(lex, '+');
 
-            exp = _lexDigitSeq(lex, &expLen, 10, false);
+            exp = _lexDigitSeq(lex, 10, &expLen, false);
         }
     }
 
