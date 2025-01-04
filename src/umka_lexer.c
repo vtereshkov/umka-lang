@@ -1,6 +1,5 @@
 #define __USE_MINGW_ANSI_STDIO 1
 
-#include <assert.h>
 #include <float.h>
 #include <math.h>
 #include <stdio.h>
@@ -676,7 +675,7 @@ static void lexOperator(Lexer *lex)
 }
 
 
-static int _baseCharVal(char c, int base)
+static int _lexBaseCharVal(char c, int base)
 {
     switch (base) {
         case 10: return c >= '0' && c <= '9' ? c - '0' : -1;
@@ -685,60 +684,38 @@ static int _baseCharVal(char c, int base)
                         c >= 'A' && c <= 'F' ? c - 'A' + 10 : -1;
     }
 
-    assert(false);
-
     return -1;
 }
 
 
-static enum {ROK, REMPTY, RRANGE, RTRAIL} _parseDigitSeq(const char *src, const char **tail, int base, size_t *len, size_t *out)
+static uint64_t _lexDigitSeq(Lexer *lex, int base, int *len, bool isFrac)
 {
-    *tail = src;
+    uint64_t out = 0;
     *len = 0;
-    *out = 0;
 
-    if (_baseCharVal(*src, base) == -1)
-        return REMPTY;
+    if (_baseCharVal(lex->buf[lex->bufPos], base) == -1)
+        lex->error->handler(lex->error->context, "Invalid number");
 
-    while (_baseCharVal(*src, base) != -1)
+    while (_baseCharVal(lex->buf[lex->bufPos], base) != -1)
     {
-        size_t newval = *out * base + _baseCharVal(*src, base);
-        if ((*out * base) / base != *out || newval < *out)
-            return RRANGE;
-        *out = newval;
+        uint64_t newVal = out * base + _lexBaseCharVal(lex->buf[lex->bufPos], base);
+        if ((out * base) / base != out || newVal < out)
+            if (isFrac)
+                lex->error->handler(lex->error->context, "Number is too large");
+        else 
+            out = newVal;
         
-        src++;
+        lexChar(lex);
         (*len)++;
 
-        if (*src == '_')
+        if (lex->buf[lex->bufPos] == '_')
         {
-            if (_baseCharVal(*(src+1), base) != -1)
-                src++;
+            if (_lexBaseCharVal(lex->buf[lex->bufPos+1], base) != -1)
+                lexChar(lex);
             else
-                return RTRAIL;
+                lex->error->handler(lex->error->context, "'_' must be placed between digits"); 
         }
     }
-
-    *tail = src;
-    return ROK;
-}
-
-
-static size_t _lexDigitSeq(Lexer *lex, size_t *len, int base)
-{
-    const char *tail;
-    size_t result;
-    switch (_parseDigitSeq(lex->buf+lex->bufPos, &tail, base, len, &result))
-    {
-        case REMPTY: lex->error->handler(lex->error->context, "Invalid number"); 
-        case RRANGE: lex->error->handler(lex->error->context, "Number is too large"); 
-        case RTRAIL: lex->error->handler(lex->error->context, "Trailing number divider");
-    }
-
-    lex->pos += tail - (lex->buf + lex->bufPos);
-    lex->bufPos = tail - lex->buf;
-
-    return result;
 }
 
 
@@ -746,9 +723,9 @@ static void lexNumber(Lexer *lex)
 {
     lex->tok.kind = TOK_NONE;
 
-    size_t wholeLen = 0, whole = 0, decLen = 0, dec = 0, expLen = 0, exp = 0;
-    bool expNegative = false, isReal = false;
-    int base = 10;
+    uint64_t whole = 0, frac = 0, exp = 0;
+    bool isExpNegative = false, isReal = false;
+    int base = 10, wholeLen = 0, fracLen = 0, expLen = 0;
     
     if (lex->buf[lex->bufPos] == '0' && lex->buf[lex->bufPos+1] == 'x')
     {
@@ -758,7 +735,7 @@ static void lexNumber(Lexer *lex)
         base = 16;
     }
 
-    if (lex->buf[lex->bufPos] == '.' && _baseCharVal(lex->buf[lex->bufPos+1], 10) == -1)
+    if (lex->buf[lex->bufPos] == '.' && _lexBaseCharVal(lex->buf[lex->bufPos+1], 10) == -1)
     {
         // Single dot is not a number
         return;
@@ -766,7 +743,7 @@ static void lexNumber(Lexer *lex)
     
     if (!(lex->buf[lex->bufPos] == '.' && base == 10))
     {
-        whole = _lexDigitSeq(lex, &wholeLen, base);
+        whole = _lexDigitSeq(lex, &wholeLen, base, false);
     }
     
     if (base == 10) 
@@ -775,8 +752,8 @@ static void lexNumber(Lexer *lex)
         {
             isReal = true;  
 
-            if (_baseCharVal(lex->buf[lex->bufPos], 10) != -1)
-                dec = _lexDigitSeq(lex, &decLen, 10);
+            if (_lexBaseCharVal(lex->buf[lex->bufPos], 10) != -1)
+                frac = _lexDigitSeq(lex, &fracLen, 10, true);
         }
         
         if (lexCharIf(lex, 'e') || lexCharIf(lex, 'E'))
@@ -784,11 +761,11 @@ static void lexNumber(Lexer *lex)
             isReal = true;
 
             if (lexCharIf(lex, '-'))
-                expNegative = true;
+                isExpNegative = true;
             else 
                 lexCharIf(lex, '+');
 
-            exp = _lexDigitSeq(lex, &expLen, 10);
+            exp = _lexDigitSeq(lex, &expLen, 10, false);
         }
     }
 
@@ -796,9 +773,9 @@ static void lexNumber(Lexer *lex)
     {
         lex->tok.kind = TOK_REALNUMBER;
         lex->tok.realVal = whole;
-        lex->tok.realVal += dec/pow(10, decLen); 
+        lex->tok.realVal += frac/pow(10, fracLen); 
 
-        if (expNegative)
+        if (isExpNegative)
             lex->tok.realVal /= pow(10, exp);
         else
             lex->tok.realVal *= pow(10, exp);
