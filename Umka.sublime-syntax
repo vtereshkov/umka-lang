@@ -25,7 +25,7 @@ contexts:
   import:
     # Exit
     - match: '\)'
-      scope: keyword.control.umka         
+      scope: keyword.definition.umka         
       pop: true
 
     # Import default
@@ -120,6 +120,10 @@ contexts:
       scope: punctuation.definition.parameters.begin.umka
       push: function_param_trap
     
+    - match: '(?=\))'
+      scope: punctuation.definition.parameters.end.umka
+      pop: true
+
     - match: '$'
       pop: true
 
@@ -187,11 +191,8 @@ contexts:
     - include: main
 
   interface_scoped:
-    - match: '\b({{builtin}}){{space}}(?=\()'
-      scope: entity.name.function.umka
-
     - match: '\b({{builtin}})\b'
-      scope: 
+      scope: variable.function.umka
 
     - match: '\}'
       scope: punctuation.definition.parameters.end.umka
@@ -319,6 +320,13 @@ contexts:
       scope: keyword.control.umka
       push: function_trap
 
+    # Enum member before return
+    - match: '\b(return){{space}}(\.){{space}}({{ident}})'
+      captures: 
+        1: keyword.control.umka
+        2: punctuation.separator.umka
+        3: constant.enum.umka
+
     # Return expr scope trap
     - match: '\breturn\b'
       scope: keyword.control.umka
@@ -375,11 +383,23 @@ contexts:
         2: punctuation.separator.umka
         3: constant.enum.umka
 
+    # Variadic type scoped
+    - match: '(\.\.){{space}}({{ident}}){{space}}(::){{space}}({{ident}})'
+      captures:
+        1: punctuation.separator.um
+        2: entity.name.module.umka
+        3: punctuation.separator.umka
+        4: storage.type.umka
+
     # Variadic type
     - match: '(\.\.){{space}}({{ident}})'
       captures:
         1: punctuation.separator.um
         2: storage.type.umka
+
+    # Module
+    - match: '\b({{ident}}){{space}}(?=::)'
+      scope: entity.name.module.umka
 
     # Type
     - match: '\b{{typeident}}\b'
@@ -408,10 +428,6 @@ contexts:
         1: punctuation.separator.umka
         2: constant.enum.umka
 
-    # Module
-    - match: '\b({{ident}}){{space}}(?=::)'
-      scope: entity.name.module.umka
-
     # Module member
     - match: '(?<=::){{space}}({{ident}})'
       scope: variable.parameter.umka
@@ -435,11 +451,11 @@ contexts:
       scope: punctuation.separator.umka
  
     # Hex literals
-    - match: '\b(0[Xx])[0-9A-Fa-f]+\b'
+    - match: '\b(0[Xx])[0-9A-Fa-f_]+\b'
       scope: constant.numeric.umka      
 
     # Decimal literals
-    - match: '\b[0-9.]+([Ee][+-]?[0-9]*)?\b'
+    - match: '\b[0-9_.]+([Ee][+-]?[0-9_]*)?\b'
       scope: constant.numeric.umka       
 
     # String literals
@@ -502,5 +518,5 @@ contexts:
     - match: '\>\>\>.*'
       scope: markup.bold.heading
 
-    - match: '\@([A-Z][A-Z0-9]*)\b(\(.*\))?:?'
+    - match: '@([A-Za-z][A-Za-z0-9]*)\b(\(.*\))?:?'
       scope: markup.bold.umka

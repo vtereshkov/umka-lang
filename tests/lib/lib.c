@@ -1,7 +1,7 @@
 #include "../../src/umka_api.h"
 
 
-void add(UmkaStackSlot *params, UmkaStackSlot *result)
+UMKA_EXPORT void add(UmkaStackSlot *params, UmkaStackSlot *result)
 {
     double a = umkaGetParam(params, 0)->realVal;
     double b = umkaGetParam(params, 1)->realVal;
@@ -9,7 +9,7 @@ void add(UmkaStackSlot *params, UmkaStackSlot *result)
 }
 
 
-void mulVec(UmkaStackSlot *params, UmkaStackSlot *result)
+UMKA_EXPORT void mulVec(UmkaStackSlot *params, UmkaStackSlot *result)
 {
     double a = umkaGetParam(params, 0)->realVal;
     double* v = (double *)umkaGetParam(params, 1);
@@ -19,7 +19,7 @@ void mulVec(UmkaStackSlot *params, UmkaStackSlot *result)
 }
 
 
-void hello(UmkaStackSlot *params, UmkaStackSlot *result)
+UMKA_EXPORT void hello(UmkaStackSlot *params, UmkaStackSlot *result)
 {
     void *umka = umkaGetInstance(result);
     UmkaAPI *api = umkaGetAPI(umka);
@@ -28,7 +28,7 @@ void hello(UmkaStackSlot *params, UmkaStackSlot *result)
 
 UmkaFuncContext callbackContext = {0};
 
-void sumImpl(UmkaStackSlot *params, UmkaStackSlot *result)
+UMKA_EXPORT void sumImpl(UmkaStackSlot *params, UmkaStackSlot *result)
 {
     UmkaClosure *callback = (UmkaClosure *)umkaGetParam(params, 0);
     void *callbackType = umkaGetParam(params, 1)->ptrVal;
