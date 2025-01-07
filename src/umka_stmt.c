@@ -1171,6 +1171,7 @@ static void parseStmt(Compiler *comp)
         case TOK_STR:
         case TOK_STRUCT:
         case TOK_INTERFACE:
+        case TOK_MAP:
         case TOK_FN:        parseSimpleStmt(comp);      break;
         case TOK_IF:        parseIfStmt(comp);          break;
         case TOK_SWITCH:    parseSwitchStmt(comp);      break;
