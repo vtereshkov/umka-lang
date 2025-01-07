@@ -2939,6 +2939,9 @@ void parseExpr(Compiler *comp, Type **type, Const *constant)
 
         *type = leftType;
     }
+
+    if ((*type)->kind == TYPE_VOID)
+        comp->error.handler(comp->error.context, "Void expression is not allowed");
 }
 
 
