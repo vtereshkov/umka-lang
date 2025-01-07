@@ -61,6 +61,8 @@ static void parseTypedIdentList(Compiler *comp, IdentName *names, bool *exported
 
         lexNext(&comp->lex);
         Type *itemType = parseType(comp, NULL);
+        if (itemType->kind == TYPE_VOID)
+            comp->error.handler(comp->error.context, "Variadic parameters cannot be void");
 
         *type = typeAdd(&comp->types, &comp->blocks, TYPE_DYNARRAY);
         (*type)->base = itemType;
