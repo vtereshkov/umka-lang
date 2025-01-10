@@ -2511,12 +2511,11 @@ static void parseDesignator(Compiler *comp, Type **type, Const *constant, bool *
 
 
 // designatorList = designator {"," designator}.
-void parseDesignatorList(Compiler *comp, Type **type, Const *constant, bool *isVar, bool *isCall)
+void parseDesignatorList(Compiler *comp, Type **type, Const *constant, bool *isVar, bool *isCall, bool *isCompLit)
 {
-    bool isCompLit = false;
-    parseDesignator(comp, type, constant, isVar, isCall, &isCompLit);
+    parseDesignator(comp, type, constant, isVar, isCall, isCompLit);
 
-    if (comp->lex.tok.kind == TOK_COMMA && (*isVar) && !(*isCall))
+    if (comp->lex.tok.kind == TOK_COMMA && (*isVar) && !(*isCall) && !(*isCompLit))
     {
         // Designator list (types formally encoded as structure field types - not a real structure)
         if (constant)
@@ -2538,7 +2537,7 @@ void parseDesignatorList(Compiler *comp, Type **type, Const *constant, bool *isV
             bool fieldIsVar, fieldIsCall, fieldIsCompLit;
             parseDesignator(comp, &fieldType, NULL, &fieldIsVar, &fieldIsCall, &fieldIsCompLit);
 
-            if (!fieldIsVar || fieldIsCall)
+            if (!fieldIsVar || fieldIsCall || fieldIsCompLit)
                 comp->error.handler(comp->error.context, "Inconsistent designator list");
         }
     }
