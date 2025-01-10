@@ -438,8 +438,8 @@ static void parseSimpleStmt(Compiler *comp)
     else
     {
         Type *type = NULL;
-        bool isVar, isCall;
-        parseDesignatorList(comp, &type, NULL, &isVar, &isCall);
+        bool isVar, isCall, isCompLit;
+        parseDesignatorList(comp, &type, NULL, &isVar, &isCall, &isCompLit);
 
         TokenKind op = comp->lex.tok.kind;
 
@@ -449,7 +449,7 @@ static void parseSimpleStmt(Compiler *comp)
         if (op == TOK_EQ || lexShortAssignment(op) != TOK_NONE)
         {
             // Assignment
-            if (!isVar)
+            if (!isVar || isCall || isCompLit)
                 comp->error.handler(comp->error.context, "Left side cannot be assigned to");
             lexNext(&comp->lex);
 
