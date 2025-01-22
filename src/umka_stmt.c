@@ -1278,7 +1278,13 @@ void parseFnBlock(Compiler *comp, Ident *fn, Type *upvaluesStructType)
         genPop(&comp->gen);
     }
 
-    // 'return' prolog
+    // 'break'/'continue'/'return' prologs
+    Gotos *outerBreaks = comp->gen.breaks;
+    comp->gen.breaks = NULL;
+
+    Gotos *outerContinues = comp->gen.continues;
+    comp->gen.continues = NULL;
+
     Gotos returns, *outerReturns = comp->gen.returns;
     comp->gen.returns = &returns;
     genGotosProlog(&comp->gen, comp->gen.returns, blocksCurrent(&comp->blocks));
@@ -1288,9 +1294,11 @@ void parseFnBlock(Compiler *comp, Ident *fn, Type *upvaluesStructType)
 
     const bool hasReturn = comp->blocks.item[comp->blocks.top].hasReturn;
 
-    // 'return' epilog
+    // 'return'/'continue'/'break' epilogs
     genGotosEpilog(&comp->gen, comp->gen.returns);
     comp->gen.returns = outerReturns;
+    comp->gen.continues = outerContinues;
+    comp->gen.breaks = outerBreaks;
 
     doGarbageCollection(comp);
     identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
