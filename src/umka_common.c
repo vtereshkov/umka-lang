@@ -8,7 +8,9 @@
 #ifdef _WIN32
     #include <windows.h>
 #else
-    #include <dlfcn.h>
+    #ifdef UMKA_EXT_LIBS
+        #include <dlfcn.h>
+    #endif
     #include <unistd.h>
 #endif
 
