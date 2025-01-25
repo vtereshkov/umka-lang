@@ -738,7 +738,7 @@ static void lexNumber(Lexer *lex)
     bool isExpNegative = false, isReal = false;
     int base = 10, wholeLen = 0, fracLen = 0, exponLen = 0;
 
-    if (lex->buf[lex->bufPos] == '0' && lex->buf[lex->bufPos + 1] == 'x')
+    if (lex->buf[lex->bufPos] == '0' && (lex->buf[lex->bufPos + 1] == 'x' || lex->buf[lex->bufPos + 1] == 'X'))
     {
         lexChar(lex);
         lexChar(lex);
