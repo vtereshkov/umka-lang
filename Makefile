@@ -5,6 +5,12 @@ PLATFORM ?= $(shell uname -s)
 BUILD_PATH ?= build
 OBJ_PATH   ?= obj
 
+# installation prefix
+PREFIX ?= /usr/local
+LIBDIR ?= $(PREFIX)/lib
+INCLUDEDIR ?= $(PREFIX)/include
+BINDIR ?= $(PREFIX)/bin
+
 # platform specific settings:
 ifeq ($(PLATFORM), Linux)
 	LDFLAGS = -lm -ldl
@@ -40,6 +46,33 @@ exe:     $(UMKA_EXE)
 
 clean:
 	$(RM) $(BUILD_PATH) $(OBJ_PATH) -r
+
+install: all
+	@echo "Installing to the following directories:"
+	@echo "  Libraries: $(DESTDIR)$(LIBDIR)"
+	@echo "  Includes:  $(DESTDIR)$(INCLUDEDIR)"
+	@echo "  Binaries:  $(DESTDIR)$(BINDIR)"
+	@mkdir -p -- $(DESTDIR)$(LIBDIR)
+	@mkdir -p -- $(DESTDIR)$(BINDIR)
+	@mkdir -p -- $(DESTDIR)$(INCLUDEDIR)
+	@echo "Copying files..."
+	@cp $(UMKA_LIB_STATIC) $(DESTDIR)$(LIBDIR)/
+	@cp $(UMKA_LIB_DYNAMIC) $(DESTDIR)$(LIBDIR)/
+	@cp $(UMKA_EXE) $(DESTDIR)$(BINDIR)/
+	@cp $(APIS) $(DESTDIR)$(INCLUDEDIR)/
+	@echo "Installation complete!"
+
+uninstall:
+	@echo "Uninstalling following files:"
+	@echo "  $(DESTDIR)$(LIBDIR)/libumka.a"
+	@echo "  $(DESTDIR)$(LIBDIR)/libumka.so"
+	@echo "  $(DESTDIR)$(BINDIR)/umka"
+	@echo "  $(DESTDIR)$(INCLUDEDIR)/umka_api.h"
+	@rm -f -- $(DESTDIR)$(LIBDIR)/libumka.a
+	@rm -f -- $(DESTDIR)$(LIBDIR)/libumka.so
+	@rm -f -- $(DESTDIR)$(BINDIR)/umka
+	@rm -f -- $(DESTDIR)$(INCLUDEDIR)/umka_api.h
+	@echo "Uninstallation complete!"
 
 $(UMKA_LIB_STATIC): $(OBJS_STATIC)
 	@echo AR $@
