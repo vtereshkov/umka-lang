@@ -7,24 +7,30 @@ OBJ_PATH   ?= obj
 
 # platform specific settings:
 ifeq ($(PLATFORM), Linux)
-	LDFLAGS = -lm -ldl
-	RANLIB = ar -crs
+	LDFLAGS               = -lm -ldl
+	RANLIB                = ar -crs
+	LIBEXT                = so
+	DYNAMIC_CFLAGS_EXTRA  = -shared -fvisibility=hidden
 else ifeq ($(PLATFORM), Darwin)
-	LDFLAGS =
-	RANLIB = libtool -static -o
+	LDFLAGS               =
+	RANLIB                = libtool -static -o
+	LIBEXT                = dylib
+	DYNAMIC_CFLAGS_EXTRA  = -dynamiclib -fvisibility=hidden
 else ifneq ($(findstring MINGW64_NT,$(PLATFORM)),)
-	LDFLAGS = -lm
-	RANLIB = ar -crs
+	LDFLAGS               = -lm
+	RANLIB                = ar -crs
+	LIBEXT                = so
+	DYNAMIC_CFLAGS_EXTRA  = -shared -fvisibility=hidden
 endif
 
 # identical for all platforms:
 UMKA_LIB_STATIC  = $(BUILD_PATH)/libumka.a
-UMKA_LIB_DYNAMIC = $(BUILD_PATH)/libumka.so
+UMKA_LIB_DYNAMIC = $(BUILD_PATH)/libumka.$(LIBEXT)
 UMKA_EXE = $(BUILD_PATH)/umka
 
 CFLAGS = -s -fPIC -O3 -Wall -Wno-format-security -malign-double -fno-strict-aliasing -DUMKA_EXT_LIBS
 STATIC_CFLAGS  = $(CFLAGS) -DUMKA_STATIC
-DYNAMIC_CFLAGS = $(CFLAGS) -DUMKA_BUILD  -shared -fvisibility=hidden
+DYNAMIC_CFLAGS = $(CFLAGS) -DUMKA_BUILD $(DYNAMIC_CFLAGS_EXTRA)
 
 SRCS = $(filter-out src/umka.c,$(wildcard src/*.c))
 OBJS_STATIC    = $(sort $(SRCS:src/%.c=$(OBJ_PATH)/%_static.o))
