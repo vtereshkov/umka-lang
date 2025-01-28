@@ -10,8 +10,8 @@ Umka is a statically typed embeddable scripting language. It combines the simpli
   * [Stable](https://github.com/vtereshkov/umka-lang/releases)
   * [Unstable](https://umbox.tophat2d.dev/api/package/umka/download/box.tar)
 * Installation
-  * [Homebrew](https://formulae.brew.sh/formula/umka-lang): `brew install umka-lang`
-  * [UmBox](https://umbox.tophat2d.dev/package/umka): `umbox install umka`
+  * [Homebrew](https://formulae.brew.sh/formula/umka-lang)
+  * [UmBox](https://umbox.tophat2d.dev/package/umka)
 * [Packages](https://umbox.tophat2d.dev)
 * Documentation
   * [Language](https://github.com/vtereshkov/umka-lang/blob/master/doc/lang.md)
