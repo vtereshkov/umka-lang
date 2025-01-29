@@ -564,7 +564,7 @@ static FORCE_INLINE char *fsscanfString(bool string, void *stream, int *len)
 typedef int (*QSortCompareFn)(const void *a, const void *b, void *context);
 
 
-void FORCE_INLINE qsortSwap(void *a, void *b, void *temp, int itemSize)
+FORCE_INLINE void qsortSwap(void *a, void *b, void *temp, int itemSize)
 {
     memcpy(temp, a, itemSize);
     memcpy(a, b, itemSize);
@@ -572,7 +572,7 @@ void FORCE_INLINE qsortSwap(void *a, void *b, void *temp, int itemSize)
 }
 
 
-char FORCE_INLINE *qsortPartition(char *first, char *last, int itemSize, QSortCompareFn compare, void *context, void *temp)
+FORCE_INLINE char *qsortPartition(char *first, char *last, int itemSize, QSortCompareFn compare, void *context, void *temp)
 {
     char *i = first;
     char *j = last;
@@ -2507,7 +2507,7 @@ static int qsortCompare(const void *a, const void *b, void *context)
 }
 
 
-static FORCE_INLINE void doBuiltinSort(Fiber *fiber, HeapPages *pages, Error *error)
+static FORCE_INLINE void doBuiltinSort(Fiber *fiber, Error *error)
 {
     Type *compareType = (Type *)(fiber->top++)->ptrVal;
     Closure *compare  = (Closure *)(fiber->top++)->ptrVal;
@@ -2590,7 +2590,7 @@ static int qsortFastCompare(const void *a, const void *b, void *context)
 }
 
 
-static FORCE_INLINE void doBuiltinSortfast(Fiber *fiber, HeapPages *pages, Error *error)
+static FORCE_INLINE void doBuiltinSortfast(Fiber *fiber, Error *error)
 {
     int64_t offset = (fiber->top++)->intVal;
     bool ascending = (bool)(fiber->top++)->intVal;
@@ -2795,7 +2795,7 @@ static FORCE_INLINE void doBuiltinKeys(Fiber *fiber, HeapPages *pages, Error *er
 
 
 // fn resume([child: fiber])
-static FORCE_INLINE void doBuiltinResume(Fiber *fiber, Fiber **newFiber, HeapPages *pages, Error *error)
+static FORCE_INLINE void doBuiltinResume(Fiber *fiber, Fiber **newFiber, Error *error)
 {
     Fiber *child = (Fiber *)(fiber->top++)->ptrVal;
     if (child && child->alive)
@@ -2880,7 +2880,7 @@ static FORCE_INLINE void doPushReg(Fiber *fiber)
 }
 
 
-static FORCE_INLINE void doPushUpvalue(Fiber *fiber, HeapPages *pages, Error *error)
+static FORCE_INLINE void doPushUpvalue(Fiber *fiber, Error *error)
 {
     Closure *closure = (Closure *)(fiber->top++)->ptrVal;
 
@@ -3615,8 +3615,8 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         case BUILTIN_INSERT:        doBuiltinInsert(fiber, pages, error); break;
         case BUILTIN_DELETE:        doBuiltinDelete(fiber, pages, error); break;
         case BUILTIN_SLICE:         doBuiltinSlice(fiber, pages, error); break;
-        case BUILTIN_SORT:          doBuiltinSort(fiber, pages, error); break;
-        case BUILTIN_SORTFAST:      doBuiltinSortfast(fiber, pages, error); break;
+        case BUILTIN_SORT:          doBuiltinSort(fiber, error); break;
+        case BUILTIN_SORTFAST:      doBuiltinSortfast(fiber, error); break;
         case BUILTIN_LEN:           doBuiltinLen(fiber, error); break;
         case BUILTIN_CAP:           doBuiltinCap(fiber, error); break;
         case BUILTIN_SIZEOF:        error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal instruction"); return;       // Done at compile time
@@ -3631,7 +3631,7 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         case BUILTIN_KEYS:          doBuiltinKeys(fiber, pages, error); break;
 
         // Fibers
-        case BUILTIN_RESUME:        doBuiltinResume(fiber, newFiber, pages, error); break;
+        case BUILTIN_RESUME:        doBuiltinResume(fiber, newFiber, error); break;
 
         // Misc
         case BUILTIN_MEMUSAGE:      doBuiltinMemusage(fiber, pages, error); break;
@@ -3663,7 +3663,7 @@ static FORCE_INLINE void doReturn(Fiber *fiber, Fiber **newFiber)
 }
 
 
-static FORCE_INLINE void doEnterFrame(Fiber *fiber, HeapPages *pages, HookFunc *hooks, Error *error)
+static FORCE_INLINE void doEnterFrame(Fiber *fiber, HookFunc *hooks, Error *error)
 {
     ParamAndLocalVarLayout *layout = fiber->code[fiber->ip].operand.ptrVal;
 
@@ -3694,7 +3694,7 @@ static FORCE_INLINE void doEnterFrame(Fiber *fiber, HeapPages *pages, HookFunc *
 }
 
 
-static FORCE_INLINE void doLeaveFrame(Fiber *fiber, HeapPages *pages, HookFunc *hooks, Error *error)
+static FORCE_INLINE void doLeaveFrame(Fiber *fiber, HookFunc *hooks, Error *error)
 {
     // Check stack frame ref count
     int64_t stackFrameRefCnt = fiber->base[-1].intVal;
@@ -3741,7 +3741,7 @@ static FORCE_INLINE void vmLoop(VM *vm)
             case OP_PUSH_LOCAL_PTR_ZERO:            doPushLocalPtrZero(fiber);                    break;
             case OP_PUSH_LOCAL:                     doPushLocal(fiber, error);                    break;
             case OP_PUSH_REG:                       doPushReg(fiber);                             break;
-            case OP_PUSH_UPVALUE:                   doPushUpvalue(fiber, pages, error);           break;
+            case OP_PUSH_UPVALUE:                   doPushUpvalue(fiber, error);                  break;
             case OP_POP:                            doPop(fiber);                                 break;
             case OP_POP_REG:                        doPopReg(fiber);                              break;
             case OP_DUP:                            doDup(fiber);                                 break;
@@ -3796,8 +3796,8 @@ static FORCE_INLINE void vmLoop(VM *vm)
 
                 break;
             }
-            case OP_ENTER_FRAME:                    doEnterFrame(fiber, pages, hooks, error);     break;
-            case OP_LEAVE_FRAME:                    doLeaveFrame(fiber, pages, hooks, error);     break;
+            case OP_ENTER_FRAME:                    doEnterFrame(fiber, hooks, error);            break;
+            case OP_LEAVE_FRAME:                    doLeaveFrame(fiber, hooks, error);            break;
             case OP_HALT:                           doHalt(vm);                                   return;
 
             default: error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal instruction"); return;

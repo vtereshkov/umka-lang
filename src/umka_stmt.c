@@ -575,7 +575,7 @@ static void parseExprCase(Compiler *comp, Type *selectorType, ConstArray *existi
 
 
 // typeCase = "case" type ":" stmtList.
-static void parseTypeCase(Compiler *comp, Type *selectorType, const char *concreteVarName, ConstArray *existingConcreteTypes)
+static void parseTypeCase(Compiler *comp, const char *concreteVarName, ConstArray *existingConcreteTypes)
 {
     lexEat(&comp->lex, TOK_CASE);
 
@@ -740,7 +740,7 @@ static void parseTypeSwitchStmt(Compiler *comp)
 
     while (comp->lex.tok.kind == TOK_CASE)
     {
-        parseTypeCase(comp, type, concreteVarName, &existingConcreteTypes);
+        parseTypeCase(comp, concreteVarName, &existingConcreteTypes);
         numCases++;
     }
 

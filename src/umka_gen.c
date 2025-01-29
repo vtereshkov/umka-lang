@@ -371,7 +371,7 @@ static bool optimizeCallBuiltin(CodeGen *gen, TypeKind typeKind, BuiltinFunc bui
     // Optimization: PUSH + CALL_BUILTIN -> PUSH
     if (prev && prev->opcode == OP_PUSH && prev->inlineOpcode == OP_NOP)
     {
-        Const arg, arg2;
+        Const arg = {0}, arg2 = {0};
         TypeKind resultTypeKind = TYPE_NONE;
 
         switch (builtin)

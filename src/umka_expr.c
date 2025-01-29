@@ -1568,12 +1568,9 @@ static void parseBuiltinCall(Compiler *comp, Type **type, Const *constant, Built
 
 
 // actualParams = "(" [expr {"," expr}] ")".
-static void parseCall(Compiler *comp, Type **type, Const *constant)
+static void parseCall(Compiler *comp, Type **type)
 {
     lexEat(&comp->lex, TOK_LPAR);
-
-    if (constant)
-        comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
 
     // Decide whether a (default) indirect call can be replaced with a direct call
     int immediateEntryPoint = (*type)->kind == TYPE_FN ? genTryRemoveImmediateEntryPoint(&comp->gen) : -1;
@@ -1634,15 +1631,15 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
             if (formalParamType->isVariadicParamList)
             {
                 // Variadic parameter list
-                parseDynArrayLiteral(comp, &formalParamType, constant);
+                parseDynArrayLiteral(comp, &formalParamType, NULL);
                 actualParamType = formalParamType;
             }
             else
             {
                 // Regular parameter
-                parseExpr(comp, &actualParamType, constant);
+                parseExpr(comp, &actualParamType, NULL);
 
-                doImplicitTypeConv(comp, formalParamType, &actualParamType, constant);
+                doImplicitTypeConv(comp, formalParamType, &actualParamType, NULL);
                 typeAssertCompatibleParam(&comp->types, formalParamType, actualParamType, *type, numExplicitParams + 1);
             }
 
@@ -1681,7 +1678,7 @@ static void parseCall(Compiler *comp, Type **type, Const *constant)
         if ((*type)->sig.numDefaultParams > 0)
             doPushConst(comp, formalParamType, &((*type)->sig.param[i]->defaultVal));   // Default parameter
         else
-            parseDynArrayLiteral(comp, &formalParamType, constant);                     // Variadic parameter (empty dynamic array)
+            parseDynArrayLiteral(comp, &formalParamType, NULL);                         // Variadic parameter (empty dynamic array)
 
         doPassParam(comp, formalParamType);
         i++;
@@ -2253,7 +2250,7 @@ static void parseTypeCastOrCompositeLiteralOrEnumConst(Compiler *comp, Ident *id
 
 
 // derefSelector = "^".
-static void parseDerefSelector(Compiler *comp, Type **type, Const *constant, bool *isVar, bool *isCall)
+static void parseDerefSelector(Compiler *comp, Type **type, bool *isVar, bool *isCall)
 {
     if (*isVar)   // This is always the case, except for type-cast lvalues like ^T(x)^ which are not variables
     {
@@ -2283,7 +2280,7 @@ static void parseDerefSelector(Compiler *comp, Type **type, Const *constant, boo
 
 
 // indexSelector = "[" expr "]".
-static void parseIndexSelector(Compiler *comp, Type **type, Const *constant, bool *isVar, bool *isCall)
+static void parseIndexSelector(Compiler *comp, Type **type, bool *isVar, bool *isCall)
 {
     // Implicit dereferencing: a^[i] == a[i]
     doTryImplicitDeref(comp, type);
@@ -2368,7 +2365,7 @@ static void parseIndexSelector(Compiler *comp, Type **type, Const *constant, boo
 
 
 // fieldSelector = "." ident.
-static void parseFieldSelector(Compiler *comp, Type **type, Const *constant, bool *isVar, bool *isCall)
+static void parseFieldSelector(Compiler *comp, Type **type, bool *isVar, bool *isCall)
 {
     // Implicit dereferencing: a^.x == a.x
     doTryImplicitDeref(comp, type);
@@ -2436,7 +2433,7 @@ static void parseFieldSelector(Compiler *comp, Type **type, Const *constant, boo
 
 
 // callSelector = actualParams.
-static void parseCallSelector(Compiler *comp, Type **type, Const *constant, bool *isVar, bool *isCall)
+static void parseCallSelector(Compiler *comp, Type **type, bool *isVar, bool *isCall)
 {
     // Implicit dereferencing: f^(x) == f(x)
     doTryImplicitDeref(comp, type);
@@ -2450,7 +2447,7 @@ static void parseCallSelector(Compiler *comp, Type **type, Const *constant, bool
     if ((*type)->kind != TYPE_FN && (*type)->kind != TYPE_CLOSURE)
         comp->error.handler(comp->error.context, "Function or closure expected");
 
-    parseCall(comp, type, constant);
+    parseCall(comp, type);
 
     // Push result
     if ((*type)->kind != TYPE_VOID)
@@ -2472,16 +2469,16 @@ static void parseSelectors(Compiler *comp, Type **type, Const *constant, bool *i
            comp->lex.tok.kind == TOK_PERIOD || comp->lex.tok.kind == TOK_LPAR)
     {
         if (constant)
-            comp->error.handler(comp->error.context, "%s is not allowed for constants", lexSpelling(comp->lex.tok.kind));
+            comp->error.handler(comp->error.context, "Selector %s is not allowed for constants", lexSpelling(comp->lex.tok.kind));
 
         *isCompLit = false;
 
         switch (comp->lex.tok.kind)
         {
-            case TOK_CARET:     parseDerefSelector(comp, type, constant, isVar, isCall); break;
-            case TOK_LBRACKET:  parseIndexSelector(comp, type, constant, isVar, isCall); break;
-            case TOK_PERIOD:    parseFieldSelector(comp, type, constant, isVar, isCall); break;
-            case TOK_LPAR:      parseCallSelector (comp, type, constant, isVar, isCall); break;
+            case TOK_CARET:     parseDerefSelector(comp, type, isVar, isCall); break;
+            case TOK_LBRACKET:  parseIndexSelector(comp, type, isVar, isCall); break;
+            case TOK_PERIOD:    parseFieldSelector(comp, type, isVar, isCall); break;
+            case TOK_LPAR:      parseCallSelector (comp, type, isVar, isCall); break;
             default:            break;
         } // switch
     } // while
