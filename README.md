@@ -55,6 +55,10 @@ _400 x 400 matrix multiplication (AMD A4-3300M @ 1.9 GHz, Windows 7)_
 
 ![](examples/raytracer/raytracer.png)
 
+[Lisp interpreter](https://github.com/vtereshkov/umka-lang/blob/master/examples/lisp)
+
+![](resources/lisp.png)
+
 * [C](https://github.com/vtereshkov/umka-lang/blob/master/examples/3dcam/3dcam.c)+[Umka](https://github.com/vtereshkov/umka-lang/blob/master/examples/3dcam/3dcam.um) 3D camera
 
 ![](examples/3dcam/3dcam.png)
@@ -162,6 +166,10 @@ fn tan(x: real): real {
 
 fn getValue(): (int, bool) {
     return 42, true
+}
+
+callback := fn (event: int): bool |context| {   // Closure capturing context
+    return context.ok && event > 0
 }
 ```
 #### Methods
