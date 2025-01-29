@@ -101,7 +101,9 @@ fn main() {
 #### Constants
 ```
 const a = 3
+
 const b* = 2.38                         // Exported identifier
+
 const (
     c = sin(b) / 5
     d = "Hello" + " World"
@@ -110,41 +112,57 @@ const (
 #### Types
 ```
 type IntPtr = ^uint16                   // Pointer
+
 type Arr = [a]real                      // Array
+
 type (
     DynArr = []int                      // Dynamic array
+
     String = str                        // String
+
     Button = enum {                     // Enumeration
         left
         middle
         right
     }
+
     MyMap = map[str]real                // Map
+
     Quat = struct {                     // Structure
         q: [4]real
         normalized: bool
     }
+
     Printable = interface {             // Interface
         print(): int
     }
+
     ErrFn = fn(code: int)               // Function
 )
 ```
 #### Variables
 ```
 var e: int
+
 var f: String = d + "!"
+
 var (
     g: Arr = {2.3, -4.1 / 2, b}
     h: DynArr
     m: MyMap
 )
+
 q := Quat{{1, 0, 0, 0}, true}
 ```
 #### Functions
 ```
-fn tan(x: real): real {return sin(x) / cos(x)}
-fn getValue(): (int, bool) {return 42, true}
+fn tan(x: real): real {
+    return sin(x) / cos(x)
+}
+
+fn getValue(): (int, bool) {
+    return 42, true
+}
 ```
 #### Methods
 ```
@@ -210,18 +228,20 @@ for i, x in g {
 ### Multitasking
 ```
 a := new(int)
+
 child := make(fiber, |a| {    // a is captured  
     for i := 0; i < 5; i++ {
         printf("Child : i = %d buf = %d\n", i, a^)
         a^ = i * 3
-        resume()              // Switch back to the parent fiber
+        resume()              // Switch back to parent
     }
 })
+
 for i := 0; i < 10; i++ {
     printf("Parent: i = %d buf = %d\n", i, a^)
     a^ = i * 7
     if valid(child) {
-        resume(child)         // Switch to the child fiber
+        resume(child)         // Switch to child
     }
 }
 ```
