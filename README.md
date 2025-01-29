@@ -55,7 +55,7 @@ _400 x 400 matrix multiplication (AMD A4-3300M @ 1.9 GHz, Windows 7)_
 
 ![](examples/raytracer/raytracer.png)
 
-[Lisp interpreter](https://github.com/vtereshkov/umka-lang/blob/master/examples/lisp)
+* [Lisp interpreter](https://github.com/vtereshkov/umka-lang/blob/master/examples/lisp)
 
 ![](resources/lisp.png)
 
