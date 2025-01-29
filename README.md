@@ -112,7 +112,7 @@ const (
 type IntPtr = ^uint16                   // Pointer
 type Arr = [a]real                      // Array
 type (
-    DynArr = [][5]int                   // Dynamic array
+    DynArr = []int                      // Dynamic array
     String = str                        // String
     Button = enum {                     // Enumeration
         left
@@ -135,11 +135,11 @@ type (
 var e: int
 var f: String = d + "!"
 var (
-    g: Arr = [3]real{2.3, -4.1 / 2, b}
+    g: Arr = {2.3, -4.1 / 2, b}
     h: DynArr
     m: MyMap
 )
-q := Quat{q: [4]real{1, 0, 0, 0}, normalized: true}
+q := Quat{{1, 0, 0, 0}, true}
 ```
 #### Functions
 ```
@@ -156,18 +156,19 @@ fn (a: ^Arr) print(): int {
 ### Statements
 #### Assignment
 ```
-h = make([][5]int, 3)   // Dynamic arrays and maps are initialized with make()
-m = make(MyMap)
+a = 42
 m["Hello Umka"] = 3.14
+alpha, beta = beta, alpha
 ```
 #### Declaration via assignment (with type inference)
 ```
 sum := 0.0
+h := make([]int, 3)
 ```
 #### Function call
 ```
 y := tan(30 * std::pi / 180)
-h = append(h, [5]int{10, 20, 30, 40, 50})
+h = append(h, []int{10, 20, 30, 40, 50})
 h = delete(h, 1)
 ```
 #### Method call
@@ -183,12 +184,12 @@ if x, ok := getValue(); ok {
 #### Switch
 ```
 switch a {
-    case 1, 3, 5, 7: std::println(std::itoa(a) + " is odd")
-    case 2, 4, 6, 8: std::println(std::itoa(a) + " is even")
-    default:         std::println("I don't know")
+    case 1, 3, 5, 7: printf("%d is odd\n", a)
+    case 2, 4, 6, 8: printf("%d is even\n", a)
+    default:         printf("I don't know\n")
 }
 
-switch v := type(a) {
+switch v := type(val) {          // val is an interface 
     case int: printf("int: %d + 5 = %d\n", v, v + 5)
     case str: printf("str: %s + 5 = %s\n", v, v + "5")
     default:  printf("unknown: %v\n", a)
@@ -209,20 +210,20 @@ for i, x in g {
 ### Multitasking
 ```
 a := new(int)
-child := make(fiber, |a| {
+child := make(fiber, |a| {    // a is captured  
     for i := 0; i < 5; i++ {
-        std::println("Child : i=" + std::itoa(i) + " buf=" + std::itoa(a^))
+        printf("Child : i = %d buf = %d\n", i, a^)
         a^ = i * 3
-        resume()
+        resume()              // Switch back to the parent fiber
     }
 })
 for i := 0; i < 10; i++ {
-    std::println("Parent: i=" + std::itoa(i) + " buf=" + std::itoa(a^))
+    printf("Parent: i = %d buf = %d\n", i, a^)
     a^ = i * 7
     if valid(child) {
-        resume(child)
+        resume(child)         // Switch to the child fiber
     }
-} 
+}
 ```
 ## Umka vs Go
 ### Purpose
