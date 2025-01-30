@@ -1,4 +1,4 @@
-# N body problem benchmark - Python vesion by Kevin Carson
+# N body problem benchmark - Python version by Kevin Carson
 
 import sys 
 

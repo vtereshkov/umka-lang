@@ -301,9 +301,9 @@ Umka debug hook function. A callback that is called each time a hook event occur
 
 Parameters:
 
-* `fileName`: Source file in which the event occured
-* `funcName`: Function in which the event occured
-* `line`: Source file line at which the event occured
+* `fileName`: Source file in which the event occurred
+* `funcName`: Function in which the event occurred
+* `line`: Source file line at which the event occurred
 
 ### Functions
 
