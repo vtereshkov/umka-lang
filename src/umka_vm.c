@@ -27,7 +27,8 @@
 /*
 Virtual machine stack layout (64-bit slots):
 
-0   ...
+    ...                                              <- Address 0
+    ...
     ...                                              <- Stack origin
     ...
     Temporary value 1                                <- Stack top
@@ -43,7 +44,7 @@ Virtual machine stack layout (64-bit slots):
     Stack frame ref count
     Caller's stack frame base pointer                <- Stack frame base pointer
     Return address
-    Parameter N
+    Parameter N                                      <- Parameter array (external functions only)
     ...
     Parameter N
     Parameter N - 1
@@ -163,6 +164,27 @@ static const char *regSpelling [] =
 
 // Memory management
 
+static FORCE_INLINE Slot *doGetOnFreeParams(void *ptr)
+{
+    static char paramLayoutBuf[sizeof(ParamLayout) + 2 * sizeof(int64_t)];
+    ParamLayout *paramLayout = (ParamLayout *)&paramLayoutBuf;
+
+    paramLayout->numParams = 2;
+    paramLayout->numParamSlots = 1;
+    paramLayout->numResultParams = 0;
+    paramLayout->firstSlotIndex[0] = 0;     // No upvalues
+    paramLayout->firstSlotIndex[1] = 0;     // Pointer to data to deallocate
+
+    static Slot paramsBuf[4 + 1] = {0};
+    Slot *params = paramsBuf + 4;
+
+    params[-4].ptrVal = paramLayout;        // For -4, see the stack layout diagram above
+    params[ 0].ptrVal = ptr;
+
+    return params;
+}
+
+
 static void pageInit(HeapPages *pages, Fiber *fiber, Error *error)
 {
     pages->first = pages->last = NULL;
@@ -206,8 +228,7 @@ static void pageFree(HeapPages *pages, bool warnLeak)
                 if (chunk->refCnt == 0 || !chunk->onFree)
                     continue;
 
-                Slot param = {.ptrVal = (char *)chunk + sizeof(HeapChunkHeader)};
-                chunk->onFree(&param, NULL);
+                chunk->onFree(doGetOnFreeParams((char *)chunk + sizeof(HeapChunkHeader)), NULL);
                 page->numChunksWithOnFree--;
             }
 
@@ -421,8 +442,7 @@ static FORCE_INLINE int chunkChangeRefCnt(HeapPages *pages, HeapPage *page, void
 
     if (chunk->onFree && chunk->refCnt == 1 && delta == -1)
     {
-        Slot param = {.ptrVal = ptr};
-        chunk->onFree(&param, NULL);
+        chunk->onFree(doGetOnFreeParams(ptr), NULL);
         page->numChunksWithOnFree--;
     }
 
