@@ -1826,62 +1826,59 @@ static void parseArrayOrStructLiteral(Compiler *comp, Type **type, Const *consta
     }
 
     int numItems = 0, itemOffset = 0;
-    if (comp->lex.tok.kind != TOK_RBRACE)
+    while (comp->lex.tok.kind != TOK_RBRACE)
     {
-        while (1)
+        if (!namedFields && numItems > (*type)->numItems - 1)
+            comp->error.handler(comp->error.context, "Too many elements in literal");
+
+        // [ident ":"]
+        Field *field = NULL;
+        if (namedFields)
         {
-            if (!namedFields && numItems > (*type)->numItems - 1)
-                comp->error.handler(comp->error.context, "Too many elements in literal");
+            lexCheck(&comp->lex, TOK_IDENT);
 
-            // [ident ":"]
-            Field *field = NULL;
-            if (namedFields)
-            {
-                lexCheck(&comp->lex, TOK_IDENT);
+            int fieldIndex = 0;
+            field = typeAssertFindField(&comp->types, *type, comp->lex.tok.name, &fieldIndex);
 
-                int fieldIndex = 0;
-                field = typeAssertFindField(&comp->types, *type, comp->lex.tok.name, &fieldIndex);
+            if (field && fieldInitialized[fieldIndex])
+                comp->error.handler(comp->error.context, "Duplicate field %s", field->name);
 
-                if (field && fieldInitialized[fieldIndex])
-                    comp->error.handler(comp->error.context, "Duplicate field %s", field->name);
+            fieldInitialized[fieldIndex] = true;
+            itemOffset = field->offset;
 
-                fieldInitialized[fieldIndex] = true;
-                itemOffset = field->offset;
-
-                lexNext(&comp->lex);
-                lexEat(&comp->lex, TOK_COLON);
-            }
-            else if ((*type)->kind == TYPE_STRUCT)
-            {
-                field = (*type)->field[numItems];
-                itemOffset = field->offset;
-            }
-
-            if (!constant)
-                genPushLocalPtr(&comp->gen, arrayOrStruct->offset + itemOffset);
-
-            Type *expectedItemType = (*type)->kind == TYPE_ARRAY ? (*type)->base : field->type;
-            Type *itemType = expectedItemType;
-            Const itemConstantBuf, *itemConstant = constant ? &itemConstantBuf : NULL;
-            int itemSize = typeSize(&comp->types, expectedItemType);
-
-            // expr
-            parseExpr(comp, &itemType, itemConstant);
-            doAssertImplicitTypeConv(comp, expectedItemType, &itemType, itemConstant);
-
-            if (constant)
-                constAssign(&comp->consts, (char *)constant->ptrVal + itemOffset, itemConstant, expectedItemType->kind, itemSize);
-            else
-                genChangeRefCntAssign(&comp->gen, expectedItemType);
-
-            numItems++;
-            if ((*type)->kind == TYPE_ARRAY)
-                itemOffset += itemSize;
-
-            if (comp->lex.tok.kind != TOK_COMMA)
-                break;
             lexNext(&comp->lex);
+            lexEat(&comp->lex, TOK_COLON);
         }
+        else if ((*type)->kind == TYPE_STRUCT)
+        {
+            field = (*type)->field[numItems];
+            itemOffset = field->offset;
+        }
+
+        if (!constant)
+            genPushLocalPtr(&comp->gen, arrayOrStruct->offset + itemOffset);
+
+        Type *expectedItemType = (*type)->kind == TYPE_ARRAY ? (*type)->base : field->type;
+        Type *itemType = expectedItemType;
+        Const itemConstantBuf, *itemConstant = constant ? &itemConstantBuf : NULL;
+        int itemSize = typeSize(&comp->types, expectedItemType);
+
+        // expr
+        parseExpr(comp, &itemType, itemConstant);
+        doAssertImplicitTypeConv(comp, expectedItemType, &itemType, itemConstant);
+
+        if (constant)
+            constAssign(&comp->consts, (char *)constant->ptrVal + itemOffset, itemConstant, expectedItemType->kind, itemSize);
+        else
+            genChangeRefCntAssign(&comp->gen, expectedItemType);
+
+        numItems++;
+        if ((*type)->kind == TYPE_ARRAY)
+            itemOffset += itemSize;
+
+        if (comp->lex.tok.kind != TOK_COMMA)
+            break;
+        lexNext(&comp->lex);
     }
 
     if (!namedFields && numItems < (*type)->numItems)
@@ -1921,7 +1918,7 @@ static void parseDynArrayLiteral(Compiler *comp, Type **type, Const *constant)
     const TokenKind rightEndTok = (*type)->isVariadicParamList ? TOK_RPAR : TOK_RBRACE;
     if (comp->lex.tok.kind != rightEndTok)
     {
-        while (1)
+        while (comp->lex.tok.kind != TOK_RBRACE)
         {
             Type *itemType = staticArrayType->base;
 
@@ -2010,34 +2007,31 @@ static void parseMapLiteral(Compiler *comp, Type **type, Const *constant)
     genCallTypedBuiltin(&comp->gen, *type, BUILTIN_MAKE);
 
     // Parse map
-    if (comp->lex.tok.kind != TOK_RBRACE)
+    while (comp->lex.tok.kind != TOK_RBRACE)
     {
-        while (1)
-        {
-            genDup(&comp->gen);
+        genDup(&comp->gen);
 
-            // Key
-            Type *keyType = typeMapKey(*type);
-            parseExpr(comp, &keyType, NULL);
-            doAssertImplicitTypeConv(comp, typeMapKey(*type), &keyType, NULL);
+        // Key
+        Type *keyType = typeMapKey(*type);
+        parseExpr(comp, &keyType, NULL);
+        doAssertImplicitTypeConv(comp, typeMapKey(*type), &keyType, NULL);
 
-            lexEat(&comp->lex, TOK_COLON);
+        lexEat(&comp->lex, TOK_COLON);
 
-            // Get map item by key
-            genGetMapPtr(&comp->gen, *type);
+        // Get map item by key
+        genGetMapPtr(&comp->gen, *type);
 
-            // Item
-            Type *itemType = typeMapItem(*type);
-            parseExpr(comp, &itemType, NULL);
-            doAssertImplicitTypeConv(comp, typeMapItem(*type), &itemType, NULL);
+        // Item
+        Type *itemType = typeMapItem(*type);
+        parseExpr(comp, &itemType, NULL);
+        doAssertImplicitTypeConv(comp, typeMapItem(*type), &itemType, NULL);
 
-            // Assign to map item
-            genChangeRefCntAssign(&comp->gen, typeMapItem(*type));
+        // Assign to map item
+        genChangeRefCntAssign(&comp->gen, typeMapItem(*type));
 
-            if (comp->lex.tok.kind != TOK_COMMA)
-                break;
-            lexNext(&comp->lex);
-        }
+        if (comp->lex.tok.kind != TOK_COMMA)
+            break;
+        lexNext(&comp->lex);
     }
 
     // Allow closing brace on a new line
