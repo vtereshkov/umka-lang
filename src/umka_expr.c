@@ -1918,7 +1918,7 @@ static void parseDynArrayLiteral(Compiler *comp, Type **type, Const *constant)
     const TokenKind rightEndTok = (*type)->isVariadicParamList ? TOK_RPAR : TOK_RBRACE;
     if (comp->lex.tok.kind != rightEndTok)
     {
-        while (comp->lex.tok.kind != TOK_RBRACE)
+        while ((*type)->isVariadicParamList || comp->lex.tok.kind != TOK_RBRACE)
         {
             Type *itemType = staticArrayType->base;
 
