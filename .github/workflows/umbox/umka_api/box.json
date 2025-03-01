@@ -1,0 +1,15 @@
+{
+    "name": "umka_api",
+    "version": "HEAD",
+    "author": "Vasiliy Tereshkov <vtereshkov@mail.ru>",
+    "license": "BSD-2",
+    "description": "Umka API C headers",
+    "readme": "README.md",
+    "homepage": "https://github.com/vtereshkov/umka-lang",
+    "dependencies": [],
+    "include": [
+        "umka_api.h",
+				"LICENSE"
+    ],
+    "run": "echo Nothing to run"
+}
