@@ -16,3 +16,14 @@ jobs:
       - uses: marekmaskarinec/umbox@master
         with:
           secret: ${{ secrets.UMBOX }}
+  upload_api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          path: umka-lang
+      - run: cp -r umka-lang/.github/workflows/umbox/umka_api/* .
+      - run: cp umka-lang/src/umka_api.h .
+      - uses: marekmaskarinec/umbox@master
+        with:
+          secret: ${{ secrets.UMBOX_API }}
