@@ -899,10 +899,10 @@ Syntax:
 ```
 compositeLiteral = [type] (arrayLiteral | dynArrayLiteral | mapLiteral | 
                    structLiteral | closureLiteral).
-arrayLiteral     = "{" [expr {"," expr}] "}".
+arrayLiteral     = "{" [expr {"," expr} [","]] "}".
 dynArrayLiteral  = arrayLiteral.
-mapLiteral       = "{" expr ":" expr {"," expr ":" expr} "}".
-structLiteral    = "{" [[ident ":"] expr {"," [ident ":"] expr}] "}".
+mapLiteral       = "{" [expr ":" expr {"," expr ":" expr} [","]] "}".
+structLiteral    = "{" [[ident ":"] expr {"," [ident ":"] expr} [","]] "}".
 closureLiteral   = ["|" ident {"," ident} "|"] fnBlock.
 ```
 
@@ -911,7 +911,10 @@ Examples:
 ```
 [3]real{2.3, -4.1 / 2, b}
 []any{7.2, "Hello", [2]int{3, 5}}
-map[[]int]str{[]int{13, 15}: "First", []int{57, 89}: "Second"}
+map[[]int]str{
+    []int{13, 15}: "First",
+    []int{57, 89}: "Second",
+}
 Vec{x: 2, y: 8}
 Mat{ {1, 2}, {3, 4} }                   // Nested literals' types omitted
 fn (x: int) |y, z| {return x + y + z}
@@ -1554,10 +1557,10 @@ callSelector        = actualParams.
 actualParams        = "(" [expr {"," expr}] ")".
 compositeLiteral    = [type] (arrayLiteral | dynArrayLiteral | mapLiteral | 
                       structLiteral | closureLiteral).
-arrayLiteral        = "{" [expr {"," expr}] "}".
+arrayLiteral        = "{" [expr {"," expr} [","]] "}".
 dynArrayLiteral     = arrayLiteral.
-mapLiteral          = "{" expr ":" expr {"," expr ":" expr} "}".
-structLiteral       = "{" [[ident ":"] expr {"," [ident ":"] expr}] "}".
+mapLiteral          = "{" [expr ":" expr {"," expr ":" expr} [","]] "}".
+structLiteral       = "{" [[ident ":"] expr {"," [ident ":"] expr} [","]] "}".
 closureLiteral      = ["|" ident {"," ident} "|"] fnBlock.
 typeCast            = type "(" expr ")".
 enumConst           = [type] "." ident.
