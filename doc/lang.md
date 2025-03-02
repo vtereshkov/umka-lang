@@ -316,7 +316,7 @@ Examples:
 
 ```
 map[str]real
-map[[]int]str
+map[[2]int]str
 ```
 
 Maps require initialization by assignment from a map literal or by explicitly calling `make()`. 
@@ -911,9 +911,9 @@ Examples:
 ```
 [3]real{2.3, -4.1 / 2, b}
 []any{7.2, "Hello", [2]int{3, 5}}
-map[[]int]str{
-    []int{13, 15}: "First",
-    []int{57, 89}: "Second",
+map[[2]int]str{
+    {13, 15}: "First",
+    {57, 89}: "Second",
 }
 Vec{x: 2, y: 8}
 Mat{ {1, 2}, {3, 4} }                   // Nested literals' types omitted
