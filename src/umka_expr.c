@@ -1786,8 +1786,8 @@ static void parseTypeCast(Compiler *comp, Type **type, Const *constant)
 }
 
 
-// arrayLiteral     = "{" [expr {"," expr}] "}".
-// structLiteral    = "{" [[ident ":"] expr {"," [ident ":"] expr}] "}".
+// arrayLiteral  = "{" [expr {"," expr} [","]] "}".
+// structLiteral = "{" [[ident ":"] expr {"," [ident ":"] expr} [","]] "}".
 static void parseArrayOrStructLiteral(Compiler *comp, Type **type, Const *constant)
 {
     lexEat(&comp->lex, TOK_LBRACE);
@@ -1991,7 +1991,7 @@ static void parseDynArrayLiteral(Compiler *comp, Type **type, Const *constant)
 }
 
 
-// mapLiteral = "{" expr ":" expr {"," expr ":" expr} "}".
+// mapLiteral = "{" [expr ":" expr {"," expr ":" expr} [","]] "}".
 static void parseMapLiteral(Compiler *comp, Type **type, Const *constant)
 {
     lexEat(&comp->lex, TOK_LBRACE);
