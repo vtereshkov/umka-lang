@@ -5,6 +5,7 @@ file_extensions:
   - um
 scope: source.umka
 variables:
+  keyword: (break|case|const|continue|default|else|enum|for|fn|import|interface|if|in|map|return|str|struct|switch|type|var|weak)
   builtin: (abs|append|atan|atan2|cap|ceil|copy|cos|delete|exit|exp|fabs|floor|fprintf|fscanf|insert|keys|len|log|make|memusage|new|printf|resume|round|scanf|selfhasptr|selftypeeq|sin|sizeof|sizeofself|slice|sort|sprintf|sqrt|sscanf|trunc|typeptr|valid|validkey)
   ident: '[A-Za-z_][A-Za-z_0-9]*'
   typeident: '_*[A-Z][A-Za-z_0-9]*'
@@ -164,6 +165,9 @@ contexts:
       scope: punctuation.definition.parameters.begin.umka
       push: function_param_trap
     
+    - match: '\bfn\b'
+      scope: keyword.control.umka
+
     # Definition
     - match: '\b({{ident}}){{space}}(\*?){{space}}(?=\()'
       captures:
@@ -361,7 +365,7 @@ contexts:
         3: constant.enum.umka
 
     # Keywords
-    - match: '\b(break|case|const|continue|default|else|enum|for|fn|import|interface|if|in|map|return|str|struct|switch|type|var|weak)\b'
+    - match: '\b{{keyword}}\b'
       scope: keyword.control.umka         
     
     # Ternary scoped 
@@ -390,6 +394,12 @@ contexts:
         2: entity.name.module.umka
         3: punctuation.separator.umka
         4: storage.type.umka
+
+    # Variadic type keyword capture
+    - match: '(\.\.){{space}}\b{{keyword}}\b'
+      captures:
+        1: punctuation.separator.um
+        2: keyword.control.umka
 
     # Variadic type
     - match: '(\.\.){{space}}({{ident}})'
