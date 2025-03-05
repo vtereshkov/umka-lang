@@ -32,10 +32,11 @@ Error description. A zero `code` means no error.
 ```
 type StdErr* = enum {
     ok     = 0           // No error
-    buffer = 1           // Wrong buffer size
-    ptr    = 2           // Pointers cannot be read or written
-    nullf  = 3           // File is null
-    eof    = 4           // End of file
+    assert = 1           // Assertion failed
+    buffer = 2           // Wrong buffer size
+    ptr    = 3           // Pointers cannot be read or written
+    nullf  = 4           // File is null
+    eof    = 5           // End of file
 }
 ```
 
@@ -361,7 +362,7 @@ fn main() {
     less := fn (x: any): bool |max| {return int(x) < max} 
     sum  := fn (x, y: any): any     {return int(x) + int(y)}     
     
-    result := int(fnc.Array(data).transform(sqr).filter(less).reduce(sum))   
+    result := int(fnc::Array(data).transform(sqr).filter(less).reduce(sum))   
     printf("Sum of all squares less than %lld = %lld \n", max, result)     
 }
 ```
