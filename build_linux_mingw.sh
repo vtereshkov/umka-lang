@@ -14,7 +14,7 @@ rm -f *.a
 
 x86_64-w64-mingw32-gcc $gccflags -c $sourcefiles
 x86_64-w64-mingw32-gcc -s -shared -fPIC -static-libgcc *.o -o libumka.dll -lm
-ar rcs libumka_static_linux.a *.o
+ar rcs libumka_static_windows.a *.o
 
 x86_64-w64-mingw32-gcc $gccflags -c umka.c
 x86_64-w64-mingw32-gcc -s umka.o -o umka.exe -static-libgcc -lm -L. -lumka -Wl,-rpath,'$ORIGIN'
