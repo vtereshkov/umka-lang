@@ -11,8 +11,10 @@
     "include": [
         "umka.exe",
         "umka",
-        "libumka.so",
         "libumka.dll",
+        "libumka.so",
+        "libumka_static_windows.a",
+        "libumka_static_linux.a",
         "umka_api.h"
     ],
     "pre_build": "sh umbox_pre_build.sh",
