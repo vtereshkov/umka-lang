@@ -210,7 +210,11 @@ Parameters:
 * `params`: Parameter stack slots
 * `result`: Returned value stack slots
 
-Returned value: Pointer to the stack slot allocated for storing the returned value. For a returned value of a structured type, this stack slot already contains the pointer to the memory area sufficiently large to store the actual returned value. In this case, the user must fill this memory area, but not rewrite the pointer.
+Returned value: Pointer to the stack slot allocated for storing the returned value. Special rules apply to a returned value of a structured type or to multiple returned values (treated as a single implicit structure):
+
+* Inside a C function called from Umka, this stack slot already contains the pointer to the memory area sufficiently large to store the actual returned value. The user must fill this memory area, but not rewrite the pointer
+
+* Before calling an Umka function from C, the user must allocate a memory area needed for storing the actual returned value and put the area pointer to the stack slot returned by `umkaGetResult`
 
 ```
 static inline void *umkaGetInstance(UmkaStackSlot *result);
