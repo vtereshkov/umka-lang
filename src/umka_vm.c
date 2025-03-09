@@ -3843,6 +3843,13 @@ void vmRun(VM *vm, FuncContext *fn)
         {
             const ParamLayout *paramLayout = (ParamLayout *)fn->params[-4].ptrVal;   // For -4, see the stack layout diagram in umka_vm.c
             numParamSlots = paramLayout->numParamSlots;
+
+            if (paramLayout->numResultParams > 0)
+            {
+                if (!fn->result || !fn->result->ptrVal)
+                    vm->error->runtimeHandler(vm->error->context, ERR_RUNTIME, "Storage for structured result is not specified");
+                fn->params[paramLayout->firstSlotIndex[paramLayout->numParams - 1]].ptrVal = fn->result->ptrVal;
+            }
         }
         else
             numParamSlots = sizeof(Interface) / sizeof(Slot);    // Only upvalue
