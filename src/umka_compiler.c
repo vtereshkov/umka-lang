@@ -70,19 +70,19 @@ static void compilerDeclareBuiltinTypes(Compiler *comp)
     // any
     comp->anyType = typeAdd(&comp->types, &comp->blocks, TYPE_INTERFACE);
 
-    typeAddField(&comp->types, comp->anyType, comp->ptrVoidType, "__self");
-    typeAddField(&comp->types, comp->anyType, comp->ptrVoidType, "__selftype");
+    typeAddField(&comp->types, comp->anyType, comp->ptrVoidType, "#self");
+    typeAddField(&comp->types, comp->anyType, comp->ptrVoidType, "#selftype");
 
     // fiber
     comp->fiberType = typeAdd(&comp->types, &comp->blocks, TYPE_FIBER);
 
     Type *fnType = typeAdd(&comp->types, &comp->blocks, TYPE_FN);
-    typeAddParam(&comp->types, &fnType->sig, comp->anyType, "__upvalues");
+    typeAddParam(&comp->types, &fnType->sig, comp->anyType, "#upvalues");
     fnType->sig.resultType = comp->voidType;
 
     comp->fiberType->base = typeAdd(&comp->types, &comp->blocks, TYPE_CLOSURE);
-    typeAddField(&comp->types, comp->fiberType->base, fnType, "__fn");
-    typeAddField(&comp->types, comp->fiberType->base, comp->anyType, "__upvalues");
+    typeAddField(&comp->types, comp->fiberType->base, fnType, "#fn");
+    typeAddField(&comp->types, comp->fiberType->base, comp->anyType, "#upvalues");
 }
 
 
@@ -151,6 +151,7 @@ static void compilerDeclareBuiltinIdents(Compiler *comp)
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "cap",        comp->intType,     BUILTIN_CAP);
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "sizeof",     comp->intType,     BUILTIN_SIZEOF);
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "sizeofself", comp->intType,     BUILTIN_SIZEOFSELF);
+    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "selfptr",    comp->ptrVoidType, BUILTIN_SELFPTR);
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "selfhasptr", comp->boolType,    BUILTIN_SELFHASPTR);
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "selftypeeq", comp->boolType,    BUILTIN_SELFTYPEEQ);
     identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "typeptr",    comp->ptrVoidType, BUILTIN_TYPEPTR);
@@ -229,7 +230,7 @@ void compilerInit(Compiler *comp, const char *fileName, const char *sourceString
     comp->argc  = argc;
     comp->argv  = argv;
 
-    comp->blocks.module = moduleAdd(&comp->modules, "__universe");
+    comp->blocks.module = moduleAdd(&comp->modules, "#universe");
 
     compilerDeclareBuiltinTypes (comp);
     compilerDeclareBuiltinIdents(comp);

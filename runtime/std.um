@@ -82,7 +82,7 @@ fn tobytes*(buf: any): []uint8 {
         return {}
     }
     bytes := make([]uint8, sizeofself(buf))
-    rtlmemcpy(&bytes[0], buf.__self, sizeofself(buf))
+    rtlmemcpy(&bytes[0], selfptr(buf), sizeofself(buf))
     return bytes
 }
 
@@ -93,7 +93,7 @@ fn frombytes*(buf: any, bytes: []uint8): Err {
     if selfhasptr(buf) {
         return stderror(.ptr)
     }
-    rtlmemcpy(buf.__self, &bytes[0], sizeofself(buf))
+    rtlmemcpy(selfptr(buf), &bytes[0], sizeofself(buf))
     return {}    
 }
 
@@ -203,7 +203,7 @@ fn freadwrite(f: File, buf: any, reading: bool): (int, Err) {
             if selfhasptr(buf) {
                 return 0, stderror(.ptr)
             }
-            length, data = sizeofself(buf), buf.__self
+            length, data = sizeofself(buf), selfptr(buf)
     }
     if length == 0 || data == null {
         return 0, stderror(.ok)

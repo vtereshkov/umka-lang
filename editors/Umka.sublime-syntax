@@ -6,7 +6,7 @@ file_extensions:
 scope: source.umka
 variables:
   keyword: (break|case|const|continue|default|else|enum|for|fn|import|interface|if|in|map|return|str|struct|switch|type|var|weak)
-  builtin: (abs|append|atan|atan2|cap|ceil|copy|cos|delete|exit|exp|fabs|floor|fprintf|fscanf|insert|keys|len|log|make|memusage|new|printf|resume|round|scanf|selfhasptr|selftypeeq|sin|sizeof|sizeofself|slice|sort|sprintf|sqrt|sscanf|trunc|typeptr|valid|validkey)
+  builtin: (abs|append|atan|atan2|cap|ceil|copy|cos|delete|exit|exp|fabs|floor|fprintf|fscanf|insert|keys|len|log|make|memusage|new|printf|resume|round|scanf|selfhasptr|selfptr|selftypeeq|sin|sizeof|sizeofself|slice|sort|sprintf|sqrt|sscanf|trunc|typeptr|valid|validkey)
   ident: '[A-Za-z_][A-Za-z_0-9]*'
   typeident: '_*[A-Z][A-Za-z_0-9]*'
   space: '\s*'

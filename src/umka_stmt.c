@@ -15,10 +15,10 @@ static void parseBlock(Compiler *comp);
 static void doGarbageCollectionAt(Compiler *comp, int blockStackPos)
 {
     for (Ident *ident = comp->idents.first; ident; ident = ident->next)
-        if (ident->kind == IDENT_VAR && typeGarbageCollected(ident->type) && ident->block == comp->blocks.item[blockStackPos].block && !(ident->temporary && !ident->used) && strcmp(ident->name, "__result") != 0)
+        if (ident->kind == IDENT_VAR && typeGarbageCollected(ident->type) && ident->block == comp->blocks.item[blockStackPos].block && !(ident->temporary && !ident->used) && strcmp(ident->name, "#result") != 0)
         {
             // Skip unused upvalues
-            if (strcmp(ident->name, "__upvalues") == 0)
+            if (strcmp(ident->name, "#upvalues") == 0)
             {
                 if (!comp->blocks.item[blockStackPos].fn)
                     comp->error.handler(comp->error.context, "Upvalues can only be declared in the function scope");
@@ -879,7 +879,7 @@ static void parseForInHeader(Compiler *comp)
         genCallBuiltin(&comp->gen, collectionType->kind, BUILTIN_LEN);
     }
 
-    Ident *lenIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "__len", comp->intType, false);
+    Ident *lenIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "#len", comp->intType, false);
     doPushVarPtr(comp, lenIdent);
     genSwapAssign(&comp->gen, lenIdent->type->kind, typeSize(&comp->types, lenIdent->type));
 
@@ -891,7 +891,7 @@ static void parseForInHeader(Compiler *comp)
         if (collectionType->kind == TYPE_ARRAY)
             collectionIdentType = typeAddPtrTo(&comp->types, &comp->blocks, collectionType);    // Avoid copying the whole static array - use a pointer instead
 
-        collectionIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "__collection", collectionIdentType, false);
+        collectionIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "#collection", collectionIdentType, false);
         doZeroVar(comp, collectionIdent);
         doPushVarPtr(comp, collectionIdent);
         genSwapChangeRefCntAssign(&comp->gen, collectionIdent->type);
@@ -903,7 +903,7 @@ static void parseForInHeader(Compiler *comp)
     }
 
     // Declare variable for the collection index (for maps, it will be used for indexing keys())
-    const char *indexName = (collectionType->kind == TYPE_MAP) ? "__index" : indexOrKeyName;
+    const char *indexName = (collectionType->kind == TYPE_MAP) ? "#index" : indexOrKeyName;
     Ident *indexIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, indexName, comp->intType, false);
     indexIdent->used = true;                            // Do not warn about unused index
     doZeroVar(comp, indexIdent);
@@ -919,7 +919,7 @@ static void parseForInHeader(Compiler *comp)
         // Declare variable for the map keys
         Type *keysType = typeAdd(&comp->types, &comp->blocks, TYPE_DYNARRAY);
         keysType->base = typeMapKey(collectionType);
-        keysIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "__keys", keysType, false);
+        keysIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "#keys", keysType, false);
         doZeroVar(comp, keysIdent);
 
         // Call keys()
@@ -955,7 +955,7 @@ static void parseForInHeader(Compiler *comp)
 
     genForCondProlog(&comp->gen);
 
-    // Implicit conditional expression: __index < __len
+    // Implicit conditional expression: #index < #len
     doPushVarPtr(comp, indexIdent);
     genDeref(&comp->gen, TYPE_INT);
     doPushVarPtr(comp, lenIdent);
@@ -972,7 +972,7 @@ static void parseForInHeader(Compiler *comp)
 
     if (collectionType->kind == TYPE_MAP)
     {
-        // Assign key = __keys[__index]
+        // Assign key = #keys[#index]
         doPushVarPtr(comp, keysIdent);
         doPushVarPtr(comp, indexIdent);
         genDeref(&comp->gen, TYPE_INT);
@@ -1120,15 +1120,15 @@ static void parseReturnStmt(Compiler *comp)
     if (sig->resultType->kind != type->kind && typeNarrow(sig->resultType))
         genAssertRange(&comp->gen, sig->resultType->kind, type);
 
-    // Copy structure to __result
+    // Copy structure to #result
     if (typeStructured(sig->resultType))
     {
-        Ident *result = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, "__result", NULL);
+        Ident *result = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, "#result", NULL);
 
         doPushVarPtr(comp, result);
         genDeref(&comp->gen, TYPE_PTR);
 
-        // Assignment to an anonymous stack area (pointed to by __result) does not require updating reference counts
+        // Assignment to an anonymous stack area (pointed to by #result) does not require updating reference counts
         genSwapAssign(&comp->gen, sig->resultType->kind, typeSize(&comp->types, sig->resultType));
 
         doPushVarPtr(comp, result);
@@ -1252,7 +1252,7 @@ void parseFnBlock(Compiler *comp, Ident *fn, Type *upvaluesStructType)
     if (upvaluesStructType)
     {
         // Extract upvalues structure from the "any" interface
-        Ident *upvaluesParamIdent = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, "__upvalues", NULL);
+        Ident *upvaluesParamIdent = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, "#upvalues", NULL);
         Type *upvaluesParamType = upvaluesParamIdent->type;
 
         doPushVarPtr(comp, upvaluesParamIdent);
