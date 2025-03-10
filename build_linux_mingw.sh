@@ -28,11 +28,13 @@ mkdir umka_windows_mingw/examples/fractal -p
 mkdir umka_windows_mingw/examples/lisp -p
 mkdir umka_windows_mingw/examples/raytracer -p
 mkdir umka_windows_mingw/doc
+mkdir umka_windows_mingw/editors
 
 mv src/libumka* src/umka.exe umka_windows_mingw/
-cp src/umka_api.h Umka.sublime-syntax LICENSE umka_windows_mingw/
+cp src/umka_api.h LICENSE umka_windows_mingw/
 
 cp examples/* umka_windows_mingw/examples -r
 cp doc/* umka_windows_mingw/doc
+cp editors/* umka_windows_mingw/editors
 
 echo Build finished

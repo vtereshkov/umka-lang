@@ -16,7 +16,6 @@ move /y src\libumka* umka_windows_mingw
 move /y src\umka.exe umka_windows_mingw
 copy src\umka_api.h umka_windows_mingw
 copy LICENSE umka_windows_mingw
-copy Umka.sublime-syntax umka_windows_mingw
 
 mkdir umka_windows_mingw\examples
 mkdir umka_windows_mingw\examples\3dcam
@@ -24,9 +23,11 @@ mkdir umka_windows_mingw\examples\fractal
 mkdir umka_windows_mingw\examples\lisp
 mkdir umka_windows_mingw\examples\raytracer
 mkdir umka_windows_mingw\doc
+mkdir umka_windows_mingw\editors
 
 copy examples\3dcam\*.* umka_windows_mingw\examples\3dcam
 copy examples\fractal\*.* umka_windows_mingw\examples\fractal
 copy examples\lisp\*.* umka_windows_mingw\examples\lisp
 copy examples\raytracer\*.* umka_windows_mingw\examples\raytracer
 copy doc\*.* umka_windows_mingw\doc
+copy editors\*.* umka_windows_mingw\editors
