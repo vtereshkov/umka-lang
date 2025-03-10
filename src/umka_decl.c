@@ -106,7 +106,7 @@ static void parseSignature(Compiler *comp, Signature *sig)
 {
     // Dummy hidden parameter that allows any function to be converted to a closure
     if (!sig->isMethod)
-        typeAddParam(&comp->types, sig, comp->anyType, "__upvalues");
+        typeAddParam(&comp->types, sig, comp->anyType, "#upvalues");
 
     // Formal parameter list
     lexEat(&comp->lex, TOK_LPAR);
@@ -207,7 +207,7 @@ static void parseSignature(Compiler *comp, Signature *sig)
 
     // Structured result parameter
     if (typeStructured(sig->resultType))
-        typeAddParam(&comp->types, sig, typeAddPtrTo(&comp->types, &comp->blocks, sig->resultType), "__result");
+        typeAddParam(&comp->types, sig, typeAddPtrTo(&comp->types, &comp->blocks, sig->resultType), "#result");
 }
 
 
@@ -401,11 +401,11 @@ static Type *parseMapType(Compiler *comp)
     Type *nodeType = typeAdd(&comp->types, &comp->blocks, TYPE_STRUCT);
     Type *ptrNodeType = typeAddPtrTo(&comp->types, &comp->blocks, nodeType);
 
-    typeAddField(&comp->types, nodeType, comp->intType, "__len");
-    typeAddField(&comp->types, nodeType, ptrKeyType,    "__key");
-    typeAddField(&comp->types, nodeType, ptrItemType,   "__data");
-    typeAddField(&comp->types, nodeType, ptrNodeType,   "__left");
-    typeAddField(&comp->types, nodeType, ptrNodeType,   "__right");
+    typeAddField(&comp->types, nodeType, comp->intType, "#len");
+    typeAddField(&comp->types, nodeType, ptrKeyType,    "#key");
+    typeAddField(&comp->types, nodeType, ptrItemType,   "#data");
+    typeAddField(&comp->types, nodeType, ptrNodeType,   "#left");
+    typeAddField(&comp->types, nodeType, ptrNodeType,   "#right");
 
     type->base = nodeType;
     return type;
@@ -453,8 +453,8 @@ static Type *parseInterfaceType(Compiler *comp)
     type->numItems = 0;
 
     // The interface type is the Umka equivalent of Interface + methods
-    typeAddField(&comp->types, type, comp->ptrVoidType, "__self");
-    typeAddField(&comp->types, type, comp->ptrVoidType, "__selftype");
+    typeAddField(&comp->types, type, comp->ptrVoidType, "#self");
+    typeAddField(&comp->types, type, comp->ptrVoidType, "#selftype");
 
     // Method names and signatures, or embedded interfaces
     while (comp->lex.tok.kind == TOK_IDENT)
@@ -472,7 +472,7 @@ static Type *parseInterfaceType(Compiler *comp)
             Type *methodType = typeAdd(&comp->types, &comp->blocks, TYPE_FN);
             methodType->sig.isMethod = true;
 
-            typeAddParam(&comp->types, &methodType->sig, comp->ptrVoidType, "__self");
+            typeAddParam(&comp->types, &methodType->sig, comp->ptrVoidType, "#self");
             parseSignature(comp, &methodType->sig);
 
             Field *method = typeAddField(&comp->types, type, methodType, methodName);
@@ -486,7 +486,7 @@ static Type *parseInterfaceType(Compiler *comp)
             if (embeddedType->kind != TYPE_INTERFACE)
                 comp->error.handler(comp->error.context, "Interface type expected");
 
-            for (int i = 2; i < embeddedType->numItems; i++)    // Skip __self and __selftype in embedded interface
+            for (int i = 2; i < embeddedType->numItems; i++)    // Skip #self and #selftype in embedded interface
             {
                 Type *methodType = typeAdd(&comp->types, &comp->blocks, TYPE_FN);
                 typeDeepCopy(methodType, embeddedType->field[i]->type);
@@ -514,10 +514,10 @@ static Type *parseClosureType(Compiler *comp)
     // Function field
     Type *fnType = typeAdd(&comp->types, &comp->blocks, TYPE_FN);
     parseSignature(comp, &fnType->sig);
-    typeAddField(&comp->types, type, fnType, "__fn");
+    typeAddField(&comp->types, type, fnType, "#fn");
 
     // Upvalues field
-    typeAddField(&comp->types, type, comp->anyType, "__upvalues");
+    typeAddField(&comp->types, type, comp->anyType, "#upvalues");
 
     return type;
 }

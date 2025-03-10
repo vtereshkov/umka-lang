@@ -18,7 +18,7 @@ Umka is a statically typed embeddable scripting language. It combines simplicity
   * [Standard library](https://github.com/vtereshkov/umka-lang/blob/master/doc/lib.md)
   * [Embedding API](https://github.com/vtereshkov/umka-lang/blob/master/doc/api.md)
 * Editor support
-  * [Sublime Text](https://github.com/vtereshkov/umka-lang/blob/master/Umka.sublime-syntax)
+  * [Sublime Text](https://github.com/vtereshkov/umka-lang/blob/master/editors/Umka.sublime-syntax)
   * [VS Code](https://marketplace.visualstudio.com/items?itemName=mrms.vscode-umka)
 * [Community](https://discord.gg/PcT7cn59h9)
 

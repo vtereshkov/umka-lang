@@ -351,16 +351,16 @@ static void doPtrToInterfaceConv(Compiler *comp, Type *dest, Type **src, Const *
     {
         int destOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, dest);
 
-        // Assign to __self
-        genPushLocalPtr(&comp->gen, destOffset);                                // Push dest.__self pointer
-        genSwapAssign(&comp->gen, TYPE_PTR, 0);                                 // Assign to dest.__self
+        // Assign to #self
+        genPushLocalPtr(&comp->gen, destOffset);                                // Push dest.#self pointer
+        genSwapAssign(&comp->gen, TYPE_PTR, 0);                                 // Assign to dest.#self
 
-        // Assign to __selftype (RTTI)
-        Field *selfType = typeAssertFindField(&comp->types, dest, "__selftype", NULL);
+        // Assign to #selftype (RTTI)
+        Field *selfType = typeAssertFindField(&comp->types, dest, "#selftype", NULL);
 
         genPushGlobalPtr(&comp->gen, *src);                                     // Push src type
-        genPushLocalPtr(&comp->gen, destOffset + selfType->offset);             // Push dest.__selftype pointer
-        genSwapAssign(&comp->gen, TYPE_PTR, 0);                                 // Assign to dest.__selftype
+        genPushLocalPtr(&comp->gen, destOffset + selfType->offset);             // Push dest.#selftype pointer
+        genSwapAssign(&comp->gen, TYPE_PTR, 0);                                 // Assign to dest.#selftype
 
         // Assign to methods
         for (int i = 2; i < dest->numItems; i++)
@@ -408,20 +408,20 @@ static void doInterfaceToInterfaceConv(Compiler *comp, Type *dest, Type **src, C
 
     int destOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, dest);
 
-    // Assign to __self
+    // Assign to #self
     genDup(&comp->gen);                                                     // Duplicate src pointer
-    genDeref(&comp->gen, TYPE_PTR);                                         // Get src.__self value
+    genDeref(&comp->gen, TYPE_PTR);                                         // Get src.#self value
     genPushLocalPtr(&comp->gen, destOffset);                                // Push dest pointer
-    genSwapAssign(&comp->gen, TYPE_PTR, 0);                                 // Assign to dest.__self (NULL means a dynamic type)
+    genSwapAssign(&comp->gen, TYPE_PTR, 0);                                 // Assign to dest.#self (NULL means a dynamic type)
 
-    // Assign to __selftype (RTTI)
-    Field *selfType = typeAssertFindField(&comp->types, dest, "__selftype", NULL);
+    // Assign to #selftype (RTTI)
+    Field *selfType = typeAssertFindField(&comp->types, dest, "#selftype", NULL);
 
     genDup(&comp->gen);                                                     // Duplicate src pointer
-    genGetFieldPtr(&comp->gen, selfType->offset);                           // Get src.__selftype pointer
-    genDeref(&comp->gen, TYPE_PTR);                                         // Get src.__selftype value
-    genPushLocalPtr(&comp->gen, destOffset + selfType->offset);             // Push dest.__selftype pointer
-    genSwapAssign(&comp->gen, TYPE_PTR, 0);                                 // Assign to dest.__selftype
+    genGetFieldPtr(&comp->gen, selfType->offset);                           // Get src.#selftype pointer
+    genDeref(&comp->gen, TYPE_PTR);                                         // Get src.#selftype value
+    genPushLocalPtr(&comp->gen, destOffset + selfType->offset);             // Push dest.#selftype pointer
+    genSwapAssign(&comp->gen, TYPE_PTR, 0);                                 // Assign to dest.#selftype
 
     // Assign to methods
     for (int i = 2; i < dest->numItems; i++)
@@ -524,8 +524,8 @@ static void doFnToClosureConv(Compiler *comp, Type *dest, Type **src, Const *con
     genPushLocalPtr(&comp->gen, destOffset);
     genZero(&comp->gen, typeSize(&comp->types, dest));
 
-    genPushLocalPtr(&comp->gen, destOffset + dest->field[0]->offset);   // Push dest.__fn pointer
-    genSwapAssign(&comp->gen, TYPE_FN, 0);                              // Assign to dest.__fn
+    genPushLocalPtr(&comp->gen, destOffset + dest->field[0]->offset);   // Push dest.#fn pointer
+    genSwapAssign(&comp->gen, TYPE_FN, 0);                              // Assign to dest.#fn
 
     genPushLocalPtr(&comp->gen, destOffset);
     *src = dest;
@@ -1147,15 +1147,15 @@ static void parseBuiltinSortCall(Compiler *comp, Type **type, Const *constant)
     Type *fnType = typeAdd(&comp->types, &comp->blocks, TYPE_FN);
     Type *paramType = typeAddPtrTo(&comp->types, &comp->blocks, (*type)->base);
 
-    typeAddParam(&comp->types, &fnType->sig, comp->anyType, "__upvalues");
+    typeAddParam(&comp->types, &fnType->sig, comp->anyType, "#upvalues");
     typeAddParam(&comp->types, &fnType->sig, paramType, "a");
     typeAddParam(&comp->types, &fnType->sig, paramType, "b");
 
     fnType->sig.resultType = comp->intType;
 
     Type *expectedCompareType = typeAdd(&comp->types, &comp->blocks, TYPE_CLOSURE);
-    typeAddField(&comp->types, expectedCompareType, fnType, "__fn");
-    typeAddField(&comp->types, expectedCompareType, comp->anyType, "__upvalues");
+    typeAddField(&comp->types, expectedCompareType, fnType, "#fn");
+    typeAddField(&comp->types, expectedCompareType, comp->anyType, "#upvalues");
 
     Type *compareOrFlagType = expectedCompareType;
     parseExpr(comp, &compareOrFlagType, NULL);
@@ -1322,6 +1322,20 @@ static void parseBuiltinSizeofselfCall(Compiler *comp, Type **type, Const *const
 
     genCallBuiltin(&comp->gen, TYPE_INTERFACE, BUILTIN_SIZEOFSELF);
     *type = comp->intType;
+}
+
+
+static void parseBuiltinSelfptrCall(Compiler *comp, Type **type, Const *constant)
+{
+    if (constant)
+        comp->error.handler(comp->error.context, "Function is not allowed in constant expressions");
+
+    *type = NULL;
+    parseExpr(comp, type, constant);
+    typeAssertCompatibleBuiltin(&comp->types, *type, BUILTIN_SELFPTR, (*type)->kind == TYPE_INTERFACE);
+
+    genCallBuiltin(&comp->gen, TYPE_INTERFACE, BUILTIN_SELFPTR);
+    *type = comp->ptrVoidType;
 }
 
 
@@ -1540,6 +1554,7 @@ static void parseBuiltinCall(Compiler *comp, Type **type, Const *constant, Built
         case BUILTIN_CAP:           parseBuiltinCapCall(comp, type, constant);              break;
         case BUILTIN_SIZEOF:        parseBuiltinSizeofCall(comp, type, constant);           break;
         case BUILTIN_SIZEOFSELF:    parseBuiltinSizeofselfCall(comp, type, constant);       break;
+        case BUILTIN_SELFPTR:       parseBuiltinSelfptrCall(comp, type, constant);          break;
         case BUILTIN_SELFHASPTR:    parseBuiltinSelfhasptrCall(comp, type, constant);       break;
         case BUILTIN_SELFTYPEEQ:    parseBuiltinSelftypeeqCall(comp, type, constant);       break;
         case BUILTIN_TYPEPTR:       parseBuiltinTypeptrCall(comp, type, constant);          break;
@@ -1575,14 +1590,14 @@ static void parseCall(Compiler *comp, Type **type)
     // Decide whether a (default) indirect call can be replaced with a direct call
     int immediateEntryPoint = (*type)->kind == TYPE_FN ? genTryRemoveImmediateEntryPoint(&comp->gen) : -1;
 
-    // Actual parameters: [__self,] param1, param2 ...[__result]
+    // Actual parameters: [#self,] param1, param2 ...[#result]
     int numExplicitParams = 0, numPreHiddenParams = 0, numPostHiddenParams = 0;
     int i = 0;
 
     if ((*type)->kind == TYPE_CLOSURE)
     {
         // Closure upvalue
-        Field *fn = typeAssertFindField(&comp->types, *type, "__fn", NULL);
+        Field *fn = typeAssertFindField(&comp->types, *type, "#fn", NULL);
         *type = fn->type;
 
         genPushUpvalue(&comp->gen);
@@ -1611,7 +1626,7 @@ static void parseCall(Compiler *comp, Type **type)
         i++;
     }
 
-    // __result
+    // #result
     if (typeStructured((*type)->sig.resultType))
         numPostHiddenParams++;
 
@@ -1684,7 +1699,7 @@ static void parseCall(Compiler *comp, Type **type)
         i++;
     }
 
-    // Push __result pointer
+    // Push #result pointer
     if (typeStructured((*type)->sig.resultType))
     {
         int offset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, (*type)->sig.resultType);
@@ -1752,7 +1767,7 @@ static void parsePrimary(Compiler *comp, Ident *ident, Type **type, Const *const
             parseBuiltinCall(comp, type, constant, ident->builtin);
 
             // Copy result to a temporary local variable to collect it as garbage when leaving the block
-            if (typeGarbageCollected(*type) && ident->builtin != BUILTIN_TYPEPTR)
+            if (typeGarbageCollected(*type) && ident->builtin != BUILTIN_SELFPTR && ident->builtin != BUILTIN_TYPEPTR)
                 doCopyResultToTempVar(comp, *type);
 
             *isVar = false;
@@ -2060,7 +2075,7 @@ static void parseClosureLiteral(Compiler *comp, Type **type, Const *constant)
         if (comp->blocks.top != 0)
             genNop(&comp->gen);                                     // Jump over the nested function block (stub)
 
-        Field *fn = typeAssertFindField(&comp->types, *type, "__fn", NULL);
+        Field *fn = typeAssertFindField(&comp->types, *type, "#fn", NULL);
 
         Const fnConstant = {.intVal = comp->gen.ip};
         Ident *fnConstantIdent = identAddTempConst(&comp->idents, &comp->modules, &comp->blocks, fn->type, fnConstant);
@@ -2131,7 +2146,7 @@ static void parseClosureLiteral(Compiler *comp, Type **type, Const *constant)
             }
 
             // Assign closure upvalues
-            Field *upvalues = typeAssertFindField(&comp->types, closureIdent->type, "__upvalues", NULL);
+            Field *upvalues = typeAssertFindField(&comp->types, closureIdent->type, "#upvalues", NULL);
             Type *upvaluesType = upvaluesStructIdent->type;
 
             doPushVarPtr(comp, closureIdent);
@@ -2149,7 +2164,7 @@ static void parseClosureLiteral(Compiler *comp, Type **type, Const *constant)
 
         genNop(&comp->gen);                                     // Jump over the nested function block (stub)
 
-        Field *fn = typeAssertFindField(&comp->types, closureIdent->type, "__fn", NULL);
+        Field *fn = typeAssertFindField(&comp->types, closureIdent->type, "#fn", NULL);
 
         Const fnConstant = {.intVal = comp->gen.ip};
         Ident *fnConstantIdent = identAddTempConst(&comp->idents, &comp->modules, &comp->blocks, fn->type, fnConstant);

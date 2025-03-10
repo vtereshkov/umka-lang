@@ -9,7 +9,7 @@
 
 static void identTempName(Idents *idents, char *buf)
 {
-    snprintf(buf, DEFAULT_STR_LEN + 1, "__temp%d", idents->tempVarNameSuffix++);
+    snprintf(buf, DEFAULT_STR_LEN + 1, "#temp%d", idents->tempVarNameSuffix++);
 }
 
 
@@ -198,7 +198,7 @@ static Ident *identAdd(Idents *idents, Modules *modules, Blocks *blocks, IdentKi
     ident->exported          = exported;
     ident->globallyAllocated = false;
     ident->temporary         = false;
-    ident->used              = exported || ident->module == 0 || ident->name[0] == '_' || identIsMain(ident);  // Exported, predefined, temporary identifiers and main() are always treated as used
+    ident->used              = exported || ident->module == 0 || ident->name[0] == '#' || (ident->name[0] == '_' && ident->name[1] == 0) || identIsMain(ident);  // Exported, predefined, temporary, placeholder identifiers and main() are always treated as used
     ident->prototypeOffset   = -1;
     ident->debug             = *(idents->debug);
     ident->next              = NULL;
@@ -366,5 +366,5 @@ void identWarnIfUnusedAll(Idents *idents, int block)
 bool identIsMain(Ident *ident)
 {
     return strcmp(ident->name, "main") == 0 && ident->kind == IDENT_CONST &&
-           ident->type->kind == TYPE_FN && !ident->type->sig.isMethod && ident->type->sig.numParams == 1 && ident->type->sig.resultType->kind == TYPE_VOID;  // A dummy "__upvalues" is the only parameter
+           ident->type->kind == TYPE_FN && !ident->type->sig.isMethod && ident->type->sig.numParams == 1 && ident->type->sig.resultType->kind == TYPE_VOID;  // A dummy #upvalues is the only parameter
 }
