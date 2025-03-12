@@ -343,17 +343,17 @@ int moduleAdd(Modules *modules, const char *path)
 }
 
 
-char *moduleFindSource(Modules *modules, const char *path)
+ModuleSource *moduleFindSource(Modules *modules, const char *path)
 {
     unsigned int pathHash = hash(path);
     for (int i = 0; i < modules->numModuleSources; i++)
         if (modules->moduleSource[i]->pathHash == pathHash && strcmp(modules->moduleSource[i]->path, path) == 0)
-            return modules->moduleSource[i]->source;
+            return modules->moduleSource[i];
     return NULL;
 }
 
 
-void moduleAddSource(Modules *modules, const char *path, const char *source)
+void moduleAddSource(Modules *modules, const char *path, const char *source, bool trusted)
 {
     if (modules->numModuleSources >= MAX_MODULES)
         modules->error->handler(modules->error->context, "Too many module sources");
@@ -380,6 +380,7 @@ void moduleAddSource(Modules *modules, const char *path, const char *source)
     moduleSource->source[sourceLen] = 0;
 
     moduleSource->pathHash = hash(path);
+    moduleSource->trusted = trusted;
 
     modules->moduleSource[modules->numModuleSources++] = moduleSource;
 }
@@ -621,12 +622,13 @@ External *externalFind(Externals *externals, const char *name)
 }
 
 
-External *externalAdd(Externals *externals, const char *name, void *entry)
+External *externalAdd(Externals *externals, const char *name, void *entry, bool resolveInTrusted)
 {
     External *external = malloc(sizeof(External));
 
     external->entry = entry;
     external->resolved = false;
+    external->resolveInTrusted = resolveInTrusted;
 
     strncpy(external->name, name, DEFAULT_STR_LEN);
     external->name[DEFAULT_STR_LEN] = 0;

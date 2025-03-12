@@ -142,6 +142,7 @@ typedef struct
     char path[DEFAULT_STR_LEN + 1], folder[DEFAULT_STR_LEN + 1], name[DEFAULT_STR_LEN + 1];
     unsigned int pathHash;
     char *source;
+    bool trusted;
 } ModuleSource;
 
 
@@ -180,7 +181,7 @@ typedef struct tagExternal
     char name[DEFAULT_STR_LEN + 1];
     unsigned int hash;
     void *entry;
-    bool resolved;
+    bool resolved, resolveInTrusted;
     struct tagExternal *next;
 } External;
 
@@ -222,8 +223,8 @@ void  moduleNameFromPath        (Modules *modules, const char *path, char *folde
 int   moduleFind                (Modules *modules, const char *path);
 int   moduleFindImported        (Modules *modules, Blocks *blocks, const char *name);
 int   moduleAdd                 (Modules *modules, const char *path);
-char *moduleFindSource          (Modules *modules, const char *path);
-void  moduleAddSource           (Modules *modules, const char *path, const char *source);
+ModuleSource *moduleFindSource  (Modules *modules, const char *path);
+void  moduleAddSource           (Modules *modules, const char *path, const char *source, bool trusted);
 void *moduleGetImplLibFunc      (Module  *module,  const char *name);
 char *moduleCurFolder           (char *buf, int size);
 bool  modulePathIsAbsolute      (const char *path);
@@ -241,7 +242,7 @@ int  blocksCurrent(Blocks *blocks);
 void externalInit       (Externals *externals);
 void externalFree       (Externals *externals);
 External *externalFind  (Externals *externals, const char *name);
-External *externalAdd   (Externals *externals, const char *name, void *entry);
+External *externalAdd   (Externals *externals, const char *name, void *entry, bool resolveInTrusted);
 
 
 static inline unsigned int hash(const char *str)

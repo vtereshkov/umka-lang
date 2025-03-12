@@ -109,7 +109,7 @@ enum
 static unsigned int keywordHash[NUM_KEYWORDS];
 
 
-int lexInit(Lexer *lex, Storage *storage, DebugInfo *debug, const char *fileName, const char *sourceString, Error *error)
+int lexInit(Lexer *lex, Storage *storage, DebugInfo *debug, const char *fileName, const char *sourceString, bool trusted, Error *error)
 {
     // Fill keyword hashes
     for (int i = 0; i < NUM_KEYWORDS; i++)
@@ -120,6 +120,7 @@ int lexInit(Lexer *lex, Storage *storage, DebugInfo *debug, const char *fileName
 
     lex->error = error;
     lex->hasSourceString = false;
+    lex->trusted = trusted;
     lex->buf = NULL;
     int bufLen = 0;
 
