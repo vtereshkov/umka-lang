@@ -118,7 +118,7 @@ typedef struct
 typedef struct
 {
     char *fileName;
-    bool hasSourceString;
+    bool hasSourceString, trusted;
     char *buf;
     int bufPos, line, pos;
     Token tok, prevTok;
@@ -128,7 +128,7 @@ typedef struct
 } Lexer;
 
 
-int lexInit(Lexer *lex, Storage *storage, DebugInfo *debug, const char *fileName, const char *sourceString, Error *error);
+int lexInit(Lexer *lex, Storage *storage, DebugInfo *debug, const char *fileName, const char *sourceString, bool trusted, Error *error);
 void lexFree(Lexer *lex);
 void lexNext(Lexer *lex);
 void lexNextForcedSemicolon(Lexer *lex);

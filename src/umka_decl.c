@@ -826,8 +826,17 @@ static void parseImportItem(Compiler *comp)
 
     // Module source strings, if any, have precedence over files
     char *sourceString = NULL;
+    bool sourceTrusted = false;
+
     if (moduleRegularizePath(comp->lex.tok.strVal, comp->modules.curFolder, path, DEFAULT_STR_LEN + 1))
-        sourceString = moduleFindSource(&comp->modules, path);
+    {
+        const ModuleSource *sourceDesc = moduleFindSource(&comp->modules, path);
+        if (sourceDesc)
+        {
+            sourceString = sourceDesc->source;
+            sourceTrusted = sourceDesc->trusted;
+        }
+    }
 
     if (!sourceString)
         moduleAssertRegularizePath(&comp->modules, comp->lex.tok.strVal, comp->modules.module[comp->blocks.module]->folder, path, DEFAULT_STR_LEN + 1);
@@ -853,7 +862,7 @@ static void parseImportItem(Compiler *comp)
         int currentModule       = comp->blocks.module;
         DebugInfo currentDebug  = comp->debug;
         Lexer currentLex        = comp->lex;
-        lexInit(&comp->lex, &comp->storage, &comp->debug, path, sourceString, &comp->error);
+        lexInit(&comp->lex, &comp->storage, &comp->debug, path, sourceString, sourceTrusted, &comp->error);
 
         lexNext(&comp->lex);
         importedModule = parseModule(comp);
