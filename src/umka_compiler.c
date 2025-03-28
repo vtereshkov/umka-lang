@@ -217,13 +217,15 @@ void compilerInit(Compiler *comp, const char *fileName, const char *sourceString
 
     vmReset(&comp->vm, comp->gen.code, comp->gen.debugPerInstr);
 
+    comp->lex.fileName = "<unknown>";
+    comp->lex.tok.line = 1;
+    comp->lex.tok.pos = 1;
+    comp->debug.fnName = "<unknown>";
+
     char filePath[DEFAULT_STR_LEN + 1] = "";
     moduleAssertRegularizePath(&comp->modules, fileName, comp->modules.curFolder, filePath, DEFAULT_STR_LEN + 1);
 
     comp->lex.fileName = filePath;
-    comp->lex.tok.line = 1;
-    comp->lex.tok.pos = 1;
-    comp->debug.fnName = "<unknown>";
 
     lexInit(&comp->lex, &comp->storage, &comp->debug, filePath, sourceString, false, &comp->error);
 
