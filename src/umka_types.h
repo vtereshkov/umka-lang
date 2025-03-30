@@ -210,7 +210,13 @@ static inline bool typeKindGarbageCollected(TypeKind typeKind)
 }
 
 
-bool typeGarbageCollected(Type *type);
+bool typeHasPtr(Type *type, bool alsoWeakPtr);
+
+
+static inline bool typeGarbageCollected(Type *type)
+{
+    return typeHasPtr(type, false);
+}
 
 
 static inline bool typeExprListStruct(Type *type)
@@ -242,7 +248,7 @@ static inline bool typeImplicitlyConvertibleBaseTypes(Type *left, Type *right)
 
 static inline bool typeExplicitlyConvertibleBaseTypes(Types *types, Type *left, Type *right)
 {
-    return typeSize(types, left) <= typeSize(types, right) && !typeGarbageCollected(left) && !typeGarbageCollected(right);
+    return typeSize(types, left) <= typeSize(types, right) && !typeHasPtr(left, true) && !typeHasPtr(right, true);
 }
 
 
