@@ -277,18 +277,21 @@ int typeAlignment(Types *types, Type *type)
 }
 
 
-bool typeGarbageCollected(Type *type)
+bool typeHasPtr(Type *type, bool alsoWeakPtr)
 {
-    if (type->kind == TYPE_PTR      || type->kind == TYPE_STR     || type->kind == TYPE_MAP  ||
+    if (type->kind == TYPE_PTR      || type->kind == TYPE_STR       || type->kind == TYPE_MAP     ||
         type->kind == TYPE_DYNARRAY || type->kind == TYPE_INTERFACE || type->kind == TYPE_CLOSURE || type->kind == TYPE_FIBER)
         return true;
 
+    if (type->kind == TYPE_WEAKPTR && alsoWeakPtr)
+        return true;
+
     if (type->kind == TYPE_ARRAY)
-        return type->numItems > 0 && typeGarbageCollected(type->base);
+        return type->numItems > 0 && typeHasPtr(type->base, alsoWeakPtr);
 
     if (type->kind == TYPE_STRUCT)
         for (int i = 0; i < type->numItems; i++)
-            if (typeGarbageCollected(type->field[i]->type))
+            if (typeHasPtr(type->field[i]->type, alsoWeakPtr))
                 return true;
 
     return false;

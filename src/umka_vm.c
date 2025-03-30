@@ -2713,7 +2713,7 @@ static FORCE_INLINE void doBuiltinSelfhasptr(Fiber *fiber, Error *error)
 
     bool hasPtr = false;
     if (interface->selfType)
-        hasPtr = typeGarbageCollected(interface->selfType->base);
+        hasPtr = typeHasPtr(interface->selfType->base, true);
 
     fiber->top->intVal = hasPtr;
 }
