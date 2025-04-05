@@ -46,8 +46,8 @@ typedef struct
     int argc;
     char **argv;
 
-    // Original codepage (Windows only)
-    unsigned int originalCodepage;
+    // Original codepages (Windows only)
+    unsigned int originalInputCodepage, originalOutputCodepage;
 
 } Compiler;
 

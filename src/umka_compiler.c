@@ -199,7 +199,9 @@ static void compilerDeclareExternalFuncs(Compiler *comp, bool fileSystemEnabled)
 void compilerInit(Compiler *comp, const char *fileName, const char *sourceString, int stackSize, int argc, char **argv, bool fileSystemEnabled, bool implLibsEnabled)
 {
 #ifdef _WIN32
-    comp->originalCodepage = GetConsoleOutputCP();
+    comp->originalInputCodepage = GetConsoleCP();
+    comp->originalOutputCodepage = GetConsoleOutputCP();
+    SetConsoleCP(CP_UTF8);
     SetConsoleOutputCP(CP_UTF8);
 #endif
 
@@ -280,7 +282,8 @@ void compilerFree(Compiler *comp)
     errorReportFree (&comp->error.report);
 
 #ifdef _WIN32
-    SetConsoleOutputCP(comp->originalCodepage);
+    SetConsoleCP(comp->originalInputCodepage);
+    SetConsoleOutputCP(comp->originalOutputCodepage);
 #endif
 }
 
