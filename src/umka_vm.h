@@ -155,7 +155,7 @@ typedef union
     uint64_t uintVal;
     int32_t int32Val[2];
     void *ptrVal;
-    uint64_t weakPtrVal;
+    uint64_t weakPtrVal;    // For global pointers, stores the pointer. For heap pointers, stores the heap flag (bit 63), page ID (bits 32...62), offset within page (bits 0..31)
     double realVal;         // For all real types
     BuiltinFunc builtinVal;
 } Slot;

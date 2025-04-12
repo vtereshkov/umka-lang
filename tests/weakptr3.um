@@ -1,0 +1,16 @@
+import "std.um"
+
+x := 666
+var p: ^int
+
+fn test*() {
+    p = new(int, 42)
+    printf("%v\n", weak ^int(p)^)
+
+    p = &x
+    printf("%v\n", weak ^int(p)^)
+}
+
+fn main() {
+    test()
+}
