@@ -311,14 +311,14 @@ static FORCE_INLINE HeapChunkHeader *pageGetChunkHeader(HeapPage *page, void *pt
 }
 
 
-static FORCE_INLINE HeapPage *pageFind(HeapPages *pages, void *ptr, bool warnDangling)
+static FORCE_INLINE HeapPage *pageFind(HeapPages *pages, void *ptr)
 {
     for (HeapPage *page = pages->first; page; page = page->next)
         if (ptr >= page->ptr && ptr < (void *)((char *)page->ptr + page->numChunks * page->chunkSize))
         {
             HeapChunkHeader *chunk = pageGetChunkHeader(page, ptr);
 
-            if (warnDangling && chunk->refCnt == 0)
+            if (chunk->refCnt == 0)
                 pages->error->runtimeHandler(pages->error->context, ERR_RUNTIME, "Dangling pointer at %p", ptr);
 
             if (chunk->refCnt > 0)
@@ -656,7 +656,7 @@ void vmInit(VM *vm, int stackSize, bool fileSystemEnabled, Error *error)
 
 void vmFree(VM *vm)
 {
-    HeapPage *page = pageFind(&vm->pages, vm->mainFiber->stack, true);
+    HeapPage *page = pageFind(&vm->pages, vm->mainFiber->stack);
     if (!page)
        vm->error->runtimeHandler(vm->error->context, ERR_RUNTIME, "No fiber stack");
 
@@ -881,7 +881,7 @@ static FORCE_INLINE void doChangeRefCntImpl(Fiber *fiber, HeapPages *pages, void
         {
             case TYPE_PTR:
             {
-                HeapPage *page = pageFind(pages, ptr, true);
+                HeapPage *page = pageFind(pages, ptr);
                 if (!page)
                     break;
 
@@ -941,7 +941,7 @@ static FORCE_INLINE void doChangeRefCntImpl(Fiber *fiber, HeapPages *pages, void
             {
                 doCheckStr((char *)ptr, pages->error);
 
-                HeapPage *page = pageFind(pages, ptr, true);
+                HeapPage *page = pageFind(pages, ptr);
                 if (!page)
                     break;
 
@@ -958,7 +958,7 @@ static FORCE_INLINE void doChangeRefCntImpl(Fiber *fiber, HeapPages *pages, void
             case TYPE_DYNARRAY:
             {
                 DynArray *array = (DynArray *)ptr;
-                HeapPage *page = pageFind(pages, array->data, true);
+                HeapPage *page = pageFind(pages, array->data);
                 if (!page)
                     break;
 
@@ -1009,7 +1009,7 @@ static FORCE_INLINE void doChangeRefCntImpl(Fiber *fiber, HeapPages *pages, void
 
             case TYPE_FIBER:
             {
-                HeapPage *page = pageFind(pages, ptr, true);
+                HeapPage *page = pageFind(pages, ptr);
                 if (!page)
                     break;
 
@@ -1028,7 +1028,7 @@ static FORCE_INLINE void doChangeRefCntImpl(Fiber *fiber, HeapPages *pages, void
                         pages->error->runtimeHandler(pages->error->context, ERR_RUNTIME, "Cannot destroy a busy fiber");
 
                     // Only one ref is left. Defer processing the parent and traverse the children before removing the ref
-                    HeapPage *stackPage = pageFind(pages, ((Fiber *)ptr)->stack, true);
+                    HeapPage *stackPage = pageFind(pages, ((Fiber *)ptr)->stack);
                     if (!stackPage)
                         pages->error->runtimeHandler(pages->error->context, ERR_RUNTIME, "No fiber stack");
 
@@ -3469,17 +3469,21 @@ static FORCE_INLINE void doWeakenPtr(Fiber *fiber, HeapPages *pages)
     void *ptr = fiber->top->ptrVal;
     uint64_t weakPtr = 0;
 
-    HeapPage *page = pageFind(pages, ptr, false);
+    HeapPage *page = pageFind(pages, ptr);
     if (page)
     {
         HeapChunkHeader *chunk = pageGetChunkHeader(page, ptr);
-        if (chunk->refCnt > 0 && !chunk->isStack)
-        {
-            int pageId = page->id;
-            int pageOffset = (char *)ptr - (char *)page->ptr;
-            weakPtr = ((uint64_t)pageId << 32) | pageOffset;
-        }
+        if (chunk->isStack)
+            pages->error->runtimeHandler(pages->error->context, ERR_RUNTIME, "Pointer to a local variable cannot be weak");
+
+        const bool isHeapPtr = true;
+        const int pageId = page->id;
+        const int pageOffset = (char *)ptr - (char *)page->ptr;
+
+        weakPtr = ((uint64_t)isHeapPtr << 63) | ((uint64_t)pageId << 32) | pageOffset;
     }
+    else
+        weakPtr = (uint64_t)ptr;
 
     fiber->top->weakPtrVal = weakPtr;
     fiber->ip++;
@@ -3491,17 +3495,26 @@ static FORCE_INLINE void doStrengthenPtr(Fiber *fiber, HeapPages *pages)
     uint64_t weakPtr = fiber->top->weakPtrVal;
     void *ptr = NULL;
 
-    int pageId = (weakPtr >> 32) & 0x7FFFFFFF;
-    HeapPage *page = pageFindById(pages, pageId);
-    if (page)
+    const bool isHeapPtr = (weakPtr >> 63) & 1;
+    if (isHeapPtr)
     {
-        int pageOffset = weakPtr & 0x7FFFFFFF;
-        ptr = (char *)page->ptr + pageOffset;
+        const int pageId = (weakPtr >> 32) & 0x7FFFFFFF;
+        HeapPage *page = pageFindById(pages, pageId);
+        if (page)
+        {
+            const int pageOffset = weakPtr & 0x7FFFFFFF;
+            ptr = (char *)page->ptr + pageOffset;
 
-        HeapChunkHeader * chunk = pageGetChunkHeader(page, ptr);
-        if (chunk->refCnt == 0 || chunk->isStack)
-            ptr = NULL;
+            HeapChunkHeader *chunk = pageGetChunkHeader(page, ptr);
+            if (chunk->isStack)
+                pages->error->runtimeHandler(pages->error->context, ERR_RUNTIME, "Pointer to a local variable cannot be weak");
+
+            if (chunk->refCnt == 0)
+                ptr = NULL;
+        }
     }
+    else
+        ptr = (void *)weakPtr;
 
     fiber->top->ptrVal = ptr;
     fiber->ip++;
@@ -4005,7 +4018,7 @@ void *vmAllocData(VM *vm, int size, ExternFunc onFree)
 
 void vmIncRef(VM *vm, void *ptr)
 {
-    HeapPage *page = pageFind(&vm->pages, ptr, true);
+    HeapPage *page = pageFind(&vm->pages, ptr);
     if (page)
         chunkChangeRefCnt(&vm->pages, page, ptr, 1);
 }
@@ -4013,7 +4026,7 @@ void vmIncRef(VM *vm, void *ptr)
 
 void vmDecRef(VM *vm, void *ptr)
 {
-    HeapPage *page = pageFind(&vm->pages, ptr, true);
+    HeapPage *page = pageFind(&vm->pages, ptr);
     if (page)
         chunkChangeRefCnt(&vm->pages, page, ptr, -1);
 }

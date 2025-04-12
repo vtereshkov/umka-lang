@@ -652,8 +652,8 @@ Error: Empty string (code -2) from "foo":
     foo: (5)
     fooTest: (11)
     test: (25)
-    main: (71)
-    <unknown>: (104)
+    main: (72)
+    <unknown>: (106)
 9
 
 
@@ -778,6 +778,12 @@ true true
 
 25
 
+
+
+>>> Weak pointers - 3
+
+42
+666
 
 
 >>> Byte conversions
