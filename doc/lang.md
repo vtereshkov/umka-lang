@@ -91,7 +91,7 @@ Examples:
 
 ### String literals
 
-A string literal is a sequence of ASCII characters enclosed in double quotes. Characters can be specified "as is" or by an escape sequence.
+A string literal is a sequence of UTF-8 characters enclosed in double quotes. Characters can be specified "as is" or by an escape sequence.
 
 Syntax:
 
