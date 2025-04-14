@@ -205,7 +205,7 @@ Umka supports the `real32` and `real` floating-point types. The `real` is the re
 
 ### Pointer types
 
-A variable that stores a memory address of another variable has a pointer type. The type of that another variable is called the *base type* of the pointer type. The pointer type is specified by a `^` followed by the base type specification. If the base type is unknown, it should be specified as `void`. An uninitialized pointer has the value `null`. 
+A variable that stores a memory address of another variable has a pointer type. The type of the other variable is called the *base type* of the pointer type. The pointer type is specified by a `^` followed by the base type specification. If the base type is unknown, it should be specified as `void`. An uninitialized pointer has the value `null`. 
 
 Umka performs automatic memory management using reference counting. All pointers are reference-counted by default. However, in processing data structures with cyclic references (like doubly-linked lists), reference counting is unable to deallocate memory properly. In this case, one of the pointers that constitute the cycle can be declared `weak`. A weak pointer is not reference-counted and its existence does not prevent the pointed-to variable from being deallocated. If a weak pointer does not point to a valid memory block, it is equal to `null`. A weak pointer cannot point to a local variable.
 
