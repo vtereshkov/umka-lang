@@ -159,23 +159,21 @@ type = qualIdent | ptrType | arrayType | dynArrayType | strType | enumType |
        mapType | structType | interfaceType | closureType.
 ```
 
+Array types, dynamic array types, structure types, interface types, map types and closure types are called *structured* types.
+
 Any data type except the interface type can have a set of functions attached to it, which are called *methods*. A variable of that type is called the *receiver* with respect to any method which is called on it. Methods are not considered a part of the type declaration. 
 
-### Simple types
-
-Simple type represent single values.
-
-#### Ordinal types
+### Ordinal types
 
 Umka supports the following ordinal types:
 
-* Signed integer types  `int8`,  `int16` , `int32`,  `int`
-* Unsigned integer types `uint8`,  `uint16` , `uint32`,  `uint`
+* Signed integer types `int8`, `int16`, `int32`, `int`
+* Unsigned integer types `uint8`, `uint16`, `uint32`, `uint`
 * Boolean type `bool`
 * Character type `char`
 * Enumeration types
 
-The  `int`  and  `uint`  are the recommended 64-bit integer types. Other integer types are for compatibility with an external environment.
+The `int` and `uint` are the recommended 64-bit integer types. Other integer types are for compatibility with an external environment.
 
 The two possible values of the Boolean type are `true` and `false`.
 
@@ -201,13 +199,13 @@ enum (uint8) {
 }
 ```
 
-#### Real types  
+### Real types  
 
-Umka supports the  `real32` and  `real`  floating-point types.  The  `real`  is the recommended 64-bit real type. The `real32`  type is for compatibility with an external environment.
+Umka supports the `real32` and `real` floating-point types. The `real` is the recommended 64-bit real type. The `real32` type is for compatibility with an external environment.
 
-#### Pointer types
+### Pointer types
 
-A variable that stores a memory address of another variable has a pointer type. The type of that another variable is called the *base type* of the pointer type. The pointer type is specified by a `^`  followed by the base type specification. If the base type is unknown, it should be specified as `void`. An uninitialized pointer has the value `null`. 
+A variable that stores a memory address of another variable has a pointer type. The type of that another variable is called the *base type* of the pointer type. The pointer type is specified by a `^` followed by the base type specification. If the base type is unknown, it should be specified as `void`. An uninitialized pointer has the value `null`. 
 
 Umka performs automatic memory management using reference counting. All pointers are reference-counted by default. However, in processing data structures with cyclic references (like doubly-linked lists), reference counting is unable to deallocate memory properly. In this case, one of the pointers that constitute the cycle can be declared `weak`. A weak pointer is not reference-counted and its existence does not prevent the pointed-to variable from being deallocated. If a weak pointer does not point to a valid memory block, it is equal to `null`. A weak pointer cannot point to a local variable.
 
@@ -225,32 +223,19 @@ Examples:
 weak ^Vec
 ```
 
-#### Function types
+### String type
 
-A constant that stores an entry point of a function has a function type. A function is characterized by its *signature* that consists of a set of parameter names, types and optional default values, and an optional set of returned value types. The type of the last parameter in the function signature may be prefixed with `..`. The type `..T` is equivalent to `[]T` within the function. Such a function is called *variadic*.
+A string is a sequence of UTF-8 characters. Its length is not fixed at compile time and can change at run time due to concatenation by using the  `+` operator.
 
 Syntax:
 
 ```
-signature = "(" [typedIdentList ["=" expr] {"," typedIdentList ["=" expr]}] ")" 
-            [":" (type | "(" type {"," type} ")")].
+strType = "str"
 ```
 
-Each function definition in the module scope defines a constant of a function type. A constant or variable of a function type cannot be declared using a `const` or `var` declaration, which produce a closure type instead.   
+String assignment copies the contents of the string.
 
-Examples:
-
-```
-fn foo(code: int)
-fn MyFunc(p: int, x, y: real): (bool, real)
-fn printMsg(msg: char, values: ..real)
-```
-
-### Structured types
-
-Structured types represents sequences of values.
-
-#### Array types
+### Array types
 
 An array is a numbered sequence of items of a single type. The number of items is called the *length* of the array and should be a non-negative integer constant expression.
 
@@ -269,7 +254,7 @@ Examples:
 
 Array assignment copies the contents of the array.
 
-#### Dynamic array types
+### Dynamic array types
 
 A dynamic array is a numbered sequence of items of a single type. Its length is not fixed at compile time and can change at run time due to appending or deleting of items.
 
@@ -290,19 +275,7 @@ Dynamic arrays require initialization by assignment from a static array or from 
 
 Dynamic array assignment copies the pointer, but not the contents of the array. 
 
-#### String type
-
-A string is a sequence of ASCII characters. Its length is not fixed at compile time and can change at run time due to concatenation by using the  `+` operator.
-
-Syntax:
-
-```
-strType = "str"
-```
-
-String assignment copies the contents of the string.
-
-#### Map types
+### Map types
 
 A map is a collection of items of a single type indexed by unique values, called *keys*, of another type. The key type must be comparable, i.e., the `==` and `!=` operators must be applicable to operands of this type.
 
@@ -323,7 +296,7 @@ Maps require initialization by assignment from a map literal or by explicitly ca
 
 Map assignment copies the pointer, but not the contents of the map
 
-#### Structure types
+### Structure types
 
 A structure is a sequence of named items, called *fields*, that possibly have different types. Each field should have a unique name.
 
@@ -346,7 +319,7 @@ struct {
 
 Structure assignment copies the contents of the structure.
 
-#### Interface types
+### Interface types
 
 An interface is a sequence of method names and signatures. Each method should have a unique name. It is allowed to specify either a method name and its signature, or a name of some other interface type whose methods are to be included to the new interface type.
 
@@ -373,7 +346,28 @@ Any type can be converted to the built-in type `any`, which is an alias for `int
 
 Interface assignment copies the pointer, but not the contents of the variable that has been converted to the interface.
 
-#### Closure types
+### Function types
+
+A constant that stores an entry point of a function has a function type. A function is characterized by its *signature* that consists of a set of parameter names, types and optional default values, and an optional set of returned value types. The type of the last parameter in the function signature may be prefixed with `..`. The type `..T` is equivalent to `[]T` within the function. Such a function is called *variadic*.
+
+Syntax:
+
+```
+signature = "(" [typedIdentList ["=" expr] {"," typedIdentList ["=" expr]}] ")" 
+            [":" (type | "(" type {"," type} ")")].
+```
+
+Each function definition in the module scope defines a constant of a function type. A constant or variable of a function type cannot be declared using a `const` or `var` declaration, which produce a closure type instead.   
+
+Examples:
+
+```
+fn foo(code: int)
+fn MyFunc(p: int, x, y: real): (bool, real)
+fn printMsg(msg: char, values: ..real)
+```
+
+### Closure types
 
 A closure stores a function entry point (a value of a function type) and an optional set of variables *captured* from the enclosing function scope. These variables are copied to the closure function, so they can be used as local variables within the closure function even if they no longer exist in the enclosing function. 
 
@@ -391,7 +385,7 @@ fn (p: int, x, y: real): (bool, real)
 fn (msg: char, values: ..real)
 ```
 
-#### Fiber type
+### Fiber type
 
 The `fiber` type represents a fiber context to use in multitasking.
 
