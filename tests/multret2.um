@@ -1,0 +1,52 @@
+import "std.um"
+
+fn f(): (int, uint, char, int16) {
+    return 5, 6, 'A', 7
+}
+
+fn g(): (int8, int8, str, real32) {
+    return f()
+}
+
+fn test1() {
+    printf("\nTest 1\n")
+    a, b, c, d := g()
+    printf("%v %v %v %v\n", a, b, c, d)
+}
+
+type Font = interface {
+    validate()
+}
+
+type MyFont = struct {
+    text: str
+}
+
+fn (f: ^MyFont) validate() {
+    printf("Validation: %s\n", f.text)
+}
+
+fn loadMyFont(): (MyFont, std::Err) {
+    fox, dog := "fox", "dog"
+    return {"The quick brown " + fox + " jumps over the lazy " + dog}, std::error()
+}
+
+fn load(): (Font, std::Err) {
+  return loadMyFont()
+}
+
+fn test2() {
+    printf("\nTest 2\n")
+    f, err := load()
+    std::exitif(err)
+    f.validate()
+}
+
+fn test*() {
+    test1()
+    test2()
+}
+
+fn main() {
+    test()
+}

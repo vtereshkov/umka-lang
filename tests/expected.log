@@ -645,6 +645,16 @@ World Hello
 8.5 "43"
 
 
+>>> Multiple returns - 2
+
+
+Test 1
+5 6 "A" 7
+
+Test 2
+Validation: The quick brown fox jumps over the lazy dog
+
+
 >>> Error handling
 
 4
@@ -652,8 +662,8 @@ Error: Empty string (code -2) from "foo":
     foo: (5)
     fooTest: (11)
     test: (25)
-    main: (72)
-    <unknown>: (106)
+    main: (74)
+    <unknown>: (108)
 9
 
 

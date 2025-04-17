@@ -427,6 +427,7 @@ If a value `s` of type `S` is given where a value `t` of some other type `T` is 
 * `S` is a weak pointer type and `T` is a strong pointer type and either the base types of `S` and `T` are equivalent, or `t` is `null` 
 * `S` is a strong pointer type and `T` is a weak pointer type and either the base types of `S` and `T` are equivalent, or `s` is `null`, and `s` and `t` are not operands of a binary operator
 * `S` is a function type and `T` is a closure type and `S` and the underlying function type of `T` are equivalent
+* `s` and `t` are expression lists having equal numbers of items and each item of `s` can be implicitly converted to the corresponding item of `t`  
 
 #### Explicit conversions
 
