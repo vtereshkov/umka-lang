@@ -532,6 +532,34 @@ static void doFnToClosureConv(Compiler *comp, Type *dest, Type **src, Const *con
 }
 
 
+static void doExprListToExprListConv(Compiler *comp, Type *dest, Type **src, Const *constant)
+{
+    if (constant)
+        comp->error.handler(comp->error.context, "Conversion to expression list is not allowed in constant expressions");
+
+    Ident *destList = identAllocTempVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, dest, false);
+    doZeroVar(comp, destList);
+
+    // Assign to fields
+    for (int i = 0; i < dest->numItems; i++)
+    {
+        genDup(&comp->gen);                                                     // Duplicate src pointer
+        genGetFieldPtr(&comp->gen, (*src)->field[i]->offset);                   // Get src.item pointer
+        genDeref(&comp->gen, (*src)->field[i]->type->kind);                     // Get src.item value
+
+        Type *srcFieldType = (*src)->field[i]->type;
+        doAssertImplicitTypeConv(comp, dest->field[i]->type, &srcFieldType, constant);
+
+        genPushLocalPtr(&comp->gen, destList->offset + dest->field[i]->offset); // Push dest.item pointer
+        genSwapChangeRefCntAssign(&comp->gen, dest->field[i]->type);            // Assign to dest.item
+    }
+
+    genPop(&comp->gen);                                                         // Remove src pointer
+    doPushVarPtr(comp, destList);
+    *src = dest;
+}
+
+
 static void doImplicitTypeConvEx(Compiler *comp, Type *dest, Type **src, Const *constant, bool lhs, bool rhs)
 {
     // lhs/rhs can only be set to true for operands of binary operators
@@ -624,6 +652,12 @@ static void doImplicitTypeConvEx(Compiler *comp, Type *dest, Type **src, Const *
     else if (dest->kind == TYPE_CLOSURE && (*src)->kind == TYPE_FN && typeEquivalent(dest->field[0]->type, *src))
     {
         doFnToClosureConv(comp, dest, src, constant);
+    }
+
+    // Expression list to expression list (not applied to operands of binary operators)
+    else if (!lhs && !rhs && typeExprListStruct(dest) && typeExprListStruct(*src) && !typeEquivalent(dest, *src) && dest->numItems == (*src)->numItems)
+    {
+        doExprListToExprListConv(comp, dest, src, constant);
     }
 }
 

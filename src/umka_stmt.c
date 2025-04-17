@@ -246,14 +246,14 @@ static void parseListAssignmentStmt(Compiler *comp, Type *type, Const *varPtrCon
         else                                                // Assign to variable
         {
             genDup(&comp->gen);                                             // Duplicate expression list pointer
-            genPopReg(&comp->gen, REG_EXPR_LIST);                         // Save expression list pointer
+            genPopReg(&comp->gen, REG_EXPR_LIST);                           // Save expression list pointer
             genGetFieldPtr(&comp->gen, rightListType->field[i]->offset);    // Get expression pointer
             genDeref(&comp->gen, rightType->kind);                          // Get expression value
 
             doAssertImplicitTypeConv(comp, leftType, &rightType, NULL);
 
             genChangeRefCntAssign(&comp->gen, leftType);                    // Assign expression to variable
-            genPushReg(&comp->gen, REG_EXPR_LIST);                        // Restore expression list pointer
+            genPushReg(&comp->gen, REG_EXPR_LIST);                          // Restore expression list pointer
         }
     }
 
