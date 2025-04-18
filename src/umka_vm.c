@@ -317,13 +317,10 @@ static FORCE_INLINE HeapPage *pageFind(HeapPages *pages, void *ptr)
         if (ptr >= page->ptr && ptr < (void *)((char *)page->ptr + page->numChunks * page->chunkSize))
         {
             HeapChunkHeader *chunk = pageGetChunkHeader(page, ptr);
-
-            if (chunk->refCnt == 0)
+            if (chunk->refCnt <= 0)
                 pages->error->runtimeHandler(pages->error->context, ERR_RUNTIME, "Dangling pointer at %p", ptr);
 
-            if (chunk->refCnt > 0)
-                return page;
-            return NULL;
+            return page;
         }
     return NULL;
 }
@@ -396,7 +393,7 @@ static FORCE_INLINE void *chunkAlloc(HeapPages *pages, int64_t size, Type *type,
     int64_t chunkSize = align(sizeof(HeapChunkHeader) + align(size + 1, sizeof(int64_t)), MEM_MIN_HEAP_CHUNK);
 
     if (size < 0 || chunkSize > INT_MAX)
-        error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal block size");
+        error->runtimeHandler(error->context, ERR_RUNTIME, "Cannot allocate a block of %lld bytes", size);
 
     HeapPage *page = pageFindForAlloc(pages, chunkSize);
     if (!page)
@@ -2222,7 +2219,7 @@ static FORCE_INLINE void doBuiltinAppend(Fiber *fiber, HeapPages *pages, Error *
         doGetEmptyDynArray(array, arrayType);
 
     void *rhs = item;
-    int rhsLen = 1;
+    int64_t rhsLen = 1;
 
     if (!single)
     {
@@ -2238,7 +2235,7 @@ static FORCE_INLINE void doBuiltinAppend(Fiber *fiber, HeapPages *pages, Error *
         rhsLen = getDims(rhsArray)->len;
     }
 
-    int newLen = getDims(array)->len + rhsLen;
+    int64_t newLen = getDims(array)->len + rhsLen;
 
     if (newLen <= getDims(array)->capacity)
     {
