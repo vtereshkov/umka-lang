@@ -1045,6 +1045,11 @@ static FORCE_INLINE char *doAllocStr(HeapPages *pages, int64_t len, Error *error
 {
     StrDimensions dims = {.len = len, .capacity = 2 * (len + 1)};
 
+    if (dims.capacity > INT_MAX - MEM_MIN_FREE_HEAP)
+        dims.capacity = INT_MAX - MEM_MIN_FREE_HEAP;
+    if (dims.capacity < dims.len)
+        dims.capacity = dims.len;
+
     char *dimsAndData = chunkAlloc(pages, sizeof(StrDimensions) + dims.capacity, NULL, NULL, false, error);
     *(StrDimensions *)dimsAndData = dims;
 
@@ -1075,6 +1080,11 @@ static FORCE_INLINE void doAllocDynArray(HeapPages *pages, DynArray *array, Type
     array->itemSize = typeSizeNoCheck(array->type->base);
 
     DynArrayDimensions dims = {.len = len, .capacity = 2 * (len + 1)};
+
+    if (dims.capacity * array->itemSize > INT_MAX - MEM_MIN_FREE_HEAP)
+        dims.capacity = (INT_MAX - MEM_MIN_FREE_HEAP) / array->itemSize;
+    if (dims.capacity < dims.len)
+        dims.capacity = dims.len;
 
     char *dimsAndData = chunkAlloc(pages, sizeof(DynArrayDimensions) + dims.capacity * array->itemSize, array->type, NULL, false, error);
     *(DynArrayDimensions *)dimsAndData = dims;
@@ -2018,7 +2028,7 @@ static FORCE_INLINE void doBuiltinMake(Fiber *fiber, HeapPages *pages, Error *er
     if (type->kind == TYPE_DYNARRAY)
     {
         DynArray *result = (DynArray *)(fiber->top++)->ptrVal;
-        int len = (fiber->top++)->intVal;
+        int64_t len = (fiber->top++)->intVal;
 
         doAllocDynArray(pages, result, type, len, error);
         (--fiber->top)->ptrVal = result;
@@ -2046,7 +2056,7 @@ static FORCE_INLINE void doBuiltinMake(Fiber *fiber, HeapPages *pages, Error *er
 static FORCE_INLINE void doBuiltinMakefromarr(Fiber *fiber, HeapPages *pages, Error *error)
 {
     DynArray *dest = (DynArray *)(fiber->top++)->ptrVal;
-    int len        = (fiber->top++)->intVal;
+    int64_t len    = (fiber->top++)->intVal;
     void *src      = (fiber->top++)->ptrVal;
 
     Type *destType = fiber->code[fiber->ip].type;
@@ -2136,7 +2146,7 @@ static FORCE_INLINE void doBuiltinMaketostr(Fiber *fiber, HeapPages *pages, Erro
 
         if (src->data)
         {
-            const int len = strlen((const char *)src->data);
+            const int64_t len = strlen((const char *)src->data);
             dest = doAllocStr(pages, len, error);
             memcpy(dest, src->data, len);
         }
@@ -3368,7 +3378,7 @@ static FORCE_INLINE void doGetDynArrayPtr(Fiber *fiber, Error *error)
         error->runtimeHandler(error->context, ERR_RUNTIME, "Dynamic array is null");
 
     int itemSize    = array->itemSize;
-    int len         = getDims(array)->len;
+    int64_t len     = getDims(array)->len;
 
     if (index < 0 || index > len - 1)
         error->runtimeHandler(error->context, ERR_RUNTIME, "Index %d is out of range 0...%d", index, len - 1);
