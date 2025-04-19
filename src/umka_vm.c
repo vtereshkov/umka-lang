@@ -3338,9 +3338,9 @@ static FORCE_INLINE void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
 
 static FORCE_INLINE void doGetArrayPtr(Fiber *fiber, Error *error)
 {
-    int itemSize = fiber->code[fiber->ip].operand.int32Val[0];
-    int len      = fiber->code[fiber->ip].operand.int32Val[1];
-    int index    = (fiber->top++)->intVal;
+    int64_t itemSize = fiber->code[fiber->ip].operand.int32Val[0];
+    int64_t len      = fiber->code[fiber->ip].operand.int32Val[1];
+    int64_t index    = (fiber->top++)->intVal;
 
     char *data = (char *)fiber->top->ptrVal;
 
@@ -3358,7 +3358,7 @@ static FORCE_INLINE void doGetArrayPtr(Fiber *fiber, Error *error)
     }
 
     if (index < 0 || index > len - 1)
-        error->runtimeHandler(error->context, ERR_RUNTIME, "Index %d is out of range 0...%d", index, len - 1);
+        error->runtimeHandler(error->context, ERR_RUNTIME, "Index %lld is out of range 0...%lld", index, len - 1);
 
     fiber->top->ptrVal = data + itemSize * index;
 
@@ -3371,17 +3371,17 @@ static FORCE_INLINE void doGetArrayPtr(Fiber *fiber, Error *error)
 
 static FORCE_INLINE void doGetDynArrayPtr(Fiber *fiber, Error *error)
 {
-    int index       = (fiber->top++)->intVal;
+    int64_t index   = (fiber->top++)->intVal;
     DynArray *array = (DynArray *)(fiber->top++)->ptrVal;
 
     if (!array || !array->data)
         error->runtimeHandler(error->context, ERR_RUNTIME, "Dynamic array is null");
 
-    int itemSize    = array->itemSize;
-    int64_t len     = getDims(array)->len;
+    int64_t itemSize = array->itemSize;
+    int64_t len      = getDims(array)->len;
 
     if (index < 0 || index > len - 1)
-        error->runtimeHandler(error->context, ERR_RUNTIME, "Index %d is out of range 0...%d", index, len - 1);
+        error->runtimeHandler(error->context, ERR_RUNTIME, "Index %lld is out of range 0...%lld", index, len - 1);
 
     (--fiber->top)->ptrVal = (char *)array->data + itemSize * index;
 
