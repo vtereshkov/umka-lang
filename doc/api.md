@@ -526,9 +526,13 @@ Using the Umka API functions generally requires linking against the Umka interpr
 ### Types
 
 ```
+typedef void *(*UmkaAlloc) (void);
+// ... all other API function pointer types
+
 typedef struct
 {
-    // Function pointers
+    UmkaAlloc umkaAlloc;
+    // ... all other API function pointers
 } UmkaAPI;
 ```
 Collection of pointers to all the Umka API functions, except those declared as `inline`. For any API function, there is a corresponding field with the same name in `UmkaAPI`.
