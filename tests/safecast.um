@@ -70,10 +70,32 @@ fn test3() {
 	std::assert(d + c == "abab")
 }
 
+fn test4() {
+    s := "Hello,"
+    a := []uint8(s + " Brave New World!")
+    b := []int8(s + " дивный новый мир!")
+    printf("%v\n%v\n", a, b)
+    printf("%s\n%s\n", str(a), str(b))
+}
+
+fn test5() {
+    b := []char{'P', 'Q'}
+    b = append(b, 'R')
+    b = delete(b, 2)
+    printf("%v %v %v %v\n", b, str(b), len(b), len(str(b)))
+
+    c := []char{'P', 'Q', '\0', 'S'}
+    c = append(c, 'R')
+    c = delete(c, 3)
+    printf("%v %v %v %v\n", c, str(c), len(c), len(str(c)))    
+}
+
 fn test*() {
 	test1()
 	test2()
 	test3()
+	test4()
+	test5()
 }
 
 fn main() {

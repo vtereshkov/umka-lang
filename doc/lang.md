@@ -417,7 +417,7 @@ If a value `s` of type `S` is given where a value `t` of some other type `T` is 
 * `S` and `T` are compatible
 * `S` is an integer type and `T` is a real type
 * `S` is `char` and `T` is `str`
-* `S` is a `[]char` and `T` is `str`
+* `S` is `[]char` and `T` is `str`
 * `S` is `str` and `T` is `[]char` and `s` and `t` are not operands of a binary operator
 * `S` is an array type and `T` is a dynamic array type and the item types of `S` and `T` are equivalent and `s` and `t` are not operands of a binary operator
 * `S` is a dynamic array type and `T` is an array type and the item types of `S` and `T` are equivalent and `len(s) <= len(t)` 
@@ -437,6 +437,8 @@ If a value `s` of type `S` is given where a value `t` of some other type `T` is 
 * `S` and `T` are ordinal types
 * `S` and `T` are pointer types and `sizeof(s^) >= sizeof(t^)` and both `S` and `T` don't contain pointers
 * `S` is an interface type and `T` is a type (or a pointer to a type) that was actually converted to `S`
+* `S` is `[]int8` or `[]uint8` and `T` is `str`
+* `S` is `str` and `T` is `[]int8` or `[]uint8`
 * `S` is `[]U`, `T` is `[]V` and `U` can be explicitly converted to `V` 
 
 ## Declarations

@@ -712,6 +712,18 @@ void doExplicitTypeConv(Compiler *comp, Type *dest, Type **src, Const *constant)
         }
     }
 
+    // Dynamic array to string
+    else if ((*src)->kind == TYPE_DYNARRAY && ((*src)->base->kind == TYPE_INT8 || (*src)->base->kind == TYPE_UINT8) && dest->kind == TYPE_STR)
+    {
+        doDynArrayToStrConv(comp, dest, src, constant, false);
+    }
+
+    // String to dynamic array
+    else if ((*src)->kind == TYPE_STR && dest->kind == TYPE_DYNARRAY && (dest->base->kind == TYPE_INT8 || dest->base->kind == TYPE_UINT8))
+    {
+        doStrToDynArrayConv(comp, dest, src, constant);
+    }
+
     // Dynamic array to dynamic array of another base type (covariant arrays)
     else if ((*src)->kind == TYPE_DYNARRAY && dest->kind == TYPE_DYNARRAY)
     {

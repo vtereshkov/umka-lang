@@ -2072,7 +2072,7 @@ static FORCE_INLINE void doBuiltinMakefromarr(Fiber *fiber, HeapPages *pages, Er
 }
 
 
-// fn makefromstr(src: str): []char
+// fn makefromstr(src: str): []char | []int8 | []uint8
 static FORCE_INLINE void doBuiltinMakefromstr(Fiber *fiber, HeapPages *pages, Error *error)
 {
     DynArray *dest  = (DynArray   *)(fiber->top++)->ptrVal;
@@ -2118,7 +2118,7 @@ static FORCE_INLINE void doBuiltinMaketoarr(Fiber *fiber, HeapPages *pages, Erro
 }
 
 
-// fn maketostr(src: char | []char): str
+// fn maketostr(src: char | []char | []int8 | []uint8): str
 static FORCE_INLINE void doBuiltinMaketostr(Fiber *fiber, HeapPages *pages, Error *error)
 {
     char *dest = doGetEmptyStr();
@@ -2139,14 +2139,17 @@ static FORCE_INLINE void doBuiltinMaketostr(Fiber *fiber, HeapPages *pages, Erro
     else
     {
         // Dynamic array to string
-        DynArray *src  = (DynArray *)(fiber->top++)->ptrVal;
+        DynArray *src = (DynArray *)(fiber->top++)->ptrVal;
 
         if (!src)
             error->runtimeHandler(error->context, ERR_RUNTIME, "Dynamic array is null");
 
         if (src->data)
         {
-            const int64_t len = strlen((const char *)src->data);
+            int64_t len = 0;
+            while (len < getDims(src)->len && ((const char *)src->data)[len])
+                len++;
+
             dest = doAllocStr(pages, len, error);
             memcpy(dest, src->data, len);
         }
