@@ -2072,7 +2072,7 @@ static FORCE_INLINE void doBuiltinMakefromarr(Fiber *fiber, HeapPages *pages, Er
 }
 
 
-// fn makefromstr(src: str): []char | []int8 | []uint8
+// fn makefromstr(src: str): []char | []uint8
 static FORCE_INLINE void doBuiltinMakefromstr(Fiber *fiber, HeapPages *pages, Error *error)
 {
     DynArray *dest  = (DynArray   *)(fiber->top++)->ptrVal;
@@ -2118,7 +2118,7 @@ static FORCE_INLINE void doBuiltinMaketoarr(Fiber *fiber, HeapPages *pages, Erro
 }
 
 
-// fn maketostr(src: char | []char | []int8 | []uint8): str
+// fn maketostr(src: char | []char | []uint8): str
 static FORCE_INLINE void doBuiltinMaketostr(Fiber *fiber, HeapPages *pages, Error *error)
 {
     char *dest = doGetEmptyStr();
