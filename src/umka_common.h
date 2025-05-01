@@ -116,14 +116,14 @@ typedef struct
 
 typedef struct tagStorageChunk
 {
-    char *data;
-    struct tagStorageChunk *next;
+    struct tagStorageChunk *prev, *next;
+    char data[];
 } StorageChunk;
 
 
 typedef struct
 {
-    StorageChunk *first, *last;
+    StorageChunk *first;
 } Storage;
 
 
@@ -216,6 +216,8 @@ void  storageFree               (Storage *storage);
 char *storageAdd                (Storage *storage, int size);
 char *storageAddStr             (Storage *storage, int len);
 DynArray *storageAddDynArray    (Storage *storage, struct tagType *type, int len);
+void storageRemove              (Storage *storage, char *data);
+char *storageRealloc            (Storage *storage, char *data, int size);
 
 void  moduleInit                (Modules *modules, bool implLibsEnabled, Error *error);
 void  moduleFree                (Modules *modules);

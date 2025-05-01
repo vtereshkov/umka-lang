@@ -71,7 +71,7 @@ void errorReportFree(ErrorReport *report)
 
 void storageInit(Storage *storage)
 {
-    storage->first = storage->last = NULL;
+    storage->first = NULL;
 }
 
 
@@ -81,7 +81,6 @@ void storageFree(Storage *storage)
     while (chunk)
     {
         StorageChunk *next = chunk->next;
-        free(chunk->data);
         free(chunk);
         chunk = next;
     }
@@ -90,21 +89,17 @@ void storageFree(Storage *storage)
 
 char *storageAdd(Storage *storage, int size)
 {
-    StorageChunk *chunk = malloc(sizeof(StorageChunk));
+    StorageChunk *chunk = malloc(sizeof(StorageChunk) + size);
 
-    chunk->data = malloc(size);
+    chunk->prev = NULL;
+    chunk->next = storage->first;
     memset(chunk->data, 0, size);
-    chunk->next = NULL;
 
-    // Add to list
-    if (!storage->first)
-        storage->first = storage->last = chunk;
-    else
-    {
-        storage->last->next = chunk;
-        storage->last = chunk;
-    }
-    return storage->last->data;
+    if (storage->first)
+        storage->first->prev = chunk;
+    storage->first = chunk;
+
+    return chunk->data;
 }
 
 
@@ -136,6 +131,32 @@ DynArray *storageAddDynArray(Storage *storage, struct tagType *type, int len)
 
     array->data = dimsAndData + sizeof(DynArrayDimensions);
     return array;
+}
+
+
+void storageRemove(Storage *storage, char *data)
+{
+    StorageChunk *chunk = (StorageChunk *)(data - sizeof(StorageChunk));
+
+    if (chunk == storage->first)
+        storage->first = chunk->next;
+
+    if (chunk->prev)
+        chunk->prev->next = chunk->next;
+
+    if (chunk->next)
+        chunk->next->prev = chunk->prev;
+
+    free(chunk);
+}
+
+
+char *storageRealloc(Storage *storage, char *data, int size)
+{
+    char *newData = storageAdd(storage, size);
+    memcpy(newData, data, size);
+    storageRemove(storage, data);
+    return newData;
 }
 
 

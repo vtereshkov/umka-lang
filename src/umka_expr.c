@@ -1965,10 +1965,9 @@ static void parseDynArrayLiteral(Compiler *comp, Type **type, Const *constant)
     if (!(*type)->isVariadicParamList)
         lexEat(&comp->lex, TOK_LBRACE);
 
-    int constItemsCapacity = 8;
-    Const *constItems = NULL;
+    ConstArray constItems;
     if (constant)
-        constItems = malloc(constItemsCapacity * sizeof(Const));
+        constArrayAlloc(&constItems, &comp->storage, (*type)->base);
 
     // Dynamic array is first parsed as a static array of unknown length, then converted to a dynamic array
     Type *staticArrayType = typeAdd(&comp->types, &comp->blocks, TYPE_ARRAY);
@@ -1986,12 +1985,8 @@ static void parseDynArrayLiteral(Compiler *comp, Type **type, Const *constant)
             Const *constItem = NULL;
             if (constant)
             {
-                if (staticArrayType->numItems == constItemsCapacity)
-                {
-                    constItemsCapacity *= 2;
-                    constItems = realloc(constItems, constItemsCapacity * sizeof(Const));
-                }
-                constItem = &constItems[staticArrayType->numItems];
+                constArrayAppend(&constItems, (Const){0});
+                constItem = &constItems.data[staticArrayType->numItems];
             }
 
             parseExpr(comp, &itemType, constItem);
@@ -2026,9 +2021,9 @@ static void parseDynArrayLiteral(Compiler *comp, Type **type, Const *constant)
 
         // Assign items
         for (int i = staticArrayType->numItems - 1; i >= 0; i--)
-            constAssign(&comp->consts, (char *)constStaticArray.ptrVal + i * itemSize, &constItems[i], staticArrayType->base->kind, itemSize);
+            constAssign(&comp->consts, (char *)constStaticArray.ptrVal + i * itemSize, &constItems.data[i], staticArrayType->base->kind, itemSize);
 
-        free(constItems);
+        constArrayFree(&constItems);
 
         *constant = constStaticArray;
     }

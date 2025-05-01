@@ -272,12 +272,13 @@ void constCallBuiltin(Consts *consts, Const *arg, const Const *arg2, TypeKind ar
 }
 
 
-void constArrayAlloc(ConstArray *array, Type *type)
+void constArrayAlloc(ConstArray *array, Storage *storage, Type *type)
 {
+    array->storage = storage;
     array->type = type;
     array->len = 0;
     array->capacity = 4;
-    array->data = malloc(array->capacity * sizeof(Const));
+    array->data = (Const *)storageAdd(array->storage, array->capacity * sizeof(Const));
 }
 
 
@@ -286,7 +287,7 @@ void constArrayAppend(ConstArray *array, Const val)
     if (array->len == array->capacity)
     {
         array->capacity *= 2;
-        array->data = realloc(array->data, array->capacity * sizeof(Const));
+        array->data = (Const *)storageRealloc(array->storage, (char *)array->data, array->capacity * sizeof(Const));
     }
     array->data[array->len++] = val;
 }
@@ -318,6 +319,6 @@ int constArrayFindEquivalentType(Consts *consts, ConstArray *array, Const val)
 
 void constArrayFree(ConstArray *array)
 {
-    free(array->data);
+    storageRemove(array->storage, (char *)array->data);
 }
 

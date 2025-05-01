@@ -678,7 +678,7 @@ static void parseExprSwitchStmt(Compiler *comp)
 
     int numCases = 0;
     ConstArray existingConstants;
-    constArrayAlloc(&existingConstants, type);
+    constArrayAlloc(&existingConstants, &comp->storage, type);
 
     while (comp->lex.tok.kind == TOK_CASE)
     {
@@ -736,7 +736,7 @@ static void parseTypeSwitchStmt(Compiler *comp)
 
     int numCases = 0;
     ConstArray existingConcreteTypes;
-    constArrayAlloc(&existingConcreteTypes, comp->ptrVoidType);
+    constArrayAlloc(&existingConcreteTypes, &comp->storage, comp->ptrVoidType);
 
     while (comp->lex.tok.kind == TOK_CASE)
     {

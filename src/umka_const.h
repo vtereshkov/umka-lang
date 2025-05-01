@@ -13,6 +13,7 @@ typedef struct
 
 typedef struct
 {
+    Storage *storage;
     Const *data;
     Type *type;
     int len, capacity;
@@ -28,7 +29,7 @@ void constUnary(Consts *consts, Const *arg, TokenKind tokKind, TypeKind typeKind
 void constBinary(Consts *consts, Const *lhs, const Const *rhs, TokenKind tokKind, TypeKind typeKind);
 void constCallBuiltin(Consts *consts, Const *arg, const Const *arg2, TypeKind argTypeKind, BuiltinFunc builtinVal);
 
-void constArrayAlloc(ConstArray *array, Type *type);
+void constArrayAlloc(ConstArray *array, Storage *storage, Type *type);
 void constArrayAppend(ConstArray *array, Const val);
 int constArrayFind(Consts *consts, ConstArray *array, Const val);
 int constArrayFindEquivalentType(Consts *consts, ConstArray *array, Const val);
