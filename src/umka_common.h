@@ -153,6 +153,7 @@ typedef struct
     int numModules, numModuleSources;
     char curFolder[DEFAULT_STR_LEN + 1];
     bool implLibsEnabled;
+    Storage *storage;
     Error *error;
 } Modules;
 
@@ -219,7 +220,7 @@ DynArray *storageAddDynArray    (Storage *storage, struct tagType *type, int len
 void storageRemove              (Storage *storage, char *data);
 char *storageRealloc            (Storage *storage, char *data, int size);
 
-void  moduleInit                (Modules *modules, bool implLibsEnabled, Error *error);
+void  moduleInit                (Modules *modules, Storage *storage, bool implLibsEnabled, Error *error);
 void  moduleFree                (Modules *modules);
 void  moduleNameFromPath        (Modules *modules, const char *path, char *folder, char *name, int size);
 int   moduleFind                (Modules *modules, const char *path);
@@ -230,7 +231,7 @@ void  moduleAddSource           (Modules *modules, const char *path, const char 
 void *moduleGetImplLibFunc      (Module  *module,  const char *name);
 char *moduleCurFolder           (char *buf, int size);
 bool  modulePathIsAbsolute      (const char *path);
-bool  moduleRegularizePath      (const char *path, const char *curFolder, char *regularizedPath, int size);
+bool  moduleRegularizePath      (Modules *modules, const char *path, const char *curFolder, char *regularizedPath, int size);
 void  moduleAssertRegularizePath(Modules *modules, const char *path, const char *curFolder, char *regularizedPath, int size);
 
 void blocksInit   (Blocks *blocks, Error *error);

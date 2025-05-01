@@ -208,7 +208,7 @@ void compilerInit(Compiler *comp, const char *fileName, const char *sourceString
     compilerSetAPI(comp);
 
     storageInit  (&comp->storage);
-    moduleInit   (&comp->modules, implLibsEnabled, &comp->error);
+    moduleInit   (&comp->modules, &comp->storage, implLibsEnabled, &comp->error);
     blocksInit   (&comp->blocks, &comp->error);
     externalInit (&comp->externals);
     typeInit     (&comp->types, &comp->error);

@@ -814,7 +814,7 @@ static void parseImportItem(Compiler *comp)
     char *alias = NULL;
     if (comp->lex.tok.kind == TOK_IDENT)
     {
-        alias = (char *)malloc(DEFAULT_STR_LEN + 1);
+        alias = storageAdd(&comp->storage, DEFAULT_STR_LEN + 1);
         strcpy(alias, comp->lex.tok.name);
         lexNext(&comp->lex);
         lexEat(&comp->lex, TOK_EQ);
@@ -828,7 +828,7 @@ static void parseImportItem(Compiler *comp)
     char *sourceString = NULL;
     bool sourceTrusted = false;
 
-    if (moduleRegularizePath(comp->lex.tok.strVal, comp->modules.curFolder, path, DEFAULT_STR_LEN + 1))
+    if (moduleRegularizePath(&comp->modules, comp->lex.tok.strVal, comp->modules.curFolder, path, DEFAULT_STR_LEN + 1))
     {
         const ModuleSource *sourceDesc = moduleFindSource(&comp->modules, path);
         if (sourceDesc)
@@ -848,7 +848,7 @@ static void parseImportItem(Compiler *comp)
 
     if (!alias)
     {
-        alias = (char *)malloc(DEFAULT_STR_LEN + 1);
+        alias = storageAdd(&comp->storage, DEFAULT_STR_LEN + 1);
         strcpy(alias, name);
     }
 

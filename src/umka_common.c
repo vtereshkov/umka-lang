@@ -215,7 +215,7 @@ static void *moduleLoadImplLibFunc(void *lib, const char *name)
 }
 
 
-void moduleInit(Modules *modules, bool implLibsEnabled, Error *error)
+void moduleInit(Modules *modules, Storage *storage, bool implLibsEnabled, Error *error)
 {
     for (int i = 0; i < MAX_MODULES; i++)
     {
@@ -225,6 +225,7 @@ void moduleInit(Modules *modules, bool implLibsEnabled, Error *error)
     modules->numModules = 0;
     modules->numModuleSources = 0;
     modules->implLibsEnabled = implLibsEnabled;
+    modules->storage = storage;
     modules->error = error;
 
     if (!moduleCurFolder(modules->curFolder, DEFAULT_STR_LEN + 1))
@@ -235,22 +236,8 @@ void moduleInit(Modules *modules, bool implLibsEnabled, Error *error)
 void moduleFree(Modules *modules)
 {
     for (int i = 0; i < modules->numModules; i++)
-    {
         if (modules->module[i]->implLib)
             moduleFreeImplLib(modules->module[i]->implLib);
-
-        for (int j = 0; j < modules->numModules; j++)
-            if (modules->module[i]->importAlias[j])
-                free(modules->module[i]->importAlias[j]);
-
-        free(modules->module[i]);
-    }
-
-    for (int i = 0; i < modules->numModuleSources; i++)
-    {
-        free(modules->moduleSource[i]->source);
-        free(modules->moduleSource[i]);
-    }
 }
 
 
@@ -318,7 +305,7 @@ int moduleAdd(Modules *modules, const char *path)
     if (res >= 0)
         modules->error->handler(modules->error->context, "Duplicate module %s", path);
 
-    Module *module = malloc(sizeof(Module));
+    Module *module = (Module *)storageAdd(modules->storage, sizeof(Module));
 
     strncpy(module->path, path, DEFAULT_STR_LEN);
     module->path[DEFAULT_STR_LEN] = 0;
@@ -331,7 +318,6 @@ int moduleAdd(Modules *modules, const char *path)
 
     module->pathHash = hash(path);
 
-    module->implLib = NULL;
     if (modules->implLibsEnabled)
     {
         char libPath[2 + 2 * DEFAULT_STR_LEN + 8 + 4 + 1];
@@ -350,11 +336,8 @@ int moduleAdd(Modules *modules, const char *path)
         }
     }
 
-    for (int i = 0; i < MAX_MODULES; i++)
-        module->importAlias[i] = NULL;
-
     // Self-import
-    module->importAlias[modules->numModules] = malloc(DEFAULT_STR_LEN + 1);
+    module->importAlias[modules->numModules] = storageAdd(modules->storage, DEFAULT_STR_LEN + 1);
     strcpy(module->importAlias[modules->numModules], name);
 
     module->isCompiled = false;
@@ -384,7 +367,7 @@ void moduleAddSource(Modules *modules, const char *path, const char *source, boo
 
     moduleNameFromPath(modules, path, folder, name, DEFAULT_STR_LEN + 1);
 
-    ModuleSource *moduleSource = malloc(sizeof(ModuleSource));
+    ModuleSource *moduleSource = (ModuleSource *)storageAdd(modules->storage, sizeof(ModuleSource));
 
     strncpy(moduleSource->path, path, DEFAULT_STR_LEN);
     moduleSource->path[DEFAULT_STR_LEN] = 0;
@@ -396,9 +379,8 @@ void moduleAddSource(Modules *modules, const char *path, const char *source, boo
     moduleSource->name[DEFAULT_STR_LEN] = 0;
 
     int sourceLen = strlen(source);
-    moduleSource->source = malloc(sourceLen + 1);
+    moduleSource->source = storageAdd(modules->storage, sourceLen + 1);
     strcpy(moduleSource->source, source);
-    moduleSource->source[sourceLen] = 0;
 
     moduleSource->pathHash = hash(path);
     moduleSource->trusted = trusted;
@@ -455,12 +437,12 @@ bool modulePathIsAbsolute(const char *path)
 }
 
 
-bool moduleRegularizePath(const char *path, const char *curFolder, char *regularizedPath, int size)
+bool moduleRegularizePath(Modules *modules, const char *path, const char *curFolder, char *regularizedPath, int size)
 {
-    char *absolutePath = malloc(size);
+    char *absolutePath = storageAdd(modules->storage, size);
     snprintf(absolutePath, size, "%s%s", modulePathIsAbsolute(path) ? "" : curFolder, path);
 
-    char **separators = malloc(size * sizeof(char *));
+    char **separators = (char **)storageAdd(modules->storage, size * sizeof(char *));
     int numSeparators = 0;
 
     char *readCh = absolutePath, *writeCh = regularizedPath;
@@ -482,11 +464,7 @@ bool moduleRegularizePath(const char *path, const char *curFolder, char *regular
                 if (numDots == 2)   // "../" or "..\"
                 {
                     if (numSeparators < 2)
-                    {
-                        free(separators);
-                        free(absolutePath);
                         return false;
-                    }
 
                     numSeparators--;
                     writeCh = separators[numSeparators - 1] + 1;
@@ -532,23 +510,16 @@ bool moduleRegularizePath(const char *path, const char *curFolder, char *regular
     }
 
     if (numDots > 0)
-    {
-        free(separators);
-        free(absolutePath);
         return false;
-    }
 
     *writeCh = 0;
-
-    free(separators);
-    free(absolutePath);
     return true;
 }
 
 
 void moduleAssertRegularizePath(Modules *modules, const char *path, const char *curFolder, char *regularizedPath, int size)
 {
-    if (!moduleRegularizePath(path, curFolder, regularizedPath, size))
+    if (!moduleRegularizePath(modules, path, curFolder, regularizedPath, size))
         modules->error->handler(modules->error->context, "Invalid module path %s", path);
 }
 
