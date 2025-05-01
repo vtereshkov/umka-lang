@@ -40,16 +40,17 @@ typedef struct tagIdent
 
 typedef struct
 {
-    Ident *first, *last;
+    Ident *first;
     Ident *lastTempVarForResult;
     int tempVarNameSuffix;
+    Storage *storage;
     DebugInfo *debug;
     Error *error;
 } Idents;
 
 
-void identInit(Idents *idents, DebugInfo *debug, Error *error);
-void identFree(Idents *idents, int startBlock /* < 0 to free in all blocks*/);
+void identInit(Idents *idents, Storage *storage, DebugInfo *debug, Error *error);
+void identFree(Idents *idents, int block /* < 0 to free in all blocks*/);
 
 Ident *identFind            (Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, Type *rcvType, bool markAsUsed);
 Ident *identAssertFind      (Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, Type *rcvType);

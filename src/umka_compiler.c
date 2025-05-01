@@ -212,7 +212,7 @@ void compilerInit(Compiler *comp, const char *fileName, const char *sourceString
     blocksInit   (&comp->blocks, &comp->error);
     externalInit (&comp->externals);
     typeInit     (&comp->types, &comp->error);
-    identInit    (&comp->idents, &comp->debug, &comp->error);
+    identInit    (&comp->idents, &comp->storage, &comp->debug, &comp->error);
     constInit    (&comp->consts, &comp->error);
     genInit      (&comp->gen, &comp->debug, &comp->error);
     vmInit       (&comp->vm, stackSize, fileSystemEnabled, &comp->error);

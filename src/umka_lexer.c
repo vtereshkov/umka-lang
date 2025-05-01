@@ -119,6 +119,7 @@ int lexInit(Lexer *lex, Storage *storage, DebugInfo *debug, const char *fileName
     errno = 0;
 
     lex->error = error;
+    lex->storage = storage;
     lex->hasSourceString = false;
     lex->trusted = trusted;
     lex->buf = NULL;
@@ -130,7 +131,7 @@ int lexInit(Lexer *lex, Storage *storage, DebugInfo *debug, const char *fileName
         lex->hasSourceString = true;
 
         bufLen = strlen(sourceString);
-        lex->buf = malloc(bufLen + 1);
+        lex->buf = storageAdd(lex->storage, bufLen + 1);
         strcpy(lex->buf, sourceString);
         lex->buf[bufLen] = 0;
     }
@@ -138,24 +139,16 @@ int lexInit(Lexer *lex, Storage *storage, DebugInfo *debug, const char *fileName
     {
         // Read source from a file
         FILE *file = fopen(fileName, "rb");
-
         if (!file)
-        {
             lex->error->handler(lex->error->context, "Cannot open file %s", fileName);
-            return 0;
-        }
 
         fseek(file, 0, SEEK_END);
         bufLen = ftell(file);
         rewind(file);
 
-        lex->buf = malloc(bufLen + 1);
-
+        lex->buf = storageAdd(lex->storage, bufLen + 1);
         if (fread(lex->buf, 1, bufLen, file) != bufLen)
-        {
             lex->error->handler(lex->error->context, "Cannot read file %s", fileName);
-            return 0;
-        }
 
         lex->buf[bufLen] = 0;
         fclose(file);
@@ -172,7 +165,6 @@ int lexInit(Lexer *lex, Storage *storage, DebugInfo *debug, const char *fileName
     lex->tok.line = lex->line;
     lex->tok.pos = lex->pos;
     lex->prevTok = lex->tok;
-    lex->storage = storage;
     lex->debug = debug;
     lex->debug->fileName = lex->fileName;
     lex->debug->fnName = "<unknown>";
@@ -186,7 +178,7 @@ void lexFree(Lexer *lex)
 {
     if (lex->buf)
     {
-        free(lex->buf);
+        storageRemove(lex->storage, lex->buf);
         lex->fileName = NULL;
         lex->buf = NULL;
     }

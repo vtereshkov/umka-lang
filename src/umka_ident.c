@@ -13,42 +13,28 @@ static void identTempName(Idents *idents, char *buf)
 }
 
 
-void identInit(Idents *idents, DebugInfo *debug, Error *error)
+void identInit(Idents *idents, Storage *storage, DebugInfo *debug, Error *error)
 {
-    idents->first = idents->last = NULL;
+    idents->first = NULL;
     idents->lastTempVarForResult = NULL;
     idents->tempVarNameSuffix = 0;
+    idents->storage = storage;
     idents->debug = debug;
     idents->error = error;
 }
 
 
-void identFree(Idents *idents, int startBlock)
+void identFree(Idents *idents, int block)
 {
-    Ident *ident = idents->first;
-
-    // If block is specified, fast forward to the first identifier in this block (assuming this is the last block in the list)
-    if (startBlock >= 0)
+    while (idents->first && (block < 0 || idents->first->block == block))
     {
-        while (ident && ident->next && ident->next->block != startBlock)
-            ident = ident->next;
+        Ident *next = idents->first->next;
 
-        Ident *next = ident->next;
-        idents->last = ident;
-        idents->last->next = NULL;
-        ident = next;
-    }
+        if (idents->first->globallyAllocated)
+            storageRemove(idents->storage, (char *)idents->first->ptr);
 
-    while (ident)
-    {
-        Ident *next = ident->next;
-
-        // Remove globals
-        if (ident->globallyAllocated)
-            free(ident->ptr);
-
-        free(ident);
-        ident = next;
+        storageRemove(idents->storage, (char *)idents->first);
+        idents->first = next;
     }
 }
 
@@ -184,7 +170,7 @@ static Ident *identAdd(Idents *idents, Modules *modules, Blocks *blocks, IdentKi
             idents->error->handler(idents->error->context, "Void variable or constant %s is not allowed", name);
     }
 
-    ident = malloc(sizeof(Ident));
+    ident = (Ident *)storageAdd(idents->storage, sizeof(Ident));
     ident->kind = kind;
 
     strncpy(ident->name, name, MAX_IDENT_LEN);
@@ -201,18 +187,11 @@ static Ident *identAdd(Idents *idents, Modules *modules, Blocks *blocks, IdentKi
     ident->used              = exported || ident->module == 0 || ident->name[0] == '#' || (ident->name[0] == '_' && ident->name[1] == 0) || identIsMain(ident);  // Exported, predefined, temporary, placeholder identifiers and main() are always treated as used
     ident->prototypeOffset   = -1;
     ident->debug             = *(idents->debug);
-    ident->next              = NULL;
 
-    // Add to list
-    if (!idents->first)
-        idents->first = idents->last = ident;
-    else
-    {
-        idents->last->next = ident;
-        idents->last = ident;
-    }
+    ident->next   = idents->first;
+    idents->first = ident;
 
-    return idents->last;
+    return ident;
 }
 
 
@@ -239,6 +218,7 @@ Ident *identAddGlobalVar(Idents *idents, Modules *modules, Blocks *blocks, const
 {
     Ident *ident = identAdd(idents, modules, blocks, IDENT_VAR, name, type, exported);
     ident->ptr = ptr;
+    ident->globallyAllocated = true;
     return ident;
 }
 
@@ -295,9 +275,8 @@ Ident *identAllocVar(Idents *idents, Types *types, Modules *modules, Blocks *blo
     Ident *ident;
     if (blocks->top == 0)       // Global
     {
-        void *ptr = malloc(typeSize(types, type));
+        void *ptr = storageAdd(idents->storage, typeSize(types, type));
         ident = identAddGlobalVar(idents, modules, blocks, name, type, exported, ptr);
-        ident->globallyAllocated = true;
     }
     else                        // Local
     {
