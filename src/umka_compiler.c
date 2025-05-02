@@ -211,7 +211,7 @@ void compilerInit(Compiler *comp, const char *fileName, const char *sourceString
     moduleInit   (&comp->modules, &comp->storage, implLibsEnabled, &comp->error);
     blocksInit   (&comp->blocks, &comp->error);
     externalInit (&comp->externals);
-    typeInit     (&comp->types, &comp->error);
+    typeInit     (&comp->types, &comp->storage, &comp->error);
     identInit    (&comp->idents, &comp->storage, &comp->debug, &comp->error);
     constInit    (&comp->consts, &comp->error);
     genInit      (&comp->gen, &comp->storage, &comp->debug, &comp->error);
@@ -271,12 +271,7 @@ void compilerFree(Compiler *comp)
 {
     lexFree         (&comp->lex);
     vmFree          (&comp->vm);
-    genFree         (&comp->gen);
-    constFree       (&comp->consts);
-    identFree       (&comp->idents, -1);
-    typeFree        (&comp->types, -1);
     externalFree    (&comp->externals);
-    blocksFree      (&comp->blocks);
     moduleFree      (&comp->modules);
     storageFree     (&comp->storage);
     errorReportFree (&comp->error.report);

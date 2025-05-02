@@ -50,7 +50,7 @@ typedef struct
 
 
 void identInit(Idents *idents, Storage *storage, DebugInfo *debug, Error *error);
-void identFree(Idents *idents, int block /* < 0 to free in all blocks*/);
+void identFree(Idents *idents, int block);
 
 Ident *identFind            (Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, Type *rcvType, bool markAsUsed);
 Ident *identAssertFind      (Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, Type *rcvType);

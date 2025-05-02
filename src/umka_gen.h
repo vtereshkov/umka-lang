@@ -44,7 +44,6 @@ typedef struct
 
 
 void genInit(CodeGen *gen, Storage *storage, DebugInfo *debug, Error *error);
-void genFree(CodeGen *gen);
 
 // Atomic VM instructions
 

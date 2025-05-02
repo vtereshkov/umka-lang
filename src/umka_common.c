@@ -540,11 +540,6 @@ void blocksInit(Blocks *blocks, Error *error)
 }
 
 
-void blocksFree(Blocks *blocks)
-{
-}
-
-
 void blocksEnterFn(Blocks *blocks, struct tagIdent *fn, bool hasUpvalues)
 {
     if (blocks->top >= MAX_BLOCK_NESTING)

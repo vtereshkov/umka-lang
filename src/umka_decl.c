@@ -489,7 +489,7 @@ static Type *parseInterfaceType(Compiler *comp)
             for (int i = 2; i < embeddedType->numItems; i++)    // Skip #self and #selftype in embedded interface
             {
                 Type *methodType = typeAdd(&comp->types, &comp->blocks, TYPE_FN);
-                typeDeepCopy(methodType, embeddedType->field[i]->type);
+                typeDeepCopy(&comp->storage, methodType, embeddedType->field[i]->type);
 
                 Field *method = typeAddField(&comp->types, type, methodType, embeddedType->field[i]->name);
                 methodType->sig.isMethod = true;
@@ -566,7 +566,7 @@ static void parseTypeDeclItem(Compiler *comp)
 
     Type *type = parseType(comp, NULL);
     Type *newType = typeAdd(&comp->types, &comp->blocks, type->kind);
-    typeDeepCopy(newType, type);
+    typeDeepCopy(&comp->storage, newType, type);
     newType->typeIdent = identAddType(&comp->idents, &comp->modules, &comp->blocks, name, newType, exported);
 }
 

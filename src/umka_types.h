@@ -116,17 +116,17 @@ typedef struct tagVisitedTypePair
 
 typedef struct
 {
-    Type *first, *last;
+    Type *first;
     bool forwardTypesEnabled;
+    Storage *storage;
     Error *error;
 } Types;
 
 
-void typeInit(Types *types, Error *error);
-void typeFree(Types *types, int startBlock /* < 0 to free in all blocks*/);
+void typeInit(Types *types, Storage *storage, Error *error);
 
 Type *typeAdd       (Types *types, Blocks *blocks, TypeKind kind);
-void typeDeepCopy   (Type *dest, Type *src);
+void typeDeepCopy   (Storage *storage, Type *dest, Type *src);
 Type *typeAddPtrTo  (Types *types, Blocks *blocks, Type *type);
 
 int typeSizeNoCheck (Type *type);

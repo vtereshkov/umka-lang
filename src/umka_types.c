@@ -42,109 +42,50 @@ static const char *spelling [] =
 };
 
 
-void typeInit(Types *types, Error *error)
+void typeInit(Types *types, Storage *storage, Error *error)
 {
-    types->first = types->last = NULL;
+    types->first = NULL;
     types->forwardTypesEnabled = false;
+    types->storage = storage;
     types->error = error;
-}
-
-
-static void typeFreeFieldsEnumConstsAndParams(Type *type)
-{
-    if ((type->kind == TYPE_STRUCT || type->kind == TYPE_INTERFACE || type->kind == TYPE_CLOSURE) && type->numItems > 0)
-    {
-        for (int i = 0; i < type->numItems; i++)
-            free(type->field[i]);
-
-        free(type->field);
-        type->field = NULL;
-    }
-    else if (typeEnum(type) && type->numItems > 0)
-    {
-        for (int i = 0; i < type->numItems; i++)
-            free(type->enumConst[i]);
-
-        free(type->enumConst);
-        type->enumConst = NULL;
-    }
-    else if (type->kind == TYPE_FN && type->sig.numParams > 0)
-    {
-        for (int i = 0; i < type->sig.numParams; i++)
-            free(type->sig.param[i]);
-    }
-}
-
-
-void typeFree(Types *types, int startBlock)
-{
-    Type *type = types->first;
-
-    // If block is specified, fast forward to the first type in this block (assuming this is the last block in the list)
-    if (startBlock >= 0)
-    {
-        while (type && type->next && type->next->block != startBlock)
-            type = type->next;
-
-        Type *next = type->next;
-        types->last = type;
-        types->last->next = NULL;
-        type = next;
-    }
-
-    while (type)
-    {
-        Type *next = type->next;
-        typeFreeFieldsEnumConstsAndParams(type);
-        free(type);
-        type = next;
-    }
 }
 
 
 Type *typeAdd(Types *types, Blocks *blocks, TypeKind kind)
 {
-    Type *type = malloc(sizeof(Type));
-    memset(type, 0, sizeof(Type));
+    Type *type = storageAdd(types->storage, sizeof(Type));
 
     type->kind  = kind;
     type->block = blocks->item[blocks->top].block;
 
-    // Add to list
-    if (!types->first)
-        types->first = types->last = type;
-    else
-    {
-        types->last->next = type;
-        types->last = type;
-    }
-    return types->last;
+    type->next = types->first;
+    types->first = type;
+
+    return type;
 }
 
 
-void typeDeepCopy(Type *dest, Type *src)
+void typeDeepCopy(Storage *storage, Type *dest, Type *src)
 {
-    typeFreeFieldsEnumConstsAndParams(dest);
-
     Type *next = dest->next;
     *dest = *src;
     dest->next = next;
 
     if ((dest->kind == TYPE_STRUCT || dest->kind == TYPE_INTERFACE || dest->kind == TYPE_CLOSURE) && dest->numItems > 0)
     {
-        dest->field = malloc(dest->numItems * sizeof(Field *));
+        dest->field = storageAdd(storage, dest->numItems * sizeof(Field *));
         for (int i = 0; i < dest->numItems; i++)
         {
-            dest->field[i] = malloc(sizeof(Field));
+            dest->field[i] = storageAdd(storage, sizeof(Field));
             *(dest->field[i]) = *(src->field[i]);
         }
     }
     else if (typeEnum(dest) && dest->numItems > 0)
     {
-        dest->enumConst = malloc(dest->numItems * sizeof(EnumConst *));
+        dest->enumConst = storageAdd(storage, dest->numItems * sizeof(EnumConst *));
         for (int i = 0; i < dest->numItems; i++)
         {
-            dest->enumConst[i] = malloc(sizeof(EnumConst));
+            dest->enumConst[i] = storageAdd(storage, sizeof(EnumConst));
             *(dest->enumConst[i]) = *(src->enumConst[i]);
         }
     }
@@ -152,7 +93,7 @@ void typeDeepCopy(Type *dest, Type *src)
     {
         for (int i = 0; i < dest->sig.numParams; i++)
         {
-            dest->sig.param[i] = malloc(sizeof(Param));
+            dest->sig.param[i] = storageAdd(storage, sizeof(Param));
             *(dest->sig.param[i]) = *(src->sig.param[i]);
         }
     }
@@ -161,9 +102,9 @@ void typeDeepCopy(Type *dest, Type *src)
 
 Type *typeAddPtrTo(Types *types, Blocks *blocks, Type *type)
 {
-    typeAdd(types, blocks, TYPE_PTR);
-    types->last->base = type;
-    return types->last;
+    Type *ptrType = typeAdd(types, blocks, TYPE_PTR);
+    ptrType->base = type;
+    return ptrType;
 }
 
 
@@ -637,7 +578,7 @@ Field *typeAddField(Types *types, Type *structType, Type *fieldType, const char 
     if (typeSize(types, fieldType) > INT_MAX - minNextFieldOffset)
         types->error->handler(types->error->context, "Structure is too large");
 
-    field = malloc(sizeof(Field));
+    field = storageAdd(types->storage, sizeof(Field));
 
     strncpy(field->name, name, MAX_IDENT_LEN);
     field->name[MAX_IDENT_LEN] = 0;
@@ -647,9 +588,9 @@ Field *typeAddField(Types *types, Type *structType, Type *fieldType, const char 
     field->offset = align(minNextFieldOffset, typeAlignment(types, fieldType));
 
     if (structType->numItems > 0)
-        structType->field = realloc(structType->field, (structType->numItems + 1) * sizeof(Field *));
+        structType->field = storageRealloc(types->storage, structType->field, (structType->numItems + 1) * sizeof(Field *));
     else
-        structType->field = malloc(sizeof(Field *));
+        structType->field = storageAdd(types->storage, sizeof(Field *));
 
     structType->numItems++;
     structType->field[structType->numItems - 1] = field;
@@ -702,7 +643,7 @@ EnumConst *typeAddEnumConst(Types *types, Type *enumType, const char *name, Cons
     if (enumConst)
         types->error->handler(types->error->context, "Duplicate enumeration constant value %lld", val.intVal);
 
-    enumConst = malloc(sizeof(EnumConst));
+    enumConst = storageAdd(types->storage, sizeof(EnumConst));
 
     strncpy(enumConst->name, name, MAX_IDENT_LEN);
     enumConst->name[MAX_IDENT_LEN] = 0;
@@ -711,9 +652,9 @@ EnumConst *typeAddEnumConst(Types *types, Type *enumType, const char *name, Cons
     enumConst->val = val;
 
     if (enumType->numItems > 0)
-        enumType->enumConst = realloc(enumType->enumConst, (enumType->numItems + 1) * sizeof(EnumConst *));
+        enumType->enumConst = storageRealloc(types->storage, enumType->enumConst, (enumType->numItems + 1) * sizeof(EnumConst *));
     else
-        enumType->enumConst = malloc(sizeof(EnumConst *));
+        enumType->enumConst = storageAdd(types->storage, sizeof(EnumConst *));
 
     enumType->numItems++;
     enumType->enumConst[enumType->numItems - 1] = enumConst;
@@ -742,7 +683,7 @@ Param *typeAddParam(Types *types, Signature *sig, Type *type, const char *name)
     if (sig->numParams > MAX_PARAMS)
         types->error->handler(types->error->context, "Too many parameters");
 
-    param = malloc(sizeof(Param));
+    param = storageAdd(types->storage, sizeof(Param));
 
     strncpy(param->name, name, MAX_IDENT_LEN);
     param->name[MAX_IDENT_LEN] = 0;

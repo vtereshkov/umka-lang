@@ -51,11 +51,6 @@ void genInit(CodeGen *gen, Storage *storage, DebugInfo *debug, Error *error)
 }
 
 
-void genFree(CodeGen *gen)
-{
-}
-
-
 static void genRealloc(CodeGen *gen)
 {
     gen->capacity *= 2;

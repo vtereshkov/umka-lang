@@ -26,7 +26,7 @@ void identInit(Idents *idents, Storage *storage, DebugInfo *debug, Error *error)
 
 void identFree(Idents *idents, int block)
 {
-    while (idents->first && (block < 0 || idents->first->block == block))
+    while (idents->first && idents->first->block == block)
     {
         Ident *next = idents->first->next;
 
@@ -138,7 +138,7 @@ static Ident *identAdd(Idents *idents, Modules *modules, Blocks *blocks, IdentKi
             strcmp(ident->type->typeIdent->name, name) == 0)
         {
             type->typeIdent = ident;
-            typeDeepCopy(ident->type, type);
+            typeDeepCopy(idents->storage, ident->type, type);
             ident->exported = exported;
             return ident;
         }
@@ -151,7 +151,7 @@ static Ident *identAdd(Idents *idents, Modules *modules, Blocks *blocks, IdentKi
             typeCompatible(ident->type, type) &&
             ident->prototypeOffset >= 0)
         {
-            typeDeepCopy(ident->type, type);
+            typeDeepCopy(idents->storage, ident->type, type);
             return ident;
         }
 

@@ -21,7 +21,6 @@ typedef struct
 
 
 void constInit(Consts *consts, Error *error);
-void constFree(Consts *consts);
 void constZero(void *lhs, int size);
 void constDeref(Consts *consts, Const *constant, TypeKind typeKind);
 void constAssign(Consts *consts, void *lhs, Const *rhs, TypeKind typeKind, int size);

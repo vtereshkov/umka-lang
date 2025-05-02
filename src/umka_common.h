@@ -236,7 +236,6 @@ bool  moduleRegularizePath      (Modules *modules, const char *path, const char 
 void  moduleAssertRegularizePath(Modules *modules, const char *path, const char *curFolder, char *regularizedPath, int size);
 
 void blocksInit   (Blocks *blocks, Error *error);
-void blocksFree   (Blocks *blocks);
 void blocksEnterFn(Blocks *blocks, struct tagIdent *fn, bool hasUpvalues);
 void blocksEnter  (Blocks *blocks);
 void blocksReenter(Blocks *blocks);

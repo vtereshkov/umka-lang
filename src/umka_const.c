@@ -15,11 +15,6 @@ void constInit(Consts *consts, Error *error)
 }
 
 
-void constFree(Consts *consts)
-{
-}
-
-
 void constZero(void *lhs, int size)
 {
     memset(lhs, 0, size);
