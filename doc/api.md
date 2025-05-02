@@ -382,7 +382,7 @@ Parameters:
 
 * `umka`: Interpreter instance handle
 
-Returned value: String buffer pointer. It should be deallocated by calling `free` on the caller side.
+Returned value: String buffer pointer. It stays valid until `umkaFree` is called.
 
 ## Accessing Umka data types
 
