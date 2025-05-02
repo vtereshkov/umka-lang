@@ -20,14 +20,12 @@
 
 // Errors
 
-void errorReportInit(ErrorReport *report, const char *fileName, const char *fnName, int line, int pos, int code, const char *format, va_list args)
+void errorReportInit(ErrorReport *report, Storage *storage, const char *fileName, const char *fnName, int line, int pos, int code, const char *format, va_list args)
 {
-    errorReportFree(report);
-
-    report->fileName = malloc(strlen(fileName) + 1);
+    report->fileName = storageAdd(storage, strlen(fileName) + 1);
     strcpy(report->fileName, fileName);
 
-    report->fnName = malloc(strlen(fnName) + 1);
+    report->fnName = storageAdd(storage, strlen(fnName) + 1);
     strcpy(report->fnName, fnName);
 
     report->line = line;
@@ -38,40 +36,19 @@ void errorReportInit(ErrorReport *report, const char *fileName, const char *fnNa
     va_copy(argsCopy, args);
 
     const int msgLen = vsnprintf(NULL, 0, format, args);
-    report->msg = malloc(msgLen + 1);
+    report->msg = storageAdd(storage, msgLen + 1);
     vsnprintf(report->msg, msgLen + 1, format, argsCopy);
 
     va_end(argsCopy);
 }
 
 
-void errorReportFree(ErrorReport *report)
-{
-    if (report->fileName)
-    {
-        free(report->fileName);
-        report->fileName = NULL;
-    }
-
-    if (report->fnName)
-    {
-        free(report->fnName);
-        report->fnName = NULL;
-    }
-
-    if (report->msg)
-    {
-        free(report->msg);
-        report->msg = NULL;
-    }
-}
-
-
 // Storage
 
-void storageInit(Storage *storage)
+void storageInit(Storage *storage, Error *error)
 {
     storage->first = NULL;
+    storage->error = error;
 }
 
 
@@ -89,6 +66,8 @@ void storageFree(Storage *storage)
 void *storageAdd(Storage *storage, int64_t size)
 {
     StorageChunk *chunk = malloc(sizeof(StorageChunk) + size);
+    if (!chunk)
+        storage->error->handler(storage->error->context, "Out of memory");
 
     chunk->prev = NULL;
     chunk->next = storage->first;
@@ -582,21 +561,10 @@ int blocksCurrent(Blocks *blocks)
 
 // Externals
 
-void externalInit(Externals *externals)
+void externalInit(Externals *externals, Storage *storage)
 {
-    externals->first = externals->last = NULL;
-}
-
-
-void externalFree(Externals *externals)
-{
-    External *external = externals->first;
-    while (external)
-    {
-        External *next = external->next;
-        free(external);
-        external = next;
-    }
+    externals->first = NULL;
+    externals->storage = storage;
 }
 
 
@@ -614,7 +582,7 @@ External *externalFind(Externals *externals, const char *name)
 
 External *externalAdd(Externals *externals, const char *name, void *entry, bool resolveInTrusted)
 {
-    External *external = malloc(sizeof(External));
+    External *external = storageAdd(externals->storage, sizeof(External));
 
     external->entry = entry;
     external->resolved = false;
@@ -624,16 +592,10 @@ External *externalAdd(Externals *externals, const char *name, void *entry, bool 
     external->name[DEFAULT_STR_LEN] = 0;
 
     external->hash = hash(name);
-    external->next = NULL;
 
-    // Add to list
-    if (!externals->first)
-        externals->first = externals->last = external;
-    else
-    {
-        externals->last->next = external;
-        externals->last = external;
-    }
-    return externals->last;
+    external->next = externals->first;
+    externals->first = external;
+
+    return external;
 }
 

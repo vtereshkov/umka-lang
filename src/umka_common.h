@@ -125,6 +125,7 @@ typedef struct tagStorageChunk
 typedef struct
 {
     StorageChunk *first;
+    Error *error;
 } Storage;
 
 
@@ -190,7 +191,8 @@ typedef struct tagExternal
 
 typedef struct
 {
-    External *first, *last;
+    External *first;
+    Storage *storage;
 } Externals;
 
 
@@ -210,10 +212,9 @@ typedef struct
 } ParamAndLocalVarLayout;
 
 
-void errorReportInit(ErrorReport *report, const char *fileName, const char *fnName, int line, int pos, int code, const char *format, va_list args);
-void errorReportFree(ErrorReport *report);
+void errorReportInit(ErrorReport *report, Storage *storage, const char *fileName, const char *fnName, int line, int pos, int code, const char *format, va_list args);
 
-void  storageInit               (Storage *storage);
+void  storageInit               (Storage *storage, Error *error);
 void  storageFree               (Storage *storage);
 void *storageAdd                (Storage *storage, int64_t size);
 char *storageAddStr             (Storage *storage, int64_t len);
@@ -242,8 +243,7 @@ void blocksReenter(Blocks *blocks);
 void blocksLeave  (Blocks *blocks);
 int  blocksCurrent(Blocks *blocks);
 
-void externalInit       (Externals *externals);
-void externalFree       (Externals *externals);
+void externalInit       (Externals *externals, Storage *storage);
 External *externalFind  (Externals *externals, const char *name);
 External *externalAdd   (Externals *externals, const char *name, void *entry, bool resolveInTrusted);
 

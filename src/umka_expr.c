@@ -1869,7 +1869,7 @@ static void parseArrayOrStructLiteral(Compiler *comp, Type **type, Const *consta
     }
 
     if (namedFields)
-        fieldInitialized = calloc((*type)->numItems + 1, sizeof(bool));
+        fieldInitialized = storageAdd(&comp->storage, (*type)->numItems + 1);
 
     const int size = typeSize(&comp->types, *type);
     Ident *arrayOrStruct = NULL;
@@ -1944,9 +1944,6 @@ static void parseArrayOrStructLiteral(Compiler *comp, Type **type, Const *consta
 
     if (!namedFields && numItems < (*type)->numItems)
         comp->error.handler(comp->error.context, "Too few elements in literal");
-
-    if (fieldInitialized)
-        free(fieldInitialized);
 
     if (!constant)
         doPushVarPtr(comp, arrayOrStruct);

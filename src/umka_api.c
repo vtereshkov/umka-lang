@@ -19,7 +19,7 @@ static void compileWarning(void *context, DebugInfo *debug, const char *format, 
     Compiler *comp = context;
 
     ErrorReport report = {0};
-    errorReportInit(&report,
+    errorReportInit(&report, &comp->storage,
                     debug ? debug->fileName : comp->lex.fileName,
                     debug ? debug->fnName : comp->debug.fnName,
                     debug ? debug->line : comp->lex.tok.line,
@@ -29,8 +29,6 @@ static void compileWarning(void *context, DebugInfo *debug, const char *format, 
 
     if (comp->error.warningCallback)
         ((UmkaWarningCallback)comp->error.warningCallback)((UmkaError *)&report);
-
-    errorReportFree(&report);
 
     va_end(args);
 }
@@ -42,7 +40,7 @@ static void compileError(void *context, const char *format, ...)
     va_start(args, format);
 
     Compiler *comp = context;
-    errorReportInit(&comp->error.report, comp->lex.fileName, comp->debug.fnName, comp->lex.tok.line, comp->lex.tok.pos, 1, format, args);
+    errorReportInit(&comp->error.report, &comp->storage, comp->lex.fileName, comp->debug.fnName, comp->lex.tok.line, comp->lex.tok.pos, 1, format, args);
 
     vmKill(&comp->vm);
 
@@ -58,7 +56,7 @@ static void runtimeError(void *context, int code, const char *format, ...)
 
     Compiler *comp = context;
     DebugInfo *debug = &comp->vm.fiber->debugPerInstr[comp->vm.fiber->ip];
-    errorReportInit(&comp->error.report, debug->fileName, debug->fnName, debug->line, 1, code, format, args);
+    errorReportInit(&comp->error.report, &comp->storage, debug->fileName, debug->fnName, debug->line, 1, code, format, args);
 
     vmKill(&comp->vm);
 

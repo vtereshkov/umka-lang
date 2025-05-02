@@ -244,6 +244,8 @@ static void pageFree(HeapPages *pages, bool warnLeak)
 static FORCE_INLINE HeapPage *pageAdd(HeapPages *pages, int numChunks, int chunkSize)
 {
     HeapPage *page = malloc(sizeof(HeapPage));
+    if (!page)
+        return NULL;
 
     page->id = pages->freeId++;
 
@@ -464,17 +466,12 @@ static FORCE_INLINE int chunkChangeRefCnt(HeapPages *pages, HeapPage *page, void
 }
 
 
-static FORCE_INLINE void candidateInit(RefCntChangeCandidates *candidates)
+static FORCE_INLINE void candidateInit(RefCntChangeCandidates *candidates, Storage *storage)
 {
+    candidates->storage = storage;
     candidates->capacity = 100;
-    candidates->stack = malloc(candidates->capacity * sizeof(RefCntChangeCandidate));
+    candidates->stack = storageAdd(candidates->storage, candidates->capacity * sizeof(RefCntChangeCandidate));
     candidates->top = -1;
-}
-
-
-static FORCE_INLINE void candidateFree(RefCntChangeCandidates *candidates)
-{
-    free(candidates->stack);
 }
 
 
@@ -489,7 +486,7 @@ static FORCE_INLINE void candidatePush(RefCntChangeCandidates *candidates, void 
     if (candidates->top >= candidates->capacity - 1)
     {
         candidates->capacity *= 2;
-        candidates->stack = realloc(candidates->stack, candidates->capacity * sizeof(RefCntChangeCandidate));
+        candidates->stack = storageRealloc(candidates->storage, candidates->stack, candidates->capacity * sizeof(RefCntChangeCandidate));
     }
 
     RefCntChangeCandidate *candidate = &candidates->stack[++candidates->top];
@@ -549,10 +546,10 @@ static int fsscanf(bool string, void *stream, const char *format, ...)
 }
 
 
-static FORCE_INLINE char *fsscanfString(bool string, void *stream, int *len)
+static FORCE_INLINE char *fsscanfString(Storage *storage, bool string, void *stream, int *len)
 {
     int capacity = 8;
-    char *str = malloc(capacity);
+    char *str = storageAdd(storage, capacity);
 
     *len = 0;
     int writtenLen = 0;
@@ -569,7 +566,7 @@ static FORCE_INLINE char *fsscanfString(bool string, void *stream, int *len)
         if (writtenLen == capacity - 1)
         {
             capacity *= 2;
-            str = realloc(str, capacity);
+            str = storageRealloc(storage, str, capacity);
         }
         ch = fsgetc(string, stream, len);
     }
@@ -629,9 +626,10 @@ void qsortEx(char *first, char *last, int itemSize, QSortCompareFn compare, void
 
 // Virtual machine
 
-void vmInit(VM *vm, int stackSize, bool fileSystemEnabled, Error *error)
+void vmInit(VM *vm, Storage *storage, int stackSize, bool fileSystemEnabled, Error *error)
 {
-    vm->fiber = vm->mainFiber = malloc(sizeof(Fiber));
+    vm->storage = storage;
+    vm->fiber = vm->mainFiber = storageAdd(vm->storage, sizeof(Fiber));
     vm->fiber->parent = NULL;
     vm->fiber->refCntChangeCandidates = &vm->refCntChangeCandidates;
     vm->fiber->vm = vm;
@@ -643,7 +641,7 @@ void vmInit(VM *vm, int stackSize, bool fileSystemEnabled, Error *error)
     vm->fiber->stack = chunkAlloc(&vm->pages, stackSize * sizeof(Slot), NULL, NULL, true, error);
     vm->fiber->stackSize = stackSize;
 
-    candidateInit(&vm->refCntChangeCandidates);
+    candidateInit(&vm->refCntChangeCandidates, vm->storage);
 
     memset(&vm->hooks, 0, sizeof(vm->hooks));
     vm->terminatedNormally = false;
@@ -658,11 +656,7 @@ void vmFree(VM *vm)
        vm->error->runtimeHandler(vm->error->context, ERR_RUNTIME, "No fiber stack");
 
     chunkChangeRefCnt(&vm->pages, page, vm->mainFiber->stack, -1);
-
-    candidateFree(&vm->refCntChangeCandidates);
     pageFree(&vm->pages, vm->terminatedNormally);
-
-    free(vm->mainFiber);
 }
 
 
@@ -1404,7 +1398,7 @@ static FORCE_INLINE int doPrintIndented(char *buf, int maxLen, int depth, bool p
 }
 
 
-static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int depth, bool pretty, bool dereferenced, Error *error)
+static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int depth, bool pretty, bool dereferenced, Storage *storage, Error *error)
 {
     enum {MAX_DEPTH = 20};
 
@@ -1447,7 +1441,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int dept
 
                 len += snprintf(buf + len, maxLen, " -> ");
                 len += doPrintIndented(buf + len, maxLen, depth, pretty, '(');
-                len += doFillReprBuf(&dataSlot, type->base, buf + len, maxLen, depth + 1, pretty, dereferenced, error);
+                len += doFillReprBuf(&dataSlot, type->base, buf + len, maxLen, depth + 1, pretty, dereferenced, storage, error);
                 len += doPrintIndented(buf + len, maxLen, depth, pretty, ')');
             }
             break;
@@ -1470,7 +1464,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int dept
             {
                 Slot itemSlot = {.ptrVal = itemPtr};
                 doDerefImpl(&itemSlot, type->base->kind, error);
-                len += doFillReprBuf(&itemSlot, type->base, buf + len, maxLen, depth + 1, pretty, dereferenced, error);
+                len += doFillReprBuf(&itemSlot, type->base, buf + len, maxLen, depth + 1, pretty, dereferenced, storage, error);
 
                 if (i < type->numItems - 1)
                     len += doPrintIndented(buf + len, maxLen, depth, pretty, ' ');
@@ -1494,7 +1488,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int dept
                 {
                     Slot itemSlot = {.ptrVal = itemPtr};
                     doDerefImpl(&itemSlot, type->base->kind, error);
-                    len += doFillReprBuf(&itemSlot, type->base, buf + len, maxLen, depth + 1, pretty, dereferenced, error);
+                    len += doFillReprBuf(&itemSlot, type->base, buf + len, maxLen, depth + 1, pretty, dereferenced, storage, error);
 
                     if (i < getDims(array)->len - 1)
                         len += doPrintIndented(buf + len, maxLen, depth, pretty, ' ');
@@ -1518,7 +1512,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int dept
                 Type *itemType = typeMapItem(map->type);
 
                 int keySize = typeSizeNoCheck(keyType);
-                void *keys = malloc(map->root->len * keySize);
+                void *keys = storageAdd(storage, map->root->len * keySize);
 
                 doGetMapKeys(map, keys, error);
 
@@ -1527,7 +1521,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int dept
                 {
                     Slot keySlot = {.ptrVal = keyPtr};
                     doDerefImpl(&keySlot, keyType->kind, error);
-                    len += doFillReprBuf(&keySlot, keyType, buf + len, maxLen, depth + 1, pretty, dereferenced, error);
+                    len += doFillReprBuf(&keySlot, keyType, buf + len, maxLen, depth + 1, pretty, dereferenced, storage, error);
 
                     len += snprintf(buf + len, maxLen, ": ");
 
@@ -1537,7 +1531,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int dept
 
                     Slot itemSlot = {.ptrVal = node->data};
                     doDerefImpl(&itemSlot, itemType->kind, error);
-                    len += doFillReprBuf(&itemSlot, itemType, buf + len, maxLen, depth + 1, pretty, dereferenced, error);
+                    len += doFillReprBuf(&itemSlot, itemType, buf + len, maxLen, depth + 1, pretty, dereferenced, storage, error);
 
                     if (i < map->root->len - 1)
                         len += doPrintIndented(buf + len, maxLen, depth, pretty, ' ');
@@ -1545,7 +1539,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int dept
                     keyPtr += keySize;
                 }
 
-                free(keys);
+                storageRemove(storage, keys);
             }
 
             len += doPrintIndented(buf + len, maxLen, depth, pretty, '}');
@@ -1566,7 +1560,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int dept
                 doDerefImpl(&fieldSlot, type->field[i]->type->kind, error);
                 if (!skipNames)
                     len += snprintf(buf + len, maxLen, "%s: ", type->field[i]->name);
-                len += doFillReprBuf(&fieldSlot, type->field[i]->type, buf + len, maxLen, depth + 1, pretty, dereferenced, error);
+                len += doFillReprBuf(&fieldSlot, type->field[i]->type, buf + len, maxLen, depth + 1, pretty, dereferenced, storage, error);
 
                 if (i < type->numItems - 1)
                     len += doPrintIndented(buf + len, maxLen, depth, pretty, ' ');
@@ -1591,7 +1585,7 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int dept
                     len += doPrintIndented(buf + len, maxLen, depth, pretty, '(');
                 }
 
-                len += doFillReprBuf(&selfSlot, interface->selfType->base, buf + len, maxLen, depth + 1, pretty, dereferenced, error);
+                len += doFillReprBuf(&selfSlot, interface->selfType->base, buf + len, maxLen, depth + 1, pretty, dereferenced, storage, error);
 
                 if (pretty)
                     len += doPrintIndented(buf + len, maxLen, depth, pretty, ')');
@@ -1836,16 +1830,20 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
     }
 
     char curFormatBuf[DEFAULT_STR_LEN + 1];
-    bool isCurFormatBufInHeap = formatLen + 1 > sizeof(curFormatBuf);
-    char *curFormat = isCurFormatBufInHeap ? malloc(formatLen + 1) : &curFormatBuf;
+    char *curFormat = curFormatBuf;
+
+    const bool isCurFormatBufInHeap = formatLen + 1 > sizeof(curFormatBuf);
+    if (isCurFormatBufInHeap)
+        curFormat = storageAdd(fiber->vm->storage, formatLen + 1);
 
     memcpy(curFormat, format, formatLen);
     curFormat[formatLen] = 0;
 
     // Special case: %v formatter - convert argument of any type to its string representation
     char reprBuf[sizeof(StrDimensions) + DEFAULT_STR_LEN + 1];
+    char *dimsAndRepr = reprBuf;
+
     bool isReprBufInHeap = false;
-    char *dimsAndRepr = NULL;
 
     if (hasAnyTypeFormatter)
     {
@@ -1864,10 +1862,11 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
         const bool pretty = formatStringTypeSize == FORMAT_SIZE_LONG_LONG;
         const bool dereferenced = formatStringTypeSize == FORMAT_SIZE_LONG || formatStringTypeSize == FORMAT_SIZE_LONG_LONG;
 
-        const int reprLen = doFillReprBuf(&value, type, NULL, 0, 0, pretty, dereferenced, error);  // Predict buffer length
+        const int reprLen = doFillReprBuf(&value, type, NULL, 0, 0, pretty, dereferenced, fiber->vm->storage, error);  // Predict buffer length
 
         isReprBufInHeap = sizeof(StrDimensions) + reprLen + 1 > sizeof(reprBuf);
-        dimsAndRepr = isReprBufInHeap ? malloc(sizeof(StrDimensions) + reprLen + 1) : &reprBuf;
+        if (isReprBufInHeap)
+            dimsAndRepr = storageAdd(fiber->vm->storage, sizeof(StrDimensions) + reprLen + 1);
 
         StrDimensions dims = {.len = reprLen, .capacity = reprLen + 1};
         *(StrDimensions *)dimsAndRepr = dims;
@@ -1875,7 +1874,7 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
         char *repr = dimsAndRepr + sizeof(StrDimensions);
         repr[reprLen] = 0;
 
-        doFillReprBuf(&value, type, repr, reprLen + 1, 0, pretty, dereferenced, error);            // Fill buffer
+        doFillReprBuf(&value, type, repr, reprLen + 1, 0, pretty, dereferenced, fiber->vm->storage, error);            // Fill buffer
 
         value.ptrVal = repr;
         typeKind = TYPE_STR;
@@ -1918,10 +1917,10 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
     fiber->top++;   // Remove value
 
     if (isCurFormatBufInHeap)
-        free(curFormat);
+        storageRemove(fiber->vm->storage, curFormat);
 
     if (isReprBufInHeap)
-        free(dimsAndRepr);
+        storageRemove(fiber->vm->storage, dimsAndRepr);
 }
 
 
@@ -1952,8 +1951,11 @@ static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool con
     }
 
     char curFormatBuf[DEFAULT_STR_LEN + 1];
-    bool isCurFormatBufInHeap = formatLen + 2 + 1 > sizeof(curFormatBuf);                   // + 2 for "%n"
-    char *curFormat = isCurFormatBufInHeap ? malloc(formatLen + 2 + 1) : &curFormatBuf;
+    char *curFormat = curFormatBuf;
+
+    const bool isCurFormatBufInHeap = formatLen + 2 + 1 > sizeof(curFormatBuf);                   // + 2 for "%n"
+    if (isCurFormatBufInHeap)
+        curFormat = storageAdd(fiber->vm->storage, formatLen + 2 + 1);
 
     memcpy(curFormat, format, formatLen);
     curFormat[formatLen + 0] = '%';
@@ -1972,7 +1974,7 @@ static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool con
         // Strings need special handling, as the required buffer size is unknown
         if (typeKind == TYPE_STR)
         {
-            char *src = fsscanfString(string, stream, &len);
+            char *src = fsscanfString(fiber->vm->storage, string, stream, &len);
             char **dest = (char **)value.ptrVal;
 
             // Decrease old string ref count
@@ -1982,7 +1984,7 @@ static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool con
             // Allocate new string
             *dest = doAllocStr(pages, strlen(src), error);
             strcpy(*dest, src);
-            free(src);
+            storageRemove(fiber->vm->storage, src);
 
             cnt = (*dest)[0] ? 1 : 0;
         }
@@ -1998,7 +2000,7 @@ static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool con
     fiber->top++;   // Remove value
 
     if (isCurFormatBufInHeap)
-        free(curFormat);
+        storageRemove(fiber->vm->storage, curFormat);
 }
 
 

@@ -228,6 +228,7 @@ typedef struct
 {
     RefCntChangeCandidate *stack;
     int top, capacity;
+    Storage *storage;
 } RefCntChangeCandidates;
 
 
@@ -267,11 +268,12 @@ typedef struct tagVM
     RefCntChangeCandidates refCntChangeCandidates;
     HookFunc hooks[NUM_HOOKS];
     bool terminatedNormally;
+    Storage *storage;
     Error *error;
 } VM;
 
 
-void vmInit                     (VM *vm, int stackSize /* slots */, bool fileSystemEnabled, Error *error);
+void vmInit                     (VM *vm, Storage *storage, int stackSize /* slots */, bool fileSystemEnabled, Error *error);
 void vmFree                     (VM *vm);
 void vmReset                    (VM *vm, Instruction *code, DebugInfo *debugPerInstr);
 void vmRun                      (VM *vm, FuncContext *fn);

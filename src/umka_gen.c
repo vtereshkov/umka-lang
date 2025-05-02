@@ -1139,8 +1139,8 @@ int genTryRemoveCopyResultToTempVar(CodeGen *gen)
 
 int genAsm(CodeGen *gen, char *buf, int size)
 {
-    bool *jumpFrom = calloc(gen->capacity + 1, 1);
-    bool *jumpTo = calloc(gen->capacity + 1, 1);
+    bool *jumpFrom = storageAdd(gen->storage, gen->capacity + 1);
+    bool *jumpTo = storageAdd(gen->storage, gen->capacity + 1);
 
     int ip = 0;
     do
@@ -1170,8 +1170,8 @@ int genAsm(CodeGen *gen, char *buf, int size)
 
     } while (gen->code[ip++].opcode != OP_HALT);
 
-    free(jumpFrom);
-    free(jumpTo);
+    storageRemove(gen->storage, jumpFrom);
+    storageRemove(gen->storage, jumpTo);
 
     return chars;
 }

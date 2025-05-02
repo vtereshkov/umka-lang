@@ -207,15 +207,15 @@ void compilerInit(Compiler *comp, const char *fileName, const char *sourceString
 
     compilerSetAPI(comp);
 
-    storageInit  (&comp->storage);
+    storageInit  (&comp->storage, &comp->error);
     moduleInit   (&comp->modules, &comp->storage, implLibsEnabled, &comp->error);
     blocksInit   (&comp->blocks, &comp->error);
-    externalInit (&comp->externals);
+    externalInit (&comp->externals, &comp->storage);
     typeInit     (&comp->types, &comp->storage, &comp->error);
     identInit    (&comp->idents, &comp->storage, &comp->debug, &comp->error);
     constInit    (&comp->consts, &comp->error);
     genInit      (&comp->gen, &comp->storage, &comp->debug, &comp->error);
-    vmInit       (&comp->vm, stackSize, fileSystemEnabled, &comp->error);
+    vmInit       (&comp->vm, &comp->storage, stackSize, fileSystemEnabled, &comp->error);
 
     vmReset(&comp->vm, comp->gen.code, comp->gen.debugPerInstr);
 
@@ -269,12 +269,9 @@ void compilerInit(Compiler *comp, const char *fileName, const char *sourceString
 
 void compilerFree(Compiler *comp)
 {
-    lexFree         (&comp->lex);
     vmFree          (&comp->vm);
-    externalFree    (&comp->externals);
     moduleFree      (&comp->modules);
     storageFree     (&comp->storage);
-    errorReportFree (&comp->error.report);
 
 #ifdef _WIN32
     SetConsoleCP(comp->originalInputCodepage);
@@ -308,7 +305,7 @@ char *compilerAsm(Compiler *comp)
     if (chars < 0)
         return NULL;
 
-    char *buf = malloc(chars + 1);
+    char *buf = storageAdd(&comp->storage, chars + 1);
     genAsm(&comp->gen, buf, chars);
     buf[chars] = 0;
     return buf;
