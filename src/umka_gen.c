@@ -35,16 +35,17 @@ static void genUpdateLastJump(CodeGen *gen, int ip)
 }
 
 
-void genInit(CodeGen *gen, DebugInfo *debug, Error *error)
+void genInit(CodeGen *gen, Storage *storage, DebugInfo *debug, Error *error)
 {
+    gen->storage = storage;
     gen->capacity = 1000;
     gen->ip = 0;
-    gen->code = malloc(gen->capacity * sizeof(Instruction));
+    gen->code = storageAdd(gen->storage, gen->capacity * sizeof(Instruction));
     gen->top = -1;
     gen->lastJump = 0;
     gen->breaks = gen->continues = gen->returns = NULL;
     gen->debug = debug;
-    gen->debugPerInstr = malloc(gen->capacity * sizeof(DebugInfo));
+    gen->debugPerInstr = storageAdd(gen->storage, gen->capacity * sizeof(DebugInfo));
     gen->error = error;
     genUnnotify(gen);
 }
@@ -52,16 +53,14 @@ void genInit(CodeGen *gen, DebugInfo *debug, Error *error)
 
 void genFree(CodeGen *gen)
 {
-    free(gen->code);
-    free(gen->debugPerInstr);
 }
 
 
 static void genRealloc(CodeGen *gen)
 {
     gen->capacity *= 2;
-    gen->code = realloc(gen->code, gen->capacity * sizeof(Instruction));
-    gen->debugPerInstr = realloc(gen->debugPerInstr, gen->capacity * sizeof(DebugInfo));
+    gen->code = storageRealloc(gen->storage, gen->code, gen->capacity * sizeof(Instruction));
+    gen->debugPerInstr = storageRealloc(gen->storage, gen->debugPerInstr, gen->capacity * sizeof(DebugInfo));
 }
 
 

@@ -214,7 +214,7 @@ void compilerInit(Compiler *comp, const char *fileName, const char *sourceString
     typeInit     (&comp->types, &comp->error);
     identInit    (&comp->idents, &comp->storage, &comp->debug, &comp->error);
     constInit    (&comp->consts, &comp->error);
-    genInit      (&comp->gen, &comp->debug, &comp->error);
+    genInit      (&comp->gen, &comp->storage, &comp->debug, &comp->error);
     vmInit       (&comp->vm, stackSize, fileSystemEnabled, &comp->error);
 
     vmReset(&comp->vm, comp->gen.code, comp->gen.debugPerInstr);
@@ -374,5 +374,5 @@ void compilerMakeFuncContext(Compiler *comp, Type *fnType, int entryOffset, Func
     ParamLayout *paramLayout = typeMakeParamLayout(&comp->types, &comp->storage, &fnType->sig);
     fn->params[-4].ptrVal = paramLayout;
 
-    fn->result = (Slot *)storageAdd(&comp->storage, sizeof(Slot));
+    fn->result = storageAdd(&comp->storage, sizeof(Slot));
 }

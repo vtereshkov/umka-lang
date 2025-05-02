@@ -77,22 +77,22 @@ void storageInit(Storage *storage)
 
 void storageFree(Storage *storage)
 {
-    StorageChunk *chunk = storage->first;
-    while (chunk)
+    while (storage->first)
     {
-        StorageChunk *next = chunk->next;
-        free(chunk);
-        chunk = next;
+        StorageChunk *next = storage->first->next;
+        free(storage->first);
+        storage->first = next;
     }
 }
 
 
-char *storageAdd(Storage *storage, int size)
+void *storageAdd(Storage *storage, int64_t size)
 {
     StorageChunk *chunk = malloc(sizeof(StorageChunk) + size);
 
     chunk->prev = NULL;
     chunk->next = storage->first;
+    chunk->size = size;
     memset(chunk->data, 0, size);
 
     if (storage->first)
@@ -103,7 +103,7 @@ char *storageAdd(Storage *storage, int size)
 }
 
 
-char *storageAddStr(Storage *storage, int len)
+char *storageAddStr(Storage *storage, int64_t len)
 {
     StrDimensions dims = {.len = len, .capacity = len + 1};
 
@@ -117,9 +117,9 @@ char *storageAddStr(Storage *storage, int len)
 }
 
 
-DynArray *storageAddDynArray(Storage *storage, struct tagType *type, int len)
+DynArray *storageAddDynArray(Storage *storage, struct tagType *type, int64_t len)
 {
-    DynArray *array = (DynArray *)storageAdd(storage, sizeof(DynArray));
+    DynArray *array = storageAdd(storage, sizeof(DynArray));
 
     array->type     = type;
     array->itemSize = typeSizeNoCheck(array->type->base);
@@ -134,9 +134,9 @@ DynArray *storageAddDynArray(Storage *storage, struct tagType *type, int len)
 }
 
 
-void storageRemove(Storage *storage, char *data)
+void storageRemove(Storage *storage, void *data)
 {
-    StorageChunk *chunk = (StorageChunk *)(data - sizeof(StorageChunk));
+    StorageChunk *chunk = (StorageChunk *)((char *)data - sizeof(StorageChunk));
 
     if (chunk == storage->first)
         storage->first = chunk->next;
@@ -151,11 +151,14 @@ void storageRemove(Storage *storage, char *data)
 }
 
 
-char *storageRealloc(Storage *storage, char *data, int size)
+void *storageRealloc(Storage *storage, void *data, int64_t size)
 {
-    char *newData = storageAdd(storage, size);
-    memcpy(newData, data, size);
+    StorageChunk *chunk = (StorageChunk *)((char *)data - sizeof(StorageChunk));
+
+    void *newData = storageAdd(storage, size);
+    memcpy(newData, data, chunk->size);
     storageRemove(storage, data);
+
     return newData;
 }
 
@@ -305,7 +308,7 @@ int moduleAdd(Modules *modules, const char *path)
     if (res >= 0)
         modules->error->handler(modules->error->context, "Duplicate module %s", path);
 
-    Module *module = (Module *)storageAdd(modules->storage, sizeof(Module));
+    Module *module = storageAdd(modules->storage, sizeof(Module));
 
     strncpy(module->path, path, DEFAULT_STR_LEN);
     module->path[DEFAULT_STR_LEN] = 0;
@@ -367,7 +370,7 @@ void moduleAddSource(Modules *modules, const char *path, const char *source, boo
 
     moduleNameFromPath(modules, path, folder, name, DEFAULT_STR_LEN + 1);
 
-    ModuleSource *moduleSource = (ModuleSource *)storageAdd(modules->storage, sizeof(ModuleSource));
+    ModuleSource *moduleSource = storageAdd(modules->storage, sizeof(ModuleSource));
 
     strncpy(moduleSource->path, path, DEFAULT_STR_LEN);
     moduleSource->path[DEFAULT_STR_LEN] = 0;
@@ -442,7 +445,7 @@ bool moduleRegularizePath(Modules *modules, const char *path, const char *curFol
     char *absolutePath = storageAdd(modules->storage, size);
     snprintf(absolutePath, size, "%s%s", modulePathIsAbsolute(path) ? "" : curFolder, path);
 
-    char **separators = (char **)storageAdd(modules->storage, size * sizeof(char *));
+    char **separators = storageAdd(modules->storage, size * sizeof(char *));
     int numSeparators = 0;
 
     char *readCh = absolutePath, *writeCh = regularizedPath;

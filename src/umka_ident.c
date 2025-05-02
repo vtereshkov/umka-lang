@@ -31,9 +31,9 @@ void identFree(Idents *idents, int block)
         Ident *next = idents->first->next;
 
         if (idents->first->globallyAllocated)
-            storageRemove(idents->storage, (char *)idents->first->ptr);
+            storageRemove(idents->storage, idents->first->ptr);
 
-        storageRemove(idents->storage, (char *)idents->first);
+        storageRemove(idents->storage, idents->first);
         idents->first = next;
     }
 }
@@ -170,7 +170,7 @@ static Ident *identAdd(Idents *idents, Modules *modules, Blocks *blocks, IdentKi
             idents->error->handler(idents->error->context, "Void variable or constant %s is not allowed", name);
     }
 
-    ident = (Ident *)storageAdd(idents->storage, sizeof(Ident));
+    ident = storageAdd(idents->storage, sizeof(Ident));
     ident->kind = kind;
 
     strncpy(ident->name, name, MAX_IDENT_LEN);

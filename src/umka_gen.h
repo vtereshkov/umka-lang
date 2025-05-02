@@ -36,13 +36,14 @@ typedef struct
     int top;
     int lastJump;
     Gotos *breaks, *continues, *returns;
+    Storage *storage;
     DebugInfo *debug, *debugPerInstr;
     GenNotification lastNotification;
     Error *error;
 } CodeGen;
 
 
-void genInit(CodeGen *gen, DebugInfo *debug, Error *error);
+void genInit(CodeGen *gen, Storage *storage, DebugInfo *debug, Error *error);
 void genFree(CodeGen *gen);
 
 // Atomic VM instructions

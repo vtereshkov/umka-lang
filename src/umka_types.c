@@ -782,7 +782,7 @@ int typeParamOffset(Types *types, Signature *sig, int index)
 
 ParamLayout *typeMakeParamLayout(Types *types, Storage *storage, Signature *sig)
 {
-    ParamLayout *layout = (ParamLayout *)storageAdd(storage, sizeof(ParamLayout) + sig->numParams * sizeof(int64_t));
+    ParamLayout *layout = storageAdd(storage, sizeof(ParamLayout) + sig->numParams * sizeof(int64_t));
 
     layout->numParams = sig->numParams;
     layout->numResultParams = typeStructured(sig->resultType) ? 1 : 0;
@@ -797,7 +797,7 @@ ParamLayout *typeMakeParamLayout(Types *types, Storage *storage, Signature *sig)
 
 ParamAndLocalVarLayout *typeMakeParamAndLocalVarLayout(Storage *storage, ParamLayout *paramLayout, int localVarSlots)
 {
-    ParamAndLocalVarLayout *layout = (ParamAndLocalVarLayout *)storageAdd(storage, sizeof(ParamAndLocalVarLayout));
+    ParamAndLocalVarLayout *layout = storageAdd(storage, sizeof(ParamAndLocalVarLayout));
     layout->paramLayout = paramLayout;
     layout->localVarSlots = localVarSlots;
     return layout;
