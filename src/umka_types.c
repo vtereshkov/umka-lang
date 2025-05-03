@@ -401,16 +401,6 @@ bool typeEquivalentExceptIdent(Type *left, Type *right)
 }
 
 
-void typeAssertEquivalent(Types *types, Type *left, Type *right)
-{
-    if (!typeEquivalent(left, right))
-    {
-        char leftBuf[DEFAULT_STR_LEN + 1], rightBuf[DEFAULT_STR_LEN + 1];
-        types->error->handler(types->error->context, "Incompatible types %s and %s", typeSpelling(left, leftBuf), typeSpelling(right, rightBuf));
-    }
-}
-
-
 bool typeCompatible(Type *left, Type *right)
 {
     if (typeEquivalent(left, right))

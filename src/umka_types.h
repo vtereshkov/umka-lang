@@ -227,7 +227,6 @@ static inline bool typeExprListStruct(Type *type)
 
 bool typeEquivalent             (Type *left, Type *right);
 bool typeEquivalentExceptIdent  (Type *left, Type *right);
-void typeAssertEquivalent       (Types *types, Type *left, Type *right);
 bool typeCompatible             (Type *left, Type *right);
 void typeAssertCompatible       (Types *types, Type *left, Type *right);
 void typeAssertCompatibleParam  (Types *types, Type *left, Type *right, Type *fnType, int paramIndex);

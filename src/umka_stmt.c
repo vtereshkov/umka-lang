@@ -1108,6 +1108,9 @@ static void parseReturnStmt(Compiler *comp)
             break;
         }
 
+    if (!sig)
+        comp->error.handler(comp->error.context, "Function block not found");
+
     Type *type = sig->resultType;
     if (comp->lex.tok.kind != TOK_SEMICOLON && comp->lex.tok.kind != TOK_IMPLICIT_SEMICOLON && comp->lex.tok.kind != TOK_RBRACE)
         parseExprList(comp, &type, NULL);
@@ -1223,7 +1226,7 @@ void parseFnBlock(Compiler *comp, Ident *fn, Type *upvaluesStructType)
 
     char *prevDebugFnName = comp->lex.debug->fnName;
 
-    if (fn && fn->kind == IDENT_CONST && fn->type->kind == TYPE_FN && fn->block == 0)
+    if (fn->kind == IDENT_CONST && fn->type->kind == TYPE_FN && fn->block == 0)
     {
         if (fn->type->sig.isMethod)
         {

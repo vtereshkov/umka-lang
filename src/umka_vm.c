@@ -252,7 +252,10 @@ static FORCE_INLINE HeapPage *pageAdd(HeapPages *pages, int numChunks, int chunk
     const int size = numChunks * chunkSize;
     page->ptr = malloc(size);
     if (!page->ptr)
+    {
+        free(page);
         return NULL;
+    }
 
     page->numChunks = numChunks;
     page->numOccupiedChunks = 0;
@@ -426,7 +429,7 @@ static FORCE_INLINE void *chunkAlloc(HeapPages *pages, int64_t size, Type *type,
     page->refCnt++;
 
 #ifdef UMKA_REF_CNT_DEBUG
-    printf("Add chunk at %p\n", (void *)chunk + sizeof(HeapChunkHeader));
+    printf("Add chunk at %p\n", (char *)chunk + sizeof(HeapChunkHeader));
 #endif
 
     return (char *)chunk + sizeof(HeapChunkHeader);
