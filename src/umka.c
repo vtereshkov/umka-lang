@@ -29,6 +29,40 @@ void help(void)
 }
 
 
+bool writeAsmFile(void *umka, const char *mainPath)
+{
+    bool ok = false;
+
+    char *asmFileName = malloc(strlen(mainPath) + 4 + 1);
+    if (!asmFileName)
+        fprintf(stderr, "Error: Out of memory\n");
+    else
+    {
+        sprintf(asmFileName, "%s.asm", mainPath);
+        const char *asmBuf = umkaAsm(umka);
+        if (!asmBuf)
+            fprintf(stderr, "Error: Cannot output assembly listing\n");
+        else
+        {
+            FILE *asmFile = fopen(asmFileName, "w");
+            if (!asmFile)
+                fprintf(stderr, "Error: Cannot open file %s\n", asmFileName);
+            else
+            {
+                if (fwrite(asmBuf, strlen(asmBuf), 1, asmFile) != 1)
+                    fprintf(stderr, "Error: Cannot write file %s\n", asmFileName);
+                else
+                    ok = true;
+                fclose(asmFile);
+            }
+        }
+        free(asmFileName);
+    }
+
+    return ok;
+}
+
+
 void printCompileWarning(UmkaError *warning)
 {
     fprintf(stderr, "Warning %s (%d, %d): %s\n", warning->fileName, warning->line, warning->pos, warning->msg);
@@ -162,41 +196,9 @@ int main(int argc, char **argv)
     if (ok)
     {
         if (writeAsm)
-        {
-            char *asmFileName = malloc(strlen(argv[i]) + 4 + 1);
-            if (!asmFileName)
-            {
-                fprintf(stderr, "Out of memory\n");
-                return 1;
-            }
-            sprintf(asmFileName, "%s.asm", argv[i]);
-            char *asmBuf = umkaAsm(umka);
-            if (!asmBuf)
-            {
-                fprintf(stderr, "Cannot output assembly listing\n");
-                free(asmFileName);
-                return 1;
-            }
-            FILE *asmFile = fopen(asmFileName, "w");
-            if (!asmFile)
-            {
-                fprintf(stderr, "Cannot open file %s\n", asmFileName);
-                free(asmFileName);
-                return 1;
-            }
-            if (fwrite(asmBuf, strlen(asmBuf), 1, asmFile) != 1)
-            {
-                fprintf(stderr, "Cannot write file %s\n", asmFileName);
-                fclose(asmFile);
-                free(asmFileName);
-                return 1;
-            }
+            ok = writeAsmFile(umka, argv[i]);
 
-            fclose(asmFile);
-            free(asmFileName);
-        }
-
-        if (!compileOnly)
+        if (ok && !compileOnly)
             exitCode = umkaRun(umka);
 
         if (exitCode)
