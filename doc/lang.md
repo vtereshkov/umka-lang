@@ -724,16 +724,19 @@ fn copy(m: map[K]T): map[K]T      // (2)
 (2) Constructs a copy of the map `m`.
 
 ```
-fn append(a: []T, x: (^T | []T)): []T
+fn append(a: []T, x: T): []T                // (1)
+fn append(a: []T, x: ([...]T | []T)): []T   // (2)
 ```
 
-Appends `x` to the dynamic array `a`. The `x` can be either a new item of the same type as the item type `T`  of `a`, or another dynamic array of the same item type `T`. If `len(a) + len(x) <= cap(a)`, it is altered and returned. Otherwise, a new dynamic array is constructed and returned. 
+(1) Appends `x` to the dynamic array `a`. `x` must be of a type implicitly convertible to `T` and not equivalent to `[...]T` or `[]T`. If `len(a) + 1 <= cap(a)`, the dynamic array `a` is altered and returned. Otherwise, a new dynamic array is constructed and returned.
+
+(2) Appends all items of `x` to the dynamic array `a`. If `len(a) + len(x) <= cap(a)`, the dynamic array `a` is altered and returned. Otherwise, a new dynamic array is constructed and returned.  
 
 ```
 fn insert(a: []T, index: int, x: T): []T
 ```
 
-Inserts `x` into the dynamic array `a` at position `index`. The `x` should be a new item of the same type as the item type `T` of `a`. If `len(a) + 1 <= cap(a)`, it is altered and returned. Otherwise, a new dynamic array is constructed and returned.
+Inserts `x` into the dynamic array `a` at position `index`. `x` must be of a type implicitly convertible to `T`. If `len(a) + 1 <= cap(a)`, the dynamic array `a` is altered and returned. Otherwise, a new dynamic array is constructed and returned.
 
 ```
 fn delete(a: []T, index: int): []T        // (1)
