@@ -1023,7 +1023,7 @@ static void parseBuiltinAppendCall(Compiler *comp, Type **type, Const *constant)
     lexEat(&comp->lex, TOK_COMMA);
 
     // New item (must always be a pointer, even for value types) or right-hand side dynamic array
-    Type *itemType = NULL;
+    Type *itemType = (*type)->base;
     parseExpr(comp, &itemType, NULL);
 
     bool singleItem = true;

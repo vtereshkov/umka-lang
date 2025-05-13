@@ -29,7 +29,7 @@ fn test*() {
 		}
 	}
 
-	arrtree.children[1].children = append(arrtree.children[1].children, ArrNode{"node121", {}})
+	arrtree.children[1].children = append(arrtree.children[1].children, {"node121", {}})
 
 	maptree := MapNode{
 		"node1",

@@ -114,7 +114,7 @@ fn test8() {
 
 	v := []Vec{}
 	for i := 0; i < 10000; i++ {
-		v = append(v, Vec{std::rand(), std::rand(), std::rand()})
+		v = append(v, {std::rand(), std::rand(), std::rand()})
 	}
 
 	sort(v, true, z)
