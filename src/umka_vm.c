@@ -188,7 +188,7 @@ static FORCE_INLINE Slot *doGetOnFreeParams(void *ptr)
 
 static void pageInit(HeapPages *pages, Fiber *fiber, Error *error)
 {
-    pages->first = pages->last = NULL;
+    pages->first = NULL;
     pages->freeId = 1;
     pages->totalSize = 0;
     pages->fiber = fiber;
@@ -202,39 +202,36 @@ static void pageFree(HeapPages *pages, bool warnLeak)
     while (page)
     {
         HeapPage *next = page->next;
-        if (page->ptr)
+
+        // Report memory leaks
+        if (warnLeak)
         {
-            // Report memory leaks
-            if (warnLeak)
-            {
-                fprintf(stderr, "Warning: Memory leak at %p (%d refs)\n", page->ptr, page->refCnt);
+            fprintf(stderr, "Warning: Memory leak at %p (%d refs)\n", page->data, page->refCnt);
 
 #ifdef UMKA_DETAILED_LEAK_INFO
-                for (int i = 0; i < page->numOccupiedChunks; i++)
-                {
-                    HeapChunkHeader *chunk = (HeapChunkHeader *)((char *)page->ptr + i * page->chunkSize);
-                    if (chunk->refCnt == 0)
-                        continue;
-
-                    DebugInfo *debug = &pages->fiber->debugPerInstr[chunk->ip];
-                    fprintf(stderr, "    Chunk allocated in %s: %s (%d)\n", debug->fnName, debug->fileName, debug->line);
-                }
- #endif
-            }
-
-            // Call custom deallocators, if any
-            for (int i = 0; i < page->numOccupiedChunks && page->numChunksWithOnFree > 0; i++)
+            for (int i = 0; i < page->numOccupiedChunks; i++)
             {
-                HeapChunkHeader *chunk = (HeapChunkHeader *)((char *)page->ptr + i * page->chunkSize);
-                if (chunk->refCnt == 0 || !chunk->onFree)
+                HeapChunk *chunk = (HeapChunk *)(page->data + i * page->chunkSize);
+                if (chunk->refCnt == 0)
                     continue;
 
-                chunk->onFree(doGetOnFreeParams((char *)chunk + sizeof(HeapChunkHeader)), NULL);
-                page->numChunksWithOnFree--;
+                DebugInfo *debug = &pages->fiber->debugPerInstr[chunk->ip];
+                fprintf(stderr, "    Chunk allocated in %s: %s (%d)\n", debug->fnName, debug->fileName, debug->line);
             }
-
-            free(page->ptr);
+#endif
         }
+
+        // Call custom deallocators, if any
+        for (int i = 0; i < page->numOccupiedChunks && page->numChunksWithOnFree > 0; i++)
+        {
+            HeapChunk *chunk = (HeapChunk *)(page->data + i * page->chunkSize);
+            if (chunk->refCnt == 0 || !chunk->onFree)
+                continue;
+
+            chunk->onFree(doGetOnFreeParams(chunk->data), NULL);
+            page->numChunksWithOnFree--;
+        }
+
         free(page);
         page = next;
     }
@@ -243,51 +240,40 @@ static void pageFree(HeapPages *pages, bool warnLeak)
 
 static FORCE_INLINE HeapPage *pageAdd(HeapPages *pages, int numChunks, int chunkSize)
 {
-    HeapPage *page = malloc(sizeof(HeapPage));
+    const int size = numChunks * chunkSize;
+
+    HeapPage *page = malloc(sizeof(HeapPage) + size);
     if (!page)
-        return NULL;
+        pages->error->runtimeHandler(pages->error->context, ERR_RUNTIME, "Out of memory");
 
     page->id = pages->freeId++;
-
-    const int size = numChunks * chunkSize;
-    page->ptr = malloc(size);
-    if (!page->ptr)
-    {
-        free(page);
-        return NULL;
-    }
-
+    page->refCnt = 0;
     page->numChunks = numChunks;
     page->numOccupiedChunks = 0;
     page->numChunksWithOnFree = 0;
     page->chunkSize = chunkSize;
-    page->refCnt = 0;
-    page->prev = pages->last;
-    page->next = NULL;
+    page->prev = NULL;
+    page->next = pages->first;
+    page->end = page->data + size;
 
-    // Add to list
-    if (!pages->first)
-        pages->first = pages->last = page;
-    else
-    {
-        pages->last->next = page;
-        pages->last = page;
-    }
+    pages->totalSize += size;
 
-    pages->totalSize += page->numChunks * page->chunkSize;
+    if (pages->first)
+        pages->first->prev = page;
+    pages->first = page;
 
 #ifdef UMKA_REF_CNT_DEBUG
-    printf("Add page at %p\n", page->ptr);
+    fprintf(stderr, "Add page at %p\n", page->data);
 #endif
 
-    return pages->last;
+    return page;
 }
 
 
 static FORCE_INLINE void pageRemove(HeapPages *pages, HeapPage *page)
 {
 #ifdef UMKA_REF_CNT_DEBUG
-    printf("Remove page at %p\n", page->ptr);
+    fprintf(stderr, "Remove page at %p\n", page->data);
 #endif
 
     pages->totalSize -= page->numChunks * page->chunkSize;
@@ -295,53 +281,59 @@ static FORCE_INLINE void pageRemove(HeapPages *pages, HeapPage *page)
     if (page == pages->first)
         pages->first = page->next;
 
-    if (page == pages->last)
-        pages->last = page->prev;
-
     if (page->prev)
         page->prev->next = page->next;
 
     if (page->next)
         page->next->prev = page->prev;
 
-    free(page->ptr);
     free(page);
 }
 
 
-static FORCE_INLINE HeapChunkHeader *pageGetChunkHeader(HeapPage *page, void *ptr)
+static FORCE_INLINE HeapChunk *pageGetChunk(HeapPage *page, void *ptr)
 {
-    const int chunkOffset = ((char *)ptr - (char *)page->ptr) % page->chunkSize;
-    return (HeapChunkHeader *)((char *)ptr - chunkOffset);
+    const int chunkOffset = ((char *)ptr - page->data) % page->chunkSize;
+    return (HeapChunk *)((char *)ptr - chunkOffset);
 }
 
 
 static FORCE_INLINE HeapPage *pageFind(HeapPages *pages, void *ptr)
 {
     for (HeapPage *page = pages->first; page; page = page->next)
-        if (ptr >= page->ptr && ptr < (void *)((char *)page->ptr + page->numChunks * page->chunkSize))
+    {
+        if (ptr >= (void *)page->data && ptr < (void *)page->end)
         {
-            HeapChunkHeader *chunk = pageGetChunkHeader(page, ptr);
+            const HeapChunk *chunk = pageGetChunk(page, ptr);
             if (chunk->refCnt <= 0)
                 pages->error->runtimeHandler(pages->error->context, ERR_RUNTIME, "Dangling pointer at %p", ptr);
 
             return page;
         }
+    }
     return NULL;
 }
 
 
-static FORCE_INLINE HeapPage *pageFindForAlloc(HeapPages *pages, int size)
+static FORCE_INLINE HeapPage *pageFindForAlloc(HeapPages *pages, int chunkSize)
 {
     HeapPage *bestPage = NULL;
-    int bestSize = 1 << 30;
+    int bestSize = INT_MAX;
 
     for (HeapPage *page = pages->first; page; page = page->next)
-        if (page->numOccupiedChunks < page->numChunks && page->chunkSize >= size && page->chunkSize < bestSize)
+    {
+        if (page->numOccupiedChunks < page->numChunks)
         {
-            bestPage = page;
-            bestSize = page->chunkSize;
+            if (page->chunkSize == chunkSize)
+                return page;
+
+            if (page->chunkSize > chunkSize && page->chunkSize < bestSize)
+            {
+                bestPage = page;
+                bestSize = page->chunkSize;
+            }
         }
+    }
     return bestPage;
 }
 
@@ -349,8 +341,10 @@ static FORCE_INLINE HeapPage *pageFindForAlloc(HeapPages *pages, int size)
 static FORCE_INLINE HeapPage *pageFindById(HeapPages *pages, int id)
 {
     for (HeapPage *page = pages->first; page; page = page->next)
+    {
         if (page->id == id)
             return page;
+    }
     return NULL;
 }
 
@@ -360,7 +354,7 @@ static FORCE_INLINE bool stackUnwind(Fiber *fiber, Slot **base, int *ip)
     if (*base == fiber->stack + fiber->stackSize - 1)
         return false;
 
-    int returnOffset = (*base + 1)->intVal;
+    const int returnOffset = (*base + 1)->intVal;
     if (returnOffset == RETURN_FROM_FIBER || returnOffset == RETURN_FROM_VM)
         return false;
 
@@ -395,7 +389,7 @@ static FORCE_INLINE void stackChangeFrameRefCnt(Fiber *fiber, HeapPages *pages, 
 static FORCE_INLINE void *chunkAlloc(HeapPages *pages, int64_t size, Type *type, ExternFunc onFree, bool isStack, Error *error)
 {
     // Page layout: header, data, footer (char), padding, header, data, footer (char), padding...
-    int64_t chunkSize = align(sizeof(HeapChunkHeader) + align(size + 1, sizeof(int64_t)), MEM_MIN_HEAP_CHUNK);
+    const int64_t chunkSize = align(sizeof(HeapChunk) + align(size + 1, sizeof(int64_t)), MEM_MIN_HEAP_CHUNK);
 
     if (size < 0 || chunkSize > INT_MAX)
         error->runtimeHandler(error->context, ERR_RUNTIME, "Cannot allocate a block of %lld bytes", size);
@@ -408,11 +402,9 @@ static FORCE_INLINE void *chunkAlloc(HeapPages *pages, int64_t size, Type *type,
             numChunks = 1;
 
         page = pageAdd(pages, numChunks, chunkSize);
-        if (!page)
-            error->runtimeHandler(error->context, ERR_RUNTIME, "Out of memory");
     }
 
-    HeapChunkHeader *chunk = (HeapChunkHeader *)((char *)page->ptr + page->numOccupiedChunks * page->chunkSize);
+    HeapChunk *chunk = (HeapChunk *)(page->data + page->numOccupiedChunks * page->chunkSize);
 
     memset(chunk, 0, page->chunkSize);
     chunk->refCnt = 1;
@@ -429,16 +421,16 @@ static FORCE_INLINE void *chunkAlloc(HeapPages *pages, int64_t size, Type *type,
     page->refCnt++;
 
 #ifdef UMKA_REF_CNT_DEBUG
-    printf("Add chunk at %p\n", (char *)chunk + sizeof(HeapChunkHeader));
+    fprintf(stderr, "Add chunk at %p\n", chunk->data);
 #endif
 
-    return (char *)chunk + sizeof(HeapChunkHeader);
+    return chunk->data;
 }
 
 
 static FORCE_INLINE int chunkChangeRefCnt(HeapPages *pages, HeapPage *page, void *ptr, int delta)
 {
-    HeapChunkHeader *chunk = pageGetChunkHeader(page, ptr);
+    HeapChunk *chunk = pageGetChunk(page, ptr);
 
     if (chunk->refCnt <= 0 || page->refCnt < chunk->refCnt)
         pages->error->runtimeHandler(pages->error->context, ERR_RUNTIME, "Wrong reference count for pointer at %p", ptr);
@@ -456,7 +448,7 @@ static FORCE_INLINE int chunkChangeRefCnt(HeapPages *pages, HeapPage *page, void
     stackChangeFrameRefCnt(pages->fiber, pages, ptr, delta);
 
 #ifdef UMKA_REF_CNT_DEBUG
-    printf("%p: delta: %d  chunk: %d  page: %d\n", ptr, delta, chunk->refCnt, page->refCnt);
+    fprintf(stderr, "%p: delta: %+d  chunk: %d  page: %d\n", ptr, delta, chunk->refCnt, page->refCnt);
 #endif
 
     if (page->refCnt == 0)
@@ -883,7 +875,7 @@ static FORCE_INLINE void doChangeRefCntImpl(Fiber *fiber, HeapPages *pages, void
                     chunkChangeRefCnt(pages, page, ptr, 1);
                 else
                 {
-                    HeapChunkHeader *chunk = pageGetChunkHeader(page, ptr);
+                    HeapChunk *chunk = pageGetChunk(page, ptr);
                     if (chunk->refCnt > 1)
                     {
                         chunkChangeRefCnt(pages, page, ptr, -1);
@@ -897,7 +889,7 @@ static FORCE_INLINE void doChangeRefCntImpl(Fiber *fiber, HeapPages *pages, void
                     // In this case, we should traverse children as for the actual composite type, rather than for the pointer
                     if (chunk->type)
                     {
-                        void *chunkDataPtr = (char *)chunk + sizeof(HeapChunkHeader);
+                        void *chunkDataPtr = (char *)chunk + sizeof(HeapChunk);
 
                         switch (chunk->type->kind)
                         {
@@ -960,7 +952,7 @@ static FORCE_INLINE void doChangeRefCntImpl(Fiber *fiber, HeapPages *pages, void
                     chunkChangeRefCnt(pages, page, array->data, 1);
                 else
                 {
-                    HeapChunkHeader *chunk = pageGetChunkHeader(page, array->data);
+                    HeapChunk *chunk = pageGetChunk(page, array->data);
                     if (chunk->refCnt > 1)
                     {
                         chunkChangeRefCnt(pages, page, array->data, -1);
@@ -1011,7 +1003,7 @@ static FORCE_INLINE void doChangeRefCntImpl(Fiber *fiber, HeapPages *pages, void
                     chunkChangeRefCnt(pages, page, ptr, 1);
                 else
                 {
-                    HeapChunkHeader *chunk = pageGetChunkHeader(page, ptr);
+                    HeapChunk *chunk = pageGetChunk(page, ptr);
                     if (chunk->refCnt > 1)
                     {
                         chunkChangeRefCnt(pages, page, ptr, -1);
@@ -3487,13 +3479,13 @@ static FORCE_INLINE void doWeakenPtr(Fiber *fiber, HeapPages *pages)
     HeapPage *page = pageFind(pages, ptr);
     if (page)
     {
-        HeapChunkHeader *chunk = pageGetChunkHeader(page, ptr);
+        HeapChunk *chunk = pageGetChunk(page, ptr);
         if (chunk->isStack)
             pages->error->runtimeHandler(pages->error->context, ERR_RUNTIME, "Pointer to a local variable cannot be weak");
 
         const bool isHeapPtr = true;
         const int pageId = page->id;
-        const int pageOffset = (char *)ptr - (char *)page->ptr;
+        const int pageOffset = (char *)ptr - page->data;
 
         weakPtr = ((uint64_t)isHeapPtr << 63) | ((uint64_t)pageId << 32) | pageOffset;
     }
@@ -3518,9 +3510,9 @@ static FORCE_INLINE void doStrengthenPtr(Fiber *fiber, HeapPages *pages)
         if (page)
         {
             const int pageOffset = weakPtr & 0x7FFFFFFF;
-            ptr = (char *)page->ptr + pageOffset;
+            ptr = page->data + pageOffset;
 
-            HeapChunkHeader *chunk = pageGetChunkHeader(page, ptr);
+            HeapChunk *chunk = pageGetChunk(page, ptr);
             if (chunk->isStack)
                 pages->error->runtimeHandler(pages->error->context, ERR_RUNTIME, "Pointer to a local variable cannot be weak");
 

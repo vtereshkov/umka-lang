@@ -187,16 +187,17 @@ typedef void (*ExternFunc)(Slot *params, Slot *result);
 typedef struct tagHeapPage
 {
     int id;
-    void *ptr;
-    int numChunks, numOccupiedChunks, numChunksWithOnFree, chunkSize;
     int refCnt;
+    int numChunks, numOccupiedChunks, numChunksWithOnFree, chunkSize;
     struct tagHeapPage *prev, *next;
+    char *end;
+    char data[];
 } HeapPage;
 
 
 typedef struct
 {
-    HeapPage *first, *last;
+    HeapPage *first;
     int freeId;
     int64_t totalSize;
     struct tagFiber *fiber;
@@ -213,7 +214,8 @@ typedef struct
     int64_t ip;                 // Optional instruction pointer at which the chunk has been allocated
     bool isStack;
     bool reserved[7];
-} HeapChunkHeader;
+    char data[];
+} HeapChunk;
 
 
 typedef struct
