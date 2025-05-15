@@ -889,25 +889,23 @@ static FORCE_INLINE void doChangeRefCntImpl(Fiber *fiber, HeapPages *pages, void
                     // In this case, we should traverse children as for the actual composite type, rather than for the pointer
                     if (chunk->type)
                     {
-                        void *chunkDataPtr = (char *)chunk + sizeof(HeapChunk);
-
                         switch (chunk->type->kind)
                         {
                             case TYPE_ARRAY:
                             {
-                                doAddArrayItemsRefCntCandidates(candidates, chunkDataPtr, chunk->type, chunk->type->numItems);
+                                doAddArrayItemsRefCntCandidates(candidates, chunk->data, chunk->type, chunk->type->numItems);
                                 break;
                             }
                             case TYPE_DYNARRAY:
                             {
-                                DynArrayDimensions *dims = (DynArrayDimensions *)chunkDataPtr;
-                                void *data = (char *)chunkDataPtr + sizeof(DynArrayDimensions);
+                                DynArrayDimensions *dims = (DynArrayDimensions *)chunk->data;
+                                void *data = chunk->data + sizeof(DynArrayDimensions);
                                 doAddArrayItemsRefCntCandidates(candidates, data, chunk->type, dims->len);
                                 break;
                             }
                             case TYPE_STRUCT:
                             {
-                                doAddStructFieldsRefCntCandidates(candidates, chunkDataPtr, chunk->type);
+                                doAddStructFieldsRefCntCandidates(candidates, chunk->data, chunk->type);
                                 break;
                             }
                             default:
