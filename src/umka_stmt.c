@@ -1265,7 +1265,7 @@ void parseFnBlock(Compiler *comp, Ident *fn, const Type *upvaluesStructType)
         // Copy upvalue structure fields to new local variables
         for (int i = 0; i < upvaluesStructType->numItems; i++)
         {
-            Field *upvalue = upvaluesStructType->field[i];
+            const Field *upvalue = upvaluesStructType->field[i];
 
             genDup(&comp->gen);
             genGetFieldPtr(&comp->gen, upvalue->offset);

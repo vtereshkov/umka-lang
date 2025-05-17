@@ -76,8 +76,9 @@ void typeDeepCopy(Storage *storage, Type *dest, const Type *src)
         dest->field = storageAdd(storage, dest->numItems * sizeof(Field *));
         for (int i = 0; i < dest->numItems; i++)
         {
-            dest->field[i] = storageAdd(storage, sizeof(Field));
-            *(dest->field[i]) = *(src->field[i]);
+            Field *field = storageAdd(storage, sizeof(Field));
+            *field = *(src->field[i]);
+            dest->field[i] = field;
         }
     }
     else if (typeEnum(dest) && dest->numItems > 0)
@@ -85,8 +86,9 @@ void typeDeepCopy(Storage *storage, Type *dest, const Type *src)
         dest->enumConst = storageAdd(storage, dest->numItems * sizeof(EnumConst *));
         for (int i = 0; i < dest->numItems; i++)
         {
-            dest->enumConst[i] = storageAdd(storage, sizeof(EnumConst));
-            *(dest->enumConst[i]) = *(src->enumConst[i]);
+            EnumConst *enumConst = storageAdd(storage, sizeof(EnumConst));
+            *enumConst = *(src->enumConst[i]);
+            dest->enumConst[i] = enumConst;
         }
     }
     else if (dest->kind == TYPE_FN && dest->sig.numParams > 0)
@@ -508,7 +510,7 @@ void typeEnableForward(Types *types, bool enable)
 }
 
 
-Field *typeFindField(const Type *structType, const char *name, int *index)
+const Field *typeFindField(const Type *structType, const char *name, int *index)
 {
     if (structType->kind == TYPE_STRUCT || structType->kind == TYPE_INTERFACE || structType->kind == TYPE_CLOSURE)
     {
@@ -525,16 +527,16 @@ Field *typeFindField(const Type *structType, const char *name, int *index)
 }
 
 
-Field *typeAssertFindField(Types *types, const Type *structType, const char *name, int *index)
+const Field *typeAssertFindField(Types *types, const Type *structType, const char *name, int *index)
 {
-    Field *res = typeFindField(structType, name, index);
+    const Field *res = typeFindField(structType, name, index);
     if (!res)
         types->error->handler(types->error->context, "Unknown field %s", name);
     return res;
 }
 
 
-Field *typeAddField(Types *types, Type *structType, const Type *fieldType, const char *fieldName)
+const Field *typeAddField(Types *types, Type *structType, const Type *fieldType, const char *fieldName)
 {
     IdentName fieldNameBuf;
     const char *name;
@@ -548,8 +550,7 @@ Field *typeAddField(Types *types, Type *structType, const Type *fieldType, const
         name = fieldNameBuf;
     }
 
-    Field *field = typeFindField(structType, name, NULL);
-    if (field)
+    if (typeFindField(structType, name, NULL))
         types->error->handler(types->error->context, "Duplicate field %s", name);
 
     if (fieldType->kind == TYPE_FORWARD)
@@ -561,14 +562,14 @@ Field *typeAddField(Types *types, Type *structType, const Type *fieldType, const
     int minNextFieldOffset = 0;
     if (structType->numItems > 0)
     {
-        Field *lastField = structType->field[structType->numItems - 1];
+        const Field *lastField = structType->field[structType->numItems - 1];
         minNextFieldOffset = lastField->offset + typeSize(types, lastField->type);
     }
 
     if (typeSize(types, fieldType) > INT_MAX - minNextFieldOffset)
         types->error->handler(types->error->context, "Structure is too large");
 
-    field = storageAdd(types->storage, sizeof(Field));
+    Field *field = storageAdd(types->storage, sizeof(Field));
 
     strncpy(field->name, name, MAX_IDENT_LEN);
     field->name[MAX_IDENT_LEN] = 0;
@@ -589,7 +590,7 @@ Field *typeAddField(Types *types, Type *structType, const Type *fieldType, const
 }
 
 
-EnumConst *typeFindEnumConst(const Type *enumType, const char *name)
+const EnumConst *typeFindEnumConst(const Type *enumType, const char *name)
 {
     if (typeEnum(enumType))
     {
@@ -602,16 +603,16 @@ EnumConst *typeFindEnumConst(const Type *enumType, const char *name)
 }
 
 
-EnumConst *typeAssertFindEnumConst(Types *types, const Type *enumType, const char *name)
+const EnumConst *typeAssertFindEnumConst(Types *types, const Type *enumType, const char *name)
 {
-    EnumConst *res = typeFindEnumConst(enumType, name);
+    const EnumConst *res = typeFindEnumConst(enumType, name);
     if (!res)
         types->error->handler(types->error->context, "Unknown enumeration constant %s", name);
     return res;
 }
 
 
-EnumConst *typeFindEnumConstByVal(const Type *enumType, Const val)
+const EnumConst *typeFindEnumConstByVal(const Type *enumType, Const val)
 {
     if (typeEnum(enumType))
     {
@@ -623,17 +624,15 @@ EnumConst *typeFindEnumConstByVal(const Type *enumType, Const val)
 }
 
 
-EnumConst *typeAddEnumConst(Types *types, Type *enumType, const char *name, Const val)
+const EnumConst *typeAddEnumConst(Types *types, Type *enumType, const char *name, Const val)
 {
-    EnumConst *enumConst = typeFindEnumConst(enumType, name);
-    if (enumConst)
+    if (typeFindEnumConst(enumType, name))
         types->error->handler(types->error->context, "Duplicate enumeration constant %s", name);
 
-    enumConst = typeFindEnumConstByVal(enumType, val);
-    if (enumConst)
+    if (typeFindEnumConstByVal(enumType, val))
         types->error->handler(types->error->context, "Duplicate enumeration constant value %lld", val.intVal);
 
-    enumConst = storageAdd(types->storage, sizeof(EnumConst));
+    EnumConst *enumConst = storageAdd(types->storage, sizeof(EnumConst));
 
     strncpy(enumConst->name, name, MAX_IDENT_LEN);
     enumConst->name[MAX_IDENT_LEN] = 0;

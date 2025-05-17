@@ -4,7 +4,7 @@
 #include "umka_compiler.h"
 
 
-void doPushConst                    (Compiler *comp, const Type *type, Const *constant);
+void doPushConst                    (Compiler *comp, const Type *type, const Const *constant);
 void doPushVarPtr                   (Compiler *comp, Ident *ident);
 void doCopyResultToTempVar          (Compiler *comp, const Type *type);
 bool doTryRemoveCopyResultToTempVar (Compiler *comp);

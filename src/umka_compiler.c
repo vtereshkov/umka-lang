@@ -68,22 +68,27 @@ static void compilerDeclareBuiltinTypes(Compiler *comp)
     comp->ptrNullType = typeAddPtrTo(&comp->types, &comp->blocks, comp->nullType);
 
     // any
-    comp->anyType = typeAdd(&comp->types, &comp->blocks, TYPE_INTERFACE);
+    Type *anyType = typeAdd(&comp->types, &comp->blocks, TYPE_INTERFACE);
 
-    typeAddField(&comp->types, comp->anyType, comp->ptrVoidType, "#self");
-    typeAddField(&comp->types, comp->anyType, comp->ptrVoidType, "#selftype");
+    typeAddField(&comp->types, anyType, comp->ptrVoidType, "#self");
+    typeAddField(&comp->types, anyType, comp->ptrVoidType, "#selftype");
+
+    comp->anyType = anyType;
 
     // fiber
-    comp->fiberType = typeAdd(&comp->types, &comp->blocks, TYPE_FIBER);
+    Type *fiberType = typeAdd(&comp->types, &comp->blocks, TYPE_FIBER);
 
     Type *fnType = typeAdd(&comp->types, &comp->blocks, TYPE_FN);
     typeAddParam(&comp->types, &fnType->sig, comp->anyType, "#upvalues");
+
     fnType->sig.resultType = comp->voidType;
 
     Type *fiberClosureType = typeAdd(&comp->types, &comp->blocks, TYPE_CLOSURE);
     typeAddField(&comp->types, fiberClosureType, fnType, "#fn");
     typeAddField(&comp->types, fiberClosureType, comp->anyType, "#upvalues");
-    comp->fiberType->base = fiberClosureType;
+    fiberType->base = fiberClosureType;
+
+    comp->fiberType = fiberType;
 }
 
 

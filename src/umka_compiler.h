@@ -30,7 +30,8 @@ typedef struct
     Error       error;
 
     // Pointers to built-in types
-    Type *voidType,
+    const Type
+         *voidType,
          *nullType,
          *int8Type,  *int16Type,  *int32Type,  *intType,
          *uint8Type, *uint16Type, *uint32Type, *uintType,

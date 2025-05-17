@@ -15,7 +15,7 @@
 static void parseDynArrayLiteral(Compiler *comp, const Type **type, Const *constant);
 
 
-void doPushConst(Compiler *comp, const Type *type, Const *constant)
+void doPushConst(Compiler *comp, const Type *type, const Const *constant)
 {
     if (type->kind == TYPE_UINT)
         genPushUIntConst(&comp->gen, constant->uintVal);
@@ -356,7 +356,7 @@ static void doPtrToInterfaceConv(Compiler *comp, const Type *dest, const Type **
         genSwapAssign(&comp->gen, TYPE_PTR, 0);                                 // Assign to dest.#self
 
         // Assign to #selftype (RTTI)
-        Field *selfType = typeAssertFindField(&comp->types, dest, "#selftype", NULL);
+        const Field *selfType = typeAssertFindField(&comp->types, dest, "#selftype", NULL);
 
         genPushGlobalPtr(&comp->gen, (Type *)(*src));                           // Push src type
         genPushLocalPtr(&comp->gen, destOffset + selfType->offset);             // Push dest.#selftype pointer
@@ -415,7 +415,7 @@ static void doInterfaceToInterfaceConv(Compiler *comp, const Type *dest, const T
     genSwapAssign(&comp->gen, TYPE_PTR, 0);                                 // Assign to dest.#self (NULL means a dynamic type)
 
     // Assign to #selftype (RTTI)
-    Field *selfType = typeAssertFindField(&comp->types, dest, "#selftype", NULL);
+    const Field *selfType = typeAssertFindField(&comp->types, dest, "#selftype", NULL);
 
     genDup(&comp->gen);                                                     // Duplicate src pointer
     genGetFieldPtr(&comp->gen, selfType->offset);                           // Get src.#selftype pointer
@@ -427,7 +427,7 @@ static void doInterfaceToInterfaceConv(Compiler *comp, const Type *dest, const T
     for (int i = 2; i < dest->numItems; i++)
     {
         const char *name = dest->field[i]->name;
-        Field *srcMethod = typeFindField(*src, name, NULL);
+        const Field *srcMethod = typeFindField(*src, name, NULL);
         if (!srcMethod)
         {
             char srcBuf[DEFAULT_STR_LEN + 1], destBuf[DEFAULT_STR_LEN + 1];
@@ -1224,7 +1224,7 @@ static void parseBuiltinSortCall(Compiler *comp, const Type **type, Const *const
             lexEat(&comp->lex, TOK_COMMA);
             lexCheck(&comp->lex, TOK_IDENT);
 
-            Field *field = typeAssertFindField(&comp->types, (*type)->base, comp->lex.tok.name, NULL);
+            const Field *field = typeAssertFindField(&comp->types, (*type)->base, comp->lex.tok.name, NULL);
             typeAssertValidOperator(&comp->types, field->type, TOK_LESS);
 
             lexNext(&comp->lex);
@@ -1643,7 +1643,7 @@ static void parseCall(Compiler *comp, const Type **type)
     if ((*type)->kind == TYPE_CLOSURE)
     {
         // Closure upvalue
-        Field *fn = typeAssertFindField(&comp->types, *type, "#fn", NULL);
+        const Field *fn = typeAssertFindField(&comp->types, *type, "#fn", NULL);
         *type = fn->type;
 
         genPushUpvalue(&comp->gen);
@@ -1893,7 +1893,7 @@ static void parseArrayOrStructLiteral(Compiler *comp, const Type **type, Const *
             comp->error.handler(comp->error.context, "Too many elements in literal");
 
         // [ident ":"]
-        Field *field = NULL;
+        const Field *field = NULL;
         if (namedFields)
         {
             lexCheck(&comp->lex, TOK_IDENT);
@@ -2113,7 +2113,7 @@ static void parseClosureLiteral(Compiler *comp, const Type **type, Const *consta
         if (comp->blocks.top != 0)
             genNop(&comp->gen);                                     // Jump over the nested function block (stub)
 
-        Field *fn = typeAssertFindField(&comp->types, *type, "#fn", NULL);
+        const Field *fn = typeAssertFindField(&comp->types, *type, "#fn", NULL);
 
         Const fnConstant = {.intVal = comp->gen.ip};
         Ident *fnConstantIdent = identAddTempConst(&comp->idents, &comp->modules, &comp->blocks, fn->type, fnConstant);
@@ -2171,7 +2171,7 @@ static void parseClosureLiteral(Compiler *comp, const Type **type, Const *consta
             // Assign upvalues structure fields
             for (int i = 0; i < upvaluesStructType->numItems; i++)
             {
-                Field *upvalue = upvaluesStructType->field[i];
+                const Field *upvalue = upvaluesStructType->field[i];
                 Ident *capturedIdent = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, upvalue->name, NULL);
 
                 doPushVarPtr(comp, upvaluesStructIdent);
@@ -2184,7 +2184,7 @@ static void parseClosureLiteral(Compiler *comp, const Type **type, Const *consta
             }
 
             // Assign closure upvalues
-            Field *upvalues = typeAssertFindField(&comp->types, closureIdent->type, "#upvalues", NULL);
+            const Field *upvalues = typeAssertFindField(&comp->types, closureIdent->type, "#upvalues", NULL);
             const Type *upvaluesType = upvaluesStructIdent->type;
 
             doPushVarPtr(comp, closureIdent);
@@ -2202,7 +2202,7 @@ static void parseClosureLiteral(Compiler *comp, const Type **type, Const *consta
 
         genNop(&comp->gen);                                     // Jump over the nested function block (stub)
 
-        Field *fn = typeAssertFindField(&comp->types, closureIdent->type, "#fn", NULL);
+        const Field *fn = typeAssertFindField(&comp->types, closureIdent->type, "#fn", NULL);
 
         Const fnConstant = {.intVal = comp->gen.ip};
         Ident *fnConstantIdent = identAddTempConst(&comp->idents, &comp->modules, &comp->blocks, fn->type, fnConstant);
@@ -2251,7 +2251,7 @@ static void parseEnumConst(Compiler *comp, const Type **type, Const *constant)
     lexEat(&comp->lex, TOK_PERIOD);
     lexCheck(&comp->lex, TOK_IDENT);
 
-    EnumConst *enumConst = typeAssertFindEnumConst(&comp->types, *type, comp->lex.tok.name);
+    const EnumConst *enumConst = typeAssertFindEnumConst(&comp->types, *type, comp->lex.tok.name);
 
     if (constant)
         *constant = enumConst->val;
@@ -2454,7 +2454,7 @@ static void parseFieldSelector(Compiler *comp, const Type **type, bool *isVar, b
             comp->error.handler(comp->error.context, "Method %s is not defined for %s", comp->lex.tok.name, typeSpelling(*type, typeBuf));
         }
 
-        Field *field = typeAssertFindField(&comp->types, *type, comp->lex.tok.name, NULL);
+        const Field *field = typeAssertFindField(&comp->types, *type, comp->lex.tok.name, NULL);
         lexNext(&comp->lex);
 
         genGetFieldPtr(&comp->gen, field->offset);
@@ -3064,7 +3064,7 @@ void parseExprList(Compiler *comp, const Type **type, Const *constant)
         // Assign expressions
         for (int i = (*type)->numItems - 1; i >= 0; i--)
         {
-            Field *field = (*type)->field[i];
+            const Field *field = (*type)->field[i];
             int fieldSize = typeSize(&comp->types, field->type);
 
             if (constant)

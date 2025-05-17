@@ -91,7 +91,7 @@ typedef struct tagType
 {
     TypeKind kind;
     int block;
-    const struct tagType *base;                       // For pointers, arrays, maps and fibers (for maps, denotes the tree node type; for fibers, denotes the fiber closure type)
+    const struct tagType *base;                 // For pointers, arrays, maps and fibers (for maps, denotes the tree node type; for fibers, denotes the fiber closure type)
     int numItems;                               // For arrays, structures and interfaces
     bool isExprList;                            // For structures that represent expression lists
     bool isVariadicParamList;                   // For dynamic arrays of interfaces that represent variadic parameter lists
@@ -99,8 +99,8 @@ typedef struct tagType
     struct tagIdent *typeIdent;                 // For types that have identifiers
     union
     {
-        Field **field;                          // For structures, interfaces and closures
-        EnumConst **enumConst;                  // For enumerations
+        const Field **field;                    // For structures, interfaces and closures
+        const EnumConst **enumConst;                  // For enumerations
         Signature sig;                          // For functions, including methods
     };
     const struct tagType *next;
@@ -299,14 +299,14 @@ static inline bool typeOverflow(TypeKind typeKind, Const val)
 }
 
 
-Field *typeFindField        (const Type *structType, const char *name, int *index);
-Field *typeAssertFindField  (Types *types, const Type *structType, const char *name, int *index);
-Field *typeAddField         (Types *types, Type *structType, const Type *fieldType, const char *fieldName);
+const Field *typeFindField        (const Type *structType, const char *name, int *index);
+const Field *typeAssertFindField  (Types *types, const Type *structType, const char *name, int *index);
+const Field *typeAddField         (Types *types, Type *structType, const Type *fieldType, const char *fieldName);
 
-EnumConst *typeFindEnumConst        (const Type *enumType, const char *name);
-EnumConst *typeAssertFindEnumConst  (Types *types, const Type *enumType, const char *name);
-EnumConst *typeFindEnumConstByVal   (const Type *enumType, Const val);
-EnumConst *typeAddEnumConst         (Types *types, Type *enumType, const char *fieldName, Const val);
+const EnumConst *typeFindEnumConst        (const Type *enumType, const char *name);
+const EnumConst *typeAssertFindEnumConst  (Types *types, const Type *enumType, const char *name);
+const EnumConst *typeFindEnumConstByVal   (const Type *enumType, Const val);
+const EnumConst *typeAddEnumConst         (Types *types, Type *enumType, const char *fieldName, Const val);
 
 Param *typeFindParam    (const Signature *sig, const char *name);
 Param *typeAddParam     (Types *types, Signature *sig, const Type *type, const char *name);

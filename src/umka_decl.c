@@ -477,7 +477,7 @@ static const Type *parseInterfaceType(Compiler *comp)
             typeAddParam(&comp->types, &methodType->sig, comp->ptrVoidType, "#self");
             parseSignature(comp, &methodType->sig);
 
-            Field *method = typeAddField(&comp->types, type, methodType, methodName);
+            const Field *method = typeAddField(&comp->types, type, methodType, methodName);
             methodType->sig.offsetFromSelf = method->offset;
         }
         else
@@ -493,7 +493,7 @@ static const Type *parseInterfaceType(Compiler *comp)
                 Type *methodType = typeAdd(&comp->types, &comp->blocks, TYPE_FN);
                 typeDeepCopy(&comp->storage, methodType, embeddedType->field[i]->type);
 
-                Field *method = typeAddField(&comp->types, type, methodType, embeddedType->field[i]->name);
+                const Field *method = typeAddField(&comp->types, type, methodType, embeddedType->field[i]->name);
                 methodType->sig.isMethod = true;
                 methodType->sig.offsetFromSelf = method->offset;
             }
