@@ -41,7 +41,7 @@ typedef StrDimensions DynArrayDimensions;
 typedef struct
 {
     // Must have 8 byte alignment
-    struct tagType *type;
+    const struct tagType *type;
     int64_t itemSize;           // Duplicates information contained in type, but useful for better performance
     void *data;                 // Allocated chunk should start at (char *)data - sizeof(DynArrayDimensions)
 } DynArray;
@@ -51,7 +51,7 @@ typedef struct
 {
     // The C equivalent of the Umka interface type
     void *self;
-    struct tagType *selfType;
+    const struct tagType *selfType;
     // Methods are omitted - do not use sizeof() for non-empty interfaces
 } Interface;
 
@@ -76,7 +76,7 @@ typedef struct tagMapNode
 typedef struct
 {
     // Must have 8 byte alignment
-    struct tagType *type;
+    const struct tagType *type;
     MapNode *root;
 } Map;
 
@@ -218,7 +218,7 @@ void  storageInit               (Storage *storage, Error *error);
 void  storageFree               (Storage *storage);
 void *storageAdd                (Storage *storage, int64_t size);
 char *storageAddStr             (Storage *storage, int64_t len);
-DynArray *storageAddDynArray    (Storage *storage, struct tagType *type, int64_t len);
+DynArray *storageAddDynArray    (Storage *storage, const struct tagType *type, int64_t len);
 void storageRemove              (Storage *storage, void *data);
 void *storageRealloc            (Storage *storage, void *data, int64_t size);
 

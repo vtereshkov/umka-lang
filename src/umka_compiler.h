@@ -61,6 +61,6 @@ char *compilerAsm               (Compiler *comp);
 bool compilerAddModule          (Compiler *comp, const char *fileName, const char *sourceString);
 bool compilerAddFunc            (Compiler *comp, const char *name, ExternFunc func);
 bool compilerGetFunc            (Compiler *comp, const char *moduleName, const char *funcName, FuncContext *fn);
-void compilerMakeFuncContext    (Compiler *comp, Type *fnType, int entryOffset, FuncContext *fn);
+void compilerMakeFuncContext    (Compiler *comp, const Type *fnType, int entryOffset, FuncContext *fn);
 
 #endif // UMKA_COMPILER_H_INCLUDED

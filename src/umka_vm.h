@@ -168,7 +168,7 @@ typedef struct
     Opcode inlineOpcode;         // Inlined instruction (DEREF, SWAP): PUSH + DEREF, SWAP + ASSIGN etc.
     TokenKind tokKind;           // Unary/binary operation token
     TypeKind typeKind;
-    Type *type;
+    const Type *type;
     Slot operand;
 } Instruction;
 
@@ -209,7 +209,7 @@ typedef struct
 {
     int refCnt;
     int size;
-    struct tagType *type;       // Optional type for garbage collection
+    const struct tagType *type;       // Optional type for garbage collection
     ExternFunc onFree;          // Optional callback called when ref count reaches zero
     int64_t ip;                 // Optional instruction pointer at which the chunk has been allocated
     bool isStack;
@@ -221,7 +221,7 @@ typedef struct
 typedef struct
 {
     void *ptr;
-    Type *type;
+    const Type *type;
     HeapPage *pageForDeferred;   // Mandatory for deferred ref count updates, NULL otherwise
 } RefCntChangeCandidate;
 
@@ -289,7 +289,7 @@ void vmIncRef                   (VM *vm, void *ptr);
 void vmDecRef                   (VM *vm, void *ptr);
 void *vmGetMapNodeData          (VM *vm, Map *map, Slot key);
 char *vmMakeStr                 (VM *vm, const char *str);
-void vmMakeDynArray             (VM *vm, DynArray *array, Type *type, int len);
+void vmMakeDynArray             (VM *vm, DynArray *array, const Type *type, int len);
 int64_t vmGetMemUsage           (VM *vm);
 const char *vmBuiltinSpelling   (BuiltinFunc builtin);
 

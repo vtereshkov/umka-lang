@@ -49,7 +49,7 @@ static void parseIdentList(Compiler *comp, IdentName *names, bool *exported, int
 
 
 // typedIdentList = identList ":" [".."] type.
-static void parseTypedIdentList(Compiler *comp, IdentName *names, bool *exported, int capacity, int *num, Type **type, bool allowVariadicParamList)
+static void parseTypedIdentList(Compiler *comp, IdentName *names, bool *exported, int capacity, int *num, const Type **type, bool allowVariadicParamList)
 {
     parseIdentList(comp, names, exported, capacity, num);
     lexEat(&comp->lex, TOK_COLON);
@@ -60,13 +60,14 @@ static void parseTypedIdentList(Compiler *comp, IdentName *names, bool *exported
             comp->error.handler(comp->error.context, "Only one variadic parameter list is allowed");
 
         lexNext(&comp->lex);
-        Type *itemType = parseType(comp, NULL);
+        const Type *itemType = parseType(comp, NULL);
         if (itemType->kind == TYPE_VOID)
             comp->error.handler(comp->error.context, "Variadic parameters cannot be void");
 
-        *type = typeAdd(&comp->types, &comp->blocks, TYPE_DYNARRAY);
-        (*type)->base = itemType;
-        (*type)->isVariadicParamList = true;
+        Type *variadicListType = typeAdd(&comp->types, &comp->blocks, TYPE_DYNARRAY);
+        variadicListType->base = itemType;
+        variadicListType->isVariadicParamList = true;
+        *type = variadicListType;
     }
     else
         *type = parseType(comp, NULL);
@@ -83,7 +84,7 @@ static void parseRcvSignature(Compiler *comp, Signature *sig)
     strcpy(rcvName, comp->lex.tok.name);
 
     lexEat(&comp->lex, TOK_COLON);
-    Type *rcvType = parseType(comp, NULL);
+    const Type *rcvType = parseType(comp, NULL);
 
     if (rcvType->kind != TYPE_PTR || !rcvType->base->typeIdent)
         comp->error.handler(comp->error.context, "Receiver should be a pointer to a defined type");
@@ -122,7 +123,7 @@ static void parseSignature(Compiler *comp, Signature *sig)
 
             IdentName paramNames[MAX_PARAMS];
             bool paramExported[MAX_PARAMS];
-            Type *paramType = NULL;
+            const Type *paramType = NULL;
             int numParams = 0;
             parseTypedIdentList(comp, paramNames, paramExported, MAX_PARAMS, &numParams, &paramType, true);
 
@@ -140,7 +141,7 @@ static void parseSignature(Compiler *comp, Signature *sig)
 
                 lexNext(&comp->lex);
 
-                Type *defaultType = paramType;
+                const Type *defaultType = paramType;
                 parseExpr(comp, &defaultType, &defaultConstant);
                 doAssertImplicitTypeConv(comp, paramType, &defaultType, &defaultConstant);
 
@@ -184,7 +185,7 @@ static void parseSignature(Compiler *comp, Signature *sig)
 
             while (1)
             {
-                Type *fieldType = parseType(comp, NULL);
+                const Type *fieldType = parseType(comp, NULL);
                 typeAddField(&comp->types, listType, fieldType, NULL);
 
                 if (comp->lex.tok.kind != TOK_COMMA)
@@ -211,9 +212,9 @@ static void parseSignature(Compiler *comp, Signature *sig)
 }
 
 
-static Type *parseTypeOrForwardType(Compiler *comp)
+static const Type *parseTypeOrForwardType(Compiler *comp)
 {
-    Type *type = NULL;
+    const Type *type = NULL;
 
     // Forward declaration?
     bool forward = false;
@@ -230,12 +231,13 @@ static Type *parseTypeOrForwardType(Compiler *comp)
 
         if (!ident)
         {
-            type = typeAdd(&comp->types, &comp->blocks, TYPE_FORWARD);
-            type->typeIdent = identAddType(&comp->idents, &comp->modules, &comp->blocks, comp->lex.tok.name, type, false);
-            type->typeIdent->used = true;
+            Type *forwardType = typeAdd(&comp->types, &comp->blocks, TYPE_FORWARD);
+            forwardType->typeIdent = identAddType(&comp->idents, &comp->modules, &comp->blocks, comp->lex.tok.name, forwardType, false);
+            forwardType->typeIdent->used = true;
 
             lexNext(&comp->lex);
 
+            type = forwardType;
             forward = true;
         }
     }
@@ -249,7 +251,7 @@ static Type *parseTypeOrForwardType(Compiler *comp)
 
 
 // ptrType = ["weak"] "^" type.
-static Type *parsePtrType(Compiler *comp)
+static const Type *parsePtrType(Compiler *comp)
 {
     bool weak = false;
     if (comp->lex.tok.kind == TOK_WEAK)
@@ -260,18 +262,18 @@ static Type *parsePtrType(Compiler *comp)
 
     lexEat(&comp->lex, TOK_CARET);
 
-    Type *type = parseTypeOrForwardType(comp);
-    type = typeAddPtrTo(&comp->types, &comp->blocks, type);
+    const Type *baseType = parseTypeOrForwardType(comp);
+    Type *ptrType = typeAddPtrTo(&comp->types, &comp->blocks, baseType);
     if (weak)
-        type->kind = TYPE_WEAKPTR;
+        ptrType->kind = TYPE_WEAKPTR;
 
-    return type;
+    return ptrType;
 }
 
 
 // arrayType = "[" expr "]" type.
 // dynArrayType = "[" "]" type.
-static Type *parseArrayType(Compiler *comp)
+static const Type *parseArrayType(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_LBRACKET);
 
@@ -288,7 +290,7 @@ static Type *parseArrayType(Compiler *comp)
     {
         // Conventional array
         typeKind = TYPE_ARRAY;
-        Type *indexType = NULL;
+        const Type *indexType = NULL;
         parseExpr(comp, &indexType, &len);
         typeAssertCompatible(&comp->types, comp->intType, indexType);
         if (len.intVal < 0 || len.intVal > INT_MAX)
@@ -297,7 +299,7 @@ static Type *parseArrayType(Compiler *comp)
 
     lexEat(&comp->lex, TOK_RBRACKET);
 
-    Type *baseType = (typeKind == TYPE_DYNARRAY) ? parseTypeOrForwardType(comp) : parseType(comp, NULL);
+    const Type *baseType = (typeKind == TYPE_DYNARRAY) ? parseTypeOrForwardType(comp) : parseType(comp, NULL);
     if (baseType->kind == TYPE_VOID)
         comp->error.handler(comp->error.context, "Array items cannot be void");
 
@@ -312,7 +314,7 @@ static Type *parseArrayType(Compiler *comp)
 
 
 // strType = "str".
-static Type *parseStrType(Compiler *comp)
+static const Type *parseStrType(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_STR);
     return comp->strType;
@@ -333,7 +335,7 @@ static void parseEnumItem(Compiler *comp, Type *type, Const *constant)
     else
     {
         lexEat(&comp->lex, TOK_EQ);
-        Type *rightType = NULL;
+        const Type *rightType = NULL;
         parseExpr(comp, &rightType, constant);
         typeAssertCompatible(&comp->types, comp->intType, rightType);
     }
@@ -346,11 +348,11 @@ static void parseEnumItem(Compiler *comp, Type *type, Const *constant)
 
 
 // enumType = "enum" ["(" type ")"] "{" {enumItem ";"} "}"
-static Type *parseEnumType(Compiler *comp)
+static const Type *parseEnumType(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_ENUM);
 
-    Type *baseType = comp->intType;
+    const Type *baseType = comp->intType;
     if (comp->lex.tok.kind == TOK_LPAR)
     {
         lexNext(&comp->lex);
@@ -376,30 +378,30 @@ static Type *parseEnumType(Compiler *comp)
 
 
 // mapType = "map" "[" type "]" type.
-static Type *parseMapType(Compiler *comp)
+static const Type *parseMapType(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_MAP);
     lexEat(&comp->lex, TOK_LBRACKET);
 
     Type *type = typeAdd(&comp->types, &comp->blocks, TYPE_MAP);
 
-    Type *keyType = parseType(comp, NULL);
+    const Type *keyType = parseType(comp, NULL);
     if (!typeValidOperator(keyType, TOK_EQEQ))
         comp->error.handler(comp->error.context, "Map key type is not comparable");
 
-    Type *ptrKeyType = typeAddPtrTo(&comp->types, &comp->blocks, keyType);
+    const Type *ptrKeyType = typeAddPtrTo(&comp->types, &comp->blocks, keyType);
 
     lexEat(&comp->lex, TOK_RBRACKET);
 
-    Type *itemType = parseTypeOrForwardType(comp);
+    const Type *itemType = parseTypeOrForwardType(comp);
     if (itemType->kind == TYPE_VOID)
         comp->error.handler(comp->error.context, "Map items cannot be void");
 
-    Type *ptrItemType = typeAddPtrTo(&comp->types, &comp->blocks, itemType);
+    const Type *ptrItemType = typeAddPtrTo(&comp->types, &comp->blocks, itemType);
 
     // The map base type is the Umka equivalent of MapNode
     Type *nodeType = typeAdd(&comp->types, &comp->blocks, TYPE_STRUCT);
-    Type *ptrNodeType = typeAddPtrTo(&comp->types, &comp->blocks, nodeType);
+    const Type *ptrNodeType = typeAddPtrTo(&comp->types, &comp->blocks, nodeType);
 
     typeAddField(&comp->types, nodeType, comp->intType, "#len");
     typeAddField(&comp->types, nodeType, ptrKeyType,    "#key");
@@ -413,7 +415,7 @@ static Type *parseMapType(Compiler *comp)
 
 
 // structType = "struct" "{" {typedIdentList ";"} "}"
-static Type *parseStructType(Compiler *comp)
+static const Type *parseStructType(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_STRUCT);
     lexEat(&comp->lex, TOK_LBRACE);
@@ -425,7 +427,7 @@ static Type *parseStructType(Compiler *comp)
     {
         IdentName fieldNames[MAX_IDENTS_IN_LIST];
         bool fieldExported[MAX_IDENTS_IN_LIST];
-        Type *fieldType = NULL;
+        const Type *fieldType = NULL;
         int numFields = 0;
         parseTypedIdentList(comp, fieldNames, fieldExported, MAX_IDENTS_IN_LIST, &numFields, &fieldType, false);
 
@@ -444,7 +446,7 @@ static Type *parseStructType(Compiler *comp)
 
 
 // interfaceType = "interface" "{" {(ident signature | qualIdent) ";"} "}"
-static Type *parseInterfaceType(Compiler *comp)
+static const Type *parseInterfaceType(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_INTERFACE);
     lexEat(&comp->lex, TOK_LBRACE);
@@ -481,7 +483,7 @@ static Type *parseInterfaceType(Compiler *comp)
         else
         {
             // Embedded interface
-            Type *embeddedType = parseType(comp, NULL);
+            const Type *embeddedType = parseType(comp, NULL);
 
             if (embeddedType->kind != TYPE_INTERFACE)
                 comp->error.handler(comp->error.context, "Interface type expected");
@@ -505,7 +507,7 @@ static Type *parseInterfaceType(Compiler *comp)
 
 
 // closureType = "fn" signature.
-static Type *parseClosureType(Compiler *comp)
+static const Type *parseClosureType(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_FN);
 
@@ -524,7 +526,7 @@ static Type *parseClosureType(Compiler *comp)
 
 
 // type = qualIdent | ptrType | arrayType | dynArrayType | strType | enumType | mapType | structType | interfaceType | closureType.
-Type *parseType(Compiler *comp, Ident *ident)
+const Type *parseType(Compiler *comp, Ident *ident)
 {
     if (ident)
     {
@@ -564,7 +566,7 @@ static void parseTypeDeclItem(Compiler *comp)
 
     lexEat(&comp->lex, TOK_EQ);
 
-    Type *type = parseType(comp, NULL);
+    const Type *type = parseType(comp, NULL);
     Type *newType = typeAdd(&comp->types, &comp->blocks, type->kind);
     typeDeepCopy(&comp->storage, newType, type);
     newType->typeIdent = identAddType(&comp->idents, &comp->modules, &comp->blocks, name, newType, exported);
@@ -596,7 +598,7 @@ static void parseTypeDecl(Compiler *comp)
 
 
 // constDeclItem = ident exportMark ["=" expr].
-static void parseConstDeclItem(Compiler *comp, Type **type, Const *constant)
+static void parseConstDeclItem(Compiler *comp, const Type **type, Const *constant)
 {
     lexCheck(&comp->lex, TOK_IDENT);
     IdentName name;
@@ -631,7 +633,7 @@ static void parseConstDecl(Compiler *comp)
 {
     lexEat(&comp->lex, TOK_CONST);
 
-    Type *type = NULL;
+    const Type *type = NULL;
     Const constant;
 
     if (comp->lex.tok.kind == TOK_LPAR)
@@ -655,7 +657,7 @@ static void parseVarDeclItem(Compiler *comp)
     IdentName varNames[MAX_IDENTS_IN_LIST];
     bool varExported[MAX_IDENTS_IN_LIST];
     int numVars = 0;
-    Type *varType = NULL;
+    const Type *varType = NULL;
     parseTypedIdentList(comp, varNames, varExported, MAX_IDENTS_IN_LIST, &numVars, &varType, false);
 
     Ident *var[MAX_IDENTS_IN_LIST];
@@ -668,23 +670,22 @@ static void parseVarDeclItem(Compiler *comp)
     // Initializer
     if (comp->lex.tok.kind == TOK_EQ)
     {
-        Type *designatorType = NULL;
+        const Type *designatorType = NULL;
         if (typeStructured(var[0]->type))
             designatorType = var[0]->type;
         else
             designatorType = typeAddPtrTo(&comp->types, &comp->blocks, var[0]->type);
 
-        Type *designatorListType = NULL;
-        if (numVars == 1)
-            designatorListType = designatorType;
-        else
+        if (numVars != 1)
         {
             // Designator list (types formally encoded as structure field types - not a real structure)
-            designatorListType = typeAdd(&comp->types, &comp->blocks, TYPE_STRUCT);
+            Type *designatorListType = typeAdd(&comp->types, &comp->blocks, TYPE_STRUCT);
             designatorListType->isExprList = true;
 
             for (int i = 0; i < numVars; i++)
                 typeAddField(&comp->types, designatorListType, designatorType, NULL);
+
+            designatorType = designatorListType;
         }
 
         Const varPtrConstList[MAX_IDENTS_IN_LIST] = {0};
@@ -698,7 +699,7 @@ static void parseVarDeclItem(Compiler *comp)
         }
 
         lexNext(&comp->lex);
-        parseAssignmentStmt(comp, designatorListType, (comp->blocks.top == 0) ? varPtrConstList : NULL);
+        parseAssignmentStmt(comp, designatorType, (comp->blocks.top == 0) ? varPtrConstList : NULL);
     }
 }
 
@@ -755,7 +756,7 @@ static void parseFnDecl(Compiler *comp)
     // Check for method/field name collision
     if (fnType->sig.isMethod)
     {
-        Type *rcvBaseType = fnType->sig.param[0]->type->base;
+        const Type *rcvBaseType = fnType->sig.param[0]->type->base;
 
         if (rcvBaseType->kind == TYPE_STRUCT && typeFindField(rcvBaseType, name, NULL))
             comp->error.handler(comp->error.context, "Structure already has field %s", name);

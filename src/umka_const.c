@@ -267,7 +267,7 @@ void constCallBuiltin(Consts *consts, Const *arg, const Const *arg2, TypeKind ar
 }
 
 
-void constArrayAlloc(ConstArray *array, Storage *storage, Type *type)
+void constArrayAlloc(ConstArray *array, Storage *storage, const Type *type)
 {
     array->storage = storage;
     array->type = type;

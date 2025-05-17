@@ -386,7 +386,7 @@ static FORCE_INLINE void stackChangeFrameRefCnt(Fiber *fiber, HeapPages *pages, 
 }
 
 
-static FORCE_INLINE void *chunkAlloc(HeapPages *pages, int64_t size, Type *type, ExternFunc onFree, bool isStack, Error *error)
+static FORCE_INLINE void *chunkAlloc(HeapPages *pages, int64_t size, const Type *type, ExternFunc onFree, bool isStack, Error *error)
 {
     // Page layout: header, data, footer (char), padding, header, data, footer (char), padding...
     const int64_t chunkSize = align(sizeof(HeapChunk) + align(size + 1, sizeof(int64_t)), MEM_MIN_HEAP_CHUNK);
@@ -476,7 +476,7 @@ static FORCE_INLINE void candidateReset(RefCntChangeCandidates *candidates)
 }
 
 
-static FORCE_INLINE void candidatePush(RefCntChangeCandidates *candidates, void *ptr, Type *type)
+static FORCE_INLINE void candidatePush(RefCntChangeCandidates *candidates, void *ptr, const Type *type)
 {
     if (candidates->top >= candidates->capacity - 1)
     {
@@ -491,14 +491,14 @@ static FORCE_INLINE void candidatePush(RefCntChangeCandidates *candidates, void 
 }
 
 
-static FORCE_INLINE void candidatePushDeferred(RefCntChangeCandidates *candidates, void *ptr, Type *type, HeapPage *page)
+static FORCE_INLINE void candidatePushDeferred(RefCntChangeCandidates *candidates, void *ptr, const Type *type, HeapPage *page)
 {
     candidatePush(candidates, ptr, type);
     candidates->stack[candidates->top].pageForDeferred = page;
 }
 
 
-static FORCE_INLINE void candidatePop(RefCntChangeCandidates *candidates, void **ptr, Type **type, HeapPage **page)
+static FORCE_INLINE void candidatePop(RefCntChangeCandidates *candidates, void **ptr, const Type **type, HeapPage **page)
 {
     RefCntChangeCandidate *candidate = &candidates->stack[candidates->top--];
     *ptr = candidate->ptr;
@@ -791,7 +791,7 @@ static FORCE_INLINE void doAssignImpl(void *lhs, Slot rhs, TypeKind typeKind, in
 }
 
 
-static FORCE_INLINE void doAddPtrBaseRefCntCandidate(RefCntChangeCandidates *candidates, void *ptr, Type *type)
+static FORCE_INLINE void doAddPtrBaseRefCntCandidate(RefCntChangeCandidates *candidates, void *ptr, const Type *type)
 {
     if (typeKindGarbageCollected(type->base->kind))
     {
@@ -804,7 +804,7 @@ static FORCE_INLINE void doAddPtrBaseRefCntCandidate(RefCntChangeCandidates *can
 }
 
 
-static FORCE_INLINE void doAddArrayItemsRefCntCandidates(RefCntChangeCandidates *candidates, void *ptr, Type *type, int len)
+static FORCE_INLINE void doAddArrayItemsRefCntCandidates(RefCntChangeCandidates *candidates, void *ptr, const Type *type, int len)
 {
     if (typeKindGarbageCollected(type->base->kind))
     {
@@ -824,7 +824,7 @@ static FORCE_INLINE void doAddArrayItemsRefCntCandidates(RefCntChangeCandidates 
 }
 
 
-static FORCE_INLINE void doAddStructFieldsRefCntCandidates(RefCntChangeCandidates *candidates, void *ptr, Type *type)
+static FORCE_INLINE void doAddStructFieldsRefCntCandidates(RefCntChangeCandidates *candidates, void *ptr, const Type *type)
 {
     for (int i = 0; i < type->numItems; i++)
     {
@@ -840,7 +840,7 @@ static FORCE_INLINE void doAddStructFieldsRefCntCandidates(RefCntChangeCandidate
 }
 
 
-static FORCE_INLINE void doChangeRefCntImpl(Fiber *fiber, HeapPages *pages, void *ptr, Type *type, TokenKind tokKind)
+static FORCE_INLINE void doChangeRefCntImpl(Fiber *fiber, HeapPages *pages, void *ptr, const Type *type, TokenKind tokKind)
 {
     // Update ref counts for pointers (including static/dynamic array items and structure/interface fields) if allocated dynamically
     // All garbage collected composite types are represented by pointers by default
@@ -1061,7 +1061,7 @@ static FORCE_INLINE char *doGetEmptyStr()
 }
 
 
-static FORCE_INLINE void doAllocDynArray(HeapPages *pages, DynArray *array, Type *type, int64_t len, Error *error)
+static FORCE_INLINE void doAllocDynArray(HeapPages *pages, DynArray *array, const Type *type, int64_t len, Error *error)
 {
     array->type     = type;
     array->itemSize = typeSizeNoCheck(array->type->base);
@@ -1080,7 +1080,7 @@ static FORCE_INLINE void doAllocDynArray(HeapPages *pages, DynArray *array, Type
 }
 
 
-static FORCE_INLINE void doGetEmptyDynArray(DynArray *array, Type *type)
+static FORCE_INLINE void doGetEmptyDynArray(DynArray *array, const Type *type)
 {
     array->type     = type;
     array->itemSize = typeSizeNoCheck(array->type->base);
@@ -1090,7 +1090,7 @@ static FORCE_INLINE void doGetEmptyDynArray(DynArray *array, Type *type)
 }
 
 
-static FORCE_INLINE void doAllocMap(HeapPages *pages, Map *map, Type *type, Error *error)
+static FORCE_INLINE void doAllocMap(HeapPages *pages, Map *map, const Type *type, Error *error)
 {
     map->type      = type;
     map->root      = chunkAlloc(pages, typeSizeNoCheck(type->base), type->base, NULL, false, error);
@@ -1098,7 +1098,7 @@ static FORCE_INLINE void doAllocMap(HeapPages *pages, Map *map, Type *type, Erro
 }
 
 
-static void doGetMapKeyBytes(Slot key, Type *keyType, Error *error, char **keyBytes, int *keySize)
+static void doGetMapKeyBytes(Slot key, const Type *keyType, Error *error, char **keyBytes, int *keySize)
 {
     switch (keyType->kind)
     {
@@ -1217,7 +1217,7 @@ static FORCE_INLINE MapNode **doGetMapNode(Map *map, Slot key, bool createMissin
 
     if (createMissingNodes)
     {
-        Type *nodeType = map->type->base;
+        const Type *nodeType = map->type->base;
         *node = (MapNode *)chunkAlloc(pages, typeSizeNoCheck(nodeType), nodeType, NULL, false, error);
     }
 
@@ -1230,14 +1230,14 @@ static MapNode *doCopyMapNode(Map *map, MapNode *node, Fiber *fiber, HeapPages *
     if (!node)
         return NULL;
 
-    Type *nodeType = map->type->base;
+    const Type *nodeType = map->type->base;
     MapNode *result = (MapNode *)chunkAlloc(pages, typeSizeNoCheck(nodeType), nodeType, NULL, false, error);
 
     result->len = node->len;
 
     if (node->key)
     {
-        Type *keyType = typeMapKey(map->type);
+        const Type *keyType = typeMapKey(map->type);
         int keySize = typeSizeNoCheck(keyType);
 
         Slot srcKey = {.ptrVal = node->key};
@@ -1254,7 +1254,7 @@ static MapNode *doCopyMapNode(Map *map, MapNode *node, Fiber *fiber, HeapPages *
 
     if (node->data)
     {
-        Type *itemType = typeMapItem(map->type);
+        const Type *itemType = typeMapItem(map->type);
         int itemSize = typeSizeNoCheck(itemType);
 
         Slot srcItem = {.ptrVal = node->data};
@@ -1286,7 +1286,7 @@ static void doGetMapKeysRecursively(Map *map, MapNode *node, void *keys, int *nu
 
     if (node->key)
     {
-        Type *keyType = typeMapKey(map->type);
+        const Type *keyType = typeMapKey(map->type);
         int keySize = typeSizeNoCheck(keyType);
         void *destKey = (char *)keys + keySize * (*numKeys);
 
@@ -1311,7 +1311,7 @@ static FORCE_INLINE void doGetMapKeys(Map *map, void *keys, Error *error)
 }
 
 
-static FORCE_INLINE Fiber *doAllocFiber(Fiber *parent, Closure *childClosure, Type *childClosureType, HeapPages *pages, Error *error)
+static FORCE_INLINE Fiber *doAllocFiber(Fiber *parent, Closure *childClosure, const Type *childClosureType, HeapPages *pages, Error *error)
 {
     if (!childClosure || childClosure->entryOffset <= 0)
         error->runtimeHandler(error->context, ERR_RUNTIME, "Called function is not defined");
@@ -1325,7 +1325,7 @@ static FORCE_INLINE Fiber *doAllocFiber(Fiber *parent, Closure *childClosure, Ty
 
     child->parent = parent;
 
-    Signature *childClosureSig = &childClosureType->field[0]->type->sig;
+    const Signature *childClosureSig = &childClosureType->field[0]->type->sig;
 
     // Push upvalues
     child->top -= sizeof(Interface) / sizeof(Slot);
@@ -1391,7 +1391,7 @@ static FORCE_INLINE int doPrintIndented(char *buf, int maxLen, int depth, bool p
 }
 
 
-static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int depth, bool pretty, bool dereferenced, Storage *storage, Error *error)
+static int doFillReprBuf(Slot *slot, const Type *type, char *buf, int maxLen, int depth, bool pretty, bool dereferenced, Storage *storage, Error *error)
 {
     enum {MAX_DEPTH = 20};
 
@@ -1501,8 +1501,8 @@ static int doFillReprBuf(Slot *slot, Type *type, char *buf, int maxLen, int dept
             Map *map = (Map *)slot->ptrVal;
             if (map && map->root)
             {
-                Type *keyType = typeMapKey(map->type);
-                Type *itemType = typeMapItem(map->type);
+                const Type *keyType = typeMapKey(map->type);
+                const Type *itemType = typeMapItem(map->type);
 
                 int keySize = typeSizeNoCheck(keyType);
                 void *keys = storageAdd(storage, map->root->len * keySize);
@@ -1783,7 +1783,7 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
     const char *format = (const char *)fiber->top[STACK_OFFSET_FORMAT].ptrVal;
     Slot value         = fiber->top[STACK_OFFSET_VALUE];
 
-    Type *type         = fiber->code[fiber->ip].type;
+    const Type *type         = fiber->code[fiber->ip].type;
     TypeKind typeKind  = type->kind;
 
     if (!string && (!stream || (!fiber->fileSystemEnabled && !console)))
@@ -1923,7 +1923,7 @@ static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool con
     const char *format = (const char *)fiber->top[STACK_OFFSET_FORMAT].ptrVal;
     Slot value         = fiber->top[STACK_OFFSET_VALUE];
 
-    Type *type         = fiber->code[fiber->ip].type;
+    const Type *type         = fiber->code[fiber->ip].type;
     TypeKind typeKind  = type->kind;
 
     if (!stream || (!fiber->fileSystemEnabled && !console && !string))
@@ -2001,7 +2001,7 @@ static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool con
 static FORCE_INLINE void doBuiltinNew(Fiber *fiber, HeapPages *pages, Error *error)
 {
     int size     = (fiber->top++)->intVal;
-    Type *type   = fiber->code[fiber->ip].type;
+    const Type *type   = fiber->code[fiber->ip].type;
 
     // For dynamic arrays, we mark with type the data chunk, not the header chunk
     if (type && type->kind == TYPE_DYNARRAY)
@@ -2018,7 +2018,7 @@ static FORCE_INLINE void doBuiltinNew(Fiber *fiber, HeapPages *pages, Error *err
 // fn make(type: Type, childFunc: fn()): type
 static FORCE_INLINE void doBuiltinMake(Fiber *fiber, HeapPages *pages, Error *error)
 {
-    Type *type = fiber->code[fiber->ip].type;
+    const Type *type = fiber->code[fiber->ip].type;
 
     if (type->kind == TYPE_DYNARRAY)
     {
@@ -2054,7 +2054,7 @@ static FORCE_INLINE void doBuiltinMakefromarr(Fiber *fiber, HeapPages *pages, Er
     int64_t len    = (fiber->top++)->intVal;
     void *src      = (fiber->top++)->ptrVal;
 
-    Type *destType = fiber->code[fiber->ip].type;
+    const Type *destType = fiber->code[fiber->ip].type;
 
     doAllocDynArray(pages, dest, destType, len, error);
     memcpy(dest->data, src, getDims(dest)->len * dest->itemSize);
@@ -2073,7 +2073,7 @@ static FORCE_INLINE void doBuiltinMakefromstr(Fiber *fiber, HeapPages *pages, Er
     DynArray *dest  = (DynArray   *)(fiber->top++)->ptrVal;
     const char *src = (const char *)(fiber->top++)->ptrVal;
 
-    Type *destType = fiber->code[fiber->ip].type;
+    const Type *destType = fiber->code[fiber->ip].type;
 
     if (!src)
         src = doGetEmptyStr();
@@ -2091,7 +2091,7 @@ static FORCE_INLINE void doBuiltinMaketoarr(Fiber *fiber, HeapPages *pages, Erro
     void *dest     = (fiber->top++)->ptrVal;
     DynArray *src  = (DynArray *)(fiber->top++)->ptrVal;
 
-    Type *destType = fiber->code[fiber->ip].type;
+    const Type *destType = fiber->code[fiber->ip].type;
 
     if (!src)
         error->runtimeHandler(error->context, ERR_RUNTIME, "Dynamic array is null");
@@ -2118,7 +2118,7 @@ static FORCE_INLINE void doBuiltinMaketostr(Fiber *fiber, HeapPages *pages, Erro
 {
     char *dest = doGetEmptyStr();
 
-    Type *type = fiber->code[fiber->ip].type;
+    const Type *type = fiber->code[fiber->ip].type;
     if (type->kind == TYPE_CHAR)
     {
         // Character to string
@@ -2202,7 +2202,7 @@ static FORCE_INLINE void doBuiltinCopyMap(Fiber *fiber, HeapPages *pages, Error 
 
 static FORCE_INLINE void doBuiltinCopy(Fiber *fiber, HeapPages *pages, Error *error)
 {
-    Type *type  = fiber->code[fiber->ip].type;
+    const Type *type  = fiber->code[fiber->ip].type;
     if (type->kind == TYPE_DYNARRAY)
         doBuiltinCopyDynArray(fiber, pages, error);
     else
@@ -2218,7 +2218,7 @@ static FORCE_INLINE void doBuiltinAppend(Fiber *fiber, HeapPages *pages, Error *
     void *item       = (fiber->top++)->ptrVal;
     DynArray *array  = (DynArray *)(fiber->top++)->ptrVal;
 
-    Type *arrayType  = fiber->code[fiber->ip].type;
+    const Type *arrayType  = fiber->code[fiber->ip].type;
 
     if (!array)
         error->runtimeHandler(error->context, ERR_RUNTIME, "Dynamic array is null");
@@ -2282,7 +2282,7 @@ static FORCE_INLINE void doBuiltinInsert(Fiber *fiber, HeapPages *pages, Error *
     int64_t index    = (fiber->top++)->intVal;
     DynArray *array  = (DynArray *)(fiber->top++)->ptrVal;
 
-    Type *arrayType  = fiber->code[fiber->ip].type;
+    const Type *arrayType  = fiber->code[fiber->ip].type;
 
     if (!array)
         error->runtimeHandler(error->context, ERR_RUNTIME, "Dynamic array is null");
@@ -2407,7 +2407,7 @@ static FORCE_INLINE void doBuiltinDeleteMap(Fiber *fiber, HeapPages *pages, Erro
 
 static FORCE_INLINE void doBuiltinDelete(Fiber *fiber, HeapPages *pages, Error *error)
 {
-    Type *type  = fiber->code[fiber->ip].type;
+    const Type *type  = fiber->code[fiber->ip].type;
     if (type->kind == TYPE_DYNARRAY)
         doBuiltinDeleteDynArray(fiber, pages, error);
     else
@@ -2423,7 +2423,7 @@ static FORCE_INLINE void doBuiltinSlice(Fiber *fiber, HeapPages *pages, Error *e
     int64_t startIndex = (fiber->top++)->intVal;
     void *arg          = (fiber->top++)->ptrVal;
 
-    Type *argType  = fiber->code[fiber->ip].type;
+    const Type *argType  = fiber->code[fiber->ip].type;
 
     DynArray *array = NULL;
     const char *str = NULL;
@@ -2496,7 +2496,7 @@ typedef struct
 {
     Fiber *fiber;
     Closure *compare;
-    Type *compareType;
+    const Type *compareType;
 } CompareContext;
 
 
@@ -2504,9 +2504,9 @@ static int qsortCompare(const void *a, const void *b, void *context)
 {
     Fiber *fiber      = ((CompareContext *)context)->fiber;
     Closure *compare  = ((CompareContext *)context)->compare;
-    Type *compareType = ((CompareContext *)context)->compareType;
+    const Type *compareType = ((CompareContext *)context)->compareType;
 
-    Signature *compareSig = &compareType->field[0]->type->sig;
+    const Signature *compareSig = &compareType->field[0]->type->sig;
 
     // Push upvalues
     fiber->top -= sizeof(Interface) / sizeof(Slot);
@@ -2535,7 +2535,7 @@ static int qsortCompare(const void *a, const void *b, void *context)
 
 static FORCE_INLINE void doBuiltinSort(Fiber *fiber, Error *error)
 {
-    Type *compareType = (Type *)(fiber->top++)->ptrVal;
+    const Type *compareType = (Type *)(fiber->top++)->ptrVal;
     Closure *compare  = (Closure *)(fiber->top++)->ptrVal;
     DynArray *array   = (DynArray *)(fiber->top++)->ptrVal;
 
@@ -2817,7 +2817,7 @@ static FORCE_INLINE void doBuiltinKeys(Fiber *fiber, HeapPages *pages, Error *er
     DynArray *result = (DynArray *)(fiber->top++)->ptrVal;
     Map *map         = (Map *)(fiber->top++)->ptrVal;
 
-    Type *resultType = fiber->code[fiber->ip].type;
+    const Type *resultType = fiber->code[fiber->ip].type;
 
     if (!map)
         error->runtimeHandler(error->context, ERR_RUNTIME, "Map is null");
@@ -3015,7 +3015,7 @@ static FORCE_INLINE void doChangeRefCnt(Fiber *fiber, HeapPages *pages)
 {
     void *ptr         = fiber->top->ptrVal;
     TokenKind tokKind = fiber->code[fiber->ip].tokKind;
-    Type *type        = fiber->code[fiber->ip].type;
+    const Type *type        = fiber->code[fiber->ip].type;
 
     doChangeRefCntImpl(fiber, pages, ptr, type, tokKind);
 
@@ -3026,7 +3026,7 @@ static FORCE_INLINE void doChangeRefCnt(Fiber *fiber, HeapPages *pages)
 static FORCE_INLINE void doChangeRefCntGlobal(Fiber *fiber, HeapPages *pages, Error *error)
 {
     TokenKind tokKind = fiber->code[fiber->ip].tokKind;
-    Type *type        = fiber->code[fiber->ip].type;
+    const Type *type        = fiber->code[fiber->ip].type;
     void *ptr         = fiber->code[fiber->ip].operand.ptrVal;
 
     Slot slot = {.ptrVal = ptr};
@@ -3041,7 +3041,7 @@ static FORCE_INLINE void doChangeRefCntGlobal(Fiber *fiber, HeapPages *pages, Er
 static FORCE_INLINE void doChangeRefCntLocal(Fiber *fiber, HeapPages *pages, Error *error)
 {
     TokenKind tokKind = fiber->code[fiber->ip].tokKind;
-    Type *type        = fiber->code[fiber->ip].type;
+    const Type *type        = fiber->code[fiber->ip].type;
     int offset        = fiber->code[fiber->ip].operand.intVal;
 
     Slot slot = {.ptrVal = (int8_t *)fiber->base + offset};
@@ -3060,7 +3060,7 @@ static FORCE_INLINE void doChangeRefCntAssign(Fiber *fiber, HeapPages *pages, Er
 
     Slot rhs   = *fiber->top++;
     void *lhs  = (fiber->top++)->ptrVal;
-    Type *type = fiber->code[fiber->ip].type;
+    const Type *type = fiber->code[fiber->ip].type;
 
     // Increase right-hand side ref count
     if (fiber->code[fiber->ip].tokKind != TOK_MINUSMINUS)      // "--" means that the right-hand side ref count should not be increased
@@ -3394,7 +3394,7 @@ static FORCE_INLINE void doGetMapPtr(Fiber *fiber, HeapPages *pages, Error *erro
 {
     Slot key  = *fiber->top++;
     Map *map  = (Map *)(fiber->top++)->ptrVal;
-    Type *mapType = fiber->code[fiber->ip].type;
+    const Type *mapType = fiber->code[fiber->ip].type;
 
     if (!map)
         error->runtimeHandler(error->context, ERR_RUNTIME, "Map is null");
@@ -3402,8 +3402,8 @@ static FORCE_INLINE void doGetMapPtr(Fiber *fiber, HeapPages *pages, Error *erro
     if (!map->root)
         doAllocMap(pages, map, mapType, error);
 
-    Type *keyType = typeMapKey(map->type);
-    Type *itemType = typeMapItem(map->type);
+    const Type *keyType = typeMapKey(map->type);
+    const Type *itemType = typeMapItem(map->type);
 
     MapNode *node = *doGetMapNode(map, key, true, pages, error);
     if (!node->data)
@@ -3444,7 +3444,7 @@ static FORCE_INLINE void doGetFieldPtr(Fiber *fiber, Error *error)
 static FORCE_INLINE void doAssertType(Fiber *fiber)
 {
     Interface *interface  = (Interface *)(fiber->top++)->ptrVal;
-    Type *type            = fiber->code[fiber->ip].type;
+    const Type *type            = fiber->code[fiber->ip].type;
 
     (--fiber->top)->ptrVal = (interface->selfType && typeEquivalent(type, interface->selfType)) ? interface->self : NULL;
     fiber->ip++;
@@ -3454,7 +3454,7 @@ static FORCE_INLINE void doAssertType(Fiber *fiber)
 static FORCE_INLINE void doAssertRange(Fiber *fiber, Error *error)
 {
     TypeKind destTypeKind = fiber->code[fiber->ip].typeKind;
-    Type *srcType         = fiber->code[fiber->ip].type;
+    const Type *srcType         = fiber->code[fiber->ip].type;
 
     Const arg;
     if (typeKindReal(destTypeKind))
@@ -4058,7 +4058,7 @@ char *vmMakeStr(VM *vm, const char *str)
 }
 
 
-void vmMakeDynArray(VM *vm, DynArray *array, Type *type, int len)
+void vmMakeDynArray(VM *vm, DynArray *array, const Type *type, int len)
 {
     if (!array)
         return;

@@ -96,7 +96,7 @@ char *storageAddStr(Storage *storage, int64_t len)
 }
 
 
-DynArray *storageAddDynArray(Storage *storage, struct tagType *type, int64_t len)
+DynArray *storageAddDynArray(Storage *storage, const struct tagType *type, int64_t len)
 {
     DynArray *array = storageAdd(storage, sizeof(DynArray));
 

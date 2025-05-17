@@ -55,7 +55,7 @@ typedef struct
 {
     IdentName name;
     unsigned int hash;
-    struct tagType *type;
+    const struct tagType *type;
     int offset;
 } Field;
 
@@ -72,7 +72,7 @@ typedef struct
 {
     IdentName name;
     unsigned int hash;
-    struct tagType *type;
+    const struct tagType *type;
     Const defaultVal;
 } Param;
 
@@ -83,7 +83,7 @@ typedef struct
     bool isMethod;
     int offsetFromSelf;                     // For interface methods
     Param *param[MAX_PARAMS];
-    struct tagType *resultType;
+    const struct tagType *resultType;
 } Signature;
 
 
@@ -91,7 +91,7 @@ typedef struct tagType
 {
     TypeKind kind;
     int block;
-    struct tagType *base;                       // For pointers, arrays, maps and fibers (for maps, denotes the tree node type; for fibers, denotes the fiber closure type)
+    const struct tagType *base;                       // For pointers, arrays, maps and fibers (for maps, denotes the tree node type; for fibers, denotes the fiber closure type)
     int numItems;                               // For arrays, structures and interfaces
     bool isExprList;                            // For structures that represent expression lists
     bool isVariadicParamList;                   // For dynamic arrays of interfaces that represent variadic parameter lists
@@ -103,20 +103,20 @@ typedef struct tagType
         EnumConst **enumConst;                  // For enumerations
         Signature sig;                          // For functions, including methods
     };
-    struct tagType *next;
+    const struct tagType *next;
 } Type;
 
 
 typedef struct tagVisitedTypePair
 {
-    Type *left, *right;
+    const Type *left, *right;
     struct tagVisitedTypePair *next;
 } VisitedTypePair;
 
 
 typedef struct
 {
-    Type *first;
+    const Type *first;
     bool forwardTypesEnabled;
     Storage *storage;
     Error *error;
@@ -126,14 +126,14 @@ typedef struct
 void typeInit(Types *types, Storage *storage, Error *error);
 
 Type *typeAdd       (Types *types, Blocks *blocks, TypeKind kind);
-void typeDeepCopy   (Storage *storage, Type *dest, Type *src);
-Type *typeAddPtrTo  (Types *types, Blocks *blocks, Type *type);
+void typeDeepCopy   (Storage *storage, Type *dest, const Type *src);
+Type *typeAddPtrTo  (Types *types, Blocks *blocks, const Type *type);
 
-int typeSizeNoCheck (Type *type);
-int typeSize        (Types *types, Type *type);
+int typeSizeNoCheck (const Type *type);
+int typeSize        (Types *types, const Type *type);
 
-int typeAlignmentNoCheck(Type *type);
-int typeAlignment       (Types *types, Type *type);
+int typeAlignmentNoCheck(const Type *type);
+int typeAlignment       (Types *types, const Type *type);
 
 
 static inline bool typeKindIntegerOrEnum(TypeKind typeKind)
@@ -143,13 +143,13 @@ static inline bool typeKindIntegerOrEnum(TypeKind typeKind)
 }
 
 
-static inline bool typeInteger(Type *type)
+static inline bool typeInteger(const Type *type)
 {
     return typeKindIntegerOrEnum(type->kind) && !type->isEnum;
 }
 
 
-static inline bool typeEnum(Type *type)
+static inline bool typeEnum(const Type *type)
 {
     return typeKindIntegerOrEnum(type->kind) && type->isEnum;
 }
@@ -161,7 +161,7 @@ static inline bool typeKindOrdinal(TypeKind typeKind)
 }
 
 
-static inline bool typeOrdinal(Type *type)
+static inline bool typeOrdinal(const Type *type)
 {
     return typeKindOrdinal(type->kind);
 }
@@ -173,13 +173,13 @@ static inline bool typeKindReal(TypeKind typeKind)
 }
 
 
-static inline bool typeReal(Type *type)
+static inline bool typeReal(const Type *type)
 {
     return typeKindReal(type->kind);
 }
 
 
-static inline bool typeNarrow(Type *type)
+static inline bool typeNarrow(const Type *type)
 {
     // Types that occupy less than 64 bits but are still represented by 64-bit temporaries
     return type->kind == TYPE_INT8  || type->kind == TYPE_INT16  || type->kind == TYPE_INT32  ||
@@ -195,7 +195,7 @@ static inline bool typeKindSigned(TypeKind typeKind)
 }
 
 
-static inline bool typeStructured(Type *type)
+static inline bool typeStructured(const Type *type)
 {
     return type->kind == TYPE_ARRAY  || type->kind == TYPE_DYNARRAY  || type->kind == TYPE_MAP ||
            type->kind == TYPE_STRUCT || type->kind == TYPE_INTERFACE || type->kind == TYPE_CLOSURE;
@@ -210,49 +210,49 @@ static inline bool typeKindGarbageCollected(TypeKind typeKind)
 }
 
 
-bool typeHasPtr(Type *type, bool alsoWeakPtr);
+bool typeHasPtr(const Type *type, bool alsoWeakPtr);
 
 
-static inline bool typeGarbageCollected(Type *type)
+static inline bool typeGarbageCollected(const Type *type)
 {
     return typeHasPtr(type, false);
 }
 
 
-static inline bool typeExprListStruct(Type *type)
+static inline bool typeExprListStruct(const Type *type)
 {
     return type->kind == TYPE_STRUCT && type->isExprList && type->numItems > 0;
 }
 
 
-bool typeEquivalent             (Type *left, Type *right);
-bool typeEquivalentExceptIdent  (Type *left, Type *right);
-bool typeCompatible             (Type *left, Type *right);
-void typeAssertCompatible       (Types *types, Type *left, Type *right);
-void typeAssertCompatibleParam  (Types *types, Type *left, Type *right, Type *fnType, int paramIndex);
-void typeAssertCompatibleBuiltin(Types *types, Type *type, /*BuiltinFunc*/ int builtin, bool condition);
+bool typeEquivalent             (const Type *left, const Type *right);
+bool typeEquivalentExceptIdent  (const Type *left, const Type *right);
+bool typeCompatible             (const Type *left, const Type *right);
+void typeAssertCompatible       (Types *types, const Type *left, const Type *right);
+void typeAssertCompatibleParam  (Types *types, const Type *left, const Type *right, const Type *fnType, int paramIndex);
+void typeAssertCompatibleBuiltin(Types *types, const Type *type, /*BuiltinFunc*/ int builtin, bool condition);
 
 
-static inline bool typeCompatibleRcv(Type *left, Type *right)
+static inline bool typeCompatibleRcv(const Type *left, const Type *right)
 {
     return left->kind  == TYPE_PTR && right->kind == TYPE_PTR && left->base->typeIdent == right->base->typeIdent;
 }
 
 
-static inline bool typeImplicitlyConvertibleBaseTypes(Type *left, Type *right)
+static inline bool typeImplicitlyConvertibleBaseTypes(const Type *left, const Type *right)
 {
    return left->kind == TYPE_VOID || right->kind == TYPE_NULL;
 }
 
 
-static inline bool typeExplicitlyConvertibleBaseTypes(Types *types, Type *left, Type *right)
+static inline bool typeExplicitlyConvertibleBaseTypes(Types *types, const Type *left, const Type *right)
 {
     return typeSize(types, left) <= typeSize(types, right) && !typeHasPtr(left, true) && !typeHasPtr(right, true);
 }
 
 
-bool typeValidOperator      (Type *type, TokenKind op);
-void typeAssertValidOperator(Types *types, Type *type, TokenKind op);
+bool typeValidOperator      (const Type *type, TokenKind op);
+void typeAssertValidOperator(Types *types, const Type *type, TokenKind op);
 
 void typeEnableForward(Types *types, bool enable);
 
@@ -299,42 +299,42 @@ static inline bool typeOverflow(TypeKind typeKind, Const val)
 }
 
 
-Field *typeFindField        (Type *structType, const char *name, int *index);
-Field *typeAssertFindField  (Types *types, Type *structType, const char *name, int *index);
-Field *typeAddField         (Types *types, Type *structType, Type *fieldType, const char *fieldName);
+Field *typeFindField        (const Type *structType, const char *name, int *index);
+Field *typeAssertFindField  (Types *types, const Type *structType, const char *name, int *index);
+Field *typeAddField         (Types *types, Type *structType, const Type *fieldType, const char *fieldName);
 
-EnumConst *typeFindEnumConst        (Type *enumType, const char *name);
-EnumConst *typeAssertFindEnumConst  (Types *types, Type *enumType, const char *name);
-EnumConst *typeFindEnumConstByVal   (Type *enumType, Const val);
+EnumConst *typeFindEnumConst        (const Type *enumType, const char *name);
+EnumConst *typeAssertFindEnumConst  (Types *types, const Type *enumType, const char *name);
+EnumConst *typeFindEnumConstByVal   (const Type *enumType, Const val);
 EnumConst *typeAddEnumConst         (Types *types, Type *enumType, const char *fieldName, Const val);
 
-Param *typeFindParam    (Signature *sig, const char *name);
-Param *typeAddParam     (Types *types, Signature *sig, Type *type, const char *name);
+Param *typeFindParam    (const Signature *sig, const char *name);
+Param *typeAddParam     (Types *types, Signature *sig, const Type *type, const char *name);
 
-int typeParamSizeUpTo   (Types *types, Signature *sig, int index);
-int typeParamSizeTotal  (Types *types, Signature *sig);
-int typeParamOffset     (Types *types, Signature *sig, int index);
+int typeParamSizeUpTo   (Types *types, const Signature *sig, int index);
+int typeParamSizeTotal  (Types *types, const Signature *sig);
+int typeParamOffset     (Types *types, const Signature *sig, int index);
 
-ParamLayout            *typeMakeParamLayout           (Types *types, Storage *storage, Signature *sig);
+ParamLayout            *typeMakeParamLayout           (Types *types, Storage *storage, const Signature *sig);
 ParamAndLocalVarLayout *typeMakeParamAndLocalVarLayout(Storage *storage, ParamLayout *paramLayout, int localVarSlots);
 
 const char *typeKindSpelling(TypeKind kind);
-char *typeSpelling          (Type *type, char *buf);
+char *typeSpelling          (const Type *type, char *buf);
 
 
-static inline Type *typeMapKey(Type *mapType)
+static inline const Type *typeMapKey(const Type *mapType)
 {
     return mapType->base->field[MAP_NODE_FIELD_KEY]->type->base;
 }
 
 
-static inline Type *typeMapItem(Type *mapType)
+static inline const Type *typeMapItem(const Type *mapType)
 {
     return mapType->base->field[MAP_NODE_FIELD_DATA]->type->base;
 }
 
 
-static inline Type *typeMapNodePtr(Type *mapType)
+static inline const Type *typeMapNodePtr(const Type *mapType)
 {
     return mapType->base->field[MAP_NODE_FIELD_LEFT]->type;
 }

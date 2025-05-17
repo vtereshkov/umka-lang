@@ -196,7 +196,7 @@ static bool optimizeSwapAssign(CodeGen *gen, TypeKind typeKind, int structSize)
 }
 
 
-static bool optimizeChangeRefCnt(CodeGen *gen, Type *type)
+static bool optimizeChangeRefCnt(CodeGen *gen, const Type *type)
 {
     Instruction *prev = getPrevInstr(gen, 1);
 
@@ -608,7 +608,7 @@ void genAssignParam(CodeGen *gen, TypeKind typeKind, int structSize)
 }
 
 
-void genChangeRefCnt(CodeGen *gen, TokenKind tokKind, Type *type)
+void genChangeRefCnt(CodeGen *gen, TokenKind tokKind, const Type *type)
 {
     if (typeGarbageCollected(type) && !optimizeChangeRefCnt(gen, type))
     {
@@ -618,7 +618,7 @@ void genChangeRefCnt(CodeGen *gen, TokenKind tokKind, Type *type)
 }
 
 
-void genChangeRefCntGlobal(CodeGen *gen, TokenKind tokKind, void *ptrVal, Type *type)
+void genChangeRefCntGlobal(CodeGen *gen, TokenKind tokKind, void *ptrVal, const Type *type)
 {
     if (typeGarbageCollected(type))
     {
@@ -628,7 +628,7 @@ void genChangeRefCntGlobal(CodeGen *gen, TokenKind tokKind, void *ptrVal, Type *
 }
 
 
-void genChangeRefCntLocal(CodeGen *gen, TokenKind tokKind, int offset, Type *type)
+void genChangeRefCntLocal(CodeGen *gen, TokenKind tokKind, int offset, const Type *type)
 {
     if (typeGarbageCollected(type))
     {
@@ -638,7 +638,7 @@ void genChangeRefCntLocal(CodeGen *gen, TokenKind tokKind, int offset, Type *typ
 }
 
 
-void genChangeRefCntAssign(CodeGen *gen, Type *type)
+void genChangeRefCntAssign(CodeGen *gen, const Type *type)
 {
     if (typeGarbageCollected(type))
     {
@@ -650,7 +650,7 @@ void genChangeRefCntAssign(CodeGen *gen, Type *type)
 }
 
 
-void genSwapChangeRefCntAssign(CodeGen *gen, Type *type)
+void genSwapChangeRefCntAssign(CodeGen *gen, const Type *type)
 {
     if (typeGarbageCollected(type))
     {
@@ -662,7 +662,7 @@ void genSwapChangeRefCntAssign(CodeGen *gen, Type *type)
 }
 
 
-void genChangeLeftRefCntAssign(CodeGen *gen, Type *type)
+void genChangeLeftRefCntAssign(CodeGen *gen, const Type *type)
 {
     if (typeGarbageCollected(type))
     {
@@ -711,7 +711,7 @@ void genGetDynArrayPtr(CodeGen *gen)
 }
 
 
-void genGetMapPtr(CodeGen *gen, Type *mapType)
+void genGetMapPtr(CodeGen *gen, const Type *mapType)
 {
     const Instruction instr = {.opcode = OP_GET_MAP_PTR, .tokKind = TOK_NONE, .type = mapType};
     genAddInstr(gen, &instr);
@@ -728,14 +728,14 @@ void genGetFieldPtr(CodeGen *gen, int fieldOffset)
 }
 
 
-void genAssertType(CodeGen *gen, Type *type)
+void genAssertType(CodeGen *gen, const Type *type)
 {
     const Instruction instr = {.opcode = OP_ASSERT_TYPE, .tokKind = TOK_NONE, .type = type};
     genAddInstr(gen, &instr);
 }
 
 
-void genAssertRange(CodeGen *gen, TypeKind destTypeKind, Type *srcType)
+void genAssertRange(CodeGen *gen, TypeKind destTypeKind, const Type *srcType)
 {
     const Instruction instr = {.opcode = OP_ASSERT_RANGE, .tokKind = TOK_NONE, .typeKind = destTypeKind, .type = srcType, .operand.intVal = 0};
     genAddInstr(gen, &instr);
@@ -817,7 +817,7 @@ void genCallBuiltin(CodeGen *gen, TypeKind typeKind, BuiltinFunc builtin)
 }
 
 
-void genCallTypedBuiltin(CodeGen *gen, Type *type, BuiltinFunc builtin)
+void genCallTypedBuiltin(CodeGen *gen, const Type *type, BuiltinFunc builtin)
 {
     if (!optimizeCallBuiltin(gen, type->kind, builtin))
     {
@@ -1102,7 +1102,7 @@ void genGotosEpilog(CodeGen *gen, Gotos *gotos)
 }
 
 
-void genCopyResultToTempVar(CodeGen *gen, Type *type, int offset)
+void genCopyResultToTempVar(CodeGen *gen, const Type *type, int offset)
 {
     genDup(gen);
     genPushLocalPtr(gen, offset);

@@ -10,7 +10,7 @@ typedef struct
     int start[MAX_GOTOS];
     int numGotos;
     int block;
-    Type *returnType;
+    const Type *returnType;
 } Gotos;
 
 
@@ -72,23 +72,23 @@ void genAssign       (CodeGen *gen, TypeKind typeKind, int structSize);
 void genSwapAssign   (CodeGen *gen, TypeKind typeKind, int structSize);
 void genAssignParam  (CodeGen *gen, TypeKind typeKind, int structSize);
 
-void genChangeRefCnt            (CodeGen *gen, TokenKind tokKind, Type *type);
-void genChangeRefCntGlobal      (CodeGen *gen, TokenKind tokKind, void *ptrVal, Type *type);
-void genChangeRefCntLocal       (CodeGen *gen, TokenKind tokKind, int offset, Type *type);
-void genChangeRefCntAssign      (CodeGen *gen, Type *type);
-void genSwapChangeRefCntAssign  (CodeGen *gen, Type *type);
-void genChangeLeftRefCntAssign  (CodeGen *gen, Type *type);
+void genChangeRefCnt            (CodeGen *gen, TokenKind tokKind, const Type *type);
+void genChangeRefCntGlobal      (CodeGen *gen, TokenKind tokKind, void *ptrVal, const Type *type);
+void genChangeRefCntLocal       (CodeGen *gen, TokenKind tokKind, int offset, const Type *type);
+void genChangeRefCntAssign      (CodeGen *gen, const Type *type);
+void genSwapChangeRefCntAssign  (CodeGen *gen, const Type *type);
+void genChangeLeftRefCntAssign  (CodeGen *gen, const Type *type);
 
 void genUnary (CodeGen *gen, TokenKind tokKind, TypeKind typeKind);
 void genBinary(CodeGen *gen, TokenKind tokKind, TypeKind typeKind, int structSize);
 
 void genGetArrayPtr   (CodeGen *gen, int itemSize, int len);
 void genGetDynArrayPtr(CodeGen *gen);
-void genGetMapPtr     (CodeGen *gen, Type *mapType);
+void genGetMapPtr     (CodeGen *gen, const Type *mapType);
 void genGetFieldPtr   (CodeGen *gen, int fieldOffset);
 
-void genAssertType   (CodeGen *gen, Type *type);
-void genAssertRange  (CodeGen *gen, TypeKind destTypeKind, Type *srcType);
+void genAssertType   (CodeGen *gen, const Type *type);
+void genAssertRange  (CodeGen *gen, TypeKind destTypeKind, const Type *srcType);
 
 void genWeakenPtr    (CodeGen *gen);
 void genStrengthenPtr(CodeGen *gen);
@@ -101,7 +101,7 @@ void genCall                (CodeGen *gen, int entry);
 void genCallIndirect        (CodeGen *gen, int paramSlots);
 void genCallExtern          (CodeGen *gen, void *entry);
 void genCallBuiltin         (CodeGen *gen, TypeKind typeKind, BuiltinFunc builtin);
-void genCallTypedBuiltin    (CodeGen *gen, Type *type, BuiltinFunc builtin);
+void genCallTypedBuiltin    (CodeGen *gen, const Type *type, BuiltinFunc builtin);
 void genReturn              (CodeGen *gen, int paramSlots);
 
 void genEnterFrame(CodeGen *gen, ParamAndLocalVarLayout *layout);
@@ -148,7 +148,7 @@ void genGotosProlog (CodeGen *gen, Gotos *gotos, int block);
 void genGotosAddStub(CodeGen *gen, Gotos *gotos);
 void genGotosEpilog (CodeGen *gen, Gotos *gotos);
 
-void genCopyResultToTempVar(CodeGen *gen, Type *type, int offset);
+void genCopyResultToTempVar(CodeGen *gen, const Type *type, int offset);
 int  genTryRemoveCopyResultToTempVar(CodeGen *gen);
 
 int genAsm(CodeGen *gen, char *buf, int size);

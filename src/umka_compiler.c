@@ -80,9 +80,10 @@ static void compilerDeclareBuiltinTypes(Compiler *comp)
     typeAddParam(&comp->types, &fnType->sig, comp->anyType, "#upvalues");
     fnType->sig.resultType = comp->voidType;
 
-    comp->fiberType->base = typeAdd(&comp->types, &comp->blocks, TYPE_CLOSURE);
-    typeAddField(&comp->types, comp->fiberType->base, fnType, "#fn");
-    typeAddField(&comp->types, comp->fiberType->base, comp->anyType, "#upvalues");
+    Type *fiberClosureType = typeAdd(&comp->types, &comp->blocks, TYPE_CLOSURE);
+    typeAddField(&comp->types, fiberClosureType, fnType, "#fn");
+    typeAddField(&comp->types, fiberClosureType, comp->anyType, "#upvalues");
+    comp->fiberType->base = fiberClosureType;
 }
 
 
@@ -356,7 +357,7 @@ bool compilerGetFunc(Compiler *comp, const char *moduleName, const char *funcNam
 }
 
 
-void compilerMakeFuncContext(Compiler *comp, Type *fnType, int entryOffset, FuncContext *fn)
+void compilerMakeFuncContext(Compiler *comp, const Type *fnType, int entryOffset, FuncContext *fn)
 {
     fn->entryOffset = entryOffset;
 
