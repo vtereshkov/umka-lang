@@ -79,7 +79,7 @@ static void compilerDeclareBuiltinTypes(Compiler *comp)
     Type *fiberType = typeAdd(&comp->types, &comp->blocks, TYPE_FIBER);
 
     Type *fnType = typeAdd(&comp->types, &comp->blocks, TYPE_FN);
-    typeAddParam(&comp->types, &fnType->sig, comp->anyType, "#upvalues");
+    typeAddParam(&comp->types, &fnType->sig, comp->anyType, "#upvalues", (Const){0});
 
     fnType->sig.resultType = comp->voidType;
 

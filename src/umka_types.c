@@ -95,8 +95,9 @@ void typeDeepCopy(Storage *storage, Type *dest, const Type *src)
     {
         for (int i = 0; i < dest->sig.numParams; i++)
         {
-            dest->sig.param[i] = storageAdd(storage, sizeof(Param));
-            *(dest->sig.param[i]) = *(src->sig.param[i]);
+            Param *param = storageAdd(storage, sizeof(Param));
+            *param = *(src->sig.param[i]);
+            dest->sig.param[i] = param;
         }
     }
 }
@@ -241,7 +242,7 @@ bool typeHasPtr(const Type *type, bool alsoWeakPtr)
 }
 
 
-static bool typeDefaultParamEqual(Const *left, Const *right, const Type *type)
+static bool typeDefaultParamEqual(const Const *left, const Const *right, const Type *type)
 {
     if (typeOrdinal(type) || type->kind == TYPE_FN)
         return left->intVal == right->intVal;
@@ -652,7 +653,7 @@ const EnumConst *typeAddEnumConst(Types *types, Type *enumType, const char *name
 }
 
 
-Param *typeFindParam(const Signature *sig, const char *name)
+const Param *typeFindParam(const Signature *sig, const char *name)
 {
     unsigned int nameHash = hash(name);
     for (int i = 0; i < sig->numParams; i++)
@@ -663,23 +664,22 @@ Param *typeFindParam(const Signature *sig, const char *name)
 }
 
 
-Param *typeAddParam(Types *types, Signature *sig, const Type *type, const char *name)
+const Param *typeAddParam(Types *types, Signature *sig, const Type *type, const char *name, Const defaultVal)
 {
-    Param *param = typeFindParam(sig, name);
-    if (param)
+    if (typeFindParam(sig, name))
         types->error->handler(types->error->context, "Duplicate parameter %s", name);
 
     if (sig->numParams > MAX_PARAMS)
         types->error->handler(types->error->context, "Too many parameters");
 
-    param = storageAdd(types->storage, sizeof(Param));
+    Param *param = storageAdd(types->storage, sizeof(Param));
 
     strncpy(param->name, name, MAX_IDENT_LEN);
     param->name[MAX_IDENT_LEN] = 0;
 
     param->hash = hash(name);
     param->type = type;
-    param->defaultVal.intVal = 0;
+    param->defaultVal = defaultVal;
 
     sig->param[sig->numParams++] = param;
     return param;

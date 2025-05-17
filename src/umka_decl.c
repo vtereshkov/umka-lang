@@ -96,7 +96,7 @@ static void parseRcvSignature(Compiler *comp, Signature *sig)
     	comp->error.handler(comp->error.context, "Receiver base type cannot be a pointer or an interface");
 
     sig->isMethod = true;
-    typeAddParam(&comp->types, sig, rcvType, rcvName);
+    typeAddParam(&comp->types, sig, rcvType, rcvName, (Const){0});
 
     lexEat(&comp->lex, TOK_RPAR);
 }
@@ -107,7 +107,7 @@ static void parseSignature(Compiler *comp, Signature *sig)
 {
     // Dummy hidden parameter that allows any function to be converted to a closure
     if (!sig->isMethod)
-        typeAddParam(&comp->types, sig, comp->anyType, "#upvalues");
+        typeAddParam(&comp->types, sig, comp->anyType, "#upvalues", (Const){0});
 
     // Formal parameter list
     lexEat(&comp->lex, TOK_LPAR);
@@ -130,7 +130,7 @@ static void parseSignature(Compiler *comp, Signature *sig)
             variadicParamListFound = paramType->isVariadicParamList;
 
             // ["=" expr]
-            Const defaultConstant;
+            Const defaultConstant = {0};
             if (comp->lex.tok.kind == TOK_EQ)
             {
                 if (numParams != 1)
@@ -158,9 +158,7 @@ static void parseSignature(Compiler *comp, Signature *sig)
                 if (paramExported[i])
                     comp->error.handler(comp->error.context, "Parameter %s cannot be exported", paramNames[i]);
 
-                Param *param = typeAddParam(&comp->types, sig, paramType, paramNames[i]);
-                if (numDefaultParams > 0)
-                    param->defaultVal = defaultConstant;
+                typeAddParam(&comp->types, sig, paramType, paramNames[i], defaultConstant);
             }
 
             if (comp->lex.tok.kind != TOK_COMMA)
@@ -208,7 +206,7 @@ static void parseSignature(Compiler *comp, Signature *sig)
 
     // Structured result parameter
     if (typeStructured(sig->resultType))
-        typeAddParam(&comp->types, sig, typeAddPtrTo(&comp->types, &comp->blocks, sig->resultType), "#result");
+        typeAddParam(&comp->types, sig, typeAddPtrTo(&comp->types, &comp->blocks, sig->resultType), "#result", (Const){0});
 }
 
 
@@ -474,7 +472,7 @@ static const Type *parseInterfaceType(Compiler *comp)
             Type *methodType = typeAdd(&comp->types, &comp->blocks, TYPE_FN);
             methodType->sig.isMethod = true;
 
-            typeAddParam(&comp->types, &methodType->sig, comp->ptrVoidType, "#self");
+            typeAddParam(&comp->types, &methodType->sig, comp->ptrVoidType, "#self", (Const){0});
             parseSignature(comp, &methodType->sig);
 
             const Field *method = typeAddField(&comp->types, type, methodType, methodName);

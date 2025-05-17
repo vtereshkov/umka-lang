@@ -82,7 +82,7 @@ typedef struct
     int numParams, numDefaultParams;
     bool isMethod;
     int offsetFromSelf;                     // For interface methods
-    Param *param[MAX_PARAMS];
+    const Param *param[MAX_PARAMS];
     const struct tagType *resultType;
 } Signature;
 
@@ -308,8 +308,8 @@ const EnumConst *typeAssertFindEnumConst  (Types *types, const Type *enumType, c
 const EnumConst *typeFindEnumConstByVal   (const Type *enumType, Const val);
 const EnumConst *typeAddEnumConst         (Types *types, Type *enumType, const char *fieldName, Const val);
 
-Param *typeFindParam    (const Signature *sig, const char *name);
-Param *typeAddParam     (Types *types, Signature *sig, const Type *type, const char *name);
+const Param *typeFindParam    (const Signature *sig, const char *name);
+const Param *typeAddParam     (Types *types, Signature *sig, const Type *type, const char *name, Const defaultVal);
 
 int typeParamSizeUpTo   (Types *types, const Signature *sig, int index);
 int typeParamSizeTotal  (Types *types, const Signature *sig);

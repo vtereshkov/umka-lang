@@ -1193,9 +1193,9 @@ static void parseBuiltinSortCall(Compiler *comp, const Type **type, Const *const
     Type *fnType = typeAdd(&comp->types, &comp->blocks, TYPE_FN);
     const Type *paramType = typeAddPtrTo(&comp->types, &comp->blocks, (*type)->base);
 
-    typeAddParam(&comp->types, &fnType->sig, comp->anyType, "#upvalues");
-    typeAddParam(&comp->types, &fnType->sig, paramType, "a");
-    typeAddParam(&comp->types, &fnType->sig, paramType, "b");
+    typeAddParam(&comp->types, &fnType->sig, comp->anyType, "#upvalues", (Const){0});
+    typeAddParam(&comp->types, &fnType->sig, paramType, "a", (Const){0});
+    typeAddParam(&comp->types, &fnType->sig, paramType, "b", (Const){0});
 
     fnType->sig.resultType = comp->intType;
 

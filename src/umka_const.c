@@ -56,7 +56,7 @@ void constDeref(Consts *consts, Const *constant, TypeKind typeKind)
 }
 
 
-void constAssign(Consts *consts, void *lhs, Const *rhs, TypeKind typeKind, int size)
+void constAssign(Consts *consts, void *lhs, const Const *rhs, TypeKind typeKind, int size)
 {
     if (typeOverflow(typeKind, *rhs))
         consts->error->handler(consts->error->context, "Overflow in assignment to %s", typeKindSpelling(typeKind));
