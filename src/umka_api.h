@@ -94,10 +94,10 @@ typedef struct
 
 typedef struct
 {
-    char *fileName;
-    char *fnName;
+    const char *fileName;
+    const char *fnName;
     int line, pos, code;
-    char *msg;
+    const char *msg;
 } UmkaError;
 
 

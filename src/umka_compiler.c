@@ -68,21 +68,27 @@ static void compilerDeclareBuiltinTypes(Compiler *comp)
     comp->ptrNullType = typeAddPtrTo(&comp->types, &comp->blocks, comp->nullType);
 
     // any
-    comp->anyType = typeAdd(&comp->types, &comp->blocks, TYPE_INTERFACE);
+    Type *anyType = typeAdd(&comp->types, &comp->blocks, TYPE_INTERFACE);
 
-    typeAddField(&comp->types, comp->anyType, comp->ptrVoidType, "#self");
-    typeAddField(&comp->types, comp->anyType, comp->ptrVoidType, "#selftype");
+    typeAddField(&comp->types, anyType, comp->ptrVoidType, "#self");
+    typeAddField(&comp->types, anyType, comp->ptrVoidType, "#selftype");
+
+    comp->anyType = anyType;
 
     // fiber
-    comp->fiberType = typeAdd(&comp->types, &comp->blocks, TYPE_FIBER);
+    Type *fiberType = typeAdd(&comp->types, &comp->blocks, TYPE_FIBER);
 
     Type *fnType = typeAdd(&comp->types, &comp->blocks, TYPE_FN);
-    typeAddParam(&comp->types, &fnType->sig, comp->anyType, "#upvalues");
+    typeAddParam(&comp->types, &fnType->sig, comp->anyType, "#upvalues", (Const){0});
+
     fnType->sig.resultType = comp->voidType;
 
-    comp->fiberType->base = typeAdd(&comp->types, &comp->blocks, TYPE_CLOSURE);
-    typeAddField(&comp->types, comp->fiberType->base, fnType, "#fn");
-    typeAddField(&comp->types, comp->fiberType->base, comp->anyType, "#upvalues");
+    Type *fiberClosureType = typeAdd(&comp->types, &comp->blocks, TYPE_CLOSURE);
+    typeAddField(&comp->types, fiberClosureType, fnType, "#fn");
+    typeAddField(&comp->types, fiberClosureType, comp->anyType, "#upvalues");
+    fiberType->base = fiberClosureType;
+
+    comp->fiberType = fiberType;
 }
 
 
@@ -345,26 +351,26 @@ bool compilerGetFunc(Compiler *comp, const char *moduleName, const char *funcNam
         module = moduleFind(&comp->modules, modulePath);
     }
 
-    Ident *fnIdent = identFind(&comp->idents, &comp->modules, &comp->blocks, module, funcName, NULL, false);
+    const Ident *fnIdent = identFind(&comp->idents, &comp->modules, &comp->blocks, module, funcName, NULL, false);
     if (!fnIdent || fnIdent->kind != IDENT_CONST || fnIdent->type->kind != TYPE_FN)
         return false;
 
-    fnIdent->used = true;
+    identSetUsed(fnIdent);
 
     compilerMakeFuncContext(comp, fnIdent->type, fnIdent->offset, fn);
     return true;
 }
 
 
-void compilerMakeFuncContext(Compiler *comp, Type *fnType, int entryOffset, FuncContext *fn)
+void compilerMakeFuncContext(Compiler *comp, const Type *fnType, int entryOffset, FuncContext *fn)
 {
     fn->entryOffset = entryOffset;
 
     int paramSlots = typeParamSizeTotal(&comp->types, &fnType->sig) / sizeof(Slot);
     fn->params = (Slot *)storageAdd(&comp->storage, (paramSlots + 4) * sizeof(Slot)) + 4;          // + 4 slots for compatibility with umkaGetParam()
 
-    ParamLayout *paramLayout = typeMakeParamLayout(&comp->types, &comp->storage, &fnType->sig);
-    fn->params[-4].ptrVal = paramLayout;
+    const ParamLayout *paramLayout = typeMakeParamLayout(&comp->types, &fnType->sig);
+    fn->params[-4].ptrVal = (ParamLayout *)paramLayout;
 
     fn->result = storageAdd(&comp->storage, sizeof(Slot));
 }

@@ -14,7 +14,7 @@ static void parseBlock(Compiler *comp);
 
 static void doGarbageCollectionAt(Compiler *comp, int blockStackPos)
 {
-    for (Ident *ident = comp->idents.first; ident; ident = ident->next)
+    for (const Ident *ident = comp->idents.first; ident; ident = ident->next)
         if (ident->kind == IDENT_VAR && typeGarbageCollected(ident->type) && ident->block == comp->blocks.item[blockStackPos].block && !(ident->temporary && !ident->used) && strcmp(ident->name, "#result") != 0)
         {
             // Skip unused upvalues
@@ -54,7 +54,7 @@ void doGarbageCollectionDownToBlock(Compiler *comp, int block)
 }
 
 
-void doZeroVar(Compiler *comp, Ident *ident)
+void doZeroVar(Compiler *comp, const Ident *ident)
 {
     if (ident->block == 0)
         constZero(ident->ptr, typeSize(&comp->types, ident->type));
@@ -68,7 +68,7 @@ void doZeroVar(Compiler *comp, Ident *ident)
 
 void doResolveExtern(Compiler *comp)
 {
-    for (Ident *ident = comp->idents.first; ident; ident = ident->next)
+    for (const Ident *ident = comp->idents.first; ident; ident = ident->next)
         if (ident->module == comp->blocks.module)
         {
             if (ident->prototypeOffset >= 0)
@@ -108,9 +108,9 @@ void doResolveExtern(Compiler *comp)
                 identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
                 identFree(&comp->idents, blocksCurrent(&comp->blocks));
 
-                ParamLayout *paramLayout = typeMakeParamLayout(&comp->types, &comp->storage, &ident->type->sig);
+                const ParamLayout *paramLayout = typeMakeParamLayout(&comp->types, &ident->type->sig);
 
-                genLeaveFrameFixup(&comp->gen, typeMakeParamAndLocalVarLayout(&comp->storage, paramLayout, 0));
+                genLeaveFrameFixup(&comp->gen, typeMakeParamAndLocalVarLayout(&comp->types, paramLayout, 0));
                 genReturn(&comp->gen, paramLayout->numParamSlots);
 
                 blocksLeave(&comp->blocks);
@@ -164,7 +164,7 @@ static bool doTypeSwitchStmtLookahead(Compiler *comp)
 
 
 // singleAssignmentStmt = designator "=" expr.
-static void parseSingleAssignmentStmt(Compiler *comp, Type *type, Const *varPtrConst)
+static void parseSingleAssignmentStmt(Compiler *comp, const Type *type, Const *varPtrConst)
 {
     if (!typeStructured(type))
     {
@@ -173,7 +173,7 @@ static void parseSingleAssignmentStmt(Compiler *comp, Type *type, Const *varPtrC
         type = type->base;
     }
 
-    Type *rightType = type;
+    const Type *rightType = type;
     Const rightConstantBuf, *rightConstant = varPtrConst ? &rightConstantBuf : NULL;
 
     parseExpr(comp, &rightType, rightConstant);
@@ -204,14 +204,14 @@ static void parseSingleAssignmentStmt(Compiler *comp, Type *type, Const *varPtrC
 
 
 // listAssignmentStmt = designatorList "=" exprList.
-static void parseListAssignmentStmt(Compiler *comp, Type *type, Const *varPtrConstList)
+static void parseListAssignmentStmt(Compiler *comp, const Type *type, Const *varPtrConstList)
 {
     Type *derefLeftListType = typeAdd(&comp->types, &comp->blocks, TYPE_STRUCT);
     derefLeftListType->isExprList = true;
 
     for (int i = 0; i < type->numItems; i++)
     {
-        Type *leftType = type->field[i]->type;
+        const Type *leftType = type->field[i]->type;
         if (!typeStructured(leftType))
         {
             if (leftType->kind != TYPE_PTR || leftType->base->kind == TYPE_VOID)
@@ -221,7 +221,7 @@ static void parseListAssignmentStmt(Compiler *comp, Type *type, Const *varPtrCon
         typeAddField(&comp->types, derefLeftListType, leftType, NULL);
     }
 
-    Type *rightListType = derefLeftListType;
+    const Type *rightListType = derefLeftListType;
     Const rightListConstantBuf, *rightListConstant = varPtrConstList ? &rightListConstantBuf : NULL;
     parseExprList(comp, &rightListType, rightListConstant);
 
@@ -231,8 +231,8 @@ static void parseListAssignmentStmt(Compiler *comp, Type *type, Const *varPtrCon
 
     for (int i = type->numItems - 1; i >= 0; i--)
     {
-        Type *leftType = derefLeftListType->field[i]->type;
-        Type *rightType = rightListType->field[i]->type;
+        const Type *leftType = derefLeftListType->field[i]->type;
+        const Type *rightType = rightListType->field[i]->type;
 
         if (varPtrConstList)                                // Initialize global variables
         {
@@ -263,7 +263,7 @@ static void parseListAssignmentStmt(Compiler *comp, Type *type, Const *varPtrCon
 
 
 // assignmentStmt = singleAssignmentStmt | listAssignmentStmt.
-void parseAssignmentStmt(Compiler *comp, Type *type, Const *varPtrConstList)
+void parseAssignmentStmt(Compiler *comp, const Type *type, Const *varPtrConstList)
 {
     if (typeExprListStruct(type))
         parseListAssignmentStmt(comp, type, varPtrConstList);
@@ -273,7 +273,7 @@ void parseAssignmentStmt(Compiler *comp, Type *type, Const *varPtrConstList)
 
 
 // shortAssignmentStmt = designator ("+=" | "-=" | "*=" | "/=" | "%=" | "&=" | "|=" | "~=" | "<<=" | ">>=") expr.
-static void parseShortAssignmentStmt(Compiler *comp, Type *type, TokenKind op)
+static void parseShortAssignmentStmt(Compiler *comp, const Type *type, TokenKind op)
 {
     if (!typeStructured(type))
     {
@@ -286,8 +286,8 @@ static void parseShortAssignmentStmt(Compiler *comp, Type *type, TokenKind op)
     genDup(&comp->gen);
     genDeref(&comp->gen, type->kind);
 
-    Type *leftType = type;
-    Type *rightType = type;
+    const Type *leftType = type;
+    const Type *rightType = type;
     parseExpr(comp, &rightType, NULL);
 
     // Keep "+=" for strings as is for better optimizations
@@ -301,14 +301,14 @@ static void parseShortAssignmentStmt(Compiler *comp, Type *type, TokenKind op)
 // singleDeclAssignmentStmt = ident ":=" expr.
 static void parseSingleDeclAssignmentStmt(Compiler *comp, IdentName name, bool exported, bool constExpr)
 {
-    Type *rightType = NULL;
+    const Type *rightType = NULL;
     Const rightConstantBuf, *rightConstant = constExpr ? &rightConstantBuf : NULL;
     parseExpr(comp, &rightType, rightConstant);
 
     if (typeExprListStruct(rightType))
         comp->error.handler(comp->error.context, "1 expression expected but %d found", rightType->numItems);
 
-    Ident *ident = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, name, rightType, exported);
+    const Ident *ident = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, name, rightType, exported);
 
     if (constExpr)              // Initialize global variable
         constAssign(&comp->consts, ident->ptr, rightConstant, rightType->kind, typeSize(&comp->types, rightType));
@@ -332,9 +332,9 @@ static void parseSingleDeclAssignmentStmt(Compiler *comp, IdentName name, bool e
 
 
 // listDeclAssignmentStmt = identList ":=" exprList.
-static void parseListDeclAssignmentStmt(Compiler *comp, IdentName *names, bool *exported, int num, bool constExpr)
+static void parseListDeclAssignmentStmt(Compiler *comp, IdentName *names, const bool *exported, int num, bool constExpr)
 {
-    Type *rightListType = NULL;
+    const Type *rightListType = NULL;
     Const rightListConstantBuf, *rightListConstant = constExpr ? &rightListConstantBuf : NULL;
     parseExprList(comp, &rightListType, rightListConstant);
 
@@ -346,15 +346,15 @@ static void parseListDeclAssignmentStmt(Compiler *comp, IdentName *names, bool *
 
     for (int i = 0; i < num; i++)
     {
-        Type *rightType = rightListType->field[i]->type;
+        const Type *rightType = rightListType->field[i]->type;
 
         bool redecl = false;
-        Ident *ident = identFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, names[i], NULL, false);
+        const Ident *ident = identFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, names[i], NULL, false);
         if (ident && ident->kind == IDENT_VAR && ident->block == comp->blocks.item[comp->blocks.top].block)
         {
             // Redeclaration in the same block
             redecl = true;
-            ident->used = true;
+            identSetUsed(ident);
         }
         else
         {
@@ -404,7 +404,7 @@ static void parseListDeclAssignmentStmt(Compiler *comp, IdentName *names, bool *
 
 
 // declAssignmentStmt = singleDeclAssignmentStmt | listDeclAssignmentStmt.
-void parseDeclAssignmentStmt(Compiler *comp, IdentName *names, bool *exported, int num, bool constExpr)
+void parseDeclAssignmentStmt(Compiler *comp, IdentName *names, const bool *exported, int num, bool constExpr)
 {
     if (num > 1)
         parseListDeclAssignmentStmt(comp, names, exported, num, constExpr);
@@ -414,7 +414,7 @@ void parseDeclAssignmentStmt(Compiler *comp, IdentName *names, bool *exported, i
 
 
 // incDecStmt = designator ("++" | "--").
-static void parseIncDecStmt(Compiler *comp, Type *type, TokenKind op)
+static void parseIncDecStmt(Compiler *comp, const Type *type, TokenKind op)
 {
     if (!typeStructured(type))
     {
@@ -437,7 +437,7 @@ static void parseSimpleStmt(Compiler *comp)
         parseShortVarDecl(comp);
     else
     {
-        Type *type = NULL;
+        const Type *type = NULL;
         bool isVar, isCall, isCompLit;
         parseDesignatorList(comp, &type, NULL, &isVar, &isCall, &isCompLit);
 
@@ -491,7 +491,7 @@ static void parseIfStmt(Compiler *comp)
     }
 
     // expr
-    Type *type = comp->boolType;
+    const Type *type = comp->boolType;
     parseExpr(comp, &type, NULL);
     typeAssertCompatible(&comp->types, comp->boolType, type);
 
@@ -526,7 +526,7 @@ static void parseIfStmt(Compiler *comp)
 
 
 // exprCase = "case" expr {"," expr} ":" stmtList.
-static void parseExprCase(Compiler *comp, Type *selectorType, ConstArray *existingConstants)
+static void parseExprCase(Compiler *comp, const Type *selectorType, ConstArray *existingConstants)
 {
     lexEat(&comp->lex, TOK_CASE);
 
@@ -536,7 +536,7 @@ static void parseExprCase(Compiler *comp, Type *selectorType, ConstArray *existi
     while (1)
     {
         Const constant;
-        Type *type = selectorType;
+        const Type *type = selectorType;
         parseExpr(comp, &type, &constant);
         doAssertImplicitTypeConv(comp, selectorType, &type, &constant);
 
@@ -580,16 +580,16 @@ static void parseTypeCase(Compiler *comp, const char *concreteVarName, ConstArra
     lexEat(&comp->lex, TOK_CASE);
 
     // type
-    Type *concreteType = parseType(comp, NULL);
+    const Type *concreteType = parseType(comp, NULL);
     if (concreteType->kind == TYPE_INTERFACE)
         comp->error.handler(comp->error.context, "Non-interface type expected");
 
-    Const concreteTypeAsConst = {.ptrVal = concreteType};
+    Const concreteTypeAsConst = {.ptrVal = (Type *)concreteType};
     if (constArrayFindEquivalentType(&comp->consts, existingConcreteTypes, concreteTypeAsConst) >= 0)
         comp->error.handler(comp->error.context, "Duplicate case type");
     constArrayAppend(existingConcreteTypes, concreteTypeAsConst);
 
-    Type *concretePtrType = concreteType;
+    const Type *concretePtrType = concreteType;
     if (concreteType->kind != TYPE_PTR)
         concretePtrType = typeAddPtrTo(&comp->types, &comp->blocks, concreteType);
 
@@ -609,8 +609,8 @@ static void parseTypeCase(Compiler *comp, const char *concreteVarName, ConstArra
     blocksEnter(&comp->blocks);
 
     // Allocate and initialize concrete-type variable
-    Ident *concreteIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, concreteVarName, concreteType, false);
-    concreteIdent->used = true;                     // Do not warn about unused concrete variable
+    const Ident *concreteIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, concreteVarName, concreteType, false);
+    identSetUsed(concreteIdent);                     // Do not warn about unused concrete variable
     doZeroVar(comp, concreteIdent);
 
     if (concreteType->kind != TYPE_PTR)
@@ -666,7 +666,7 @@ static void parseExprSwitchStmt(Compiler *comp)
     }
 
     // expr
-    Type *type = NULL;
+    const Type *type = NULL;
     parseExpr(comp, &type, NULL);
     if (!typeOrdinal(type))
         comp->error.handler(comp->error.context, "Ordinal type expected");
@@ -723,7 +723,7 @@ static void parseTypeSwitchStmt(Compiler *comp)
     lexEat(&comp->lex, TOK_LPAR);
 
     // expr
-    Type *type = NULL;
+    const Type *type = NULL;
     parseExpr(comp, &type, NULL);
     if (type->kind != TYPE_INTERFACE)
         comp->error.handler(comp->error.context, "Interface type expected");
@@ -789,7 +789,7 @@ static void parseForHeader(Compiler *comp)
     blocksEnter(&comp->blocks);
 
     // expr
-    Type *type = comp->boolType;
+    const Type *type = comp->boolType;
     parseExpr(comp, &type, NULL);
     typeAssertCompatible(&comp->types, comp->boolType, type);
 
@@ -847,7 +847,7 @@ static void parseForInHeader(Compiler *comp)
     lexEat(&comp->lex, TOK_IN);
 
     // expr
-    Type *collectionType = NULL;
+    const Type *collectionType = NULL;
     parseExpr(comp, &collectionType, NULL);
 
     // Implicit dereferencing: x in a^ == x in a
@@ -879,15 +879,15 @@ static void parseForInHeader(Compiler *comp)
         genCallBuiltin(&comp->gen, collectionType->kind, BUILTIN_LEN);
     }
 
-    Ident *lenIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "#len", comp->intType, false);
+    const Ident *lenIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "#len", comp->intType, false);
     doPushVarPtr(comp, lenIdent);
     genSwapAssign(&comp->gen, lenIdent->type->kind, typeSize(&comp->types, lenIdent->type));
 
-    Ident *collectionIdent = NULL;
+    const Ident *collectionIdent = NULL;
     if (itemName[0] != '\0' || collectionType->kind == TYPE_MAP)
     {
         // Declare variable for the collection and assign expr to it
-        Type *collectionIdentType = collectionType;
+        const Type *collectionIdentType = collectionType;
         if (collectionType->kind == TYPE_ARRAY)
             collectionIdentType = typeAddPtrTo(&comp->types, &comp->blocks, collectionType);    // Avoid copying the whole static array - use a pointer instead
 
@@ -904,16 +904,16 @@ static void parseForInHeader(Compiler *comp)
 
     // Declare variable for the collection index (for maps, it will be used for indexing keys())
     const char *indexName = (collectionType->kind == TYPE_MAP) ? "#index" : indexOrKeyName;
-    Ident *indexIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, indexName, comp->intType, false);
-    indexIdent->used = true;                            // Do not warn about unused index
+    const Ident *indexIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, indexName, comp->intType, false);
+    identSetUsed(indexIdent);                            // Do not warn about unused index
     doZeroVar(comp, indexIdent);
 
-    Ident *keyIdent = NULL, *keysIdent = NULL;
+    const Ident *keyIdent = NULL, *keysIdent = NULL;
     if (collectionType->kind == TYPE_MAP)
     {
         // Declare variable for the map key
         keyIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, indexOrKeyName, typeMapKey(collectionType), false);
-        keyIdent->used = true;                            // Do not warn about unused key
+        identSetUsed(keyIdent);                            // Do not warn about unused key
         doZeroVar(comp, keyIdent);
 
         // Declare variable for the map keys
@@ -933,11 +933,11 @@ static void parseForInHeader(Compiler *comp)
         genSwapAssign(&comp->gen, keysType->kind, typeSize(&comp->types, keysType));
     }
 
-    Ident *itemIdent = NULL;
+    const Ident *itemIdent = NULL;
     if (itemName[0] != '\0')
     {
         // Declare variable for the collection item
-        Type *itemType = NULL;
+        const Type *itemType = NULL;
 
         if (collectionType->kind == TYPE_MAP)
             itemType = typeMapItem(collectionType);
@@ -1100,7 +1100,7 @@ static void parseReturnStmt(Compiler *comp)
     comp->blocks.item[comp->blocks.top].hasReturn = true;
 
     // Get function signature
-    Signature *sig = NULL;
+    const Signature *sig = NULL;
     for (int i = comp->blocks.top; i >= 1; i--)
         if (comp->blocks.item[i].fn)
         {
@@ -1111,7 +1111,7 @@ static void parseReturnStmt(Compiler *comp)
     if (!sig)
         comp->error.handler(comp->error.context, "Function block not found");
 
-    Type *type = sig->resultType;
+    const Type *type = sig->resultType;
     if (comp->lex.tok.kind != TOK_SEMICOLON && comp->lex.tok.kind != TOK_IMPLICIT_SEMICOLON && comp->lex.tok.kind != TOK_RBRACE)
         parseExprList(comp, &type, NULL);
     else
@@ -1126,7 +1126,7 @@ static void parseReturnStmt(Compiler *comp)
     // Copy structure to #result
     if (typeStructured(sig->resultType))
     {
-        Ident *result = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, "#result", NULL);
+        const Ident *result = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, "#result", NULL);
 
         doPushVarPtr(comp, result);
         genDeref(&comp->gen, TYPE_PTR);
@@ -1219,20 +1219,17 @@ static void parseBlock(Compiler *comp)
 
 
 // fnBlock = block.
-void parseFnBlock(Compiler *comp, Ident *fn, Type *upvaluesStructType)
+void parseFnBlock(Compiler *comp, Ident *fn, const Type *upvaluesStructType)
 {
     lexEat(&comp->lex, TOK_LBRACE);
     blocksEnterFn(&comp->blocks, fn, upvaluesStructType != NULL);
 
-    char *prevDebugFnName = comp->lex.debug->fnName;
+    const char *prevDebugFnName = comp->lex.debug->fnName;
 
     if (fn->kind == IDENT_CONST && fn->type->kind == TYPE_FN && fn->block == 0)
     {
         if (fn->type->sig.isMethod)
-        {
-            comp->lex.debug->fnName = storageAdd(&comp->storage, DEFAULT_STR_LEN + 1);
-            identMethodNameWithRcv(fn, comp->lex.debug->fnName, DEFAULT_STR_LEN + 1);
-        }
+            comp->lex.debug->fnName = identMethodNameWithRcv(&comp->idents, fn);
         else
             comp->lex.debug->fnName = fn->name;
     }
@@ -1255,8 +1252,8 @@ void parseFnBlock(Compiler *comp, Ident *fn, Type *upvaluesStructType)
     if (upvaluesStructType)
     {
         // Extract upvalues structure from the "any" interface
-        Ident *upvaluesParamIdent = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, "#upvalues", NULL);
-        Type *upvaluesParamType = upvaluesParamIdent->type;
+        const Ident *upvaluesParamIdent = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, "#upvalues", NULL);
+        const Type *upvaluesParamType = upvaluesParamIdent->type;
 
         doPushVarPtr(comp, upvaluesParamIdent);
         genDeref(&comp->gen, upvaluesParamIdent->type->kind);
@@ -1265,13 +1262,13 @@ void parseFnBlock(Compiler *comp, Ident *fn, Type *upvaluesStructType)
         // Copy upvalue structure fields to new local variables
         for (int i = 0; i < upvaluesStructType->numItems; i++)
         {
-            Field *upvalue = upvaluesStructType->field[i];
+            const Field *upvalue = upvaluesStructType->field[i];
 
             genDup(&comp->gen);
             genGetFieldPtr(&comp->gen, upvalue->offset);
             genDeref(&comp->gen, upvalue->type->kind);
 
-            Ident *upvalueIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, upvalue->name, upvalue->type, false);
+            const Ident *upvalueIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, upvalue->name, upvalue->type, false);
             doZeroVar(comp, upvalueIdent);
             doPushVarPtr(comp, upvalueIdent);
 
@@ -1309,9 +1306,9 @@ void parseFnBlock(Compiler *comp, Ident *fn, Type *upvaluesStructType)
 
     const int localVarSlots = align(comp->blocks.item[comp->blocks.top].localVarSize, sizeof(Slot)) / sizeof(Slot);
 
-    ParamLayout *paramLayout = typeMakeParamLayout(&comp->types, &comp->storage, &fn->type->sig);
+    const ParamLayout *paramLayout = typeMakeParamLayout(&comp->types, &fn->type->sig);
 
-    genLeaveFrameFixup(&comp->gen, typeMakeParamAndLocalVarLayout(&comp->storage, paramLayout, localVarSlots));
+    genLeaveFrameFixup(&comp->gen, typeMakeParamAndLocalVarLayout(&comp->types, paramLayout, localVarSlots));
     genReturn(&comp->gen, paramLayout->numParamSlots);
 
     comp->lex.debug->fnName = prevDebugFnName;

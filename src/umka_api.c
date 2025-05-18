@@ -11,7 +11,7 @@
 #define UMKA_VERSION    "1.5.4"
 
 
-static void compileWarning(void *context, DebugInfo *debug, const char *format, ...)
+static void compileWarning(void *context, const DebugInfo *debug, const char *format, ...)
 {
     va_list args;
     va_start(args, format);
@@ -55,7 +55,7 @@ static void runtimeError(void *context, int code, const char *format, ...)
     va_start(args, format);
 
     Compiler *comp = context;
-    DebugInfo *debug = &comp->vm.fiber->debugPerInstr[comp->vm.fiber->ip];
+    const DebugInfo *debug = &comp->vm.fiber->debugPerInstr[comp->vm.fiber->ip];
     errorReportInit(&comp->error.report, &comp->storage, debug->fileName, debug->fnName, debug->line, 1, code, format, args);
 
     vmKill(&comp->vm);

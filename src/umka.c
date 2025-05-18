@@ -71,14 +71,14 @@ void printCompileWarning(UmkaError *warning)
 
 void printCompileError(void *umka)
 {
-    UmkaError *error = umkaGetError(umka);
+    const UmkaError *error = umkaGetError(umka);
     fprintf(stderr, "Error %s (%d, %d): %s\n", error->fileName, error->line, error->pos, error->msg);
 }
 
 
 void printRuntimeError(void *umka)
 {
-    UmkaError *error = umkaGetError(umka);
+    const UmkaError *error = umkaGetError(umka);
 
     if (error->msg[0])
     {

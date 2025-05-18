@@ -22,11 +22,13 @@
 
 void errorReportInit(ErrorReport *report, Storage *storage, const char *fileName, const char *fnName, int line, int pos, int code, const char *format, va_list args)
 {
-    report->fileName = storageAdd(storage, strlen(fileName) + 1);
-    strcpy(report->fileName, fileName);
+    char *reportFileName = storageAdd(storage, strlen(fileName) + 1);
+    strcpy(reportFileName, fileName);
+    report->fileName = reportFileName;
 
-    report->fnName = storageAdd(storage, strlen(fnName) + 1);
-    strcpy(report->fnName, fnName);
+    char *reportFnName = storageAdd(storage, strlen(fnName) + 1);
+    strcpy(reportFnName, fnName);
+    report->fnName = reportFnName;
 
     report->line = line;
     report->pos = pos;
@@ -36,8 +38,9 @@ void errorReportInit(ErrorReport *report, Storage *storage, const char *fileName
     va_copy(argsCopy, args);
 
     const int msgLen = vsnprintf(NULL, 0, format, args);
-    report->msg = storageAdd(storage, msgLen + 1);
-    vsnprintf(report->msg, msgLen + 1, format, argsCopy);
+    char *reportMsg = storageAdd(storage, msgLen + 1);
+    vsnprintf(reportMsg, msgLen + 1, format, argsCopy);
+    report->msg = reportMsg;
 
     va_end(argsCopy);
 }
@@ -96,7 +99,7 @@ char *storageAddStr(Storage *storage, int64_t len)
 }
 
 
-DynArray *storageAddDynArray(Storage *storage, struct tagType *type, int64_t len)
+DynArray *storageAddDynArray(Storage *storage, const struct tagType *type, int64_t len)
 {
     DynArray *array = storageAdd(storage, sizeof(DynArray));
 
@@ -132,7 +135,7 @@ void storageRemove(Storage *storage, void *data)
 
 void *storageRealloc(Storage *storage, void *data, int64_t size)
 {
-    StorageChunk *chunk = (StorageChunk *)((char *)data - sizeof(StorageChunk));
+    const StorageChunk *chunk = (const StorageChunk *)((char *)data - sizeof(StorageChunk));
 
     void *newData = storageAdd(storage, size);
     memcpy(newData, data, chunk->size);
@@ -154,8 +157,9 @@ static const char *moduleImplLibSuffix()
     #else
         return "_linux";
     #endif
-#endif
+#else
     return "";
+#endif
 }
 
 
@@ -167,8 +171,9 @@ static void *moduleLoadImplLib(const char *path)
     #else
         return dlopen(path, RTLD_LOCAL | RTLD_LAZY);
     #endif
-#endif
+#else
     return NULL;
+#endif
 }
 
 
@@ -192,8 +197,9 @@ static void *moduleLoadImplLibFunc(void *lib, const char *name)
     #else
         return dlsym(lib, name);
     #endif
-#endif
+#else
     return NULL;
+#endif
 }
 
 
@@ -223,7 +229,7 @@ void moduleFree(Modules *modules)
 }
 
 
-void moduleNameFromPath(Modules *modules, const char *path, char *folder, char *name, int size)
+void moduleNameFromPath(const Modules *modules, const char *path, char *folder, char *name, int size)
 {
     const char *slash = strrchr(path, '/');
     const char *backslash = strrchr(path, '\\');
@@ -247,9 +253,9 @@ void moduleNameFromPath(Modules *modules, const char *path, char *folder, char *
 }
 
 
-int moduleFind(Modules *modules, const char *path)
+int moduleFind(const Modules *modules, const char *path)
 {
-    unsigned int pathHash = hash(path);
+    const unsigned int pathHash = hash(path);
     for (int i = 0; i < modules->numModules; i++)
         if (modules->module[i]->pathHash == pathHash && strcmp(modules->module[i]->path, path) == 0)
             return i;
@@ -257,7 +263,7 @@ int moduleFind(Modules *modules, const char *path)
 }
 
 
-int moduleFindImported(Modules *modules, Blocks *blocks, const char *alias)
+int moduleFindImported(const Modules *modules, const Blocks *blocks, const char *alias)
 {
     for (int i = 0; i < modules->numModules; i++)
     {
@@ -329,9 +335,9 @@ int moduleAdd(Modules *modules, const char *path)
 }
 
 
-ModuleSource *moduleFindSource(Modules *modules, const char *path)
+const ModuleSource *moduleFindSource(const Modules *modules, const char *path)
 {
-    unsigned int pathHash = hash(path);
+    const unsigned int pathHash = hash(path);
     for (int i = 0; i < modules->numModuleSources; i++)
         if (modules->moduleSource[i]->pathHash == pathHash && strcmp(modules->moduleSource[i]->path, path) == 0)
             return modules->moduleSource[i];
@@ -371,7 +377,7 @@ void moduleAddSource(Modules *modules, const char *path, const char *source, boo
 }
 
 
-void *moduleGetImplLibFunc(Module *module, const char *name)
+void *moduleGetImplLibFunc(const Module *module, const char *name)
 {
     if (module->implLib)
         return moduleLoadImplLibFunc(module->implLib, name);
@@ -419,7 +425,7 @@ bool modulePathIsAbsolute(const char *path)
 }
 
 
-bool moduleRegularizePath(Modules *modules, const char *path, const char *curFolder, char *regularizedPath, int size)
+bool moduleRegularizePath(const Modules *modules, const char *path, const char *curFolder, char *regularizedPath, int size)
 {
     char *absolutePath = storageAdd(modules->storage, size);
     snprintf(absolutePath, size, "%s%s", modulePathIsAbsolute(path) ? "" : curFolder, path);
@@ -427,7 +433,8 @@ bool moduleRegularizePath(Modules *modules, const char *path, const char *curFol
     char **separators = storageAdd(modules->storage, size * sizeof(char *));
     int numSeparators = 0;
 
-    char *readCh = absolutePath, *writeCh = regularizedPath;
+    const char *readCh = absolutePath;
+    char *writeCh = regularizedPath;
     int numDots = 0;
 
     while (*readCh)
@@ -499,7 +506,7 @@ bool moduleRegularizePath(Modules *modules, const char *path, const char *curFol
 }
 
 
-void moduleAssertRegularizePath(Modules *modules, const char *path, const char *curFolder, char *regularizedPath, int size)
+void moduleAssertRegularizePath(const Modules *modules, const char *path, const char *curFolder, char *regularizedPath, int size)
 {
     if (!moduleRegularizePath(modules, path, curFolder, regularizedPath, size))
         modules->error->handler(modules->error->context, "Invalid module path %s", path);
@@ -519,7 +526,7 @@ void blocksInit(Blocks *blocks, Error *error)
 }
 
 
-void blocksEnterFn(Blocks *blocks, struct tagIdent *fn, bool hasUpvalues)
+void blocksEnterFn(Blocks *blocks, const struct tagIdent *fn, bool hasUpvalues)
 {
     if (blocks->top >= MAX_BLOCK_NESTING)
         blocks->error->handler(blocks->error->context, "Block nesting is too deep");
@@ -553,7 +560,7 @@ void blocksReenter(Blocks *blocks)
 }
 
 
-int blocksCurrent(Blocks *blocks)
+int blocksCurrent(const Blocks *blocks)
 {
     return blocks->item[blocks->top].block;
 }
@@ -568,9 +575,9 @@ void externalInit(Externals *externals, Storage *storage)
 }
 
 
-External *externalFind(Externals *externals, const char *name)
+External *externalFind(const Externals *externals, const char *name)
 {
-    unsigned int nameHash = hash(name);
+    const unsigned int nameHash = hash(name);
 
     for (External *external = externals->first; external; external = external->next)
         if (external->hash == nameHash && strcmp(external->name, name) == 0)

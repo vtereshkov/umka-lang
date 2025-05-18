@@ -51,7 +51,7 @@ void typeInit(Types *types, Storage *storage, Error *error)
 }
 
 
-Type *typeAdd(Types *types, Blocks *blocks, TypeKind kind)
+Type *typeAdd(Types *types, const Blocks *blocks, TypeKind kind)
 {
     Type *type = storageAdd(types->storage, sizeof(Type));
 
@@ -65,9 +65,9 @@ Type *typeAdd(Types *types, Blocks *blocks, TypeKind kind)
 }
 
 
-void typeDeepCopy(Storage *storage, Type *dest, Type *src)
+void typeDeepCopy(Storage *storage, Type *dest, const Type *src)
 {
-    Type *next = dest->next;
+    const Type *next = dest->next;
     *dest = *src;
     dest->next = next;
 
@@ -76,8 +76,9 @@ void typeDeepCopy(Storage *storage, Type *dest, Type *src)
         dest->field = storageAdd(storage, dest->numItems * sizeof(Field *));
         for (int i = 0; i < dest->numItems; i++)
         {
-            dest->field[i] = storageAdd(storage, sizeof(Field));
-            *(dest->field[i]) = *(src->field[i]);
+            Field *field = storageAdd(storage, sizeof(Field));
+            *field = *(src->field[i]);
+            dest->field[i] = field;
         }
     }
     else if (typeEnum(dest) && dest->numItems > 0)
@@ -85,22 +86,24 @@ void typeDeepCopy(Storage *storage, Type *dest, Type *src)
         dest->enumConst = storageAdd(storage, dest->numItems * sizeof(EnumConst *));
         for (int i = 0; i < dest->numItems; i++)
         {
-            dest->enumConst[i] = storageAdd(storage, sizeof(EnumConst));
-            *(dest->enumConst[i]) = *(src->enumConst[i]);
+            EnumConst *enumConst = storageAdd(storage, sizeof(EnumConst));
+            *enumConst = *(src->enumConst[i]);
+            dest->enumConst[i] = enumConst;
         }
     }
     else if (dest->kind == TYPE_FN && dest->sig.numParams > 0)
     {
         for (int i = 0; i < dest->sig.numParams; i++)
         {
-            dest->sig.param[i] = storageAdd(storage, sizeof(Param));
-            *(dest->sig.param[i]) = *(src->sig.param[i]);
+            Param *param = storageAdd(storage, sizeof(Param));
+            *param = *(src->sig.param[i]);
+            dest->sig.param[i] = param;
         }
     }
 }
 
 
-Type *typeAddPtrTo(Types *types, Blocks *blocks, Type *type)
+Type *typeAddPtrTo(Types *types, const Blocks *blocks, const Type *type)
 {
     Type *ptrType = typeAdd(types, blocks, TYPE_PTR);
     ptrType->base = type;
@@ -108,7 +111,7 @@ Type *typeAddPtrTo(Types *types, Blocks *blocks, Type *type)
 }
 
 
-int typeSizeNoCheck(Type *type)
+int typeSizeNoCheck(const Type *type)
 {
     switch (type->kind)
     {
@@ -151,9 +154,9 @@ int typeSizeNoCheck(Type *type)
 }
 
 
-int typeSize(Types *types, Type *type)
+int typeSize(const Types *types, const Type *type)
 {
-    int size = typeSizeNoCheck(type);
+    const int size = typeSizeNoCheck(type);
     if (size < 0)
     {
         char buf[DEFAULT_STR_LEN + 1];
@@ -163,7 +166,7 @@ int typeSize(Types *types, Type *type)
 }
 
 
-int typeAlignmentNoCheck(Type *type)
+int typeAlignmentNoCheck(const Type *type)
 {
     switch (type->kind)
     {
@@ -206,9 +209,9 @@ int typeAlignmentNoCheck(Type *type)
 }
 
 
-int typeAlignment(Types *types, Type *type)
+int typeAlignment(const Types *types, const Type *type)
 {
-    int alignment = typeAlignmentNoCheck(type);
+    const int alignment = typeAlignmentNoCheck(type);
     if (alignment <= 0)
     {
         char buf[DEFAULT_STR_LEN + 1];
@@ -218,7 +221,7 @@ int typeAlignment(Types *types, Type *type)
 }
 
 
-bool typeHasPtr(Type *type, bool alsoWeakPtr)
+bool typeHasPtr(const Type *type, bool alsoWeakPtr)
 {
     if (type->kind == TYPE_PTR      || type->kind == TYPE_STR       || type->kind == TYPE_MAP     ||
         type->kind == TYPE_DYNARRAY || type->kind == TYPE_INTERFACE || type->kind == TYPE_CLOSURE || type->kind == TYPE_FIBER)
@@ -239,7 +242,7 @@ bool typeHasPtr(Type *type, bool alsoWeakPtr)
 }
 
 
-static bool typeDefaultParamEqual(Const *left, Const *right, Type *type)
+static bool typeDefaultParamEqual(const Const *left, const Const *right, const Type *type)
 {
     if (typeOrdinal(type) || type->kind == TYPE_FN)
         return left->intVal == right->intVal;
@@ -266,7 +269,7 @@ static bool typeDefaultParamEqual(Const *left, Const *right, Type *type)
 }
 
 
-static bool typeEquivalentRecursive(Type *left, Type *right, bool checkTypeIdents, VisitedTypePair *firstPair)
+static bool typeEquivalentRecursive(const Type *left, const Type *right, bool checkTypeIdents, VisitedTypePair *firstPair)
 {
     // Recursively defined types visited before (need to check first in order to break a possible circular definition)
     VisitedTypePair *pair = firstPair;
@@ -389,19 +392,19 @@ static bool typeEquivalentRecursive(Type *left, Type *right, bool checkTypeIdent
 }
 
 
-bool typeEquivalent(Type *left, Type *right)
+bool typeEquivalent(const Type *left, const Type *right)
 {
     return typeEquivalentRecursive(left, right, true, NULL);
 }
 
 
-bool typeEquivalentExceptIdent(Type *left, Type *right)
+bool typeEquivalentExceptIdent(const Type *left, const Type *right)
 {
     return typeEquivalentRecursive(left, right, false, NULL);
 }
 
 
-bool typeCompatible(Type *left, Type *right)
+bool typeCompatible(const Type *left, const Type *right)
 {
     if (typeEquivalent(left, right))
         return true;
@@ -416,7 +419,7 @@ bool typeCompatible(Type *left, Type *right)
 }
 
 
-void typeAssertCompatible(Types *types, Type *left, Type *right)
+void typeAssertCompatible(const Types *types, const Type *left, const Type *right)
 {
     if (!typeCompatible(left, right))
     {
@@ -426,7 +429,7 @@ void typeAssertCompatible(Types *types, Type *left, Type *right)
 }
 
 
-void typeAssertCompatibleParam(Types *types, Type *left, Type *right, Type *fnType, int paramIndex)
+void typeAssertCompatibleParam(const Types *types, const Type *left, const Type *right, const Type *fnType, int paramIndex)
 {
     if (!typeCompatible(left, right))
     {
@@ -436,7 +439,7 @@ void typeAssertCompatibleParam(Types *types, Type *left, Type *right, Type *fnTy
 }
 
 
-void typeAssertCompatibleBuiltin(Types *types, Type *type, /*BuiltinFunc*/ int builtin, bool condition)
+void typeAssertCompatibleBuiltin(const Types *types, const Type *type, /*BuiltinFunc*/ int builtin, bool condition)
 {
     if (!condition)
     {
@@ -446,7 +449,7 @@ void typeAssertCompatibleBuiltin(Types *types, Type *type, /*BuiltinFunc*/ int b
 }
 
 
-bool typeValidOperator(Type *type, TokenKind op)
+bool typeValidOperator(const Type *type, TokenKind op)
 {
     switch (op)
     {
@@ -487,7 +490,7 @@ bool typeValidOperator(Type *type, TokenKind op)
 }
 
 
-void typeAssertValidOperator(Types *types, Type *type, TokenKind op)
+void typeAssertValidOperator(const Types *types, const Type *type, TokenKind op)
 {
     if (!typeValidOperator(type, op))
     {
@@ -502,13 +505,13 @@ void typeEnableForward(Types *types, bool enable)
     types->forwardTypesEnabled = enable;
 
     if (!enable)
-        for (Type *type = types->first; type; type = type->next)
+        for (const Type *type = types->first; type; type = type->next)
             if (type->kind == TYPE_FORWARD)
                 types->error->handler(types->error->context, "Unresolved forward declaration of %s", (Ident *)(type->typeIdent)->name);
 }
 
 
-Field *typeFindField(Type *structType, const char *name, int *index)
+const Field *typeFindField(const Type *structType, const char *name, int *index)
 {
     if (structType->kind == TYPE_STRUCT || structType->kind == TYPE_INTERFACE || structType->kind == TYPE_CLOSURE)
     {
@@ -525,16 +528,16 @@ Field *typeFindField(Type *structType, const char *name, int *index)
 }
 
 
-Field *typeAssertFindField(Types *types, Type *structType, const char *name, int *index)
+const Field *typeAssertFindField(const Types *types, const Type *structType, const char *name, int *index)
 {
-    Field *res = typeFindField(structType, name, index);
+    const Field *res = typeFindField(structType, name, index);
     if (!res)
         types->error->handler(types->error->context, "Unknown field %s", name);
     return res;
 }
 
 
-Field *typeAddField(Types *types, Type *structType, Type *fieldType, const char *fieldName)
+const Field *typeAddField(const Types *types, Type *structType, const Type *fieldType, const char *fieldName)
 {
     IdentName fieldNameBuf;
     const char *name;
@@ -548,8 +551,7 @@ Field *typeAddField(Types *types, Type *structType, Type *fieldType, const char 
         name = fieldNameBuf;
     }
 
-    Field *field = typeFindField(structType, name, NULL);
-    if (field)
+    if (typeFindField(structType, name, NULL))
         types->error->handler(types->error->context, "Duplicate field %s", name);
 
     if (fieldType->kind == TYPE_FORWARD)
@@ -561,14 +563,14 @@ Field *typeAddField(Types *types, Type *structType, Type *fieldType, const char 
     int minNextFieldOffset = 0;
     if (structType->numItems > 0)
     {
-        Field *lastField = structType->field[structType->numItems - 1];
+        const Field *lastField = structType->field[structType->numItems - 1];
         minNextFieldOffset = lastField->offset + typeSize(types, lastField->type);
     }
 
     if (typeSize(types, fieldType) > INT_MAX - minNextFieldOffset)
         types->error->handler(types->error->context, "Structure is too large");
 
-    field = storageAdd(types->storage, sizeof(Field));
+    Field *field = storageAdd(types->storage, sizeof(Field));
 
     strncpy(field->name, name, MAX_IDENT_LEN);
     field->name[MAX_IDENT_LEN] = 0;
@@ -589,7 +591,7 @@ Field *typeAddField(Types *types, Type *structType, Type *fieldType, const char 
 }
 
 
-EnumConst *typeFindEnumConst(Type *enumType, const char *name)
+const EnumConst *typeFindEnumConst(const Type *enumType, const char *name)
 {
     if (typeEnum(enumType))
     {
@@ -602,16 +604,16 @@ EnumConst *typeFindEnumConst(Type *enumType, const char *name)
 }
 
 
-EnumConst *typeAssertFindEnumConst(Types *types, Type *enumType, const char *name)
+const EnumConst *typeAssertFindEnumConst(const Types *types, const Type *enumType, const char *name)
 {
-    EnumConst *res = typeFindEnumConst(enumType, name);
+    const EnumConst *res = typeFindEnumConst(enumType, name);
     if (!res)
         types->error->handler(types->error->context, "Unknown enumeration constant %s", name);
     return res;
 }
 
 
-EnumConst *typeFindEnumConstByVal(Type *enumType, Const val)
+const EnumConst *typeFindEnumConstByVal(const Type *enumType, Const val)
 {
     if (typeEnum(enumType))
     {
@@ -623,17 +625,15 @@ EnumConst *typeFindEnumConstByVal(Type *enumType, Const val)
 }
 
 
-EnumConst *typeAddEnumConst(Types *types, Type *enumType, const char *name, Const val)
+const EnumConst *typeAddEnumConst(const Types *types, Type *enumType, const char *name, Const val)
 {
-    EnumConst *enumConst = typeFindEnumConst(enumType, name);
-    if (enumConst)
+    if (typeFindEnumConst(enumType, name))
         types->error->handler(types->error->context, "Duplicate enumeration constant %s", name);
 
-    enumConst = typeFindEnumConstByVal(enumType, val);
-    if (enumConst)
+    if (typeFindEnumConstByVal(enumType, val))
         types->error->handler(types->error->context, "Duplicate enumeration constant value %lld", val.intVal);
 
-    enumConst = storageAdd(types->storage, sizeof(EnumConst));
+    EnumConst *enumConst = storageAdd(types->storage, sizeof(EnumConst));
 
     strncpy(enumConst->name, name, MAX_IDENT_LEN);
     enumConst->name[MAX_IDENT_LEN] = 0;
@@ -653,9 +653,9 @@ EnumConst *typeAddEnumConst(Types *types, Type *enumType, const char *name, Cons
 }
 
 
-Param *typeFindParam(Signature *sig, const char *name)
+const Param *typeFindParam(const Signature *sig, const char *name)
 {
-    unsigned int nameHash = hash(name);
+    const unsigned int nameHash = hash(name);
     for (int i = 0; i < sig->numParams; i++)
         if (sig->param[i]->hash == nameHash && strcmp(sig->param[i]->name, name) == 0)
             return sig->param[i];
@@ -664,30 +664,29 @@ Param *typeFindParam(Signature *sig, const char *name)
 }
 
 
-Param *typeAddParam(Types *types, Signature *sig, Type *type, const char *name)
+const Param *typeAddParam(const Types *types, Signature *sig, const Type *type, const char *name, Const defaultVal)
 {
-    Param *param = typeFindParam(sig, name);
-    if (param)
+    if (typeFindParam(sig, name))
         types->error->handler(types->error->context, "Duplicate parameter %s", name);
 
     if (sig->numParams > MAX_PARAMS)
         types->error->handler(types->error->context, "Too many parameters");
 
-    param = storageAdd(types->storage, sizeof(Param));
+    Param *param = storageAdd(types->storage, sizeof(Param));
 
     strncpy(param->name, name, MAX_IDENT_LEN);
     param->name[MAX_IDENT_LEN] = 0;
 
     param->hash = hash(name);
     param->type = type;
-    param->defaultVal.intVal = 0;
+    param->defaultVal = defaultVal;
 
     sig->param[sig->numParams++] = param;
     return param;
 }
 
 
-int typeParamSizeUpTo(Types *types, Signature *sig, int index)
+int typeParamSizeUpTo(const Types *types, const Signature *sig, int index)
 {
     // All parameters are slot-aligned
     int size = 0;
@@ -697,23 +696,23 @@ int typeParamSizeUpTo(Types *types, Signature *sig, int index)
 }
 
 
-int typeParamSizeTotal(Types *types, Signature *sig)
+int typeParamSizeTotal(const Types *types, const Signature *sig)
 {
     return typeParamSizeUpTo(types, sig, sig->numParams - 1);
 }
 
 
-int typeParamOffset(Types *types, Signature *sig, int index)
+int typeParamOffset(const Types *types, const Signature *sig, int index)
 {
-    int paramSizeUpToIndex = typeParamSizeUpTo(types, sig, index);
-    int paramSizeTotal     = typeParamSizeTotal(types, sig);
+    const int paramSizeUpToIndex = typeParamSizeUpTo(types, sig, index);
+    const int paramSizeTotal     = typeParamSizeTotal(types, sig);
     return (paramSizeTotal - paramSizeUpToIndex) + 2 * sizeof(Slot);  // + 2 slots for old base pointer and return address
 }
 
 
-ParamLayout *typeMakeParamLayout(Types *types, Storage *storage, Signature *sig)
+const ParamLayout *typeMakeParamLayout(const Types *types, const Signature *sig)
 {
-    ParamLayout *layout = storageAdd(storage, sizeof(ParamLayout) + sig->numParams * sizeof(int64_t));
+    ParamLayout *layout = storageAdd(types->storage, sizeof(ParamLayout) + sig->numParams * sizeof(int64_t));
 
     layout->numParams = sig->numParams;
     layout->numResultParams = typeStructured(sig->resultType) ? 1 : 0;
@@ -726,9 +725,9 @@ ParamLayout *typeMakeParamLayout(Types *types, Storage *storage, Signature *sig)
 }
 
 
-ParamAndLocalVarLayout *typeMakeParamAndLocalVarLayout(Storage *storage, ParamLayout *paramLayout, int localVarSlots)
+const ParamAndLocalVarLayout *typeMakeParamAndLocalVarLayout(const Types *types, const ParamLayout *paramLayout, int localVarSlots)
 {
-    ParamAndLocalVarLayout *layout = storageAdd(storage, sizeof(ParamAndLocalVarLayout));
+    ParamAndLocalVarLayout *layout = storageAdd(types->storage, sizeof(ParamAndLocalVarLayout));
     layout->paramLayout = paramLayout;
     layout->localVarSlots = localVarSlots;
     return layout;
@@ -741,7 +740,7 @@ const char *typeKindSpelling(TypeKind kind)
 }
 
 
-static char *typeSpellingRecursive(Type *type, char *buf, int size, int depth)
+static char *typeSpellingRecursive(const Type *type, char *buf, int size, int depth)
 {
     if (type->block == 0 && type->typeIdent)
         snprintf(buf, size, "%s", type->typeIdent->name);
@@ -816,7 +815,7 @@ static char *typeSpellingRecursive(Type *type, char *buf, int size, int depth)
 
         if (type->kind == TYPE_PTR || type->kind == TYPE_WEAKPTR || type->kind == TYPE_ARRAY || type->kind == TYPE_DYNARRAY || type->kind == TYPE_MAP)
         {
-            Type *itemType = (type->kind == TYPE_MAP) ? typeMapItem(type) : type->base;
+            const Type *itemType = (type->kind == TYPE_MAP) ? typeMapItem(type) : type->base;
 
             char itemBuf[DEFAULT_STR_LEN + 1];
             if (depth > 0)
@@ -829,7 +828,7 @@ static char *typeSpellingRecursive(Type *type, char *buf, int size, int depth)
 }
 
 
-char *typeSpelling(Type *type, char *buf)
+char *typeSpelling(const Type *type, char *buf)
 {
     enum {MAX_TYPE_SPELLING_DEPTH = 10};
     return typeSpellingRecursive(type, buf, DEFAULT_STR_LEN + 1, MAX_TYPE_SPELLING_DEPTH);

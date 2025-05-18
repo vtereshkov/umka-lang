@@ -41,7 +41,7 @@ typedef StrDimensions DynArrayDimensions;
 typedef struct
 {
     // Must have 8 byte alignment
-    struct tagType *type;
+    const struct tagType *type;
     int64_t itemSize;           // Duplicates information contained in type, but useful for better performance
     void *data;                 // Allocated chunk should start at (char *)data - sizeof(DynArrayDimensions)
 } DynArray;
@@ -51,7 +51,7 @@ typedef struct
 {
     // The C equivalent of the Umka interface type
     void *self;
-    struct tagType *selfType;
+    const struct tagType *selfType;
     // Methods are omitted - do not use sizeof() for non-empty interfaces
 } Interface;
 
@@ -76,15 +76,15 @@ typedef struct tagMapNode
 typedef struct
 {
     // Must have 8 byte alignment
-    struct tagType *type;
+    const struct tagType *type;
     MapNode *root;
 } Map;
 
 
 typedef struct
 {
-    char *fileName;
-    char *fnName;
+    const char *fileName;
+    const char *fnName;
     int line;
 } DebugInfo;
 
@@ -94,10 +94,10 @@ typedef void (*WarningCallback)(void * /*UmkaError*/ warning);
 
 typedef struct      // Must be identical to UmkaError
 {
-    char *fileName;
-    char *fnName;
+    const char *fileName;
+    const char *fnName;
     int line, pos, code;
-    char *msg;
+    const char *msg;
 } ErrorReport;
 
 
@@ -105,7 +105,7 @@ typedef struct
 {
     void (*handler)(void *context, const char *format, ...);
     void (*runtimeHandler)(void *context, int code, const char *format, ...);
-    void (*warningHandler)(void *context, DebugInfo *debug, const char *format, ...);
+    void (*warningHandler)(void *context, const DebugInfo *debug, const char *format, ...);
     WarningCallback warningCallback;
     void *context;
     jmp_buf jumper;
@@ -151,7 +151,7 @@ typedef struct
 typedef struct
 {
     Module *module[MAX_MODULES];
-    ModuleSource *moduleSource[MAX_MODULES];
+    const ModuleSource *moduleSource[MAX_MODULES];
     int numModules, numModuleSources;
     char curFolder[DEFAULT_STR_LEN + 1];
     bool implLibsEnabled;
@@ -163,7 +163,7 @@ typedef struct
 typedef struct
 {
     int block;
-    struct tagIdent *fn;
+    const struct tagIdent *fn;
     int localVarSize;           // For function blocks only
     bool hasReturn;
     bool hasUpvalues;
@@ -207,7 +207,7 @@ typedef struct
 
 typedef struct
 {
-    ParamLayout *paramLayout;
+    const ParamLayout *paramLayout;
     int64_t localVarSlots;
 } ParamAndLocalVarLayout;
 
@@ -218,33 +218,33 @@ void  storageInit               (Storage *storage, Error *error);
 void  storageFree               (Storage *storage);
 void *storageAdd                (Storage *storage, int64_t size);
 char *storageAddStr             (Storage *storage, int64_t len);
-DynArray *storageAddDynArray    (Storage *storage, struct tagType *type, int64_t len);
+DynArray *storageAddDynArray    (Storage *storage, const struct tagType *type, int64_t len);
 void storageRemove              (Storage *storage, void *data);
 void *storageRealloc            (Storage *storage, void *data, int64_t size);
 
 void  moduleInit                (Modules *modules, Storage *storage, bool implLibsEnabled, Error *error);
 void  moduleFree                (Modules *modules);
-void  moduleNameFromPath        (Modules *modules, const char *path, char *folder, char *name, int size);
-int   moduleFind                (Modules *modules, const char *path);
-int   moduleFindImported        (Modules *modules, Blocks *blocks, const char *name);
+void  moduleNameFromPath        (const Modules *modules, const char *path, char *folder, char *name, int size);
+int   moduleFind                (const Modules *modules, const char *path);
+int   moduleFindImported        (const Modules *modules, const Blocks *blocks, const char *alias);
 int   moduleAdd                 (Modules *modules, const char *path);
-ModuleSource *moduleFindSource  (Modules *modules, const char *path);
+const ModuleSource *moduleFindSource(const Modules *modules, const char *path);
 void  moduleAddSource           (Modules *modules, const char *path, const char *source, bool trusted);
-void *moduleGetImplLibFunc      (Module  *module,  const char *name);
+void *moduleGetImplLibFunc      (const Module  *module,  const char *name);
 char *moduleCurFolder           (char *buf, int size);
 bool  modulePathIsAbsolute      (const char *path);
-bool  moduleRegularizePath      (Modules *modules, const char *path, const char *curFolder, char *regularizedPath, int size);
-void  moduleAssertRegularizePath(Modules *modules, const char *path, const char *curFolder, char *regularizedPath, int size);
+bool  moduleRegularizePath      (const Modules *modules, const char *path, const char *curFolder, char *regularizedPath, int size);
+void  moduleAssertRegularizePath(const Modules *modules, const char *path, const char *curFolder, char *regularizedPath, int size);
 
 void blocksInit   (Blocks *blocks, Error *error);
-void blocksEnterFn(Blocks *blocks, struct tagIdent *fn, bool hasUpvalues);
+void blocksEnterFn(Blocks *blocks, const struct tagIdent *fn, bool hasUpvalues);
 void blocksEnter  (Blocks *blocks);
 void blocksReenter(Blocks *blocks);
 void blocksLeave  (Blocks *blocks);
-int  blocksCurrent(Blocks *blocks);
+int  blocksCurrent(const Blocks *blocks);
 
 void externalInit       (Externals *externals, Storage *storage);
-External *externalFind  (Externals *externals, const char *name);
+External *externalFind  (const Externals *externals, const char *name);
 External *externalAdd   (Externals *externals, const char *name, void *entry, bool resolveInTrusted);
 
 

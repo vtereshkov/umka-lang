@@ -30,7 +30,8 @@ typedef struct
     Error       error;
 
     // Pointers to built-in types
-    Type *voidType,
+    const Type
+         *voidType,
          *nullType,
          *int8Type,  *int16Type,  *int32Type,  *intType,
          *uint8Type, *uint16Type, *uint32Type, *uintType,
@@ -61,6 +62,6 @@ char *compilerAsm               (Compiler *comp);
 bool compilerAddModule          (Compiler *comp, const char *fileName, const char *sourceString);
 bool compilerAddFunc            (Compiler *comp, const char *name, ExternFunc func);
 bool compilerGetFunc            (Compiler *comp, const char *moduleName, const char *funcName, FuncContext *fn);
-void compilerMakeFuncContext    (Compiler *comp, Type *fnType, int entryOffset, FuncContext *fn);
+void compilerMakeFuncContext    (Compiler *comp, const Type *fnType, int entryOffset, FuncContext *fn);
 
 #endif // UMKA_COMPILER_H_INCLUDED
