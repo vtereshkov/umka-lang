@@ -329,8 +329,8 @@ const char *identMethodNameWithRcv(const Idents *idents, const Ident *method)
     char typeBuf[DEFAULT_STR_LEN + 1];
     typeSpelling(method->type->sig.param[0]->type, typeBuf);
 
-    char *buf = storageAdd(idents->storage, DEFAULT_STR_LEN + 1);
-    snprintf(buf, DEFAULT_STR_LEN + 1, "(%s)%s", typeBuf, method->name);
+    char *buf = storageAdd(idents->storage, 2 * DEFAULT_STR_LEN + 2 + 1);
+    snprintf(buf, 2 * DEFAULT_STR_LEN + 2 + 1, "(%s)%s", typeBuf, method->name);
 
     return buf;
 }
