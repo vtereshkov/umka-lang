@@ -51,7 +51,7 @@ void typeInit(Types *types, Storage *storage, Error *error)
 }
 
 
-Type *typeAdd(Types *types, Blocks *blocks, TypeKind kind)
+Type *typeAdd(Types *types, const Blocks *blocks, TypeKind kind)
 {
     Type *type = storageAdd(types->storage, sizeof(Type));
 
@@ -103,7 +103,7 @@ void typeDeepCopy(Storage *storage, Type *dest, const Type *src)
 }
 
 
-Type *typeAddPtrTo(Types *types, Blocks *blocks, const Type *type)
+Type *typeAddPtrTo(Types *types, const Blocks *blocks, const Type *type)
 {
     Type *ptrType = typeAdd(types, blocks, TYPE_PTR);
     ptrType->base = type;

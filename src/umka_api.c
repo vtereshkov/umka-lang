@@ -55,7 +55,7 @@ static void runtimeError(void *context, int code, const char *format, ...)
     va_start(args, format);
 
     Compiler *comp = context;
-    DebugInfo *debug = &comp->vm.fiber->debugPerInstr[comp->vm.fiber->ip];
+    const DebugInfo *debug = &comp->vm.fiber->debugPerInstr[comp->vm.fiber->ip];
     errorReportInit(&comp->error.report, &comp->storage, debug->fileName, debug->fnName, debug->line, 1, code, format, args);
 
     vmKill(&comp->vm);

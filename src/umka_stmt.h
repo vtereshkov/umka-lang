@@ -10,7 +10,7 @@ void doZeroVar(Compiler *comp, const Ident *ident);
 void doResolveExtern(Compiler *comp);
 
 void parseAssignmentStmt(Compiler *comp, const Type *type, Const *varPtrConstList);
-void parseDeclAssignmentStmt(Compiler *comp, IdentName *names, bool *exported, int num, bool constExpr);
+void parseDeclAssignmentStmt(Compiler *comp, IdentName *names, const bool *exported, int num, bool constExpr);
 
 void parseFnBlock(Compiler *comp, Ident *fn, const Type *upvaluesStructType);
 void parseFnPrototype(Compiler *comp, Ident *fn);

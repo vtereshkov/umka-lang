@@ -732,7 +732,7 @@ void doExplicitTypeConv(Compiler *comp, const Type *dest, const Type **src, Cons
 }
 
 
-static void doApplyStrCat(Compiler *comp, Const *constant, Const *rightConstant, TokenKind op)
+static void doApplyStrCat(Compiler *comp, Const *constant, const Const *rightConstant, TokenKind op)
 {
     if (constant)
     {

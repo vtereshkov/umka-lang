@@ -209,7 +209,7 @@ typedef struct
 {
     int refCnt;
     int size;
-    const struct tagType *type;       // Optional type for garbage collection
+    const struct tagType *type; // Optional type for garbage collection
     ExternFunc onFree;          // Optional callback called when ref count reaches zero
     int64_t ip;                 // Optional instruction pointer at which the chunk has been allocated
     bool isStack;
@@ -249,13 +249,13 @@ typedef void (*HookFunc)(const char *fileName, const char *funcName, int line);
 typedef struct tagFiber
 {
     // Must have 8 byte alignment
-    Instruction *code;
+    const Instruction *code;
     int ip;
     Slot *stack, *top, *base;
     int stackSize;
     Slot reg[NUM_REGS];
     struct tagFiber *parent;
-    DebugInfo *debugPerInstr;
+    const DebugInfo *debugPerInstr;
     RefCntChangeCandidates *refCntChangeCandidates;
     struct tagVM *vm;
     bool alive;
@@ -277,11 +277,11 @@ typedef struct tagVM
 
 void vmInit                     (VM *vm, Storage *storage, int stackSize /* slots */, bool fileSystemEnabled, Error *error);
 void vmFree                     (VM *vm);
-void vmReset                    (VM *vm, Instruction *code, DebugInfo *debugPerInstr);
+void vmReset                    (VM *vm, const Instruction *code, const DebugInfo *debugPerInstr);
 void vmRun                      (VM *vm, FuncContext *fn);
 bool vmAlive                    (VM *vm);
 void vmKill                     (VM *vm);
-int vmAsm                       (int ip, Instruction *code, DebugInfo *debugPerInstr, char *buf, int size);
+int vmAsm                       (int ip, const Instruction *code, const DebugInfo *debugPerInstr, char *buf, int size);
 bool vmUnwindCallStack          (VM *vm, Slot **base, int *ip);
 void vmSetHook                  (VM *vm, HookEvent event, HookFunc hook);
 void *vmAllocData               (VM *vm, int size, ExternFunc onFree);

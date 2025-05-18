@@ -332,7 +332,7 @@ static void parseSingleDeclAssignmentStmt(Compiler *comp, IdentName name, bool e
 
 
 // listDeclAssignmentStmt = identList ":=" exprList.
-static void parseListDeclAssignmentStmt(Compiler *comp, IdentName *names, bool *exported, int num, bool constExpr)
+static void parseListDeclAssignmentStmt(Compiler *comp, IdentName *names, const bool *exported, int num, bool constExpr)
 {
     const Type *rightListType = NULL;
     Const rightListConstantBuf, *rightListConstant = constExpr ? &rightListConstantBuf : NULL;
@@ -404,7 +404,7 @@ static void parseListDeclAssignmentStmt(Compiler *comp, IdentName *names, bool *
 
 
 // declAssignmentStmt = singleDeclAssignmentStmt | listDeclAssignmentStmt.
-void parseDeclAssignmentStmt(Compiler *comp, IdentName *names, bool *exported, int num, bool constExpr)
+void parseDeclAssignmentStmt(Compiler *comp, IdentName *names, const bool *exported, int num, bool constExpr)
 {
     if (num > 1)
         parseListDeclAssignmentStmt(comp, names, exported, num, constExpr);

@@ -112,10 +112,10 @@ static void parseSignature(Compiler *comp, Signature *sig)
     // Formal parameter list
     lexEat(&comp->lex, TOK_LPAR);
     int numDefaultParams = 0;
-    bool variadicParamListFound = false;
-
+    
     if (comp->lex.tok.kind == TOK_IDENT)
     {
+        bool variadicParamListFound = false;
         while (1)
         {
             if (variadicParamListFound)
@@ -824,7 +824,7 @@ static void parseImportItem(Compiler *comp)
     char path[DEFAULT_STR_LEN + 1] = "";
 
     // Module source strings, if any, have precedence over files
-    char *sourceString = NULL;
+    const char *sourceString = NULL;
     bool sourceTrusted = false;
 
     if (moduleRegularizePath(&comp->modules, comp->lex.tok.strVal, comp->modules.curFolder, path, DEFAULT_STR_LEN + 1))

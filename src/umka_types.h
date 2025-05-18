@@ -100,7 +100,7 @@ typedef struct tagType
     union
     {
         const Field **field;                    // For structures, interfaces and closures
-        const EnumConst **enumConst;                  // For enumerations
+        const EnumConst **enumConst;            // For enumerations
         Signature sig;                          // For functions, including methods
     };
     const struct tagType *next;
@@ -125,9 +125,9 @@ typedef struct
 
 void typeInit(Types *types, Storage *storage, Error *error);
 
-Type *typeAdd       (Types *types, Blocks *blocks, TypeKind kind);
+Type *typeAdd       (Types *types, const Blocks *blocks, TypeKind kind);
 void typeDeepCopy   (Storage *storage, Type *dest, const Type *src);
-Type *typeAddPtrTo  (Types *types, Blocks *blocks, const Type *type);
+Type *typeAddPtrTo  (Types *types, const Blocks *blocks, const Type *type);
 
 int typeSizeNoCheck (const Type *type);
 int typeSize        (const Types *types, const Type *type);
@@ -306,7 +306,7 @@ const Field *typeAddField         (const Types *types, Type *structType, const T
 const EnumConst *typeFindEnumConst        (const Type *enumType, const char *name);
 const EnumConst *typeAssertFindEnumConst  (const Types *types, const Type *enumType, const char *name);
 const EnumConst *typeFindEnumConstByVal   (const Type *enumType, Const val);
-const EnumConst *typeAddEnumConst         (const Types *types, Type *enumType, const char *fieldName, Const val);
+const EnumConst *typeAddEnumConst         (const Types *types, Type *enumType, const char *name, Const val);
 
 const Param *typeFindParam    (const Signature *sig, const char *name);
 const Param *typeAddParam     (const Types *types, Signature *sig, const Type *type, const char *name, Const defaultVal);

@@ -39,9 +39,9 @@ static void convFromRTLDateTime(struct tm *dest, const RTLDateTime *src)
 
 void rtlmemcpy(UmkaStackSlot *params, UmkaStackSlot *result)
 {
-    void *dest   = umkaGetParam(params, 0)->ptrVal;
-    void *src    = umkaGetParam(params, 1)->ptrVal;
-    int   count  = umkaGetParam(params, 2)->intVal;
+    void *dest = umkaGetParam(params, 0)->ptrVal;
+    const void *src = umkaGetParam(params, 1)->ptrVal;
+    const int count = umkaGetParam(params, 2)->intVal;
 
     memcpy(dest, src, count);
 }
@@ -67,8 +67,8 @@ void rtlstderr(UmkaStackSlot *params, UmkaStackSlot *result)
 
 void rtlfopen(UmkaStackSlot *params, UmkaStackSlot *result)
 {
-    const char *name = (const char *)umkaGetParam(params, 0)->ptrVal;
-    const char *mode = (const char *)umkaGetParam(params, 1)->ptrVal;
+    const char *name = umkaGetParam(params, 0)->ptrVal;
+    const char *mode = umkaGetParam(params, 1)->ptrVal;
 
     FILE *file = fopen(name, mode);
     umkaGetResult(params, result)->ptrVal = file;
@@ -83,7 +83,7 @@ void rtlfopenSandbox(UmkaStackSlot *params, UmkaStackSlot *result)
 
 void rtlfclose(UmkaStackSlot *params, UmkaStackSlot *result)
 {
-    FILE *file = (FILE *)umkaGetParam(params, 0)->ptrVal;
+    FILE *file = umkaGetParam(params, 0)->ptrVal;
     umkaGetResult(params, result)->intVal = fclose(file);
 }
 
@@ -96,10 +96,10 @@ void rtlfcloseSandbox(UmkaStackSlot *params, UmkaStackSlot *result)
 
 void rtlfread(UmkaStackSlot *params, UmkaStackSlot *result)
 {
-    void *buf  = umkaGetParam(params, 0)->ptrVal;
-    int   size = umkaGetParam(params, 1)->intVal;
-    int   cnt  = umkaGetParam(params, 2)->intVal;
-    FILE *file = (FILE *)umkaGetParam(params, 3)->ptrVal;
+    void *buf = umkaGetParam(params, 0)->ptrVal;
+    const int size = umkaGetParam(params, 1)->intVal;
+    const int cnt = umkaGetParam(params, 2)->intVal;
+    FILE *file = umkaGetParam(params, 3)->ptrVal;
 
     umkaGetResult(params, result)->intVal = fread(buf, size, cnt, file);
 }
@@ -113,10 +113,10 @@ void rtlfreadSandbox(UmkaStackSlot *params, UmkaStackSlot *result)
 
 void rtlfwrite(UmkaStackSlot *params, UmkaStackSlot *result)
 {
-    void *buf  = umkaGetParam(params, 0)->ptrVal;
-    int   size = umkaGetParam(params, 1)->intVal;
-    int   cnt  = umkaGetParam(params, 2)->intVal;
-    FILE *file = (FILE *)umkaGetParam(params, 3)->ptrVal;
+    const void *buf = umkaGetParam(params, 0)->ptrVal;
+    const int size = umkaGetParam(params, 1)->intVal;
+    const int cnt  = umkaGetParam(params, 2)->intVal;
+    FILE *file = umkaGetParam(params, 3)->ptrVal;
 
     umkaGetResult(params, result)->intVal = fwrite(buf, size, cnt, file);
 }
@@ -130,9 +130,9 @@ void rtlfwriteSandbox(UmkaStackSlot *params, UmkaStackSlot *result)
 
 void rtlfseek(UmkaStackSlot *params, UmkaStackSlot *result)
 {
-    FILE *file   = (FILE *)umkaGetParam(params, 0)->ptrVal;
-    int   offset = umkaGetParam(params, 1)->intVal;
-    int   origin = umkaGetParam(params, 2)->intVal;
+    FILE *file = umkaGetParam(params, 0)->ptrVal;
+    const int offset = umkaGetParam(params, 1)->intVal;
+    const int origin = umkaGetParam(params, 2)->intVal;
 
     int originC = 0;
     if      (origin == 0) originC = SEEK_SET;
@@ -151,7 +151,7 @@ void rtlfseekSandbox(UmkaStackSlot *params, UmkaStackSlot *result)
 
 void rtlftell(UmkaStackSlot *params, UmkaStackSlot *result)
 {
-    FILE *file = (FILE *)umkaGetParam(params, 0)->ptrVal;
+    FILE *file = umkaGetParam(params, 0)->ptrVal;
     umkaGetResult(params, result)->intVal = ftell(file);
 }
 
@@ -164,7 +164,7 @@ void rtlftellSandbox(UmkaStackSlot *params, UmkaStackSlot *result)
 
 void rtlremove(UmkaStackSlot *params, UmkaStackSlot *result)
 {
-    const char *name = (const char *)umkaGetParam(params, 0)->ptrVal;
+    const char *name = umkaGetParam(params, 0)->ptrVal;
     umkaGetResult(params, result)->intVal = remove(name);
 }
 
@@ -177,7 +177,7 @@ void rtlremoveSandbox(UmkaStackSlot *params, UmkaStackSlot *result)
 
 void rtlfeof(UmkaStackSlot *params, UmkaStackSlot *result)
 {
-    FILE *file = (FILE *)umkaGetParam(params, 0)->ptrVal;
+    FILE *file = umkaGetParam(params, 0)->ptrVal;
     umkaGetResult(params, result)->intVal = feof(file);
 }
 
@@ -190,7 +190,7 @@ void rtlfeofSandbox(UmkaStackSlot *params, UmkaStackSlot *result)
 
 void rtlfflush(UmkaStackSlot *params, UmkaStackSlot *result)
 {
-    FILE *file = (FILE *)umkaGetParam(params, 0)->ptrVal;
+    FILE *file = umkaGetParam(params, 0)->ptrVal;
     umkaGetResult(params, result)->intVal = fflush(file);
 }
 
@@ -216,27 +216,27 @@ void rtlclock(UmkaStackSlot *params, UmkaStackSlot *result)
 
 void rtllocaltime(UmkaStackSlot *params, UmkaStackSlot *result)
 {
-    time_t curTime = umkaGetParam(params, 0)->intVal;
-    RTLDateTime *rtlDateTime = (RTLDateTime *)umkaGetResult(params, result)->ptrVal;
+    const time_t curTime = umkaGetParam(params, 0)->intVal;
+    RTLDateTime *rtlDateTime = umkaGetResult(params, result)->ptrVal;
 
-    struct tm *dateTime = localtime(&curTime);
+    const struct tm *dateTime = localtime(&curTime);
     convToRTLDateTime(rtlDateTime, dateTime);
 }
 
 
 void rtlgmtime(UmkaStackSlot *params, UmkaStackSlot *result)
 {
-    time_t curTime = umkaGetParam(params, 0)->intVal;
-    RTLDateTime *rtlDateTime = (RTLDateTime *)umkaGetResult(params, result)->ptrVal;
+    const time_t curTime = umkaGetParam(params, 0)->intVal;
+    RTLDateTime *rtlDateTime = umkaGetResult(params, result)->ptrVal;
 
-    struct tm *dateTime = gmtime(&curTime);
+    const struct tm *dateTime = gmtime(&curTime);
     convToRTLDateTime(rtlDateTime, dateTime);
 }
 
 
 void rtlmktime(UmkaStackSlot *params, UmkaStackSlot *result)
 {
-    RTLDateTime *rtlDateTime = (RTLDateTime *)umkaGetParam(params, 0)->ptrVal;
+    const RTLDateTime *rtlDateTime = umkaGetParam(params, 0)->ptrVal;
 
     struct tm dateTime;
     convFromRTLDateTime(&dateTime, rtlDateTime);
@@ -276,8 +276,8 @@ void rtlsystemSandbox(UmkaStackSlot *params, UmkaStackSlot *result)
 
 void rtltrace(UmkaStackSlot *params, UmkaStackSlot *result)
 {
-    int depth = umkaGetParam(params, 0)->intVal;
-    RTLErrPos *pos = (RTLErrPos *)umkaGetParam(params, 1)->ptrVal;
+    const int depth = umkaGetParam(params, 0)->intVal;
+    RTLErrPos *pos = umkaGetParam(params, 1)->ptrVal;
 
     void *umka = umkaGetInstance(result);
 

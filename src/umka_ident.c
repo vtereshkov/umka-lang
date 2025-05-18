@@ -39,13 +39,13 @@ void identFree(Idents *idents, int block)
 }
 
 
-static const Ident *identFindEx(Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, const Type *rcvType, bool markAsUsed, bool isModule)
+static const Ident *identFindEx(const Idents *idents, const Modules *modules, const Blocks *blocks, int module, const char *name, const Type *rcvType, bool markAsUsed, bool isModule)
 {
     const unsigned int nameHash = hash(name);
 
     for (int i = blocks->top; i >= 0; i--)
     {
-        for (Ident *ident = idents->first; ident; ident = ident->next)
+        for (const Ident *ident = idents->first; ident; ident = ident->next)
             if (ident->hash == nameHash && strcmp(ident->name, name) == 0 && ident->block == blocks->item[i].block && (ident->kind == IDENT_MODULE) == isModule)
             {
                 // What we found has correct name and block scope, check module scope
@@ -62,7 +62,7 @@ static const Ident *identFindEx(Idents *idents, Modules *modules, Blocks *blocks
                     if (found)
                     {
                         if (markAsUsed)
-                            ident->used = true;
+                            identSetUsed(ident);
                         return ident;
                     }
                 }
@@ -73,13 +73,13 @@ static const Ident *identFindEx(Idents *idents, Modules *modules, Blocks *blocks
 }
 
 
-const Ident *identFind(Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, const Type *rcvType, bool markAsUsed)
+const Ident *identFind(const Idents *idents, const Modules *modules, const Blocks *blocks, int module, const char *name, const Type *rcvType, bool markAsUsed)
 {
     return identFindEx(idents, modules, blocks, module, name, rcvType, markAsUsed, false);
 }
 
 
-const Ident *identAssertFind(Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, const Type *rcvType)
+const Ident *identAssertFind(const Idents *idents, const Modules *modules, const Blocks *blocks, int module, const char *name, const Type *rcvType)
 {
     const Ident *res = identFind(idents, modules, blocks, module, name, rcvType, true);
     if (!res)
@@ -88,13 +88,13 @@ const Ident *identAssertFind(Idents *idents, Modules *modules, Blocks *blocks, i
 }
 
 
-const Ident *identFindModule(Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, bool markAsUsed)
+const Ident *identFindModule(const Idents *idents, const Modules *modules, const Blocks *blocks, int module, const char *name, bool markAsUsed)
 {
     return identFindEx(idents, modules, blocks, module, name, NULL, markAsUsed, true);
 }
 
 
-const Ident *identAssertFindModule(Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name)
+const Ident *identAssertFindModule(const Idents *idents, const Modules *modules, const Blocks *blocks, int module, const char *name)
 {
     const Ident *res = identFindModule(idents, modules, blocks, module, name, true);
     if (!res)
@@ -103,7 +103,7 @@ const Ident *identAssertFindModule(Idents *idents, Modules *modules, Blocks *blo
 }
 
 
-bool identIsOuterLocalVar(Blocks *blocks, const Ident *ident)
+bool identIsOuterLocalVar(const Blocks *blocks, const Ident *ident)
 {
     if (!ident || ident->kind != IDENT_VAR || ident->block == 0)
         return false;
@@ -122,7 +122,7 @@ bool identIsOuterLocalVar(Blocks *blocks, const Ident *ident)
 }
 
 
-static Ident *identAdd(Idents *idents, Modules *modules, Blocks *blocks, IdentKind kind, const char *name, const Type *type, bool exported)
+static Ident *identAdd(Idents *idents, const Modules *modules, const Blocks *blocks, IdentKind kind, const char *name, const Type *type, bool exported)
 {
     const Type *rcvType = NULL;
     if (type->kind == TYPE_FN && type->sig.isMethod)
@@ -204,7 +204,7 @@ static Ident *identAdd(Idents *idents, Modules *modules, Blocks *blocks, IdentKi
 }
 
 
-Ident *identAddConst(Idents *idents, Modules *modules, Blocks *blocks, const char *name, const Type *type, bool exported, Const constant)
+Ident *identAddConst(Idents *idents, const Modules *modules, const Blocks *blocks, const char *name, const Type *type, bool exported, Const constant)
 {
     Ident *ident = identAdd(idents, modules, blocks, IDENT_CONST, name, type, exported);
     ident->constant = constant;
@@ -212,7 +212,7 @@ Ident *identAddConst(Idents *idents, Modules *modules, Blocks *blocks, const cha
 }
 
 
-Ident *identAddTempConst(Idents *idents, Modules *modules, Blocks *blocks, const Type *type, Const constant)
+Ident *identAddTempConst(Idents *idents, const Modules *modules, const Blocks *blocks, const Type *type, Const constant)
 {
     IdentName tempName;
     identTempName(idents, tempName);
@@ -223,7 +223,7 @@ Ident *identAddTempConst(Idents *idents, Modules *modules, Blocks *blocks, const
 }
 
 
-Ident *identAddGlobalVar(Idents *idents, Modules *modules, Blocks *blocks, const char *name, const Type *type, bool exported, void *ptr)
+Ident *identAddGlobalVar(Idents *idents, const Modules *modules, const Blocks *blocks, const char *name, const Type *type, bool exported, void *ptr)
 {
     Ident *ident = identAdd(idents, modules, blocks, IDENT_VAR, name, type, exported);
     ident->ptr = ptr;
@@ -232,7 +232,7 @@ Ident *identAddGlobalVar(Idents *idents, Modules *modules, Blocks *blocks, const
 }
 
 
-Ident *identAddLocalVar(Idents *idents, Modules *modules, Blocks *blocks, const char *name, const Type *type, bool exported, int offset)
+Ident *identAddLocalVar(Idents *idents, const Modules *modules, const Blocks *blocks, const char *name, const Type *type, bool exported, int offset)
 {
     Ident *ident = identAdd(idents, modules, blocks, IDENT_VAR, name, type, exported);
     ident->offset = offset;
@@ -240,13 +240,13 @@ Ident *identAddLocalVar(Idents *idents, Modules *modules, Blocks *blocks, const 
 }
 
 
-Ident *identAddType(Idents *idents, Modules *modules, Blocks *blocks, const char *name, const Type *type, bool exported)
+Ident *identAddType(Idents *idents, const Modules *modules, const Blocks *blocks, const char *name, const Type *type, bool exported)
 {
     return identAdd(idents, modules, blocks, IDENT_TYPE, name, type, exported);
 }
 
 
-Ident *identAddBuiltinFunc(Idents *idents, Modules *modules, Blocks *blocks, const char *name, const Type *type, BuiltinFunc builtin)
+Ident *identAddBuiltinFunc(Idents *idents, const Modules *modules, const Blocks *blocks, const char *name, const Type *type, BuiltinFunc builtin)
 {
     Ident *ident = identAdd(idents, modules, blocks, IDENT_BUILTIN_FN, name, type, false);
     ident->builtin = builtin;
@@ -254,7 +254,7 @@ Ident *identAddBuiltinFunc(Idents *idents, Modules *modules, Blocks *blocks, con
 }
 
 
-Ident *identAddModule(Idents *idents, Modules *modules, Blocks *blocks, const char *name, const Type *type, int moduleVal)
+Ident *identAddModule(Idents *idents, const Modules *modules, const Blocks *blocks, const char *name, const Type *type, int moduleVal)
 {
     Ident *ident = identAdd(idents, modules, blocks, IDENT_MODULE, name, type, false);
     ident->moduleVal = moduleVal;
@@ -262,7 +262,7 @@ Ident *identAddModule(Idents *idents, Modules *modules, Blocks *blocks, const ch
 }
 
 
-int identAllocStack(Idents *idents, Types *types, Blocks *blocks, const Type *type)
+int identAllocStack(Idents *idents, const Types *types, Blocks *blocks, const Type *type)
 {
     int *localVarSize = NULL;
     for (int i = blocks->top; i >= 1; i--)
@@ -279,7 +279,7 @@ int identAllocStack(Idents *idents, Types *types, Blocks *blocks, const Type *ty
 }
 
 
-Ident *identAllocVar(Idents *idents, Types *types, Modules *modules, Blocks *blocks, const char *name, const Type *type, bool exported)
+Ident *identAllocVar(Idents *idents, const Types *types, const Modules *modules, Blocks *blocks, const char *name, const Type *type, bool exported)
 {
     Ident *ident;
     if (blocks->top == 0)       // Global
@@ -296,7 +296,7 @@ Ident *identAllocVar(Idents *idents, Types *types, Modules *modules, Blocks *blo
 }
 
 
-Ident *identAllocTempVar(Idents *idents, Types *types, Modules *modules, Blocks *blocks, const Type *type, bool isFuncResult)
+Ident *identAllocTempVar(Idents *idents, const Types *types, const Modules *modules, Blocks *blocks, const Type *type, bool isFuncResult)
 {
     IdentName tempName;
     identTempName(idents, tempName);
@@ -315,16 +315,16 @@ Ident *identAllocTempVar(Idents *idents, Types *types, Modules *modules, Blocks 
 }
 
 
-Ident *identAllocParam(Idents *idents, Types *types, Modules *modules, Blocks *blocks, const Signature *sig, int index)
+Ident *identAllocParam(Idents *idents, const Types *types, const Modules *modules, const Blocks *blocks, const Signature *sig, int index)
 {
-    int offset =typeParamOffset(types, sig, index);
+    const int offset = typeParamOffset(types, sig, index);
     Ident *ident = identAddLocalVar(idents, modules, blocks, sig->param[index]->name, sig->param[index]->type, false, offset);
-    ident->used = true;                                                     // Do not warn about unused parameters
+    identSetUsed(ident);                                                     // Do not warn about unused parameters
     return ident;
 }
 
 
-const char *identMethodNameWithRcv(Idents *idents, const Ident *method)
+const char *identMethodNameWithRcv(const Idents *idents, const Ident *method)
 {
     char typeBuf[DEFAULT_STR_LEN + 1];
     typeSpelling(method->type->sig.param[0]->type, typeBuf);
@@ -336,7 +336,7 @@ const char *identMethodNameWithRcv(Idents *idents, const Ident *method)
 }
 
 
-void identWarnIfUnused(Idents *idents, const Ident *ident)
+void identWarnIfUnused(const Idents *idents, const Ident *ident)
 {
     if (!ident->temporary && !ident->used)
     {
@@ -346,9 +346,9 @@ void identWarnIfUnused(Idents *idents, const Ident *ident)
 }
 
 
-void identWarnIfUnusedAll(Idents *idents, int block)
+void identWarnIfUnusedAll(const Idents *idents, int block)
 {
-    for (Ident *ident = idents->first; ident; ident = ident->next)
+    for (const Ident *ident = idents->first; ident; ident = ident->next)
         if (ident->block == block)
             identWarnIfUnused(idents, ident);
 }

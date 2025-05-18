@@ -21,7 +21,7 @@ void constZero(void *lhs, int size)
 }
 
 
-void constDeref(Consts *consts, Const *constant, TypeKind typeKind)
+void constDeref(const Consts *consts, Const *constant, TypeKind typeKind)
 {
     if (!constant->ptrVal)
         consts->error->handler(consts->error->context, "Pointer is null");
@@ -56,7 +56,7 @@ void constDeref(Consts *consts, Const *constant, TypeKind typeKind)
 }
 
 
-void constAssign(Consts *consts, void *lhs, const Const *rhs, TypeKind typeKind, int size)
+void constAssign(const Consts *consts, void *lhs, const Const *rhs, TypeKind typeKind, int size)
 {
     if (typeOverflow(typeKind, *rhs))
         consts->error->handler(consts->error->context, "Overflow in assignment to %s", typeKindSpelling(typeKind));
@@ -91,7 +91,7 @@ void constAssign(Consts *consts, void *lhs, const Const *rhs, TypeKind typeKind,
 }
 
 
-void constUnary(Consts *consts, Const *arg, TokenKind tokKind, TypeKind typeKind)
+void constUnary(const Consts *consts, Const *arg, TokenKind tokKind, TypeKind typeKind)
 {
     if (typeKind == TYPE_REAL || typeKind == TYPE_REAL32)
         switch (tokKind)
@@ -112,7 +112,7 @@ void constUnary(Consts *consts, Const *arg, TokenKind tokKind, TypeKind typeKind
 }
 
 
-void constBinary(Consts *consts, Const *lhs, const Const *rhs, TokenKind tokKind, TypeKind typeKind)
+void constBinary(const Consts *consts, Const *lhs, const Const *rhs, TokenKind tokKind, TypeKind typeKind)
 {
     if (typeKind == TYPE_PTR)
         switch (tokKind)
@@ -209,7 +209,7 @@ void constBinary(Consts *consts, Const *lhs, const Const *rhs, TokenKind tokKind
 }
 
 
-void constCallBuiltin(Consts *consts, Const *arg, const Const *arg2, TypeKind argTypeKind, BuiltinFunc builtinVal)
+void constCallBuiltin(const Consts *consts, Const *arg, const Const *arg2, TypeKind argTypeKind, BuiltinFunc builtinVal)
 {
     switch (builtinVal)
     {
@@ -288,7 +288,7 @@ void constArrayAppend(ConstArray *array, Const val)
 }
 
 
-int constArrayFind(Consts *consts, ConstArray *array, Const val)
+int constArrayFind(const Consts *consts, const ConstArray *array, Const val)
 {
     for (int i = 0; i < array->len; i++)
     {
@@ -301,7 +301,7 @@ int constArrayFind(Consts *consts, ConstArray *array, Const val)
 }
 
 
-int constArrayFindEquivalentType(Consts *consts, ConstArray *array, Const val)
+int constArrayFindEquivalentType(const Consts *consts, const ConstArray *array, Const val)
 {
     for (int i = 0; i < array->len; i++)
     {
