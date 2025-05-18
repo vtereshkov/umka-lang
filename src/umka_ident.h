@@ -52,12 +52,12 @@ typedef struct
 void identInit(Idents *idents, Storage *storage, DebugInfo *debug, Error *error);
 void identFree(Idents *idents, int block);
 
-Ident *identFind            (Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, const Type *rcvType, bool markAsUsed);
-Ident *identAssertFind      (Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, const Type *rcvType);
-Ident *identFindModule      (Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, bool markAsUsed);
-Ident *identAssertFindModule(Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name);
+const Ident *identFind            (Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, const Type *rcvType, bool markAsUsed);
+const Ident *identAssertFind      (Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, const Type *rcvType);
+const Ident *identFindModule      (Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, bool markAsUsed);
+const Ident *identAssertFindModule(Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name);
 
-bool identIsOuterLocalVar (Blocks *blocks, Ident *ident);
+bool identIsOuterLocalVar (Blocks *blocks, const Ident *ident);
 
 Ident *identAddConst      (Idents *idents, Modules *modules, Blocks *blocks, const char *name, const Type *type, bool exported, Const constant);
 Ident *identAddTempConst  (Idents *idents, Modules *modules, Blocks *blocks, const Type *type, Const constant);
@@ -72,10 +72,15 @@ Ident *identAllocVar      (Idents *idents, Types *types, Modules *modules, Block
 Ident *identAllocTempVar  (Idents *idents, Types *types, Modules *modules, Blocks *blocks, const Type *type, bool isFuncResult);
 Ident *identAllocParam    (Idents *idents, Types *types, Modules *modules, Blocks *blocks, const Signature *sig, int index);
 
-char *identMethodNameWithRcv(Ident *method, char *buf, int size);
+const char *identMethodNameWithRcv(Idents *idents, const Ident *method);
 
-void identWarnIfUnused        (Idents *idents, Ident *ident);
+void identWarnIfUnused        (Idents *idents, const Ident *ident);
 void identWarnIfUnusedAll     (Idents *idents, int block);
-bool identIsMain              (Ident *ident);
+bool identIsMain              (const Ident *ident);
+
+static inline void identSetUsed(const Ident *ident)
+{
+    ((Ident *)ident)->used = true;
+}
 
 #endif // UMKA_IDENT_H_INCLUDED

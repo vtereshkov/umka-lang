@@ -519,7 +519,7 @@ void blocksInit(Blocks *blocks, Error *error)
 }
 
 
-void blocksEnterFn(Blocks *blocks, struct tagIdent *fn, bool hasUpvalues)
+void blocksEnterFn(Blocks *blocks, const struct tagIdent *fn, bool hasUpvalues)
 {
     if (blocks->top >= MAX_BLOCK_NESTING)
         blocks->error->handler(blocks->error->context, "Block nesting is too deep");

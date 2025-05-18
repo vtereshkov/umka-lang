@@ -32,7 +32,7 @@ void doPushConst(Compiler *comp, const Type *type, const Const *constant)
 }
 
 
-void doPushVarPtr(Compiler *comp, Ident *ident)
+void doPushVarPtr(Compiler *comp, const Ident *ident)
 {
     if (ident->block == 0)
         genPushGlobalPtr(&comp->gen, ident->ptr);
@@ -62,7 +62,7 @@ static void doPassParam(Compiler *comp, const Type *formalParamType)
 
 void doCopyResultToTempVar(Compiler *comp, const Type *type)
 {
-    Ident *resultCopy = identAllocTempVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, type, true);
+    const Ident *resultCopy = identAllocTempVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, type, true);
     genCopyResultToTempVar(&comp->gen, type, resultCopy->offset);
 }
 
@@ -268,7 +268,7 @@ static void doDynArrayToDynArrayConv(Compiler *comp, const Type *dest, const Typ
     genSwapAssign(&comp->gen, TYPE_INT, 0);
 
     // Allocate destination array: destArray = make(dest, length)
-    Ident *destArray = identAllocTempVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, dest, false);
+    const Ident *destArray = identAllocTempVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, dest, false);
     doZeroVar(comp, destArray);
 
     genPushLocal(&comp->gen, TYPE_INT, lenOffset);
@@ -374,7 +374,7 @@ static void doPtrToInterfaceConv(Compiler *comp, const Type *dest, const Type **
             {
                 int rcvTypeModule = rcvType->typeIdent ? rcvType->typeIdent->module : -1;
 
-                Ident *srcMethod = identFind(&comp->idents, &comp->modules, &comp->blocks, rcvTypeModule, name, *src, true);
+                const Ident *srcMethod = identFind(&comp->idents, &comp->modules, &comp->blocks, rcvTypeModule, name, *src, true);
                 if (!srcMethod)
                 {
                     char srcBuf[DEFAULT_STR_LEN + 1], destBuf[DEFAULT_STR_LEN + 1];
@@ -537,7 +537,7 @@ static void doExprListToExprListConv(Compiler *comp, const Type *dest, const Typ
     if (constant)
         comp->error.handler(comp->error.context, "Conversion to expression list is not allowed in constant expressions");
 
-    Ident *destList = identAllocTempVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, dest, false);
+    const Ident *destList = identAllocTempVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, dest, false);
     doZeroVar(comp, destList);
 
     // Assign to fields
@@ -782,7 +782,7 @@ void doApplyOperator(Compiler *comp, const Type **type, const Type **rightType, 
 
 
 // qualIdent = [ident "::"] ident.
-Ident *parseQualIdent(Compiler *comp)
+const Ident *parseQualIdent(Compiler *comp)
 {
     lexCheck(&comp->lex, TOK_IDENT);
 
@@ -792,7 +792,7 @@ Ident *parseQualIdent(Compiler *comp)
     lexNext(&lookaheadLex);
     if (lookaheadLex.tok.kind == TOK_COLONCOLON)
     {
-        Ident *moduleIdent = identAssertFindModule(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, comp->lex.tok.name);
+        const Ident *moduleIdent = identAssertFindModule(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, comp->lex.tok.name);
 
         lexNext(&comp->lex);
         lexNext(&comp->lex);
@@ -801,7 +801,7 @@ Ident *parseQualIdent(Compiler *comp)
         moduleToSeekIn = moduleIdent->moduleVal;
     }
 
-    Ident *ident = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, moduleToSeekIn, comp->lex.tok.name, NULL);
+    const Ident *ident = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, moduleToSeekIn, comp->lex.tok.name, NULL);
 
     if (identIsOuterLocalVar(&comp->blocks, ident))
         comp->error.handler(comp->error.context, "%s is not specified as a captured variable", ident->name);
@@ -1323,7 +1323,7 @@ static void parseBuiltinSizeofCall(Compiler *comp, const Type **type, Const *con
     // sizeof(T)
     if (comp->lex.tok.kind == TOK_IDENT)
     {
-        Ident *ident = identFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, comp->lex.tok.name, NULL, false);
+        const Ident *ident = identFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, comp->lex.tok.name, NULL, false);
         if (ident && ident->kind == IDENT_TYPE)
         {
             Lexer lookaheadLex = comp->lex;
@@ -1332,7 +1332,7 @@ static void parseBuiltinSizeofCall(Compiler *comp, const Type **type, Const *con
             {
                 lexNext(&comp->lex);
                 *type = ident->type;
-                ident->used = true;
+                identSetUsed(ident);
             }
         }
     }
@@ -1771,7 +1771,7 @@ static void parseCall(Compiler *comp, const Type **type)
 
 
 // primary = qualIdent | builtinCall.
-static void parsePrimary(Compiler *comp, Ident *ident, const Type **type, Const *constant, bool *isVar, bool *isCall)
+static void parsePrimary(Compiler *comp, const Ident *ident, const Type **type, Const *constant, bool *isVar, bool *isCall)
 {
     switch (ident->kind)
     {
@@ -1872,7 +1872,7 @@ static void parseArrayOrStructLiteral(Compiler *comp, const Type **type, Const *
         fieldInitialized = storageAdd(&comp->storage, (*type)->numItems + 1);
 
     const int size = typeSize(&comp->types, *type);
-    Ident *arrayOrStruct = NULL;
+    const Ident *arrayOrStruct = NULL;
 
     if (constant)
     {
@@ -2053,7 +2053,7 @@ static void parseMapLiteral(Compiler *comp, const Type **type, Const *constant)
         comp->error.handler(comp->error.context, "Map literals are not allowed for constants");
 
     // Allocate map
-    Ident *mapIdent = identAllocTempVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, *type, false);
+    const Ident *mapIdent = identAllocTempVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, *type, false);
     doZeroVar(comp, mapIdent);
 
     doPushVarPtr(comp, mapIdent);
@@ -2115,7 +2115,7 @@ static void parseClosureLiteral(Compiler *comp, const Type **type, Const *consta
 
         const Field *fn = typeAssertFindField(&comp->types, *type, "#fn", NULL);
 
-        Const fnConstant = {.intVal = comp->gen.ip};
+        const Const fnConstant = {.intVal = comp->gen.ip};
         Ident *fnConstantIdent = identAddTempConst(&comp->idents, &comp->modules, &comp->blocks, fn->type, fnConstant);
         parseFnBlock(comp, fnConstantIdent, NULL);
 
@@ -2129,7 +2129,7 @@ static void parseClosureLiteral(Compiler *comp, const Type **type, Const *consta
     else
     {
         // Allocate closure
-        Ident *closureIdent = identAllocTempVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, *type, false);
+        const Ident *closureIdent = identAllocTempVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, *type, false);
         doZeroVar(comp, closureIdent);
 
         Type *upvaluesStructType = NULL;
@@ -2145,7 +2145,7 @@ static void parseClosureLiteral(Compiler *comp, const Type **type, Const *consta
             {
                 lexCheck(&comp->lex, TOK_IDENT);
 
-                Ident *capturedIdent = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, comp->lex.tok.name, NULL);
+                const Ident *capturedIdent = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, comp->lex.tok.name, NULL);
 
                 if (capturedIdent->kind != IDENT_VAR)
                     comp->error.handler(comp->error.context, "%s is not a variable", capturedIdent->name);
@@ -2165,14 +2165,14 @@ static void parseClosureLiteral(Compiler *comp, const Type **type, Const *consta
             lexEat(&comp->lex, TOK_OR);
 
             // Allocate upvalues structure
-            Ident *upvaluesStructIdent = identAllocTempVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, upvaluesStructType, false);
+            const Ident *upvaluesStructIdent = identAllocTempVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, upvaluesStructType, false);
             doZeroVar(comp, upvaluesStructIdent);
 
             // Assign upvalues structure fields
             for (int i = 0; i < upvaluesStructType->numItems; i++)
             {
                 const Field *upvalue = upvaluesStructType->field[i];
-                Ident *capturedIdent = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, upvalue->name, NULL);
+                const Ident *capturedIdent = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, upvalue->name, NULL);
 
                 doPushVarPtr(comp, upvaluesStructIdent);
                 genGetFieldPtr(&comp->gen, upvalue->offset);
@@ -2198,13 +2198,13 @@ static void parseClosureLiteral(Compiler *comp, const Type **type, Const *consta
         }
 
         // fnBlock
-        int beforeEntry = comp->gen.ip;
+        const int beforeEntry = comp->gen.ip;
 
         genNop(&comp->gen);                                     // Jump over the nested function block (stub)
 
         const Field *fn = typeAssertFindField(&comp->types, closureIdent->type, "#fn", NULL);
 
-        Const fnConstant = {.intVal = comp->gen.ip};
+        const Const fnConstant = {.intVal = comp->gen.ip};
         Ident *fnConstantIdent = identAddTempConst(&comp->idents, &comp->modules, &comp->blocks, fn->type, fnConstant);
         parseFnBlock(comp, fnConstantIdent, upvaluesStructType);
 
@@ -2262,7 +2262,7 @@ static void parseEnumConst(Compiler *comp, const Type **type, Const *constant)
 }
 
 
-static void parseTypeCastOrCompositeLiteralOrEnumConst(Compiler *comp, Ident *ident, const Type **type, Const *constant, bool *isVar, bool *isCall, bool *isCompLit)
+static void parseTypeCastOrCompositeLiteralOrEnumConst(Compiler *comp, const Ident *ident, const Type **type, Const *constant, bool *isVar, bool *isCall, bool *isCompLit)
 {
     if (*type && (comp->lex.tok.kind == TOK_LBRACE || comp->lex.tok.kind == TOK_OR || comp->lex.tok.kind == TOK_PERIOD))
     {
@@ -2431,7 +2431,7 @@ static void parseFieldSelector(Compiler *comp, const Type **type, bool *isVar, b
 
     rcvType = typeAddPtrTo(&comp->types, &comp->blocks, rcvType);
 
-    Ident *method = identFind(&comp->idents, &comp->modules, &comp->blocks, rcvTypeModule, comp->lex.tok.name, rcvType, true);
+    const Ident *method = identFind(&comp->idents, &comp->modules, &comp->blocks, rcvTypeModule, comp->lex.tok.name, rcvType, true);
     if (method)
     {
         // Method
@@ -2535,7 +2535,7 @@ static void parseSelectors(Compiler *comp, const Type **type, Const *constant, b
 // designator = (primary | typeCast | compositeLiteral | enumConst) selectors.
 static void parseDesignator(Compiler *comp, const Type **type, Const *constant, bool *isVar, bool *isCall, bool *isCompLit)
 {
-    Ident *ident = NULL;
+    const Ident *ident = NULL;
     if (comp->lex.tok.kind == TOK_IDENT && (ident = parseQualIdent(comp)) && ident->kind != IDENT_TYPE)
     {
         parsePrimary(comp, ident, type, constant, isVar, isCall);
@@ -2937,7 +2937,7 @@ void parseExpr(Compiler *comp, const Type **type, Const *constant)
 
             parseExpr(comp, &leftType, NULL);
 
-            Ident *result = NULL;
+            const Ident *result = NULL;
             if (typeGarbageCollected(leftType))
             {
                 // Create a temporary result variable in the outer block, so that it could outlive both left- and right-hand side expression blocks
@@ -3052,7 +3052,7 @@ void parseExprList(Compiler *comp, const Type **type, Const *constant)
         *type = exprListType;
 
         // Allocate structure
-        Ident *exprList = NULL;
+        const Ident *exprList = NULL;
         if (constant)
             constant->ptrVal = storageAdd(&comp->storage, typeSize(&comp->types, *type));
         else

@@ -351,11 +351,11 @@ bool compilerGetFunc(Compiler *comp, const char *moduleName, const char *funcNam
         module = moduleFind(&comp->modules, modulePath);
     }
 
-    Ident *fnIdent = identFind(&comp->idents, &comp->modules, &comp->blocks, module, funcName, NULL, false);
+    const Ident *fnIdent = identFind(&comp->idents, &comp->modules, &comp->blocks, module, funcName, NULL, false);
     if (!fnIdent || fnIdent->kind != IDENT_CONST || fnIdent->type->kind != TYPE_FN)
         return false;
 
-    fnIdent->used = true;
+    identSetUsed(fnIdent);
 
     compilerMakeFuncContext(comp, fnIdent->type, fnIdent->offset, fn);
     return true;

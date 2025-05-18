@@ -39,7 +39,7 @@ void identFree(Idents *idents, int block)
 }
 
 
-static Ident *identFindEx(Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, const Type *rcvType, bool markAsUsed, bool isModule)
+static const Ident *identFindEx(Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, const Type *rcvType, bool markAsUsed, bool isModule)
 {
     const unsigned int nameHash = hash(name);
 
@@ -73,37 +73,37 @@ static Ident *identFindEx(Idents *idents, Modules *modules, Blocks *blocks, int 
 }
 
 
-Ident *identFind(Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, const Type *rcvType, bool markAsUsed)
+const Ident *identFind(Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, const Type *rcvType, bool markAsUsed)
 {
     return identFindEx(idents, modules, blocks, module, name, rcvType, markAsUsed, false);
 }
 
 
-Ident *identAssertFind(Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, const Type *rcvType)
+const Ident *identAssertFind(Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, const Type *rcvType)
 {
-    Ident *res = identFind(idents, modules, blocks, module, name, rcvType, true);
+    const Ident *res = identFind(idents, modules, blocks, module, name, rcvType, true);
     if (!res)
         idents->error->handler(idents->error->context, "Unknown identifier %s", name);
     return res;
 }
 
 
-Ident *identFindModule(Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, bool markAsUsed)
+const Ident *identFindModule(Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name, bool markAsUsed)
 {
     return identFindEx(idents, modules, blocks, module, name, NULL, markAsUsed, true);
 }
 
 
-Ident *identAssertFindModule(Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name)
+const Ident *identAssertFindModule(Idents *idents, Modules *modules, Blocks *blocks, int module, const char *name)
 {
-    Ident *res = identFindModule(idents, modules, blocks, module, name, true);
+    const Ident *res = identFindModule(idents, modules, blocks, module, name, true);
     if (!res)
         idents->error->handler(idents->error->context, "Unknown module %s", name);
     return res;
 }
 
 
-bool identIsOuterLocalVar(Blocks *blocks, Ident *ident)
+bool identIsOuterLocalVar(Blocks *blocks, const Ident *ident)
 {
     if (!ident || ident->kind != IDENT_VAR || ident->block == 0)
         return false;
@@ -128,36 +128,40 @@ static Ident *identAdd(Idents *idents, Modules *modules, Blocks *blocks, IdentKi
     if (type->kind == TYPE_FN && type->sig.isMethod)
         rcvType = type->sig.param[0]->type;
 
-    Ident *ident = identFind(idents, modules, blocks, blocks->module, name, rcvType, false);
+    const Ident *existingIdent = identFind(idents, modules, blocks, blocks->module, name, rcvType, false);
 
-    if (ident && ident->block == blocks->item[blocks->top].block)
+    if (existingIdent && existingIdent->block == blocks->item[blocks->top].block)
     {
         // Forward type declaration resolution
-        if (ident->kind == IDENT_TYPE && ident->type->kind == TYPE_FORWARD &&
+        if (existingIdent->kind == IDENT_TYPE && existingIdent->type->kind == TYPE_FORWARD &&
             kind == IDENT_TYPE && type->kind != TYPE_FORWARD &&
-            strcmp(ident->type->typeIdent->name, name) == 0)
+            strcmp(existingIdent->type->typeIdent->name, name) == 0)
         {
+            Ident *modifiableIdent = (Ident *)existingIdent;
             Type *modifiableType = (Type *)type;
-            Type *modifiableIdentType = (Type *)ident->type;
+            Type *modifiableIdentType = (Type *)existingIdent->type;
 
-            modifiableType->typeIdent = ident;
+            modifiableType->typeIdent = existingIdent;
             typeDeepCopy(idents->storage, modifiableIdentType, type);
-            ident->exported = exported;
-            return ident;
+            modifiableIdent->exported = exported;
+
+            return modifiableIdent;
         }
 
         // Function prototype resolution
-        if (ident->kind == IDENT_CONST && ident->type->kind == TYPE_FN &&
+        if (existingIdent->kind == IDENT_CONST && existingIdent->type->kind == TYPE_FN &&
             kind == IDENT_CONST && type->kind == TYPE_FN &&
-            ident->exported == exported &&
-            strcmp(ident->name, name) == 0 &&
-            typeCompatible(ident->type, type) &&
-            ident->prototypeOffset >= 0)
+            existingIdent->exported == exported &&
+            strcmp(existingIdent->name, name) == 0 &&
+            typeCompatible(existingIdent->type, type) &&
+            existingIdent->prototypeOffset >= 0)
         {
-            Type *modifiableIdentType = (Type *)ident->type;
+            Ident *modifiableIdent = (Ident *)existingIdent;
+            Type *modifiableIdentType = (Type *)existingIdent->type;
 
             typeDeepCopy(idents->storage, modifiableIdentType, type);
-            return ident;
+
+            return modifiableIdent;
         }
 
         idents->error->handler(idents->error->context, "Duplicate identifier %s", name);
@@ -175,7 +179,7 @@ static Ident *identAdd(Idents *idents, Modules *modules, Blocks *blocks, IdentKi
             idents->error->handler(idents->error->context, "Void variable or constant %s is not allowed", name);
     }
 
-    ident = storageAdd(idents->storage, sizeof(Ident));
+    Ident *ident = storageAdd(idents->storage, sizeof(Ident));
     ident->kind = kind;
 
     strncpy(ident->name, name, MAX_IDENT_LEN);
@@ -285,7 +289,7 @@ Ident *identAllocVar(Idents *idents, Types *types, Modules *modules, Blocks *blo
     }
     else                        // Local
     {
-        int offset = identAllocStack(idents, types, blocks, type);
+        const int offset = identAllocStack(idents, types, blocks, type);
         ident = identAddLocalVar(idents, modules, blocks, name, type, exported, offset);
     }
     return ident;
@@ -320,21 +324,24 @@ Ident *identAllocParam(Idents *idents, Types *types, Modules *modules, Blocks *b
 }
 
 
-char *identMethodNameWithRcv(Ident *method, char *buf, int size)
+const char *identMethodNameWithRcv(Idents *idents, const Ident *method)
 {
     char typeBuf[DEFAULT_STR_LEN + 1];
     typeSpelling(method->type->sig.param[0]->type, typeBuf);
-    snprintf(buf, size, "(%s)%s", typeBuf, method->name);
+
+    char *buf = storageAdd(idents->storage, DEFAULT_STR_LEN + 1);
+    snprintf(buf, DEFAULT_STR_LEN + 1, "(%s)%s", typeBuf, method->name);
+
     return buf;
 }
 
 
-void identWarnIfUnused(Idents *idents, Ident *ident)
+void identWarnIfUnused(Idents *idents, const Ident *ident)
 {
     if (!ident->temporary && !ident->used)
     {
         idents->error->warningHandler(idents->error->context, &ident->debug, "%s %s is not used", (ident->kind == IDENT_MODULE ? "Module" : "Identifier"), ident->name);
-        ident->used = true;
+        identSetUsed(ident);
     }
 }
 
@@ -347,7 +354,7 @@ void identWarnIfUnusedAll(Idents *idents, int block)
 }
 
 
-bool identIsMain(Ident *ident)
+bool identIsMain(const Ident *ident)
 {
     return strcmp(ident->name, "main") == 0 && ident->kind == IDENT_CONST &&
            ident->type->kind == TYPE_FN && !ident->type->sig.isMethod && ident->type->sig.numParams == 1 && ident->type->sig.resultType->kind == TYPE_VOID;  // A dummy #upvalues is the only parameter

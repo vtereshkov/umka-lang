@@ -83,8 +83,8 @@ typedef struct
 
 typedef struct
 {
-    char *fileName;
-    char *fnName;
+    const char *fileName;
+    const char *fnName;
     int line;
 } DebugInfo;
 
@@ -105,7 +105,7 @@ typedef struct
 {
     void (*handler)(void *context, const char *format, ...);
     void (*runtimeHandler)(void *context, int code, const char *format, ...);
-    void (*warningHandler)(void *context, DebugInfo *debug, const char *format, ...);
+    void (*warningHandler)(void *context, const DebugInfo *debug, const char *format, ...);
     WarningCallback warningCallback;
     void *context;
     jmp_buf jumper;
@@ -163,7 +163,7 @@ typedef struct
 typedef struct
 {
     int block;
-    struct tagIdent *fn;
+    const struct tagIdent *fn;
     int localVarSize;           // For function blocks only
     bool hasReturn;
     bool hasUpvalues;
@@ -237,7 +237,7 @@ bool  moduleRegularizePath      (Modules *modules, const char *path, const char 
 void  moduleAssertRegularizePath(Modules *modules, const char *path, const char *curFolder, char *regularizedPath, int size);
 
 void blocksInit   (Blocks *blocks, Error *error);
-void blocksEnterFn(Blocks *blocks, struct tagIdent *fn, bool hasUpvalues);
+void blocksEnterFn(Blocks *blocks, const struct tagIdent *fn, bool hasUpvalues);
 void blocksEnter  (Blocks *blocks);
 void blocksReenter(Blocks *blocks);
 void blocksLeave  (Blocks *blocks);

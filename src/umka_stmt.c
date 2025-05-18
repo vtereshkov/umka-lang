@@ -14,7 +14,7 @@ static void parseBlock(Compiler *comp);
 
 static void doGarbageCollectionAt(Compiler *comp, int blockStackPos)
 {
-    for (Ident *ident = comp->idents.first; ident; ident = ident->next)
+    for (const Ident *ident = comp->idents.first; ident; ident = ident->next)
         if (ident->kind == IDENT_VAR && typeGarbageCollected(ident->type) && ident->block == comp->blocks.item[blockStackPos].block && !(ident->temporary && !ident->used) && strcmp(ident->name, "#result") != 0)
         {
             // Skip unused upvalues
@@ -54,7 +54,7 @@ void doGarbageCollectionDownToBlock(Compiler *comp, int block)
 }
 
 
-void doZeroVar(Compiler *comp, Ident *ident)
+void doZeroVar(Compiler *comp, const Ident *ident)
 {
     if (ident->block == 0)
         constZero(ident->ptr, typeSize(&comp->types, ident->type));
@@ -68,7 +68,7 @@ void doZeroVar(Compiler *comp, Ident *ident)
 
 void doResolveExtern(Compiler *comp)
 {
-    for (Ident *ident = comp->idents.first; ident; ident = ident->next)
+    for (const Ident *ident = comp->idents.first; ident; ident = ident->next)
         if (ident->module == comp->blocks.module)
         {
             if (ident->prototypeOffset >= 0)
@@ -308,7 +308,7 @@ static void parseSingleDeclAssignmentStmt(Compiler *comp, IdentName name, bool e
     if (typeExprListStruct(rightType))
         comp->error.handler(comp->error.context, "1 expression expected but %d found", rightType->numItems);
 
-    Ident *ident = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, name, rightType, exported);
+    const Ident *ident = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, name, rightType, exported);
 
     if (constExpr)              // Initialize global variable
         constAssign(&comp->consts, ident->ptr, rightConstant, rightType->kind, typeSize(&comp->types, rightType));
@@ -349,12 +349,12 @@ static void parseListDeclAssignmentStmt(Compiler *comp, IdentName *names, bool *
         const Type *rightType = rightListType->field[i]->type;
 
         bool redecl = false;
-        Ident *ident = identFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, names[i], NULL, false);
+        const Ident *ident = identFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, names[i], NULL, false);
         if (ident && ident->kind == IDENT_VAR && ident->block == comp->blocks.item[comp->blocks.top].block)
         {
             // Redeclaration in the same block
             redecl = true;
-            ident->used = true;
+            identSetUsed(ident);
         }
         else
         {
@@ -609,8 +609,8 @@ static void parseTypeCase(Compiler *comp, const char *concreteVarName, ConstArra
     blocksEnter(&comp->blocks);
 
     // Allocate and initialize concrete-type variable
-    Ident *concreteIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, concreteVarName, concreteType, false);
-    concreteIdent->used = true;                     // Do not warn about unused concrete variable
+    const Ident *concreteIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, concreteVarName, concreteType, false);
+    identSetUsed(concreteIdent);                     // Do not warn about unused concrete variable
     doZeroVar(comp, concreteIdent);
 
     if (concreteType->kind != TYPE_PTR)
@@ -879,11 +879,11 @@ static void parseForInHeader(Compiler *comp)
         genCallBuiltin(&comp->gen, collectionType->kind, BUILTIN_LEN);
     }
 
-    Ident *lenIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "#len", comp->intType, false);
+    const Ident *lenIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "#len", comp->intType, false);
     doPushVarPtr(comp, lenIdent);
     genSwapAssign(&comp->gen, lenIdent->type->kind, typeSize(&comp->types, lenIdent->type));
 
-    Ident *collectionIdent = NULL;
+    const Ident *collectionIdent = NULL;
     if (itemName[0] != '\0' || collectionType->kind == TYPE_MAP)
     {
         // Declare variable for the collection and assign expr to it
@@ -904,16 +904,16 @@ static void parseForInHeader(Compiler *comp)
 
     // Declare variable for the collection index (for maps, it will be used for indexing keys())
     const char *indexName = (collectionType->kind == TYPE_MAP) ? "#index" : indexOrKeyName;
-    Ident *indexIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, indexName, comp->intType, false);
-    indexIdent->used = true;                            // Do not warn about unused index
+    const Ident *indexIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, indexName, comp->intType, false);
+    identSetUsed(indexIdent);                            // Do not warn about unused index
     doZeroVar(comp, indexIdent);
 
-    Ident *keyIdent = NULL, *keysIdent = NULL;
+    const Ident *keyIdent = NULL, *keysIdent = NULL;
     if (collectionType->kind == TYPE_MAP)
     {
         // Declare variable for the map key
         keyIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, indexOrKeyName, typeMapKey(collectionType), false);
-        keyIdent->used = true;                            // Do not warn about unused key
+        identSetUsed(keyIdent);                            // Do not warn about unused key
         doZeroVar(comp, keyIdent);
 
         // Declare variable for the map keys
@@ -933,7 +933,7 @@ static void parseForInHeader(Compiler *comp)
         genSwapAssign(&comp->gen, keysType->kind, typeSize(&comp->types, keysType));
     }
 
-    Ident *itemIdent = NULL;
+    const Ident *itemIdent = NULL;
     if (itemName[0] != '\0')
     {
         // Declare variable for the collection item
@@ -1126,7 +1126,7 @@ static void parseReturnStmt(Compiler *comp)
     // Copy structure to #result
     if (typeStructured(sig->resultType))
     {
-        Ident *result = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, "#result", NULL);
+        const Ident *result = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, "#result", NULL);
 
         doPushVarPtr(comp, result);
         genDeref(&comp->gen, TYPE_PTR);
@@ -1224,15 +1224,12 @@ void parseFnBlock(Compiler *comp, Ident *fn, const Type *upvaluesStructType)
     lexEat(&comp->lex, TOK_LBRACE);
     blocksEnterFn(&comp->blocks, fn, upvaluesStructType != NULL);
 
-    char *prevDebugFnName = comp->lex.debug->fnName;
+    const char *prevDebugFnName = comp->lex.debug->fnName;
 
     if (fn->kind == IDENT_CONST && fn->type->kind == TYPE_FN && fn->block == 0)
     {
         if (fn->type->sig.isMethod)
-        {
-            comp->lex.debug->fnName = storageAdd(&comp->storage, DEFAULT_STR_LEN + 1);
-            identMethodNameWithRcv(fn, comp->lex.debug->fnName, DEFAULT_STR_LEN + 1);
-        }
+            comp->lex.debug->fnName = identMethodNameWithRcv(&comp->idents, fn);
         else
             comp->lex.debug->fnName = fn->name;
     }
@@ -1255,7 +1252,7 @@ void parseFnBlock(Compiler *comp, Ident *fn, const Type *upvaluesStructType)
     if (upvaluesStructType)
     {
         // Extract upvalues structure from the "any" interface
-        Ident *upvaluesParamIdent = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, "#upvalues", NULL);
+        const Ident *upvaluesParamIdent = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, "#upvalues", NULL);
         const Type *upvaluesParamType = upvaluesParamIdent->type;
 
         doPushVarPtr(comp, upvaluesParamIdent);
@@ -1271,7 +1268,7 @@ void parseFnBlock(Compiler *comp, Ident *fn, const Type *upvaluesStructType)
             genGetFieldPtr(&comp->gen, upvalue->offset);
             genDeref(&comp->gen, upvalue->type->kind);
 
-            Ident *upvalueIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, upvalue->name, upvalue->type, false);
+            const Ident *upvalueIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, upvalue->name, upvalue->type, false);
             doZeroVar(comp, upvalueIdent);
             doPushVarPtr(comp, upvalueIdent);
 

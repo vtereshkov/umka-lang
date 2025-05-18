@@ -96,7 +96,7 @@ typedef struct tagType
     bool isExprList;                            // For structures that represent expression lists
     bool isVariadicParamList;                   // For dynamic arrays of interfaces that represent variadic parameter lists
     bool isEnum;                                // For enumerations
-    struct tagIdent *typeIdent;                 // For types that have identifiers
+    const struct tagIdent *typeIdent;           // For types that have identifiers
     union
     {
         const Field **field;                    // For structures, interfaces and closures

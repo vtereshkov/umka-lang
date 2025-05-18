@@ -6,7 +6,7 @@
 void doGarbageCollection(Compiler *comp);
 void doGarbageCollectionDownToBlock(Compiler *comp, int block);
 
-void doZeroVar(Compiler *comp, Ident *ident);
+void doZeroVar(Compiler *comp, const Ident *ident);
 void doResolveExtern(Compiler *comp);
 
 void parseAssignmentStmt(Compiler *comp, const Type *type, Const *varPtrConstList);

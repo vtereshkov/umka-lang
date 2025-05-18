@@ -218,7 +218,7 @@ static const Type *parseTypeOrForwardType(Compiler *comp)
     bool forward = false;
     if (comp->types.forwardTypesEnabled && comp->lex.tok.kind == TOK_IDENT)
     {
-        Ident *ident = NULL;
+        const Ident *ident = NULL;
 
         Lexer lookaheadLex = comp->lex;
         lexNext(&lookaheadLex);
@@ -231,7 +231,7 @@ static const Type *parseTypeOrForwardType(Compiler *comp)
         {
             Type *forwardType = typeAdd(&comp->types, &comp->blocks, TYPE_FORWARD);
             forwardType->typeIdent = identAddType(&comp->idents, &comp->modules, &comp->blocks, comp->lex.tok.name, forwardType, false);
-            forwardType->typeIdent->used = true;
+            identSetUsed(forwardType->typeIdent);
 
             lexNext(&comp->lex);
 
@@ -524,7 +524,7 @@ static const Type *parseClosureType(Compiler *comp)
 
 
 // type = qualIdent | ptrType | arrayType | dynArrayType | strType | enumType | mapType | structType | interfaceType | closureType.
-const Type *parseType(Compiler *comp, Ident *ident)
+const Type *parseType(Compiler *comp, const Ident *ident)
 {
     if (ident)
     {
@@ -939,7 +939,7 @@ void parseProgram(Compiler *comp)
     // Entry point
     genEntryPoint(&comp->gen, 0);
 
-    Ident *mainFn = identFind(&comp->idents, &comp->modules, &comp->blocks, mainModule, "main", NULL, false);
+    const Ident *mainFn = identFind(&comp->idents, &comp->modules, &comp->blocks, mainModule, "main", NULL, false);
     if (mainFn && identIsMain(mainFn))
     {
         genPushZero(&comp->gen, sizeof(Interface) / sizeof(Slot));  // Dummy upvalue

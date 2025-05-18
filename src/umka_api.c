@@ -11,7 +11,7 @@
 #define UMKA_VERSION    "1.5.4"
 
 
-static void compileWarning(void *context, DebugInfo *debug, const char *format, ...)
+static void compileWarning(void *context, const DebugInfo *debug, const char *format, ...)
 {
     va_list args;
     va_start(args, format);
