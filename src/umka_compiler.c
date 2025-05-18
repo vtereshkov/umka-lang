@@ -369,8 +369,8 @@ void compilerMakeFuncContext(Compiler *comp, const Type *fnType, int entryOffset
     int paramSlots = typeParamSizeTotal(&comp->types, &fnType->sig) / sizeof(Slot);
     fn->params = (Slot *)storageAdd(&comp->storage, (paramSlots + 4) * sizeof(Slot)) + 4;          // + 4 slots for compatibility with umkaGetParam()
 
-    ParamLayout *paramLayout = typeMakeParamLayout(&comp->types, &comp->storage, &fnType->sig);
-    fn->params[-4].ptrVal = paramLayout;
+    const ParamLayout *paramLayout = typeMakeParamLayout(&comp->types, &fnType->sig);
+    fn->params[-4].ptrVal = (ParamLayout *)paramLayout;
 
     fn->result = storageAdd(&comp->storage, sizeof(Slot));
 }

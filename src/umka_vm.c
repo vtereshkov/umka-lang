@@ -3722,7 +3722,7 @@ static FORCE_INLINE void doReturn(Fiber *fiber, Fiber **newFiber)
 
 static FORCE_INLINE void doEnterFrame(Fiber *fiber, HookFunc *hooks, Error *error)
 {
-    ParamAndLocalVarLayout *layout = fiber->code[fiber->ip].operand.ptrVal;
+    const ParamAndLocalVarLayout *layout = fiber->code[fiber->ip].operand.ptrVal;
 
     // Allocate stack frame
     if (fiber->top - layout->localVarSlots - fiber->stack < MEM_MIN_FREE_STACK)
@@ -3736,7 +3736,7 @@ static FORCE_INLINE void doEnterFrame(Fiber *fiber, HookFunc *hooks, Error *erro
     (--fiber->top)->intVal = 0;
 
     // Push parameter layout table pointer
-    (--fiber->top)->ptrVal = layout->paramLayout;
+    (--fiber->top)->ptrVal = (ParamLayout *)layout->paramLayout;
 
     // Move stack top
     fiber->top -= layout->localVarSlots;

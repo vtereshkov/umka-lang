@@ -130,10 +130,10 @@ void typeDeepCopy   (Storage *storage, Type *dest, const Type *src);
 Type *typeAddPtrTo  (Types *types, Blocks *blocks, const Type *type);
 
 int typeSizeNoCheck (const Type *type);
-int typeSize        (Types *types, const Type *type);
+int typeSize        (const Types *types, const Type *type);
 
 int typeAlignmentNoCheck(const Type *type);
-int typeAlignment       (Types *types, const Type *type);
+int typeAlignment       (const Types *types, const Type *type);
 
 
 static inline bool typeKindIntegerOrEnum(TypeKind typeKind)
@@ -228,9 +228,9 @@ static inline bool typeExprListStruct(const Type *type)
 bool typeEquivalent             (const Type *left, const Type *right);
 bool typeEquivalentExceptIdent  (const Type *left, const Type *right);
 bool typeCompatible             (const Type *left, const Type *right);
-void typeAssertCompatible       (Types *types, const Type *left, const Type *right);
-void typeAssertCompatibleParam  (Types *types, const Type *left, const Type *right, const Type *fnType, int paramIndex);
-void typeAssertCompatibleBuiltin(Types *types, const Type *type, /*BuiltinFunc*/ int builtin, bool condition);
+void typeAssertCompatible       (const Types *types, const Type *left, const Type *right);
+void typeAssertCompatibleParam  (const Types *types, const Type *left, const Type *right, const Type *fnType, int paramIndex);
+void typeAssertCompatibleBuiltin(const Types *types, const Type *type, /*BuiltinFunc*/ int builtin, bool condition);
 
 
 static inline bool typeCompatibleRcv(const Type *left, const Type *right)
@@ -245,14 +245,14 @@ static inline bool typeImplicitlyConvertibleBaseTypes(const Type *left, const Ty
 }
 
 
-static inline bool typeExplicitlyConvertibleBaseTypes(Types *types, const Type *left, const Type *right)
+static inline bool typeExplicitlyConvertibleBaseTypes(const Types *types, const Type *left, const Type *right)
 {
     return typeSize(types, left) <= typeSize(types, right) && !typeHasPtr(left, true) && !typeHasPtr(right, true);
 }
 
 
 bool typeValidOperator      (const Type *type, TokenKind op);
-void typeAssertValidOperator(Types *types, const Type *type, TokenKind op);
+void typeAssertValidOperator(const Types *types, const Type *type, TokenKind op);
 
 void typeEnableForward(Types *types, bool enable);
 
@@ -300,23 +300,23 @@ static inline bool typeOverflow(TypeKind typeKind, Const val)
 
 
 const Field *typeFindField        (const Type *structType, const char *name, int *index);
-const Field *typeAssertFindField  (Types *types, const Type *structType, const char *name, int *index);
-const Field *typeAddField         (Types *types, Type *structType, const Type *fieldType, const char *fieldName);
+const Field *typeAssertFindField  (const Types *types, const Type *structType, const char *name, int *index);
+const Field *typeAddField         (const Types *types, Type *structType, const Type *fieldType, const char *fieldName);
 
 const EnumConst *typeFindEnumConst        (const Type *enumType, const char *name);
-const EnumConst *typeAssertFindEnumConst  (Types *types, const Type *enumType, const char *name);
+const EnumConst *typeAssertFindEnumConst  (const Types *types, const Type *enumType, const char *name);
 const EnumConst *typeFindEnumConstByVal   (const Type *enumType, Const val);
-const EnumConst *typeAddEnumConst         (Types *types, Type *enumType, const char *fieldName, Const val);
+const EnumConst *typeAddEnumConst         (const Types *types, Type *enumType, const char *fieldName, Const val);
 
 const Param *typeFindParam    (const Signature *sig, const char *name);
-const Param *typeAddParam     (Types *types, Signature *sig, const Type *type, const char *name, Const defaultVal);
+const Param *typeAddParam     (const Types *types, Signature *sig, const Type *type, const char *name, Const defaultVal);
 
-int typeParamSizeUpTo   (Types *types, const Signature *sig, int index);
-int typeParamSizeTotal  (Types *types, const Signature *sig);
-int typeParamOffset     (Types *types, const Signature *sig, int index);
+int typeParamSizeUpTo   (const Types *types, const Signature *sig, int index);
+int typeParamSizeTotal  (const Types *types, const Signature *sig);
+int typeParamOffset     (const Types *types, const Signature *sig, int index);
 
-ParamLayout            *typeMakeParamLayout           (Types *types, Storage *storage, const Signature *sig);
-ParamAndLocalVarLayout *typeMakeParamAndLocalVarLayout(Storage *storage, ParamLayout *paramLayout, int localVarSlots);
+const ParamLayout            *typeMakeParamLayout           (const Types *types, const Signature *sig);
+const ParamAndLocalVarLayout *typeMakeParamAndLocalVarLayout(const Types *types, const ParamLayout *paramLayout, int localVarSlots);
 
 const char *typeKindSpelling(TypeKind kind);
 char *typeSpelling          (const Type *type, char *buf);

@@ -108,9 +108,9 @@ void doResolveExtern(Compiler *comp)
                 identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
                 identFree(&comp->idents, blocksCurrent(&comp->blocks));
 
-                ParamLayout *paramLayout = typeMakeParamLayout(&comp->types, &comp->storage, &ident->type->sig);
+                const ParamLayout *paramLayout = typeMakeParamLayout(&comp->types, &ident->type->sig);
 
-                genLeaveFrameFixup(&comp->gen, typeMakeParamAndLocalVarLayout(&comp->storage, paramLayout, 0));
+                genLeaveFrameFixup(&comp->gen, typeMakeParamAndLocalVarLayout(&comp->types, paramLayout, 0));
                 genReturn(&comp->gen, paramLayout->numParamSlots);
 
                 blocksLeave(&comp->blocks);
@@ -1309,9 +1309,9 @@ void parseFnBlock(Compiler *comp, Ident *fn, const Type *upvaluesStructType)
 
     const int localVarSlots = align(comp->blocks.item[comp->blocks.top].localVarSize, sizeof(Slot)) / sizeof(Slot);
 
-    ParamLayout *paramLayout = typeMakeParamLayout(&comp->types, &comp->storage, &fn->type->sig);
+    const ParamLayout *paramLayout = typeMakeParamLayout(&comp->types, &fn->type->sig);
 
-    genLeaveFrameFixup(&comp->gen, typeMakeParamAndLocalVarLayout(&comp->storage, paramLayout, localVarSlots));
+    genLeaveFrameFixup(&comp->gen, typeMakeParamAndLocalVarLayout(&comp->types, paramLayout, localVarSlots));
     genReturn(&comp->gen, paramLayout->numParamSlots);
 
     comp->lex.debug->fnName = prevDebugFnName;

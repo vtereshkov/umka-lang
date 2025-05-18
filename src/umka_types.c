@@ -154,9 +154,9 @@ int typeSizeNoCheck(const Type *type)
 }
 
 
-int typeSize(Types *types, const Type *type)
+int typeSize(const Types *types, const Type *type)
 {
-    int size = typeSizeNoCheck(type);
+    const int size = typeSizeNoCheck(type);
     if (size < 0)
     {
         char buf[DEFAULT_STR_LEN + 1];
@@ -209,9 +209,9 @@ int typeAlignmentNoCheck(const Type *type)
 }
 
 
-int typeAlignment(Types *types, const Type *type)
+int typeAlignment(const Types *types, const Type *type)
 {
-    int alignment = typeAlignmentNoCheck(type);
+    const int alignment = typeAlignmentNoCheck(type);
     if (alignment <= 0)
     {
         char buf[DEFAULT_STR_LEN + 1];
@@ -419,7 +419,7 @@ bool typeCompatible(const Type *left, const Type *right)
 }
 
 
-void typeAssertCompatible(Types *types, const Type *left, const Type *right)
+void typeAssertCompatible(const Types *types, const Type *left, const Type *right)
 {
     if (!typeCompatible(left, right))
     {
@@ -429,7 +429,7 @@ void typeAssertCompatible(Types *types, const Type *left, const Type *right)
 }
 
 
-void typeAssertCompatibleParam(Types *types, const Type *left, const Type *right, const Type *fnType, int paramIndex)
+void typeAssertCompatibleParam(const Types *types, const Type *left, const Type *right, const Type *fnType, int paramIndex)
 {
     if (!typeCompatible(left, right))
     {
@@ -439,7 +439,7 @@ void typeAssertCompatibleParam(Types *types, const Type *left, const Type *right
 }
 
 
-void typeAssertCompatibleBuiltin(Types *types, const Type *type, /*BuiltinFunc*/ int builtin, bool condition)
+void typeAssertCompatibleBuiltin(const Types *types, const Type *type, /*BuiltinFunc*/ int builtin, bool condition)
 {
     if (!condition)
     {
@@ -490,7 +490,7 @@ bool typeValidOperator(const Type *type, TokenKind op)
 }
 
 
-void typeAssertValidOperator(Types *types, const Type *type, TokenKind op)
+void typeAssertValidOperator(const Types *types, const Type *type, TokenKind op)
 {
     if (!typeValidOperator(type, op))
     {
@@ -528,7 +528,7 @@ const Field *typeFindField(const Type *structType, const char *name, int *index)
 }
 
 
-const Field *typeAssertFindField(Types *types, const Type *structType, const char *name, int *index)
+const Field *typeAssertFindField(const Types *types, const Type *structType, const char *name, int *index)
 {
     const Field *res = typeFindField(structType, name, index);
     if (!res)
@@ -537,7 +537,7 @@ const Field *typeAssertFindField(Types *types, const Type *structType, const cha
 }
 
 
-const Field *typeAddField(Types *types, Type *structType, const Type *fieldType, const char *fieldName)
+const Field *typeAddField(const Types *types, Type *structType, const Type *fieldType, const char *fieldName)
 {
     IdentName fieldNameBuf;
     const char *name;
@@ -604,7 +604,7 @@ const EnumConst *typeFindEnumConst(const Type *enumType, const char *name)
 }
 
 
-const EnumConst *typeAssertFindEnumConst(Types *types, const Type *enumType, const char *name)
+const EnumConst *typeAssertFindEnumConst(const Types *types, const Type *enumType, const char *name)
 {
     const EnumConst *res = typeFindEnumConst(enumType, name);
     if (!res)
@@ -625,7 +625,7 @@ const EnumConst *typeFindEnumConstByVal(const Type *enumType, Const val)
 }
 
 
-const EnumConst *typeAddEnumConst(Types *types, Type *enumType, const char *name, Const val)
+const EnumConst *typeAddEnumConst(const Types *types, Type *enumType, const char *name, Const val)
 {
     if (typeFindEnumConst(enumType, name))
         types->error->handler(types->error->context, "Duplicate enumeration constant %s", name);
@@ -655,7 +655,7 @@ const EnumConst *typeAddEnumConst(Types *types, Type *enumType, const char *name
 
 const Param *typeFindParam(const Signature *sig, const char *name)
 {
-    unsigned int nameHash = hash(name);
+    const unsigned int nameHash = hash(name);
     for (int i = 0; i < sig->numParams; i++)
         if (sig->param[i]->hash == nameHash && strcmp(sig->param[i]->name, name) == 0)
             return sig->param[i];
@@ -664,7 +664,7 @@ const Param *typeFindParam(const Signature *sig, const char *name)
 }
 
 
-const Param *typeAddParam(Types *types, Signature *sig, const Type *type, const char *name, Const defaultVal)
+const Param *typeAddParam(const Types *types, Signature *sig, const Type *type, const char *name, Const defaultVal)
 {
     if (typeFindParam(sig, name))
         types->error->handler(types->error->context, "Duplicate parameter %s", name);
@@ -686,7 +686,7 @@ const Param *typeAddParam(Types *types, Signature *sig, const Type *type, const 
 }
 
 
-int typeParamSizeUpTo(Types *types, const Signature *sig, int index)
+int typeParamSizeUpTo(const Types *types, const Signature *sig, int index)
 {
     // All parameters are slot-aligned
     int size = 0;
@@ -696,23 +696,23 @@ int typeParamSizeUpTo(Types *types, const Signature *sig, int index)
 }
 
 
-int typeParamSizeTotal(Types *types, const Signature *sig)
+int typeParamSizeTotal(const Types *types, const Signature *sig)
 {
     return typeParamSizeUpTo(types, sig, sig->numParams - 1);
 }
 
 
-int typeParamOffset(Types *types, const Signature *sig, int index)
+int typeParamOffset(const Types *types, const Signature *sig, int index)
 {
-    int paramSizeUpToIndex = typeParamSizeUpTo(types, sig, index);
-    int paramSizeTotal     = typeParamSizeTotal(types, sig);
+    const int paramSizeUpToIndex = typeParamSizeUpTo(types, sig, index);
+    const int paramSizeTotal     = typeParamSizeTotal(types, sig);
     return (paramSizeTotal - paramSizeUpToIndex) + 2 * sizeof(Slot);  // + 2 slots for old base pointer and return address
 }
 
 
-ParamLayout *typeMakeParamLayout(Types *types, Storage *storage, const Signature *sig)
+const ParamLayout *typeMakeParamLayout(const Types *types, const Signature *sig)
 {
-    ParamLayout *layout = storageAdd(storage, sizeof(ParamLayout) + sig->numParams * sizeof(int64_t));
+    ParamLayout *layout = storageAdd(types->storage, sizeof(ParamLayout) + sig->numParams * sizeof(int64_t));
 
     layout->numParams = sig->numParams;
     layout->numResultParams = typeStructured(sig->resultType) ? 1 : 0;
@@ -725,9 +725,9 @@ ParamLayout *typeMakeParamLayout(Types *types, Storage *storage, const Signature
 }
 
 
-ParamAndLocalVarLayout *typeMakeParamAndLocalVarLayout(Storage *storage, ParamLayout *paramLayout, int localVarSlots)
+const ParamAndLocalVarLayout *typeMakeParamAndLocalVarLayout(const Types *types, const ParamLayout *paramLayout, int localVarSlots)
 {
-    ParamAndLocalVarLayout *layout = storageAdd(storage, sizeof(ParamAndLocalVarLayout));
+    ParamAndLocalVarLayout *layout = storageAdd(types->storage, sizeof(ParamAndLocalVarLayout));
     layout->paramLayout = paramLayout;
     layout->localVarSlots = localVarSlots;
     return layout;

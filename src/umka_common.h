@@ -207,7 +207,7 @@ typedef struct
 
 typedef struct
 {
-    ParamLayout *paramLayout;
+    const ParamLayout *paramLayout;
     int64_t localVarSlots;
 } ParamAndLocalVarLayout;
 
