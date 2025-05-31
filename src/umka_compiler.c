@@ -43,6 +43,9 @@ static void compilerSetAPI(Compiler *comp)
     comp->api.umkaGetVersion        = umkaGetVersion;
     comp->api.umkaGetMemUsage       = umkaGetMemUsage;
     comp->api.umkaMakeFuncContext   = umkaMakeFuncContext;
+    comp->api.umkaGetParam          = umkaGetParam;
+    comp->api.umkaGetUpvalue        = umkaGetUpvalue;
+    comp->api.umkaGetResult         = umkaGetResult;
 }
 
 

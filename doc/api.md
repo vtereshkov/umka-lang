@@ -178,7 +178,7 @@ Parameters:
 Returned value: 0 if the Umka function returns successfully and no run-time errors are detected, otherwise the error code.
 
 ```
-static inline UmkaStackSlot *umkaGetParam(UmkaStackSlot *params, int index);
+UMKA_API UmkaStackSlot *umkaGetParam(UmkaStackSlot *params, int index);
 ```
 Finds the parameter slot.
 
@@ -190,7 +190,7 @@ Parameters:
 Returned value: Pointer to the first stack slot occupied by the parameter, `NULL` if there is no such parameter.
 
 ```
-static inline UmkaAny *umkaGetUpvalue(UmkaStackSlot *params);
+UMKA_API UmkaAny *umkaGetUpvalue(UmkaStackSlot *params);
 ```
 Finds the captured variables.
 
@@ -201,7 +201,7 @@ Parameters:
 Returned value: Pointer to the captured variables stored as `any`.
 
 ```
-static inline UmkaStackSlot *umkaGetResult(UmkaStackSlot *params, UmkaStackSlot *result);
+UMKA_API UmkaStackSlot *umkaGetResult(UmkaStackSlot *params, UmkaStackSlot *result);
 ```
 Finds the returned value slot.
 
@@ -226,44 +226,6 @@ Parameters:
 * `result`: Returned value stack slots
 
 Returned value: Interpreter instance handle. 
-
-Example:
-
-```
-// lib.um - UMI interface
-
-fn add*(a, b: real): real
-fn mulVec*(a: real, v: [2]real): [2]real
-fn hello*(): str
-```
-```
-// lib.c - UMI implementation
-
-#include "umka_api.h"
-
-void add(UmkaStackSlot *params, UmkaStackSlot *result)
-{
-    double a = umkaGetParam(params, 0)->realVal;
-    double b = umkaGetParam(params, 1)->realVal;
-    umkaGetResult(params, result)->realVal = a + b;
-}
-
-void mulVec(UmkaStackSlot *params, UmkaStackSlot *result)
-{
-    double a = umkaGetParam(params, 0)->realVal;
-    double* v = (double *)umkaGetParam(params, 1);
-    double* out = umkaGetResult(params, result)->ptrVal;
-    out[0] = a * v[0];
-    out[1] = a * v[1];
-}
-
-void hello(UmkaStackSlot *params, UmkaStackSlot *result)
-{
-    void *umka = umkaGetInstance(result);
-    UmkaAPI *api = umkaGetAPI(umka);
-    umkaGetResult(params, result)->ptrVal = api->umkaMakeStr(umka, "Hello");
-}
-```
 
 ## Debugging and profiling
 
@@ -553,6 +515,47 @@ Returned value: Collection of Umka API function pointers
 Example:
 
 ```
-UmkaAPI *api = umkaGetAPI(umka);
-char *s = api->umkaMakeStr(umka, "Hello");
+// lib.um - UMI interface
+
+fn add*(a, b: real): real
+fn mulVec*(a: real, v: [2]real): [2]real
+fn hello*(): str
+```
+```
+// lib.c - UMI implementation
+
+#include "umka_api.h"
+
+UMKA_EXPORT void add(UmkaStackSlot *params, UmkaStackSlot *result)
+{
+    void *umka = umkaGetInstance(result);
+    UmkaAPI *api = umkaGetAPI(umka);
+
+    double a = api->umkaGetParam(params, 0)->realVal;
+    double b = api->umkaGetParam(params, 1)->realVal;
+    api->umkaGetResult(params, result)->realVal = a + b;
+}
+
+
+UMKA_EXPORT void mulVec(UmkaStackSlot *params, UmkaStackSlot *result)
+{
+    void *umka = umkaGetInstance(result);
+    UmkaAPI *api = umkaGetAPI(umka); 
+
+    double a = api->umkaGetParam(params, 0)->realVal;
+    double* v = (double *)api->umkaGetParam(params, 1);
+    double* out = api->umkaGetResult(params, result)->ptrVal;
+
+    out[0] = a * v[0];
+    out[1] = a * v[1];
+}
+
+
+UMKA_EXPORT void hello(UmkaStackSlot *params, UmkaStackSlot *result)
+{
+    void *umka = umkaGetInstance(result);
+    UmkaAPI *api = umkaGetAPI(umka);
+    
+    api->umkaGetResult(params, result)->ptrVal = api->umkaMakeStr(umka, "Hello");
+}
 ```
