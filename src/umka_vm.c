@@ -186,6 +186,17 @@ static FORCE_INLINE Slot *doGetOnFreeParams(void *ptr)
 }
 
 
+static FORCE_INLINE Slot *doGetOnFreeResult(HeapPages *pages)
+{
+    static Slot resultBuf = {0};
+    Slot *result = &resultBuf;
+
+    result->ptrVal = pages->error->context;     // Upon entry, the result slot stores the Umka instance
+
+    return result;
+}
+
+
 static void pageInit(HeapPages *pages, Fiber *fiber, Error *error)
 {
     pages->first = NULL;
@@ -228,7 +239,7 @@ static void pageFree(HeapPages *pages, bool warnLeak)
             if (chunk->refCnt == 0 || !chunk->onFree)
                 continue;
 
-            chunk->onFree(doGetOnFreeParams(chunk->data), NULL);
+            chunk->onFree(doGetOnFreeParams(chunk->data), doGetOnFreeResult(pages));
             page->numChunksWithOnFree--;
         }
 
@@ -437,7 +448,7 @@ static FORCE_INLINE int chunkChangeRefCnt(HeapPages *pages, HeapPage *page, void
 
     if (chunk->onFree && chunk->refCnt == 1 && delta == -1)
     {
-        chunk->onFree(doGetOnFreeParams(ptr), NULL);
+        chunk->onFree(doGetOnFreeParams(ptr), doGetOnFreeResult(pages));
         page->numChunksWithOnFree--;
     }
 
