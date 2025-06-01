@@ -111,7 +111,7 @@ static const char *runtimeModuleSources[] = {
 "// Input/output\n"
 "\n"
 "type (\n"
-"    File* = ^struct {}\n"
+"    File* = __file\n"
 "\n"
 "    SeekFrom* = enum {\n"
 "        begin\n"

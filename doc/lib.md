@@ -83,7 +83,7 @@ Copies the `bytes` array to `buf`. If unsuccessful, returns `StdErr.buffer` or `
 #### Types
 
 ```
-type File* = ^struct {}
+type File* = __file
 ```
 
 File handle.

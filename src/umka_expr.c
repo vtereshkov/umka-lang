@@ -823,7 +823,7 @@ static void parseBuiltinIOCall(Compiler *comp, const Type **type, Const *constan
     // Stream (file/string pointer)
     if (builtin == BUILTIN_FPRINTF || builtin == BUILTIN_FSCANF  || builtin == BUILTIN_SSCANF)
     {
-        const Type *expectedType = (builtin == BUILTIN_FPRINTF || builtin == BUILTIN_FSCANF) ? comp->ptrVoidType : comp->strType;
+        const Type *expectedType = (builtin == BUILTIN_FPRINTF || builtin == BUILTIN_FSCANF) ? comp->fileType : comp->strType;
         *type = expectedType;
         parseExpr(comp, type, constant);
         doAssertImplicitTypeConv(comp, expectedType, type, constant);

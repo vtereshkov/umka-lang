@@ -494,6 +494,7 @@ char
 real32 real
 fiber
 any
+__file
 ```
 
 ### Constant declarations
@@ -633,7 +634,7 @@ Built-in functions don't necessarily adhere to the general rules for functions.
 
 ```
 fn printf(format: str, a1: T1, a2: T2...): int
-fn fprintf(f: ^std::File, format: str, a1: T1, a2: T2...): int
+fn fprintf(f: __file, format: str, a1: T1, a2: T2...): int
 fn sprintf(format: str, a1: T1, a2: T2...): str
 ```
 
@@ -641,7 +642,7 @@ Write `a1`, `a2`... to the console, or to the file `f`, or to a string, accordin
 
 ```
 fn scanf(format: str, a1: ^T1, a2: ^T2...): int
-fn fscanf(f: ^std::File, format: str, a1: ^T1, a2: ^T2...): int
+fn fscanf(f: __file, format: str, a1: ^T1, a2: ^T2...): int
 fn sscanf(buf, format: str, a1: ^T1, a2: ^T2...): int
 ```
 

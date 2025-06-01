@@ -100,7 +100,7 @@ fn frombytes*(buf: any, bytes: []uint8): Err {
 // Input/output
 
 type (
-    File* = ^struct {}
+    File* = __file
 
     SeekFrom* = enum {
         begin

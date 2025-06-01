@@ -41,7 +41,8 @@ typedef struct
          *strType,
          *fiberType,
          *ptrVoidType, *ptrNullType,
-         *anyType;
+         *anyType,
+         *fileType;
 
     // Command-line arguments
     int argc;

@@ -92,6 +92,12 @@ static void compilerDeclareBuiltinTypes(Compiler *comp)
     fiberType->base = fiberClosureType;
 
     comp->fiberType = fiberType;
+
+    // __file
+    Type *fileDataType = typeAdd(&comp->types, &comp->blocks, TYPE_STRUCT);
+    typeAddField(&comp->types, fileDataType, comp->ptrVoidType, "#data");
+
+    comp->fileType = typeAddPtrTo(&comp->types, &comp->blocks, fileDataType);
 }
 
 
@@ -122,6 +128,7 @@ static void compilerDeclareBuiltinIdents(Compiler *comp)
     identAddType(&comp->idents, &comp->modules, &comp->blocks,  "real",     comp->realType,    true);
     identAddType(&comp->idents, &comp->modules, &comp->blocks,  "fiber",    comp->fiberType,   true);
     identAddType(&comp->idents, &comp->modules, &comp->blocks,  "any",      comp->anyType,     true);
+    identAddType(&comp->idents, &comp->modules, &comp->blocks,  "__file",   comp->fileType,    true);
 
     // Built-in functions
     // I/O
