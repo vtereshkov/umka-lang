@@ -1913,6 +1913,9 @@ static void parseArrayOrStructLiteral(Compiler *comp, const Type **type, Const *
         else if ((*type)->kind == TYPE_STRUCT)
         {
             field = (*type)->field[numItems];
+            if (field && field->name[0] == '#')
+                comp->error.handler(comp->error.context, "Cannot initialize hidden field");
+
             itemOffset = field->offset;
         }
 
