@@ -112,7 +112,7 @@ static void parseSignature(Compiler *comp, Signature *sig)
     // Formal parameter list
     lexEat(&comp->lex, TOK_LPAR);
     int numDefaultParams = 0;
-    
+
     if (comp->lex.tok.kind == TOK_IDENT)
     {
         bool variadicParamListFound = false;

@@ -57,6 +57,7 @@ Type *typeAdd(Types *types, const Blocks *blocks, TypeKind kind)
 
     type->kind  = kind;
     type->block = blocks->item[blocks->top].block;
+    type->sameAs = type;
 
     type->next = types->first;
     types->first = type;
@@ -269,7 +270,7 @@ static bool typeDefaultParamEqual(const Const *left, const Const *right, const T
 }
 
 
-static bool typeEquivalentRecursive(const Type *left, const Type *right, bool checkTypeIdents, VisitedTypePair *firstPair)
+static bool typeEquivalentRecursive(const Type *left, const Type *right, VisitedTypePair *firstPair)
 {
     // Recursively defined types visited before (need to check first in order to break a possible circular definition)
     VisitedTypePair *pair = firstPair;
@@ -286,14 +287,14 @@ static bool typeEquivalentRecursive(const Type *left, const Type *right, bool ch
         return true;
 
     // Identically named types
-    if (checkTypeIdents && left->typeIdent && right->typeIdent)
+    if (left->typeIdent && right->typeIdent)
         return left->typeIdent == right->typeIdent && left->block == right->block;
 
     if (left->kind == right->kind)
     {
         // Pointers or weak pointers
         if (left->kind == TYPE_PTR || left->kind == TYPE_WEAKPTR)
-            return typeEquivalentRecursive(left->base, right->base, checkTypeIdents, &newPair);
+            return typeEquivalentRecursive(left->base, right->base, &newPair);
 
         // Arrays
         else if (left->kind == TYPE_ARRAY)
@@ -302,12 +303,12 @@ static bool typeEquivalentRecursive(const Type *left, const Type *right, bool ch
             if (left->numItems != right->numItems)
                 return false;
 
-            return typeEquivalentRecursive(left->base, right->base, checkTypeIdents, &newPair);
+            return typeEquivalentRecursive(left->base, right->base, &newPair);
         }
 
         // Dynamic arrays
         else if (left->kind == TYPE_DYNARRAY)
-            return typeEquivalentRecursive(left->base, right->base, checkTypeIdents, &newPair);
+            return typeEquivalentRecursive(left->base, right->base, &newPair);
 
         // Strings
         else if (left->kind == TYPE_STR)
@@ -321,10 +322,10 @@ static bool typeEquivalentRecursive(const Type *left, const Type *right, bool ch
         else if (left->kind == TYPE_MAP)
         {
             // Key type
-            if (!typeEquivalentRecursive(typeMapKey(left), typeMapKey(right), checkTypeIdents, &newPair))
+            if (!typeEquivalentRecursive(typeMapKey(left), typeMapKey(right), &newPair))
                 return false;
 
-            return typeEquivalentRecursive(left->base, right->base, checkTypeIdents, &newPair);
+            return typeEquivalentRecursive(left->base, right->base, &newPair);
         }
 
         // Structures or interfaces
@@ -342,7 +343,7 @@ static bool typeEquivalentRecursive(const Type *left, const Type *right, bool ch
                     return false;
 
                 // Type
-                if (!typeEquivalentRecursive(left->field[i]->type, right->field[i]->type, checkTypeIdents, &newPair))
+                if (!typeEquivalentRecursive(left->field[i]->type, right->field[i]->type, &newPair))
                     return false;
             }
             return true;
@@ -368,7 +369,7 @@ static bool typeEquivalentRecursive(const Type *left, const Type *right, bool ch
             for (int i = iStart; i < left->sig.numParams; i++)
             {
                 // Type
-                if (!typeEquivalentRecursive(left->sig.param[i]->type, right->sig.param[i]->type, checkTypeIdents, &newPair))
+                if (!typeEquivalentRecursive(left->sig.param[i]->type, right->sig.param[i]->type, &newPair))
                     return false;
 
                 // Default value
@@ -378,7 +379,7 @@ static bool typeEquivalentRecursive(const Type *left, const Type *right, bool ch
             }
 
             // Result type
-            if (!typeEquivalentRecursive(left->sig.resultType, right->sig.resultType, checkTypeIdents, &newPair))
+            if (!typeEquivalentRecursive(left->sig.resultType, right->sig.resultType, &newPair))
                 return false;
 
             return true;
@@ -394,13 +395,13 @@ static bool typeEquivalentRecursive(const Type *left, const Type *right, bool ch
 
 bool typeEquivalent(const Type *left, const Type *right)
 {
-    return typeEquivalentRecursive(left, right, true, NULL);
+    return typeEquivalentRecursive(left, right, NULL);
 }
 
 
-bool typeEquivalentExceptIdent(const Type *left, const Type *right)
+bool typeSameExceptMaybeIdent(const Type *left, const Type *right)
 {
-    return typeEquivalentRecursive(left, right, false, NULL);
+    return left->sameAs == right->sameAs;
 }
 
 

@@ -97,6 +97,7 @@ typedef struct tagType
     bool isVariadicParamList;                   // For dynamic arrays of interfaces that represent variadic parameter lists
     bool isEnum;                                // For enumerations
     const struct tagIdent *typeIdent;           // For types that have identifiers
+    const struct tagType *sameAs;               // For types declared as type T = ...
     union
     {
         const Field **field;                    // For structures, interfaces and closures
@@ -226,7 +227,7 @@ static inline bool typeExprListStruct(const Type *type)
 
 
 bool typeEquivalent             (const Type *left, const Type *right);
-bool typeEquivalentExceptIdent  (const Type *left, const Type *right);
+bool typeSameExceptMaybeIdent   (const Type *left, const Type *right);
 bool typeCompatible             (const Type *left, const Type *right);
 void typeAssertCompatible       (const Types *types, const Type *left, const Type *right);
 void typeAssertCompatibleParam  (const Types *types, const Type *left, const Type *right, const Type *fnType, int paramIndex);

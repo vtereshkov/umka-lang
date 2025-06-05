@@ -679,8 +679,8 @@ void doExplicitTypeConv(Compiler *comp, const Type *dest, const Type **src, Cons
 {
     doImplicitTypeConv(comp, dest, src, constant);
 
-    // Type to equivalent type (up to the type identifier)
-    if (typeEquivalentExceptIdent(dest, *src))
+    // Type to same type (up to the type identifier)
+    if (typeSameExceptMaybeIdent(dest, *src))
     {
         *src = dest;
     }
