@@ -51,7 +51,7 @@ dynamic: $(UMKA_LIB_DYNAMIC)
 exe:     $(UMKA_EXE)
 
 clean:
-	$(RM) $(BUILD_PATH) $(OBJ_PATH) -r
+	$(RM) -r $(BUILD_PATH) $(OBJ_PATH)
 
 install: all
 	@echo "Installing to the following directories:"
