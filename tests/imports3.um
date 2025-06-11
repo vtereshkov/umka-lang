@@ -1,11 +1,14 @@
-import s = "std.um"
+import (
+    s = "std.um"
+    log = "mat.um"
+)
 
 std := 42
 imports3 := 43
 
 fn test*() {
     s := "Hello"
-    printf("%v %v %v %v\n", std, imports3, s::argc(), s)
+    printf("%v %v %v %v %v %v\n", std, imports3, s::argc(), s, log::Vec{1, 2, 3}, log(2))
 }
 
 fn main() {

@@ -128,7 +128,7 @@ static Ident *identAdd(Idents *idents, const Modules *modules, const Blocks *blo
     if (type->kind == TYPE_FN && type->sig.isMethod)
         rcvType = type->sig.param[0]->type;
 
-    const Ident *existingIdent = identFind(idents, modules, blocks, blocks->module, name, rcvType, false);
+    const Ident *existingIdent = identFindEx(idents, modules, blocks, blocks->module, name, rcvType, false, kind == IDENT_MODULE);
 
     if (existingIdent && existingIdent->block == blocks->item[blocks->top].block)
     {
