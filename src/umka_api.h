@@ -104,15 +104,6 @@ typedef struct
 typedef void (*UmkaWarningCallback)(UmkaError *warning);
 
 
-typedef struct
-{
-    int64_t numParams;
-    int64_t numResultParams;
-    int64_t numParamSlots;
-    int64_t firstSlotIndex[];
-} UmkaExternalCallParamLayout;
-
-
 typedef void *(*UmkaAlloc)            (void);
 typedef bool (*UmkaInit)              (void *umka, const char *fileName, const char *sourceString, int stackSize, void *reserved, int argc, char **argv, bool fileSystemEnabled, bool implLibsEnabled, UmkaWarningCallback warningCallback);
 typedef bool (*UmkaCompile)           (void *umka);
