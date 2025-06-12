@@ -1836,7 +1836,7 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
     char curFormatBuf[DEFAULT_STR_LEN + 1];
     char *curFormat = curFormatBuf;
 
-    const bool isCurFormatBufInHeap = formatLen + 1 > sizeof(curFormatBuf);
+    const bool isCurFormatBufInHeap = formatLen + 1 > (int)sizeof(curFormatBuf);
     if (isCurFormatBufInHeap)
         curFormat = storageAdd(fiber->vm->storage, formatLen + 1);
 
@@ -1957,7 +1957,7 @@ static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool con
     char curFormatBuf[DEFAULT_STR_LEN + 1];
     char *curFormat = curFormatBuf;
 
-    const bool isCurFormatBufInHeap = formatLen + 2 + 1 > sizeof(curFormatBuf);                   // + 2 for "%n"
+    const bool isCurFormatBufInHeap = formatLen + 2 + 1 > (int)sizeof(curFormatBuf);                   // + 2 for "%n"
     if (isCurFormatBufInHeap)
         curFormat = storageAdd(fiber->vm->storage, formatLen + 2 + 1);
 

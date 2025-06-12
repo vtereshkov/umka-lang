@@ -147,7 +147,7 @@ int lexInit(Lexer *lex, Storage *storage, DebugInfo *debug, const char *fileName
         rewind(file);
 
         lex->buf = storageAdd(lex->storage, bufLen + 1);
-        if (fread(lex->buf, 1, bufLen, file) != bufLen)
+        if ((int)fread(lex->buf, 1, bufLen, file) != bufLen)
             lex->error->handler(lex->error->context, "Cannot read file %s", fileName);
 
         lex->buf[bufLen] = 0;
