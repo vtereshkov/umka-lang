@@ -46,6 +46,8 @@ static void compilerSetAPI(Compiler *comp)
     comp->api.umkaGetParam          = umkaGetParam;
     comp->api.umkaGetUpvalue        = umkaGetUpvalue;
     comp->api.umkaGetResult         = umkaGetResult;
+    comp->api.umkaGetMetadata       = umkaGetMetadata;
+    comp->api.umkaSetMetadata       = umkaSetMetadata;
 }
 
 

@@ -86,6 +86,27 @@ Returns Umka interpreter version.
 
 Returned value: Umka interpreter version (build date) string.
 
+```
+UMKA_API void umkaSetMetadata(void *umka, void *metadata);
+```
+Saves an arbitrary user data pointer to the Umka instance. Umka does not use the data in any way.
+
+Parameters:
+
+* `umka`: Interpreter instance handle
+* `metadata`: User data pointer
+
+```
+UMKA_API void *umkaGetMetadata(void *umka);
+```
+Retrieves the user data pointer previously saved to the Umka instance with `umkaSetMetadata`.
+
+Parameters:
+
+* `umka`: Interpreter instance handle
+
+Returned value: User data pointer
+
 ## Calling functions
 
 ### Types

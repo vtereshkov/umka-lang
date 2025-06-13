@@ -132,6 +132,8 @@ typedef void (*UmkaMakeFuncContext)   (void *umka, void *closureType, int entryO
 typedef UmkaStackSlot *(*UmkaGetParam)(UmkaStackSlot *params, int index);
 typedef UmkaAny *(*UmkaGetUpvalue)    (UmkaStackSlot *params);
 typedef UmkaStackSlot *(*UmkaGetResult)(UmkaStackSlot *params, UmkaStackSlot *result);
+typedef void *(*UmkaGetMetadata)      (void *umka);
+typedef void (*UmkaSetMetadata)       (void *umka, void *metadata);
 
 
 typedef struct
@@ -164,6 +166,8 @@ typedef struct
     UmkaGetParam        umkaGetParam;
     UmkaGetUpvalue      umkaGetUpvalue;
     UmkaGetResult       umkaGetResult;
+    UmkaGetMetadata     umkaGetMetadata;
+    UmkaSetMetadata     umkaSetMetadata;
 } UmkaAPI;
 
 
@@ -195,6 +199,8 @@ UMKA_API void umkaMakeFuncContext   (void *umka, void *closureType, int entryOff
 UMKA_API UmkaStackSlot *umkaGetParam(UmkaStackSlot *params, int index);
 UMKA_API UmkaAny *umkaGetUpvalue    (UmkaStackSlot *params);
 UMKA_API UmkaStackSlot *umkaGetResult(UmkaStackSlot *params, UmkaStackSlot *result);
+UMKA_API void *umkaGetMetadata      (void *umka);
+UMKA_API void umkaSetMetadata       (void *umka, void *metadata);
 
 
 static inline UmkaAPI *umkaGetAPI(void *umka)

@@ -334,3 +334,17 @@ UMKA_API UmkaStackSlot *umkaGetResult(UmkaStackSlot *params, UmkaStackSlot *resu
     return result;
 }
 
+
+UMKA_API void *umkaGetMetadata(void *umka)
+{
+    Compiler *comp = umka;
+    return comp->metadata;
+}
+
+
+UMKA_API void umkaSetMetadata(void *umka, void *metadata)
+{
+    Compiler *comp = umka;
+    comp->metadata = metadata;
+}
+

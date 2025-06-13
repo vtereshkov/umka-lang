@@ -14,8 +14,10 @@
 
 typedef struct
 {
-    UmkaAPI     api;        // Must be the first field
+    // User API - must be the first field
+    UmkaAPI     api;
 
+    // Compiler components
     Storage     storage;
     Modules     modules;
     Blocks      blocks;
@@ -47,6 +49,9 @@ typedef struct
     // Command-line arguments
     int argc;
     char **argv;
+
+    // Arbitrary metadata
+    void *metadata;
 
     // Original codepages (Windows only)
     unsigned int originalInputCodepage, originalOutputCodepage;
