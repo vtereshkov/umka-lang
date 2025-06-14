@@ -2,8 +2,10 @@
 
 #ifdef _MSC_VER  // MSVC++ only
     #define FORCE_INLINE __forceinline
+    #define UNLIKELY(x)  (x)
 #else
     #define FORCE_INLINE __attribute__((always_inline)) inline
+    #define UNLIKELY(x)  __builtin_expect(!!(x), 0)
 #endif
 
 //#define UMKA_STR_DEBUG
@@ -254,7 +256,7 @@ static FORCE_INLINE HeapPage *pageAdd(HeapPages *pages, int numChunks, int chunk
     const int size = numChunks * chunkSize;
 
     HeapPage *page = malloc(sizeof(HeapPage) + size);
-    if (!page)
+    if (UNLIKELY(!page))
         pages->error->runtimeHandler(pages->error->context, ERR_RUNTIME, "Out of memory");
 
     page->id = pages->freeId++;
@@ -316,7 +318,7 @@ static FORCE_INLINE HeapPage *pageFind(HeapPages *pages, void *ptr)
         if (ptr >= (void *)page->data && ptr < (void *)page->end)
         {
             const HeapChunk *chunk = pageGetChunk(page, ptr);
-            if (chunk->refCnt <= 0)
+            if (UNLIKELY(chunk->refCnt <= 0))
                 pages->error->runtimeHandler(pages->error->context, ERR_RUNTIME, "Dangling pointer at %p", ptr);
 
             return page;
@@ -385,7 +387,7 @@ static FORCE_INLINE void stackChangeFrameRefCnt(Fiber *fiber, HeapPages *pages, 
 
         while (ptr > (void *)(base + 1 + paramLayout->numParamSlots))   // + 1 for return address
         {
-            if (!stackUnwind(fiber, &base, NULL))
+            if (UNLIKELY(!stackUnwind(fiber, &base, NULL)))
                 pages->error->runtimeHandler(pages->error->context, ERR_RUNTIME, "Illegal stack pointer");
 
             paramLayout = base[-2].ptrVal;
@@ -402,7 +404,7 @@ static FORCE_INLINE void *chunkAlloc(HeapPages *pages, int64_t size, const Type 
     // Page layout: header, data, footer (char), padding, header, data, footer (char), padding...
     const int64_t chunkSize = align(sizeof(HeapChunk) + align(size + 1, sizeof(int64_t)), MEM_MIN_HEAP_CHUNK);
 
-    if (size < 0 || chunkSize > INT_MAX)
+    if (UNLIKELY(size < 0 || chunkSize > INT_MAX))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Cannot allocate a block of %lld bytes", size);
 
     HeapPage *page = pageFindForAlloc(pages, chunkSize);
@@ -443,7 +445,7 @@ static FORCE_INLINE int chunkChangeRefCnt(HeapPages *pages, HeapPage *page, void
 {
     HeapChunk *chunk = pageGetChunk(page, ptr);
 
-    if (chunk->refCnt <= 0 || page->refCnt < chunk->refCnt)
+    if (UNLIKELY(chunk->refCnt <= 0 || page->refCnt < chunk->refCnt))
         pages->error->runtimeHandler(pages->error->context, ERR_RUNTIME, "Wrong reference count for pointer at %p", ptr);
 
     if (chunk->onFree && chunk->refCnt == 1 && delta == -1)
@@ -658,7 +660,7 @@ void vmInit(VM *vm, Storage *storage, int stackSize, bool fileSystemEnabled, Err
 void vmFree(VM *vm)
 {
     HeapPage *page = pageFind(&vm->pages, vm->mainFiber->stack);
-    if (!page)
+    if (UNLIKELY(!page))
        vm->error->runtimeHandler(vm->error->context, ERR_RUNTIME, "No fiber stack");
 
     chunkChangeRefCnt(&vm->pages, page, vm->mainFiber->stack, -1);
@@ -686,7 +688,7 @@ static FORCE_INLINE void doCheckStr(const char *str, Error *error)
         return;
 
     const StrDimensions *dims = getStrDims(str);
-    if (dims->len != strlen(str) || dims->capacity < dims->len + 1)
+    if (UNLIKELY(dims->len != strlen(str) || dims->capacity < dims->len + 1))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Invalid string: %s", str);
 #endif
 }
@@ -712,7 +714,7 @@ static FORCE_INLINE void doSwapImpl(Slot *slot)
 
 static FORCE_INLINE void doDerefImpl(Slot *slot, TypeKind typeKind, Error *error)
 {
-    if (!slot->ptrVal)
+    if (UNLIKELY(!slot->ptrVal))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Pointer is null");
 
     switch (typeKind)
@@ -753,11 +755,11 @@ static FORCE_INLINE void doDerefImpl(Slot *slot, TypeKind typeKind, Error *error
 
 static FORCE_INLINE void doAssignImpl(void *lhs, Slot rhs, TypeKind typeKind, int structSize, Error *error)
 {
-    if (!lhs)
+    if (UNLIKELY(!lhs))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Pointer is null");
 
     Const rhsConstant = {.intVal = rhs.intVal};
-    if (typeOverflow(typeKind, rhsConstant))
+    if (UNLIKELY(typeOverflow(typeKind, rhsConstant)))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Overflow of %s", typeKindSpelling(typeKind));
 
     switch (typeKind)
@@ -789,7 +791,7 @@ static FORCE_INLINE void doAssignImpl(void *lhs, Slot rhs, TypeKind typeKind, in
         case TYPE_INTERFACE:
         case TYPE_CLOSURE:
         {
-            if (!rhs.ptrVal)
+            if (UNLIKELY(!rhs.ptrVal))
                 error->runtimeHandler(error->context, ERR_RUNTIME, "Pointer is null");
             memcpy(lhs, rhs.ptrVal, structSize);
             break;
@@ -1019,12 +1021,12 @@ static FORCE_INLINE void doChangeRefCntImpl(Fiber *fiber, HeapPages *pages, void
                         break;
                     }
 
-                    if (((Fiber *)ptr)->alive)
+                    if (UNLIKELY(((Fiber *)ptr)->alive))
                         pages->error->runtimeHandler(pages->error->context, ERR_RUNTIME, "Cannot destroy a busy fiber");
 
                     // Only one ref is left. Defer processing the parent and traverse the children before removing the ref
                     HeapPage *stackPage = pageFind(pages, ((Fiber *)ptr)->stack);
-                    if (!stackPage)
+                    if (UNLIKELY(!stackPage))
                         pages->error->runtimeHandler(pages->error->context, ERR_RUNTIME, "No fiber stack");
 
                     chunkChangeRefCnt(pages, stackPage, ((Fiber *)ptr)->stack, -1);
@@ -1180,7 +1182,7 @@ static FORCE_INLINE void doRebalanceMapNodes(MapNode **nodeInParent)
 
 static FORCE_INLINE MapNode **doGetMapNode(Map *map, Slot key, bool createMissingNodes, HeapPages *pages, Error *error)
 {
-    if (!map || !map->root)
+    if (UNLIKELY(!map || !map->root))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Map is null");
 
     Slot keyBytesBuffer = {0};
@@ -1189,10 +1191,10 @@ static FORCE_INLINE MapNode **doGetMapNode(Map *map, Slot key, bool createMissin
 
     doGetMapKeyBytes(key, typeMapKey(map->type), error, &keyBytes, &keySize);
 
-    if (!keyBytes)
+    if (UNLIKELY(!keyBytes))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Map key is null");
 
-    if (keySize == 0)
+    if (UNLIKELY(keySize == 0))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Map key has zero length");
 
     MapNode **node = &map->root;
@@ -1317,14 +1319,14 @@ static FORCE_INLINE void doGetMapKeys(const Map *map, void *keys, Error *error)
 {
     int numKeys = 0;
     doGetMapKeysRecursively(map, map->root, keys, &numKeys, error);
-    if (numKeys != map->root->len)
+    if (UNLIKELY(numKeys != map->root->len))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Wrong number of map keys");
 }
 
 
 static FORCE_INLINE Fiber *doAllocFiber(Fiber *parent, const Closure *childClosure, const Type *childClosureType, HeapPages *pages, Error *error)
 {
-    if (!childClosure || childClosure->entryOffset <= 0)
+    if (UNLIKELY(!childClosure || childClosure->entryOffset <= 0))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Called function is not defined");
 
     // Copy whole fiber context
@@ -1530,7 +1532,7 @@ static int doFillReprBuf(const Slot *slot, const Type *type, char *buf, int maxL
                     len += snprintf(buf + len, maxLen, ": ");
 
                     const MapNode *node = *doGetMapNode(map, keySlot, false, NULL, error);
-                    if (!node)
+                    if (UNLIKELY(!node))
                         error->runtimeHandler(error->context, ERR_RUNTIME, "Map node is null");
 
                     Slot itemSlot = {.ptrVal = node->data};
@@ -1730,7 +1732,7 @@ static FORCE_INLINE void doCheckFormatString(const char *format, int *formatLen,
                 case 'c':
                 {
                     *typeKind = format[i] == 's' ? TYPE_STR : TYPE_CHAR;
-                    if (*size != FORMAT_SIZE_NORMAL)
+                    if (UNLIKELY(*size != FORMAT_SIZE_NORMAL))
                         error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal size specifier");
                     break;
                 }
@@ -1797,7 +1799,7 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
     const Type *type         = fiber->code[fiber->ip].type;
     TypeKind typeKind  = type->kind;
 
-    if (!string && (!stream || (!fiber->fileSystemEnabled && !console)))
+    if (UNLIKELY(!string && (!stream || (!fiber->fileSystemEnabled && !console))))
         error->runtimeHandler(error->context, ERR_RUNTIME, "printf() destination is null");
 
     if (!format)
@@ -1811,10 +1813,10 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
 
     const bool hasAnyTypeFormatter = expectedTypeKind == TYPE_INTERFACE && typeLetterPos >= 0 && typeLetterPos < formatLen;     // %v
 
-    if (type->kind != expectedTypeKind &&
+    if (UNLIKELY(type->kind != expectedTypeKind &&
         !(type->kind != TYPE_VOID            && expectedTypeKind == TYPE_INTERFACE) &&
         !(typeKindIntegerOrEnum(type->kind)  && typeKindIntegerOrEnum(expectedTypeKind)) &&
-        !(typeKindReal(type->kind)           && typeKindReal(expectedTypeKind)))
+        !(typeKindReal(type->kind)           && typeKindReal(expectedTypeKind))))
     {
         char typeBuf[DEFAULT_STR_LEN + 1];
         error->runtimeHandler(error->context, ERR_RUNTIME, "Incompatible types %s and %s in printf()", typeKindSpelling(expectedTypeKind), typeSpelling(type, typeBuf));
@@ -1829,7 +1831,7 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
         else
             arg.intVal = value.intVal;
 
-        if (typeConvOverflow(expectedTypeKind, type->kind, arg))
+        if (UNLIKELY(typeConvOverflow(expectedTypeKind, type->kind, arg)))
             error->runtimeHandler(error->context, ERR_RUNTIME, "Overflow of %s", typeKindSpelling(expectedTypeKind));
     }
 
@@ -1937,7 +1939,7 @@ static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool con
     const Type *type         = fiber->code[fiber->ip].type;
     TypeKind typeKind  = type->kind;
 
-    if (!stream || (!fiber->fileSystemEnabled && !console && !string))
+    if (UNLIKELY(!stream || (!fiber->fileSystemEnabled && !console && !string)))
         error->runtimeHandler(error->context, ERR_RUNTIME, "scanf() source is null");
 
     if (!format)
@@ -1949,7 +1951,7 @@ static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool con
 
     doCheckFormatString(format, &formatLen, &typeLetterPos, &expectedTypeKind, &formatStringTypeSize, error);
 
-    if (typeKind != expectedTypeKind || expectedTypeKind == TYPE_INTERFACE)
+    if (UNLIKELY(typeKind != expectedTypeKind || expectedTypeKind == TYPE_INTERFACE))
     {
         error->runtimeHandler(error->context, ERR_RUNTIME, "Incompatible types %s and %s in scanf()", typeKindSpelling(expectedTypeKind), typeKindSpelling(typeKind));
     }
@@ -1972,7 +1974,7 @@ static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool con
         cnt = fsscanf(string, stream, curFormat, &len);
     else
     {
-        if (!value.ptrVal)
+        if (UNLIKELY(!value.ptrVal))
             error->runtimeHandler(error->context, ERR_RUNTIME, "scanf() destination is null");
 
         // Strings need special handling, as the required buffer size is unknown
@@ -2104,14 +2106,14 @@ static FORCE_INLINE void doBuiltinMaketoarr(Fiber *fiber, HeapPages *pages, Erro
 
     const Type *destType = fiber->code[fiber->ip].type;
 
-    if (!src)
+    if (UNLIKELY(!src))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Dynamic array is null");
 
     memset(dest, 0, typeSizeNoCheck(destType));
 
     if (src->data)
     {
-        if (getDims(src)->len > destType->numItems)
+        if (UNLIKELY(getDims(src)->len > destType->numItems))
             error->runtimeHandler(error->context, ERR_RUNTIME, "Dynamic array is too long");
 
         memcpy(dest, src->data, getDims(src)->len * src->itemSize);
@@ -2147,7 +2149,7 @@ static FORCE_INLINE void doBuiltinMaketostr(Fiber *fiber, HeapPages *pages, Erro
         // Dynamic array to string
         const DynArray *src = (fiber->top++)->ptrVal;
 
-        if (!src)
+        if (UNLIKELY(!src))
             error->runtimeHandler(error->context, ERR_RUNTIME, "Dynamic array is null");
 
         if (src->data)
@@ -2171,7 +2173,7 @@ static FORCE_INLINE void doBuiltinCopyDynArray(Fiber *fiber, HeapPages *pages, E
     DynArray *result = (DynArray *)(fiber->top++)->ptrVal;
     DynArray *array  = (DynArray *)(fiber->top++)->ptrVal;
 
-    if (!array)
+    if (UNLIKELY(!array))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Dynamic array is null");
 
     *result = *array;
@@ -2196,7 +2198,7 @@ static FORCE_INLINE void doBuiltinCopyMap(Fiber *fiber, HeapPages *pages, Error 
     Map *result = (Map *)(fiber->top++)->ptrVal;
     Map *map    = (Map *)(fiber->top++)->ptrVal;
 
-    if (!map)
+    if (UNLIKELY(!map))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Map is null");
 
     if (!map->root)
@@ -2231,7 +2233,7 @@ static FORCE_INLINE void doBuiltinAppend(Fiber *fiber, HeapPages *pages, Error *
 
     const Type *arrayType  = fiber->code[fiber->ip].type;
 
-    if (!array)
+    if (UNLIKELY(!array))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Dynamic array is null");
 
     if (!array->data)
@@ -2244,7 +2246,7 @@ static FORCE_INLINE void doBuiltinAppend(Fiber *fiber, HeapPages *pages, Error *
     {
         DynArray *rhsArray = item;
 
-        if (!rhsArray)
+        if (UNLIKELY(!rhsArray))
             error->runtimeHandler(error->context, ERR_RUNTIME, "Dynamic array is null");
 
         if (!rhsArray->data)
@@ -2295,13 +2297,13 @@ static FORCE_INLINE void doBuiltinInsert(Fiber *fiber, HeapPages *pages, Error *
 
     const Type *arrayType  = fiber->code[fiber->ip].type;
 
-    if (!array)
+    if (UNLIKELY(!array))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Dynamic array is null");
 
     if (!array->data)
         doGetEmptyDynArray(array, arrayType);
 
-    if (index < 0 || index > getDims(array)->len)
+    if (UNLIKELY(index < 0 || index > getDims(array)->len))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Index %lld is out of range 0...%lld", index, getDims(array)->len);
 
     if (getDims(array)->len + 1 <= getDims(array)->capacity)
@@ -2342,10 +2344,10 @@ static FORCE_INLINE void doBuiltinDeleteDynArray(Fiber *fiber, HeapPages *pages,
     int64_t index    =             (fiber->top++)->intVal;
     DynArray *array  = (DynArray *)(fiber->top++)->ptrVal;
 
-    if (!array || !array->data)
+    if (UNLIKELY(!array || !array->data))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Dynamic array is null");
 
-    if (index < 0 || index > getDims(array)->len - 1)
+    if (UNLIKELY(index < 0 || index > getDims(array)->len - 1))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Index %lld is out of range 0...%lld", index, getDims(array)->len - 1);
 
     doChangeRefCntImpl(fiber, pages, array, array->type, TOK_PLUSPLUS);
@@ -2404,7 +2406,7 @@ static FORCE_INLINE void doBuiltinDeleteMap(Fiber *fiber, HeapPages *pages, Erro
 
         doChangeRefCntImpl(fiber, pages, node, typeMapNodePtr(map->type), TOK_MINUSMINUS);
 
-        if (--map->root->len < 0)
+        if (UNLIKELY(--map->root->len < 0))
             error->runtimeHandler(error->context, ERR_RUNTIME, "Map length is negative");
     }
 
@@ -2445,7 +2447,7 @@ static FORCE_INLINE void doBuiltinSlice(Fiber *fiber, HeapPages *pages, Error *e
         // Dynamic array
         array = (DynArray *)arg;
 
-        if (!array)
+        if (UNLIKELY(!array))
             error->runtimeHandler(error->context, ERR_RUNTIME, "Dynamic array is null");
 
         if (!array->data)
@@ -2471,10 +2473,10 @@ static FORCE_INLINE void doBuiltinSlice(Fiber *fiber, HeapPages *pages, Error *e
     if (endIndex < 0)
         endIndex += len;
 
-    if (startIndex < 0)
+    if (UNLIKELY(startIndex < 0))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Index %lld is out of range 0...%lld", startIndex, len);
 
-    if (endIndex < startIndex || endIndex > len)
+    if (UNLIKELY(endIndex < startIndex || endIndex > len))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Index %lld is out of range %lld...%lld", endIndex, startIndex, len);
 
     if (result)
@@ -2550,10 +2552,10 @@ static FORCE_INLINE void doBuiltinSort(Fiber *fiber, Error *error)
     Closure *compare = (fiber->top++)->ptrVal;
     DynArray *array = (fiber->top++)->ptrVal;
 
-    if (!array)
+    if (UNLIKELY(!array))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Dynamic array is null");
 
-    if (!compare || compare->entryOffset <= 0)
+    if (UNLIKELY(!compare || compare->entryOffset <= 0))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Called function is not defined");
 
     if (array->data && getDims(array)->len > 0)
@@ -2634,7 +2636,7 @@ static FORCE_INLINE void doBuiltinSortfast(Fiber *fiber, Error *error)
     DynArray *array = (DynArray *)(fiber->top++)->ptrVal;
     const TypeKind comparedTypeKind = fiber->code[fiber->ip].typeKind;
 
-    if (!array)
+    if (UNLIKELY(!array))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Dynamic array is null");
 
     if (array->data && getDims(array)->len > 0)
@@ -2659,7 +2661,7 @@ static FORCE_INLINE void doBuiltinLen(Fiber *fiber, Error *error)
         case TYPE_DYNARRAY:
         {
             const DynArray *array = fiber->top->ptrVal;
-            if (!array)
+            if (UNLIKELY(!array))
                 error->runtimeHandler(error->context, ERR_RUNTIME, "Dynamic array is null");
 
             fiber->top->intVal = array->data ? getDims(array)->len : 0;
@@ -2675,7 +2677,7 @@ static FORCE_INLINE void doBuiltinLen(Fiber *fiber, Error *error)
         case TYPE_MAP:
         {
             const Map *map = fiber->top->ptrVal;
-            if (!map)
+            if (UNLIKELY(!map))
                 error->runtimeHandler(error->context, ERR_RUNTIME, "Map is null");
 
             fiber->top->intVal =  map->root ? map->root->len : 0;
@@ -2690,7 +2692,7 @@ static FORCE_INLINE void doBuiltinLen(Fiber *fiber, Error *error)
 static FORCE_INLINE void doBuiltinCap(Fiber *fiber, Error *error)
 {
     const DynArray *array = fiber->top->ptrVal;
-    if (!array)
+    if (UNLIKELY(!array))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Dynamic array is null");
 
     fiber->top->intVal = array->data ? getDims(array)->capacity : 0;
@@ -2700,7 +2702,7 @@ static FORCE_INLINE void doBuiltinCap(Fiber *fiber, Error *error)
 static FORCE_INLINE void doBuiltinSizeofself(Fiber *fiber, Error *error)
 {
     const Interface *interface = fiber->top->ptrVal;
-    if (!interface)
+    if (UNLIKELY(!interface))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Interface is null");
 
     int size = 0;
@@ -2714,7 +2716,7 @@ static FORCE_INLINE void doBuiltinSizeofself(Fiber *fiber, Error *error)
 static FORCE_INLINE void doBuiltinSelfptr(Fiber *fiber, Error *error)
 {
     Interface *interface = fiber->top->ptrVal;
-    if (!interface)
+    if (UNLIKELY(!interface))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Interface is null");
 
     fiber->top->ptrVal = interface->self;
@@ -2724,7 +2726,7 @@ static FORCE_INLINE void doBuiltinSelfptr(Fiber *fiber, Error *error)
 static FORCE_INLINE void doBuiltinSelfhasptr(Fiber *fiber, Error *error)
 {
     const Interface *interface = fiber->top->ptrVal;
-    if (!interface)
+    if (UNLIKELY(!interface))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Interface is null");
 
     bool hasPtr = false;
@@ -2740,7 +2742,7 @@ static FORCE_INLINE void doBuiltinSelftypeeq(Fiber *fiber, Error *error)
     const Interface *right = (fiber->top++)->ptrVal;
     const Interface *left  = (fiber->top++)->ptrVal;
 
-    if (!left || !right)
+    if (UNLIKELY(!left || !right))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Interface is null");
 
     bool typesEq = false;
@@ -2807,7 +2809,7 @@ static FORCE_INLINE void doBuiltinValidkey(Fiber *fiber, HeapPages *pages, Error
     Slot key  = *fiber->top++;
     Map *map  = (fiber->top++)->ptrVal;
 
-    if (!map)
+    if (UNLIKELY(!map))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Map is null");
 
     bool isValid = false;
@@ -2830,7 +2832,7 @@ static FORCE_INLINE void doBuiltinKeys(Fiber *fiber, HeapPages *pages, Error *er
 
     const Type *resultType = fiber->code[fiber->ip].type;
 
-    if (!map)
+    if (UNLIKELY(!map))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Map is null");
 
     doAllocDynArray(pages, result, resultType, map->root ? map->root->len : 0, error);
@@ -2893,7 +2895,7 @@ static FORCE_INLINE void doPushZero(Fiber *fiber, Error *error)
 {
     const int64_t slots = fiber->code[fiber->ip].operand.intVal;
 
-    if (fiber->top - slots - fiber->stack < MEM_MIN_FREE_STACK)
+    if (UNLIKELY(fiber->top - slots - fiber->stack < MEM_MIN_FREE_STACK))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Stack overflow");
 
     fiber->top -= slots;
@@ -3011,7 +3013,7 @@ static FORCE_INLINE void doAssignParam(Fiber *fiber, Error *error)
     const int64_t paramSlots = align(paramSize, sizeof(Slot)) / sizeof(Slot);
     if (paramSlots != 1)
     {
-        if (fiber->top - (paramSlots - 1) - fiber->stack < MEM_MIN_FREE_STACK)
+        if (UNLIKELY(fiber->top - (paramSlots - 1) - fiber->stack < MEM_MIN_FREE_STACK))
             error->runtimeHandler(error->context, ERR_RUNTIME, "Stack overflow");
 
         fiber->top -= paramSlots - 1;
@@ -3237,14 +3239,14 @@ static FORCE_INLINE void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
             case TOK_MUL:   lhs->realVal *= rhs.realVal; break;
             case TOK_DIV:
             {
-                if (rhs.realVal == 0)
+                if (UNLIKELY(rhs.realVal == 0))
                     error->runtimeHandler(error->context, ERR_RUNTIME, "Division by zero");
                 lhs->realVal /= rhs.realVal;
                 break;
             }
             case TOK_MOD:
             {
-                if (rhs.realVal == 0)
+                if (UNLIKELY(rhs.realVal == 0))
                     error->runtimeHandler(error->context, ERR_RUNTIME, "Division by zero");
                 lhs->realVal = fmod(lhs->realVal, rhs.realVal);
                 break;
@@ -3269,14 +3271,14 @@ static FORCE_INLINE void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
             case TOK_MUL:   lhs->uintVal *= rhs.uintVal; break;
             case TOK_DIV:
             {
-                if (rhs.uintVal == 0)
+                if (UNLIKELY(rhs.uintVal == 0))
                     error->runtimeHandler(error->context, ERR_RUNTIME, "Division by zero");
                 lhs->uintVal /= rhs.uintVal;
                 break;
             }
             case TOK_MOD:
             {
-                if (rhs.uintVal == 0)
+                if (UNLIKELY(rhs.uintVal == 0))
                     error->runtimeHandler(error->context, ERR_RUNTIME, "Division by zero");
                 lhs->uintVal %= rhs.uintVal;
                 break;
@@ -3307,18 +3309,18 @@ static FORCE_INLINE void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
             case TOK_MUL:   lhs->intVal *= rhs.intVal; break;
             case TOK_DIV:
             {
-                if (rhs.intVal == 0)
+                if (UNLIKELY(rhs.intVal == 0))
                     error->runtimeHandler(error->context, ERR_RUNTIME, "Division by zero");
-                if (lhs->intVal == LLONG_MIN && rhs.intVal == -1)
+                if (UNLIKELY(lhs->intVal == LLONG_MIN && rhs.intVal == -1))
                     error->runtimeHandler(error->context, ERR_RUNTIME, "Overflow of int");
                 lhs->intVal /= rhs.intVal;
                 break;
             }
             case TOK_MOD:
             {
-                if (rhs.intVal == 0)
+                if (UNLIKELY(rhs.intVal == 0))
                     error->runtimeHandler(error->context, ERR_RUNTIME, "Division by zero");
-                if (lhs->intVal == LLONG_MIN && rhs.intVal == -1)
+                if (UNLIKELY(lhs->intVal == LLONG_MIN && rhs.intVal == -1))
                     error->runtimeHandler(error->context, ERR_RUNTIME, "Overflow of int");
                 lhs->intVal %= rhs.intVal;
                 break;
@@ -3355,7 +3357,7 @@ static FORCE_INLINE void doGetArrayPtr(Fiber *fiber, Error *error)
 
     if (len >= 0)   // For arrays, nonnegative length must be explicitly provided
     {
-        if (!data)
+        if (UNLIKELY(!data))
             error->runtimeHandler(error->context, ERR_RUNTIME, "Array is null");
     }
     else            // For strings, negative length means that the actual string length is to be used
@@ -3366,7 +3368,7 @@ static FORCE_INLINE void doGetArrayPtr(Fiber *fiber, Error *error)
         len = getStrDims(data)->len;
     }
 
-    if (index < 0 || index > len - 1)
+    if (UNLIKELY(index < 0 || index > len - 1))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Index %lld is out of range 0...%lld", index, len - 1);
 
     fiber->top->ptrVal = data + itemSize * index;
@@ -3383,13 +3385,13 @@ static FORCE_INLINE void doGetDynArrayPtr(Fiber *fiber, Error *error)
     const int64_t index = (fiber->top++)->intVal;
     const DynArray *array = (fiber->top++)->ptrVal;
 
-    if (!array || !array->data)
+    if (UNLIKELY(!array || !array->data))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Dynamic array is null");
 
     const int64_t itemSize = array->itemSize;
     const int64_t len = getDims(array)->len;
 
-    if (index < 0 || index > len - 1)
+    if (UNLIKELY(index < 0 || index > len - 1))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Index %lld is out of range 0...%lld", index, len - 1);
 
     (--fiber->top)->ptrVal = (char *)array->data + itemSize * index;
@@ -3407,7 +3409,7 @@ static FORCE_INLINE void doGetMapPtr(Fiber *fiber, HeapPages *pages, Error *erro
     Map *map = (fiber->top++)->ptrVal;
     const Type *mapType = fiber->code[fiber->ip].type;
 
-    if (!map)
+    if (UNLIKELY(!map))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Map is null");
 
     if (!map->root)
@@ -3440,7 +3442,7 @@ static FORCE_INLINE void doGetFieldPtr(Fiber *fiber, Error *error)
 {
     const int64_t fieldOffset = fiber->code[fiber->ip].operand.intVal;
 
-    if (!fiber->top->ptrVal)
+    if (UNLIKELY(!fiber->top->ptrVal))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Array or structure is null");
 
     fiber->top->ptrVal = (char *)fiber->top->ptrVal + fieldOffset;
@@ -3473,7 +3475,7 @@ static FORCE_INLINE void doAssertRange(Fiber *fiber, Error *error)
     else
         arg.intVal = fiber->top->intVal;
 
-    if (typeConvOverflow(destTypeKind, srcType->kind, arg))
+    if (UNLIKELY(typeConvOverflow(destTypeKind, srcType->kind, arg)))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Overflow of %s", typeKindSpelling(destTypeKind));
 
     fiber->ip++;
@@ -3489,7 +3491,7 @@ static FORCE_INLINE void doWeakenPtr(Fiber *fiber, HeapPages *pages)
     if (page)
     {
         const HeapChunk *chunk = pageGetChunk(page, ptr);
-        if (chunk->isStack)
+        if (UNLIKELY(chunk->isStack))
             pages->error->runtimeHandler(pages->error->context, ERR_RUNTIME, "Pointer to a local variable cannot be weak");
 
         const bool isHeapPtr = true;
@@ -3522,7 +3524,7 @@ static FORCE_INLINE void doStrengthenPtr(Fiber *fiber, HeapPages *pages)
             ptr = page->data + pageOffset;
 
             const HeapChunk *chunk = pageGetChunk(page, ptr);
-            if (chunk->isStack)
+            if (UNLIKELY(chunk->isStack))
                 pages->error->runtimeHandler(pages->error->context, ERR_RUNTIME, "Pointer to a local variable cannot be weak");
 
             if (chunk->refCnt == 0)
@@ -3578,7 +3580,7 @@ static FORCE_INLINE void doCallIndirect(Fiber *fiber, Error *error)
     const int64_t paramSlots = fiber->code[fiber->ip].operand.intVal;
     const int64_t entryOffset = (fiber->top + paramSlots)->intVal;
 
-    if (entryOffset == 0)
+    if (UNLIKELY(entryOffset == 0))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Called function is not defined");
 
     // Push return address and go to the entry point
@@ -3636,7 +3638,7 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         case BUILTIN_FLOOR:         fiber->top->intVal = (int64_t)floor(fiber->top->realVal); break;
         case BUILTIN_ABS:
         {
-            if (fiber->top->intVal == LLONG_MIN)
+            if (UNLIKELY(fiber->top->intVal == LLONG_MIN))
                 error->runtimeHandler(error->context, ERR_RUNTIME, "abs() domain error");
             fiber->top->intVal = llabs(fiber->top->intVal);
             break;
@@ -3644,7 +3646,7 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         case BUILTIN_FABS:          fiber->top->realVal = fabs(fiber->top->realVal); break;
         case BUILTIN_SQRT:
         {
-            if (fiber->top->realVal < 0)
+            if (UNLIKELY(fiber->top->realVal < 0))
                 error->runtimeHandler(error->context, ERR_RUNTIME, "sqrt() domain error");
             fiber->top->realVal = sqrt(fiber->top->realVal);
             break;
@@ -3656,7 +3658,7 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         {
             double x = (fiber->top++)->realVal;
             double y = fiber->top->realVal;
-            if (x == 0 && y == 0)
+            if (UNLIKELY(x == 0 && y == 0))
                 error->runtimeHandler(error->context, ERR_RUNTIME, "atan2() domain error");
             fiber->top->realVal = atan2(y, x);
             break;
@@ -3664,7 +3666,7 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         case BUILTIN_EXP:           fiber->top->realVal = exp (fiber->top->realVal); break;
         case BUILTIN_LOG:
         {
-            if (fiber->top->realVal <= 0)
+            if (UNLIKELY(fiber->top->realVal <= 0))
                 error->runtimeHandler(error->context, ERR_RUNTIME, "log() domain error");
             fiber->top->realVal = log(fiber->top->realVal);
             break;
@@ -3736,7 +3738,7 @@ static FORCE_INLINE void doEnterFrame(Fiber *fiber, const HookFunc *hooks, Error
     const ParamAndLocalVarLayout *layout = fiber->code[fiber->ip].operand.ptrVal;
 
     // Allocate stack frame
-    if (fiber->top - layout->localVarSlots - fiber->stack < MEM_MIN_FREE_STACK)
+    if (UNLIKELY(fiber->top - layout->localVarSlots - fiber->stack < MEM_MIN_FREE_STACK))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Stack overflow");
 
     // Push old stack frame base pointer, set new one
@@ -3766,7 +3768,7 @@ static FORCE_INLINE void doLeaveFrame(Fiber *fiber, const HookFunc *hooks, Error
 {
     // Check stack frame ref count
     const int64_t stackFrameRefCnt = fiber->base[-1].intVal;
-    if (stackFrameRefCnt != 0)
+    if (UNLIKELY(stackFrameRefCnt != 0))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Pointer to a local variable escapes from the function");
 
     // Call 'return' hook, if any
@@ -3798,7 +3800,7 @@ static FORCE_INLINE void vmLoop(VM *vm)
 
     while (1)
     {
-        if (fiber->top - fiber->stack < MEM_MIN_FREE_STACK)
+        if (UNLIKELY(fiber->top - fiber->stack < MEM_MIN_FREE_STACK))
             error->runtimeHandler(error->context, ERR_RUNTIME, "Stack overflow");
 
         switch (fiber->code[fiber->ip].opcode)
@@ -3876,13 +3878,13 @@ static FORCE_INLINE void vmLoop(VM *vm)
 
 void vmRun(VM *vm, FuncContext *fn)
 {
-    if (!vm->fiber->alive)
+    if (UNLIKELY(!vm->fiber->alive))
         vm->error->runtimeHandler(vm->error->context, ERR_RUNTIME, "Cannot run a dead fiber");
 
     if (fn)
     {
         // Calling individual function
-        if (fn->entryOffset <= 0)
+        if (UNLIKELY(fn->entryOffset <= 0))
             vm->error->runtimeHandler(vm->error->context, ERR_RUNTIME, "Called function is not defined");
 
         // Push parameters
@@ -3894,7 +3896,7 @@ void vmRun(VM *vm, FuncContext *fn)
 
             if (paramLayout->numResultParams > 0)
             {
-                if (!fn->result || !fn->result->ptrVal)
+                if (UNLIKELY(!fn->result || !fn->result->ptrVal))
                     vm->error->runtimeHandler(vm->error->context, ERR_RUNTIME, "Storage for structured result is not specified");
                 fn->params[paramLayout->firstSlotIndex[paramLayout->numParams - 1]].ptrVal = fn->result->ptrVal;
             }
