@@ -177,7 +177,7 @@ The `int` and `uint` are the recommended 64-bit integer types. Other integer typ
 
 The two possible values of the Boolean type are `true` and `false`.
 
-An enumeration type is defined by its base type (any integer type) and a list of named enumeration constants used as values of the enumeration type. If the base type is omitted, `int` is assumed. If the integer value of an enumeration constant is omitted, the value is obtained by incrementing the previous constant's value by 1. For the first constant, 0 is assumed.
+An enumeration type is defined by its base type (any integer type) and a list of named enumeration constants used as values of the enumeration type. If the base type is omitted, `int` is assumed. If the integer value of an enumeration constant is omitted, the value is obtained by incrementing the previous constant's value by 1. For the first constant, 0 is assumed. If an enumeration type has no enumeration constant with the value 0, this constant is declared implicitly: `zero = 0`.
 
 Syntax:
 

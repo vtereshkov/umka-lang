@@ -371,6 +371,11 @@ static const Type *parseEnumType(Compiler *comp)
         lexEat(&comp->lex, TOK_SEMICOLON);
     }
     lexEat(&comp->lex, TOK_RBRACE);
+
+    const Const zero = {.intVal = 0};
+    if (!typeFindEnumConstByVal(type, zero))
+        typeAddEnumConst(&comp->types, type, "zero", zero);
+
     return type;
 }
 

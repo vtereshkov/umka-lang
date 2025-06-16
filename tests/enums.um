@@ -1,3 +1,5 @@
+import "std.um"
+
 type Button = enum {left; middle; right}
 
 type Mode = enum (uint8) {
@@ -61,6 +63,12 @@ fn test*() {
 	}
 
 	printf("\n")
+
+	var m0: Mode
+	std::assert(m0 == .zero)
+
+	var b0: Button
+	std::assert(b0 == .left)	
 
 	lb := Button.left
 	var mb, rb: Button
