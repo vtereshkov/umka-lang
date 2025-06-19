@@ -261,7 +261,7 @@ void compilerInit(Compiler *comp, const char *fileName, const char *sourceString
     // Command-line-arguments
     Type *argvType = typeAdd(&comp->types, &comp->blocks, TYPE_ARRAY);
     argvType->base = comp->strType;
-    typeSetNumArrayItems(argvType, comp->argc);
+    typeResizeArray(argvType, comp->argc);
 
     Ident *rtlargv = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "rtlargv", argvType, true);
     char **argArray = (char **)rtlargv->ptr;

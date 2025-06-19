@@ -257,27 +257,6 @@ void typeAssertValidOperator(const Types *types, const Type *type, TokenKind op)
 void typeEnableForward(Types *types, bool enable);
 
 
-static inline void typeSetNumArrayItems(Type *type, int numItems)
-{
-    if (type->kind == TYPE_ARRAY)
-    {
-        type->numItems = numItems;
-        type->size = type->numItems * type->base->size;
-        type->alignment = type->base->alignment;
-    }
-}
-
-
-static inline Type typeMakeDetachedArray(const Type *base, int numItems)
-{
-    Type type = {0};
-    type.kind = TYPE_ARRAY;
-    type.base = base;
-    typeSetNumArrayItems(&type, numItems);
-    return type;
-}
-
-
 static inline bool typeConvOverflow(TypeKind destTypeKind, TypeKind srcTypeKind, Const val)
 {
     const bool fromVeryBigUInt = val.intVal < 0 && srcTypeKind == TYPE_UINT;
@@ -317,6 +296,25 @@ static inline bool typeConvOverflow(TypeKind destTypeKind, TypeKind srcTypeKind,
 static inline bool typeOverflow(TypeKind typeKind, Const val)
 {
     return typeConvOverflow(typeKind, TYPE_VOID, val);
+}
+
+
+static inline void typeResizeArray(Type *type, int numItems)
+{
+    if (type->kind == TYPE_ARRAY)
+    {
+        type->numItems = numItems;
+        type->size = type->numItems * type->base->size;
+        type->alignment = type->base->alignment;
+    }
+}
+
+
+static inline Type typeMakeDetachedArray(const Type *base, int numItems)
+{
+    Type type = {.kind = TYPE_ARRAY, .base = base};
+    typeResizeArray(&type, numItems);
+    return type;
 }
 
 

@@ -306,7 +306,7 @@ static const Type *parseArrayType(Compiler *comp)
 
     Type *type = typeAdd(&comp->types, &comp->blocks, typeKind);
     type->base = baseType;
-    typeSetNumArrayItems(type, len.intVal);
+    typeResizeArray(type, len.intVal);
     return type;
 }
 

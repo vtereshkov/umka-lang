@@ -1997,7 +1997,7 @@ static void parseDynArrayLiteral(Compiler *comp, const Type **type, Const *const
 
             doAssertImplicitTypeConv(comp, staticArrayType->base, &itemType, constItem);
 
-            typeSetNumArrayItems(staticArrayType, staticArrayType->numItems + 1);
+            typeResizeArray(staticArrayType, staticArrayType->numItems + 1);
 
             if (comp->lex.tok.kind != TOK_COMMA)
                 break;
