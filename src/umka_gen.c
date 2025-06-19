@@ -646,7 +646,7 @@ void genChangeRefCntAssign(CodeGen *gen, const Type *type)
         genAddInstr(gen, &instr);
     }
     else
-        genAssign(gen, type->kind, typeSizeNoCheck(type));
+        genAssign(gen, type->kind, type->size);
 }
 
 
@@ -658,7 +658,7 @@ void genSwapChangeRefCntAssign(CodeGen *gen, const Type *type)
         genAddInstr(gen, &instr);
     }
     else
-        genSwapAssign(gen, type->kind, typeSizeNoCheck(type));
+        genSwapAssign(gen, type->kind, type->size);
 }
 
 
@@ -670,7 +670,7 @@ void genChangeLeftRefCntAssign(CodeGen *gen, const Type *type)
         genAddInstr(gen, &instr);
     }
     else
-        genAssign(gen, type->kind, typeSizeNoCheck(type));
+        genAssign(gen, type->kind, type->size);
 }
 
 
@@ -1106,7 +1106,7 @@ void genCopyResultToTempVar(CodeGen *gen, const Type *type, int offset)
 {
     genDup(gen);
     genPushLocalPtr(gen, offset);
-    genSwapAssign(gen, type->kind, typeSizeNoCheck(type));
+    genSwapAssign(gen, type->kind, type->size);
 
     genNotify(gen, GEN_NOTIFICATION_COPY_RESULT_TO_TEMP_VAR);
 }

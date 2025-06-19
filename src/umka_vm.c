@@ -822,7 +822,7 @@ static FORCE_INLINE void doAddArrayItemsRefCntCandidates(RefCntChangeCandidates 
     if (typeKindGarbageCollected(type->base->kind))
     {
         char *itemPtr = ptr;
-        int itemSize = typeSizeNoCheck(type->base);
+        const int itemSize = type->base->size;
 
         for (int i = 0; i < len; i++)
         {
@@ -1077,7 +1077,7 @@ static FORCE_INLINE char *doGetEmptyStr()
 static FORCE_INLINE void doAllocDynArray(HeapPages *pages, DynArray *array, const Type *type, int64_t len, Error *error)
 {
     array->type     = type;
-    array->itemSize = typeSizeNoCheck(array->type->base);
+    array->itemSize = array->type->base->size;
 
     DynArrayDimensions dims = {.len = len, .capacity = 2 * (len + 1)};
 
@@ -1096,7 +1096,7 @@ static FORCE_INLINE void doAllocDynArray(HeapPages *pages, DynArray *array, cons
 static FORCE_INLINE void doGetEmptyDynArray(DynArray *array, const Type *type)
 {
     array->type     = type;
-    array->itemSize = typeSizeNoCheck(array->type->base);
+    array->itemSize = array->type->base->size;
 
     static DynArrayDimensions dims = {.len = 0, .capacity = 0};
     array->data = (char *)(&dims) + sizeof(DynArrayDimensions);
@@ -1106,7 +1106,7 @@ static FORCE_INLINE void doGetEmptyDynArray(DynArray *array, const Type *type)
 static FORCE_INLINE void doAllocMap(HeapPages *pages, Map *map, const Type *type, Error *error)
 {
     map->type      = type;
-    map->root      = chunkAlloc(pages, typeSizeNoCheck(type->base), type->base, NULL, false, error);
+    map->root      = chunkAlloc(pages, type->base->size, type->base, NULL, false, error);
     map->root->len = 0;
 }
 
@@ -1132,7 +1132,7 @@ static void doGetMapKeyBytes(Slot key, const Type *keyType, Error *error, char *
         {
             // keyBytes must point to a pre-allocated 8-byte buffer
             doAssignImpl(*keyBytes, key, keyType->kind, 0, error);
-            *keySize = typeSizeNoCheck(keyType);
+            *keySize = keyType->size;
             break;
         }
         case TYPE_STR:
@@ -1146,7 +1146,7 @@ static void doGetMapKeyBytes(Slot key, const Type *keyType, Error *error, char *
         case TYPE_STRUCT:
         {
             *keyBytes = (char *)key.ptrVal;
-            *keySize = typeSizeNoCheck(keyType);
+            *keySize = keyType->size;
             break;
         }
         default:
@@ -1231,7 +1231,7 @@ static FORCE_INLINE MapNode **doGetMapNode(Map *map, Slot key, bool createMissin
     if (createMissingNodes)
     {
         const Type *nodeType = map->type->base;
-        *node = chunkAlloc(pages, typeSizeNoCheck(nodeType), nodeType, NULL, false, error);
+        *node = chunkAlloc(pages, nodeType->size, nodeType, NULL, false, error);
     }
 
     return node;
@@ -1244,42 +1244,40 @@ static MapNode *doCopyMapNode(Map *map, MapNode *node, Fiber *fiber, HeapPages *
         return NULL;
 
     const Type *nodeType = map->type->base;
-    MapNode *result = (MapNode *)chunkAlloc(pages, typeSizeNoCheck(nodeType), nodeType, NULL, false, error);
+    MapNode *result = (MapNode *)chunkAlloc(pages, nodeType->size, nodeType, NULL, false, error);
 
     result->len = node->len;
 
     if (node->key)
     {
         const Type *keyType = typeMapKey(map->type);
-        int keySize = typeSizeNoCheck(keyType);
 
         Slot srcKey = {.ptrVal = node->key};
         doDerefImpl(&srcKey, keyType->kind, error);
 
         // When allocating dynamic arrays, we mark with type the data chunk, not the header chunk
-        result->key = chunkAlloc(pages, typeSizeNoCheck(keyType), keyType->kind == TYPE_DYNARRAY ? NULL : keyType, NULL, false, error);
+        result->key = chunkAlloc(pages, keyType->size, keyType->kind == TYPE_DYNARRAY ? NULL : keyType, NULL, false, error);
 
         if (typeGarbageCollected(keyType))
             doChangeRefCntImpl(fiber, pages, srcKey.ptrVal, keyType, TOK_PLUSPLUS);
 
-        doAssignImpl(result->key, srcKey, keyType->kind, keySize, error);
+        doAssignImpl(result->key, srcKey, keyType->kind, keyType->size, error);
     }
 
     if (node->data)
     {
         const Type *itemType = typeMapItem(map->type);
-        int itemSize = typeSizeNoCheck(itemType);
 
         Slot srcItem = {.ptrVal = node->data};
         doDerefImpl(&srcItem, itemType->kind, error);
 
         // When allocating dynamic arrays, we mark with type the data chunk, not the header chunk
-        result->data = chunkAlloc(pages, typeSizeNoCheck(itemType), itemType->kind == TYPE_DYNARRAY ? NULL : itemType, NULL, false, error);
+        result->data = chunkAlloc(pages, itemType->size, itemType->kind == TYPE_DYNARRAY ? NULL : itemType, NULL, false, error);
 
         if (typeGarbageCollected(itemType))
             doChangeRefCntImpl(fiber, pages, srcItem.ptrVal, itemType, TOK_PLUSPLUS);
 
-        doAssignImpl(result->data, srcItem, itemType->kind, itemSize, error);
+        doAssignImpl(result->data, srcItem, itemType->kind, itemType->size, error);
     }
 
     if (node->left)
@@ -1300,12 +1298,11 @@ static void doGetMapKeysRecursively(const Map *map, const MapNode *node, void *k
     if (node->key)
     {
         const Type *keyType = typeMapKey(map->type);
-        int keySize = typeSizeNoCheck(keyType);
-        void *destKey = (char *)keys + keySize * (*numKeys);
+        void *destKey = (char *)keys + keyType->size * (*numKeys);
 
         Slot srcKey = {.ptrVal = node->key};
         doDerefImpl(&srcKey, keyType->kind, error);
-        doAssignImpl(destKey, srcKey, keyType->kind, keySize, error);
+        doAssignImpl(destKey, srcKey, keyType->kind, keyType->size, error);
 
         (*numKeys)++;
     }
@@ -1464,7 +1461,7 @@ static int doFillReprBuf(const Slot *slot, const Type *type, char *buf, int maxL
             len += doPrintIndented(buf + len, maxLen, depth, pretty, '[');
 
             char *itemPtr = slot->ptrVal;
-            const int itemSize = typeSizeNoCheck(type->base);
+            const int itemSize = type->base->size;
 
             for (int i = 0; i < type->numItems; i++)
             {
@@ -1517,8 +1514,7 @@ static int doFillReprBuf(const Slot *slot, const Type *type, char *buf, int maxL
                 const Type *keyType = typeMapKey(map->type);
                 const Type *itemType = typeMapItem(map->type);
 
-                const int keySize = typeSizeNoCheck(keyType);
-                void *keys = storageAdd(storage, map->root->len * keySize);
+                void *keys = storageAdd(storage, map->root->len * keyType->size);
 
                 doGetMapKeys(map, keys, error);
 
@@ -1542,7 +1538,7 @@ static int doFillReprBuf(const Slot *slot, const Type *type, char *buf, int maxL
                     if (i < map->root->len - 1)
                         len += doPrintIndented(buf + len, maxLen, depth, pretty, ' ');
 
-                    keyPtr += keySize;
+                    keyPtr += keyType->size;
                 }
 
                 storageRemove(storage, keys);
@@ -2073,7 +2069,7 @@ static FORCE_INLINE void doBuiltinMakefromarr(Fiber *fiber, HeapPages *pages, Er
     memcpy(dest->data, src, getDims(dest)->len * dest->itemSize);
 
     // Increase result items' ref counts, as if they have been assigned one by one
-    Type staticArrayType = {.kind = TYPE_ARRAY, .base = dest->type->base, .numItems = getDims(dest)->len, .next = NULL};
+    const Type staticArrayType = typeMakeDetachedArray(dest->type->base, getDims(dest)->len);
     doChangeRefCntImpl(fiber, pages, dest->data, &staticArrayType, TOK_PLUSPLUS);
 
     (--fiber->top)->ptrVal = dest;
@@ -2109,7 +2105,7 @@ static FORCE_INLINE void doBuiltinMaketoarr(Fiber *fiber, HeapPages *pages, Erro
     if (UNLIKELY(!src))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Dynamic array is null");
 
-    memset(dest, 0, typeSizeNoCheck(destType));
+    memset(dest, 0, destType->size);
 
     if (src->data)
     {
@@ -2184,7 +2180,7 @@ static FORCE_INLINE void doBuiltinCopyDynArray(Fiber *fiber, HeapPages *pages, E
         memmove((char *)result->data, (char *)array->data, getDims(array)->len * array->itemSize);
 
         // Increase result items' ref counts, as if they have been assigned one by one
-        Type staticArrayType = {.kind = TYPE_ARRAY, .base = result->type->base, .numItems = getDims(result)->len, .next = NULL};
+        const Type staticArrayType = typeMakeDetachedArray(result->type->base, getDims(result)->len);
         doChangeRefCntImpl(fiber, pages, result->data, &staticArrayType, TOK_PLUSPLUS);
     }
 
@@ -2266,7 +2262,7 @@ static FORCE_INLINE void doBuiltinAppend(Fiber *fiber, HeapPages *pages, Error *
         memmove((char *)result->data + getDims(array)->len * array->itemSize, (char *)rhs, rhsLen * array->itemSize);
 
         // Increase result items' ref counts, as if they have been assigned one by one
-        Type staticArrayType = {.kind = TYPE_ARRAY, .base = result->type->base, .numItems = rhsLen, .next = NULL};
+        const Type staticArrayType = typeMakeDetachedArray(result->type->base, rhsLen);
         doChangeRefCntImpl(fiber, pages, (char *)result->data + getDims(array)->len * array->itemSize, &staticArrayType, TOK_PLUSPLUS);
 
         getDims(result)->len = newLen;
@@ -2279,7 +2275,7 @@ static FORCE_INLINE void doBuiltinAppend(Fiber *fiber, HeapPages *pages, Error *
         memmove((char *)result->data + getDims(array)->len * array->itemSize, (char *)rhs, rhsLen * array->itemSize);
 
         // Increase result items' ref counts, as if they have been assigned one by one
-        Type staticArrayType = {.kind = TYPE_ARRAY, .base = result->type->base, .numItems = newLen, .next = NULL};
+        const Type staticArrayType = typeMakeDetachedArray(result->type->base, newLen);
         doChangeRefCntImpl(fiber, pages, result->data, &staticArrayType, TOK_PLUSPLUS);
     }
 
@@ -2315,7 +2311,7 @@ static FORCE_INLINE void doBuiltinInsert(Fiber *fiber, HeapPages *pages, Error *
         memmove((char *)result->data + index * result->itemSize, (char *)item, result->itemSize);
 
         // Increase result items' ref counts, as if they have been assigned one by one
-        Type staticArrayType = {.kind = TYPE_ARRAY, .base = result->type->base, .numItems = 1, .next = NULL};
+        const Type staticArrayType = typeMakeDetachedArray(result->type->base, 1);
         doChangeRefCntImpl(fiber, pages, (char *)result->data + index * result->itemSize, &staticArrayType, TOK_PLUSPLUS);
 
         getDims(result)->len++;
@@ -2329,7 +2325,7 @@ static FORCE_INLINE void doBuiltinInsert(Fiber *fiber, HeapPages *pages, Error *
         memmove((char *)result->data + index * result->itemSize, (char *)item, result->itemSize);
 
         // Increase result items' ref counts, as if they have been assigned one by one
-        Type staticArrayType = {.kind = TYPE_ARRAY, .base = result->type->base, .numItems = getDims(result)->len, .next = NULL};
+        const Type staticArrayType = typeMakeDetachedArray(result->type->base, getDims(result)->len);
         doChangeRefCntImpl(fiber, pages, result->data, &staticArrayType, TOK_PLUSPLUS);
     }
 
@@ -2354,7 +2350,7 @@ static FORCE_INLINE void doBuiltinDeleteDynArray(Fiber *fiber, HeapPages *pages,
     *result = *array;
 
     // Decrease result item's ref count
-    Type staticArrayType = {.kind = TYPE_ARRAY, .base = result->type->base, .numItems = 1, .next = NULL};
+    const Type staticArrayType = typeMakeDetachedArray(result->type->base, 1);
     doChangeRefCntImpl(fiber, pages, (char *)result->data + index * result->itemSize, &staticArrayType, TOK_MINUSMINUS);
 
     memmove((char *)result->data + index * result->itemSize, (char *)result->data + (index + 1) * result->itemSize, (getDims(array)->len - index - 1) * result->itemSize);
@@ -2487,7 +2483,7 @@ static FORCE_INLINE void doBuiltinSlice(Fiber *fiber, HeapPages *pages, Error *e
         memcpy((char *)result->data, (char *)array->data + startIndex * result->itemSize, getDims(result)->len * result->itemSize);
 
         // Increase result items' ref counts, as if they have been assigned one by one
-        Type staticArrayType = {.kind = TYPE_ARRAY, .base = result->type->base, .numItems = getDims(result)->len, .next = NULL};
+        const Type staticArrayType = typeMakeDetachedArray(result->type->base, getDims(result)->len);
         doChangeRefCntImpl(fiber, pages, result->data, &staticArrayType, TOK_PLUSPLUS);
 
         (--fiber->top)->ptrVal = result;
@@ -2707,7 +2703,7 @@ static FORCE_INLINE void doBuiltinSizeofself(Fiber *fiber, Error *error)
 
     int size = 0;
     if (interface->selfType)
-        size = typeSizeNoCheck(interface->selfType->base);
+        size = interface->selfType->base->size;
 
     fiber->top->intVal = size;
 }
@@ -2842,7 +2838,7 @@ static FORCE_INLINE void doBuiltinKeys(Fiber *fiber, HeapPages *pages, Error *er
         doGetMapKeys(map, result->data, error);
 
         // Increase result items' ref counts, as if they have been assigned one by one
-        Type staticArrayType = {.kind = TYPE_ARRAY, .base = result->type->base, .numItems = getDims(result)->len, .next = NULL};
+        const Type staticArrayType = typeMakeDetachedArray(result->type->base, getDims(result)->len);
         doChangeRefCntImpl(fiber, pages, result->data, &staticArrayType, TOK_PLUSPLUS);
     }
 
@@ -3084,7 +3080,7 @@ static FORCE_INLINE void doChangeRefCntAssign(Fiber *fiber, HeapPages *pages, Er
     doDerefImpl(&lhsDeref, type->kind, error);
     doChangeRefCntImpl(fiber, pages, lhsDeref.ptrVal, type, TOK_MINUSMINUS);
 
-    doAssignImpl(lhs, rhs, type->kind, typeSizeNoCheck(type), error);
+    doAssignImpl(lhs, rhs, type->kind, type->size, error);
     fiber->ip++;
 }
 
@@ -3422,14 +3418,14 @@ static FORCE_INLINE void doGetMapPtr(Fiber *fiber, HeapPages *pages, Error *erro
     if (!node->data)
     {
         // When allocating dynamic arrays, we mark with type the data chunk, not the header chunk
-        node->key  = chunkAlloc(pages, typeSizeNoCheck(keyType),  keyType->kind  == TYPE_DYNARRAY ? NULL : keyType,  NULL, false, error);
-        node->data = chunkAlloc(pages, typeSizeNoCheck(itemType), itemType->kind == TYPE_DYNARRAY ? NULL : itemType, NULL, false, error);
+        node->key  = chunkAlloc(pages, keyType->size,  keyType->kind  == TYPE_DYNARRAY ? NULL : keyType,  NULL, false, error);
+        node->data = chunkAlloc(pages, itemType->size, itemType->kind == TYPE_DYNARRAY ? NULL : itemType, NULL, false, error);
 
         // Increase key ref count
         if (typeGarbageCollected(keyType))
             doChangeRefCntImpl(fiber, pages, key.ptrVal, keyType, TOK_PLUSPLUS);
 
-        doAssignImpl(node->key, key, keyType->kind, typeSizeNoCheck(keyType), error);
+        doAssignImpl(node->key, key, keyType->kind, keyType->size, error);
         map->root->len++;
     }
 

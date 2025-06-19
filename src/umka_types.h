@@ -104,6 +104,8 @@ typedef struct tagType
         const EnumConst **enumConst;            // For enumerations
         Signature sig;                          // For functions, including methods
     };
+    int size;
+    int alignment;
     const struct tagType *next;
 } Type;
 
@@ -130,11 +132,8 @@ Type *typeAdd       (Types *types, const Blocks *blocks, TypeKind kind);
 void typeDeepCopy   (Storage *storage, Type *dest, const Type *src);
 Type *typeAddPtrTo  (Types *types, const Blocks *blocks, const Type *type);
 
-int typeSizeNoCheck (const Type *type);
-int typeSize        (const Types *types, const Type *type);
-
-int typeAlignmentNoCheck(const Type *type);
-int typeAlignment       (const Types *types, const Type *type);
+int typeSize     (const Types *types, const Type *type);
+int typeAlignment(const Types *types, const Type *type);
 
 
 static inline bool typeKindIntegerOrEnum(TypeKind typeKind)
@@ -256,6 +255,27 @@ bool typeValidOperator      (const Type *type, TokenKind op);
 void typeAssertValidOperator(const Types *types, const Type *type, TokenKind op);
 
 void typeEnableForward(Types *types, bool enable);
+
+
+static inline void typeSetNumArrayItems(Type *type, int numItems)
+{
+    if (type->kind == TYPE_ARRAY)
+    {
+        type->numItems = numItems;
+        type->size = type->numItems * type->base->size;
+        type->alignment = type->base->alignment;
+    }
+}
+
+
+static inline Type typeMakeDetachedArray(const Type *base, int numItems)
+{
+    Type type = {0};
+    type.kind = TYPE_ARRAY;
+    type.base = base;
+    typeSetNumArrayItems(&type, numItems);
+    return type;
+}
 
 
 static inline bool typeConvOverflow(TypeKind destTypeKind, TypeKind srcTypeKind, Const val)

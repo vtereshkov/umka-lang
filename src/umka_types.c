@@ -42,6 +42,10 @@ static const char *spelling [] =
 };
 
 
+static int typeSizeRecompute(const Type *type);
+static int typeAlignmentRecompute(const Type *type);
+
+
 void typeInit(Types *types, Storage *storage, Error *error)
 {
     types->first = NULL;
@@ -58,6 +62,8 @@ Type *typeAdd(Types *types, const Blocks *blocks, TypeKind kind)
     type->kind  = kind;
     type->block = blocks->item[blocks->top].block;
     type->sameAs = type;
+    type->size = typeSizeRecompute(type);
+    type->alignment = typeAlignmentRecompute(type);
 
     type->next = types->first;
     types->first = type;
@@ -112,7 +118,7 @@ Type *typeAddPtrTo(Types *types, const Blocks *blocks, const Type *type)
 }
 
 
-int typeSizeNoCheck(const Type *type)
+static int typeSizeRecompute(const Type *type)
 {
     switch (type->kind)
     {
@@ -132,7 +138,7 @@ int typeSizeNoCheck(const Type *type)
         case TYPE_PTR:      return sizeof(void *);
         case TYPE_WEAKPTR:  return sizeof(uint64_t);
         case TYPE_STR:      return sizeof(void *);
-        case TYPE_ARRAY:    return type->numItems * typeSizeNoCheck(type->base);
+        case TYPE_ARRAY:    return type->numItems > 0 ? (type->numItems * typeSizeRecompute(type->base)) : 0;
         case TYPE_DYNARRAY: return sizeof(DynArray);
         case TYPE_MAP:      return sizeof(Map);
         case TYPE_STRUCT:
@@ -142,10 +148,10 @@ int typeSizeNoCheck(const Type *type)
             int size = 0;
             for (int i = 0; i < type->numItems; i++)
             {
-                const int fieldSize = typeSizeNoCheck(type->field[i]->type);
-                size = align(size + fieldSize, typeAlignmentNoCheck(type->field[i]->type));
+                const int fieldSize = typeSizeRecompute(type->field[i]->type);
+                size = align(size + fieldSize, typeAlignmentRecompute(type->field[i]->type));
             }
-            size = align(size, typeAlignmentNoCheck(type));
+            size = align(size, typeAlignmentRecompute(type));
             return size;
         }
         case TYPE_FIBER:    return sizeof(void *);
@@ -157,17 +163,16 @@ int typeSizeNoCheck(const Type *type)
 
 int typeSize(const Types *types, const Type *type)
 {
-    const int size = typeSizeNoCheck(type);
-    if (size < 0)
+    if (type->size < 0)
     {
         char buf[DEFAULT_STR_LEN + 1];
         types->error->handler(types->error->context, "Illegal type %s", typeSpelling(type, buf));
     }
-    return size;
+    return type->size;
 }
 
 
-int typeAlignmentNoCheck(const Type *type)
+static int typeAlignmentRecompute(const Type *type)
 {
     switch (type->kind)
     {
@@ -186,8 +191,8 @@ int typeAlignmentNoCheck(const Type *type)
         case TYPE_REAL:
         case TYPE_PTR:
         case TYPE_WEAKPTR:
-        case TYPE_STR:      return typeSizeNoCheck(type);
-        case TYPE_ARRAY:    return typeAlignmentNoCheck(type->base);
+        case TYPE_STR:      return typeSizeRecompute(type);
+        case TYPE_ARRAY:    return type->numItems > 0 ? typeAlignmentRecompute(type->base) : 1;
         case TYPE_DYNARRAY:
         case TYPE_MAP:      return sizeof(int64_t);
         case TYPE_STRUCT:
@@ -197,13 +202,13 @@ int typeAlignmentNoCheck(const Type *type)
             int alignment = 1;
             for (int i = 0; i < type->numItems; i++)
             {
-                const int fieldAlignment = typeAlignmentNoCheck(type->field[i]->type);
+                const int fieldAlignment = typeAlignmentRecompute(type->field[i]->type);
                 if (fieldAlignment > alignment)
                     alignment = fieldAlignment;
             }
             return alignment;
         }
-        case TYPE_FIBER:    return typeSizeNoCheck(type);
+        case TYPE_FIBER:    return typeSizeRecompute(type);
         case TYPE_FN:       return sizeof(int64_t);
         default:            return 0;
     }
@@ -212,13 +217,12 @@ int typeAlignmentNoCheck(const Type *type)
 
 int typeAlignment(const Types *types, const Type *type)
 {
-    const int alignment = typeAlignmentNoCheck(type);
-    if (alignment <= 0)
+    if (type->alignment <= 0)
     {
         char buf[DEFAULT_STR_LEN + 1];
         types->error->handler(types->error->context, "Illegal type %s", typeSpelling(type, buf));
     }
-    return alignment;
+    return type->alignment;
 }
 
 
@@ -264,7 +268,7 @@ static bool typeDefaultParamEqual(const Const *left, const Const *right, const T
         return strcmp((char *)left->ptrVal, (char *)right->ptrVal) == 0;
 
     if (type->kind == TYPE_ARRAY || type->kind == TYPE_STRUCT || type->kind == TYPE_CLOSURE)
-        return memcmp(left->ptrVal, right->ptrVal, typeSizeNoCheck(type)) == 0;
+        return memcmp(left->ptrVal, right->ptrVal, type->size) == 0;
 
     return false;
 }
@@ -565,7 +569,7 @@ const Field *typeAddField(const Types *types, Type *structType, const Type *fiel
     if (structType->numItems > 0)
     {
         const Field *lastField = structType->field[structType->numItems - 1];
-        minNextFieldOffset = lastField->offset + typeSize(types, lastField->type);
+        minNextFieldOffset = lastField->offset + lastField->type->size;
     }
 
     if (typeSize(types, fieldType) > INT_MAX - minNextFieldOffset)
@@ -587,6 +591,11 @@ const Field *typeAddField(const Types *types, Type *structType, const Type *fiel
 
     structType->numItems++;
     structType->field[structType->numItems - 1] = field;
+
+    if (structType->alignment < fieldType->alignment)
+        structType->alignment = fieldType->alignment;
+
+    structType->size = align(field->offset + fieldType->size, structType->alignment);
 
     return field;
 }
@@ -786,8 +795,8 @@ static char *typeSpellingRecursive(const Type *type, char *buf, int size, int de
                 len += snprintf(buf + len, nonneg(size - len), "%s) (", typeSpellingRecursive(type->sig.param[0]->type, paramBuf, DEFAULT_STR_LEN + 1, depth - 1));
             }
 
-            int numPreHiddenParams = 1;                                                 // #self or #upvalues
-            int numPostHiddenParams = typeStructured(type->sig.resultType) ? 1 : 0;     // #result
+            const int numPreHiddenParams = 1;                                                 // #self or #upvalues
+            const int numPostHiddenParams = typeStructured(type->sig.resultType) ? 1 : 0;     // #result
 
             for (int i = numPreHiddenParams; i < type->sig.numParams - numPostHiddenParams; i++)
             {
