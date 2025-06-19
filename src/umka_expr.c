@@ -1997,7 +1997,7 @@ static void parseDynArrayLiteral(Compiler *comp, const Type **type, Const *const
 
             doAssertImplicitTypeConv(comp, staticArrayType->base, &itemType, constItem);
 
-            staticArrayType->numItems++;
+            typeResizeArray(staticArrayType, staticArrayType->numItems + 1);
 
             if (comp->lex.tok.kind != TOK_COMMA)
                 break;
@@ -2036,7 +2036,7 @@ static void parseDynArrayLiteral(Compiler *comp, const Type **type, Const *const
         for (int i = staticArrayType->numItems - 1; i >= 0; i--)
         {
             genPushLocalPtr(&comp->gen, staticArrayOffset + i * itemSize);
-            genSwapAssign(&comp->gen, staticArrayType->base->kind, typeSizeNoCheck(staticArrayType->base));
+            genSwapAssign(&comp->gen, staticArrayType->base->kind, staticArrayType->base->size);
         }
 
         genPushLocalPtr(&comp->gen, staticArrayOffset);

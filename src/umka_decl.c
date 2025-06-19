@@ -306,7 +306,7 @@ static const Type *parseArrayType(Compiler *comp)
 
     Type *type = typeAdd(&comp->types, &comp->blocks, typeKind);
     type->base = baseType;
-    type->numItems = len.intVal;
+    typeResizeArray(type, len.intVal);
     return type;
 }
 
@@ -424,7 +424,6 @@ static const Type *parseStructType(Compiler *comp)
     lexEat(&comp->lex, TOK_LBRACE);
 
     Type *type = typeAdd(&comp->types, &comp->blocks, TYPE_STRUCT);
-    type->numItems = 0;
 
     while (comp->lex.tok.kind == TOK_IDENT)
     {
@@ -455,7 +454,6 @@ static const Type *parseInterfaceType(Compiler *comp)
     lexEat(&comp->lex, TOK_LBRACE);
 
     Type *type = typeAdd(&comp->types, &comp->blocks, TYPE_INTERFACE);
-    type->numItems = 0;
 
     // The interface type is the Umka equivalent of Interface + methods
     typeAddField(&comp->types, type, comp->ptrVoidType, "#self");

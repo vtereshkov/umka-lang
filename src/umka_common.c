@@ -104,7 +104,7 @@ DynArray *storageAddDynArray(Storage *storage, const struct tagType *type, int64
     DynArray *array = storageAdd(storage, sizeof(DynArray));
 
     array->type     = type;
-    array->itemSize = typeSizeNoCheck(array->type->base);
+    array->itemSize = array->type->base->size;
 
     DynArrayDimensions dims = {.len = len, .capacity = 2 * (len + 1)};
 
