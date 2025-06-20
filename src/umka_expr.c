@@ -623,7 +623,7 @@ static void doImplicitTypeConvEx(Compiler *comp, const Type *dest, const Type **
 
             doPtrToInterfaceConv(comp, dest, src, constant);
         }
-        else
+        else if ((*src)->kind != TYPE_VOID)
         {
             // Value to interface
             doValueToInterfaceConv(comp, dest, src, constant);
