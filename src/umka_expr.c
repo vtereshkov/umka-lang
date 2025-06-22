@@ -1925,7 +1925,7 @@ static void parseArrayOrStructLiteral(Compiler *comp, const Type **type, Const *
         const Type *expectedItemType = (*type)->kind == TYPE_ARRAY ? (*type)->base : field->type;
         const Type *itemType = expectedItemType;
         Const itemConstantBuf, *itemConstant = constant ? &itemConstantBuf : NULL;
-        int itemSize = typeSize(&comp->types, expectedItemType);
+        const int itemSize = typeSize(&comp->types, expectedItemType);
 
         // expr
         parseExpr(comp, &itemType, itemConstant);
@@ -1934,7 +1934,19 @@ static void parseArrayOrStructLiteral(Compiler *comp, const Type **type, Const *
         if (constant)
             constAssign(&comp->consts, (char *)constant->ptrVal + itemOffset, itemConstant, expectedItemType->kind, itemSize);
         else
-            genChangeRefCntAssign(&comp->gen, expectedItemType);
+        {
+            if (doTryRemoveCopyResultToTempVar(comp))
+            {
+                // Optimization: if the right-hand side is a function call, assume its reference count to be already increased before return
+                // The left-hand side will hold this additional reference, so we can remove the temporary "reference holder" variable
+                genAssign(&comp->gen, expectedItemType->kind, itemSize);
+            }
+            else
+            {
+                // General case: update reference counts for both sides
+                genChangeRefCntAssign(&comp->gen, expectedItemType);
+            }
+        }
 
         numItems++;
         if ((*type)->kind == TYPE_ARRAY)
@@ -2083,7 +2095,17 @@ static void parseMapLiteral(Compiler *comp, const Type **type, Const *constant)
         doAssertImplicitTypeConv(comp, typeMapItem(*type), &itemType, NULL);
 
         // Assign to map item
-        genChangeRefCntAssign(&comp->gen, typeMapItem(*type));
+        if (doTryRemoveCopyResultToTempVar(comp))
+        {
+            // Optimization: if the right-hand side is a function call, assume its reference count to be already increased before return
+            // The left-hand side will hold this additional reference, so we can remove the temporary "reference holder" variable
+            genChangeLeftRefCntAssign(&comp->gen, typeMapItem(*type));
+        }
+        else
+        {
+            // General case: update reference counts for both sides
+            genChangeRefCntAssign(&comp->gen, typeMapItem(*type));
+        }
 
         if (comp->lex.tok.kind != TOK_COMMA)
             break;
