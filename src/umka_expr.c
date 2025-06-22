@@ -105,13 +105,14 @@ static void doEscapeToHeap(Compiler *comp, const Type *ptrType)
     // Allocate heap
     genPushIntConst(&comp->gen, typeSize(&comp->types, ptrType->base));
     genCallTypedBuiltin(&comp->gen, ptrType->base, BUILTIN_NEW);
-    doCopyResultToTempVar(comp, ptrType);
 
     // Copy to heap and use heap pointer
     genDup(&comp->gen);
     genPopReg(&comp->gen, REG_HEAP_COPY);
     genSwapChangeRefCntAssign(&comp->gen, ptrType->base);
     genPushReg(&comp->gen, REG_HEAP_COPY);
+
+    doCopyResultToTempVar(comp, ptrType);
 }
 
 
