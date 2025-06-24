@@ -3750,6 +3750,9 @@ static FORCE_INLINE void doEnterFrame(Fiber *fiber, const HookFunc *hooks, Error
     // Move stack top
     fiber->top -= layout->localVarSlots;
 
+    // Zero the whole stack frame
+    memset(fiber->top, 0, layout->localVarSlots * sizeof(Slot));
+
     // Call 'call' hook, if any
     doHook(fiber, hooks, HOOK_CALL);
 
