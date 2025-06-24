@@ -1289,10 +1289,18 @@ void parseFnBlock(Compiler *comp, Ident *fn, const Type *upvaluesStructType)
     comp->gen.returns = &returns;
     genGotosProlog(&comp->gen, comp->gen.returns, blocksCurrent(&comp->blocks));
 
+    // Additional scope embracing StmtList
+    blocksEnter(&comp->blocks);
+
     // StmtList
     parseStmtList(comp);
 
     const bool hasReturn = comp->blocks.item[comp->blocks.top].hasReturn;
+
+    // Additional scope embracing StmtList
+    doGarbageCollection(comp);
+    identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
+    blocksLeave(&comp->blocks);
 
     // 'return'/'continue'/'break' epilogs
     genGotosEpilog(&comp->gen, comp->gen.returns);
