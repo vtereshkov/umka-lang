@@ -905,20 +905,20 @@ static FORCE_INLINE void doChangeRefCntImpl(Fiber *fiber, HeapPages *pages, void
                         switch (chunk->type->kind)
                         {
                             case TYPE_ARRAY:
+                            case TYPE_MAP:
+                            case TYPE_STRUCT:
+                            case TYPE_INTERFACE:
+                            case TYPE_CLOSURE:
                             {
-                                doAddArrayItemsRefCntCandidates(candidates, chunk->data, chunk->type, chunk->type->numItems);
+                                candidatePush(candidates, chunk->data, chunk->type);
                                 break;
                             }
                             case TYPE_DYNARRAY:
                             {
+                                // When allocating dynamic arrays, we mark with type the data chunk, not the header chunk
                                 const DynArrayDimensions *dims = (DynArrayDimensions *)chunk->data;
                                 void *data = chunk->data + sizeof(DynArrayDimensions);
                                 doAddArrayItemsRefCntCandidates(candidates, data, chunk->type, dims->len);
-                                break;
-                            }
-                            case TYPE_STRUCT:
-                            {
-                                doAddStructFieldsRefCntCandidates(candidates, chunk->data, chunk->type);
                                 break;
                             }
                             default:
@@ -4030,19 +4030,15 @@ void *vmAllocData(VM *vm, int size, ExternFunc onFree)
 }
 
 
-void vmIncRef(VM *vm, void *ptr)
+void vmIncRef(VM *vm, void *ptr, const Type *type)
 {
-    HeapPage *page = pageFind(&vm->pages, ptr);
-    if (page)
-        chunkChangeRefCnt(&vm->pages, page, ptr, 1);
+    doChangeRefCntImpl(vm->fiber, &vm->pages, ptr, type, TOK_PLUSPLUS);
 }
 
 
-void vmDecRef(VM *vm, void *ptr)
+void vmDecRef(VM *vm, void *ptr, const Type *type)
 {
-    HeapPage *page = pageFind(&vm->pages, ptr);
-    if (page)
-        chunkChangeRefCnt(&vm->pages, page, ptr, -1);
+    doChangeRefCntImpl(vm->fiber, &vm->pages, ptr, type, TOK_MINUSMINUS);
 }
 
 
