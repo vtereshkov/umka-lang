@@ -285,8 +285,8 @@ int vmAsm                       (int ip, const Instruction *code, const DebugInf
 bool vmUnwindCallStack          (VM *vm, Slot **base, int *ip);
 void vmSetHook                  (VM *vm, HookEvent event, HookFunc hook);
 void *vmAllocData               (VM *vm, int size, ExternFunc onFree);
-void vmIncRef                   (VM *vm, void *ptr);
-void vmDecRef                   (VM *vm, void *ptr);
+void vmIncRef                   (VM *vm, void *ptr, const Type *type);
+void vmDecRef                   (VM *vm, void *ptr, const Type *type);
 void *vmGetMapNodeData          (VM *vm, Map *map, Slot key);
 char *vmMakeStr                 (VM *vm, const char *str);
 void vmMakeDynArray             (VM *vm, DynArray *array, const Type *type, int len);

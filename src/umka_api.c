@@ -236,21 +236,22 @@ UMKA_API void *umkaAllocData(void *umka, int size, UmkaExternFunc onFree)
 UMKA_API void umkaIncRef(void *umka, void *ptr)
 {
     Compiler *comp = umka;
-    vmIncRef(&comp->vm, ptr);
+    vmIncRef(&comp->vm, ptr, comp->ptrVoidType);    // We have no actual type info provided by the user, so we can only rely on the type info from the heap chunk header, if any
 }
 
 
 UMKA_API void umkaDecRef(void *umka, void *ptr)
 {
     Compiler *comp = umka;
-    vmDecRef(&comp->vm, ptr);
+    vmDecRef(&comp->vm, ptr, comp->ptrVoidType);    // We have no actual type info provided by the user, so we can only rely on the type info from the heap chunk header, if any
 }
 
 
 UMKA_API void *umkaGetMapItem(void *umka, UmkaMap *map, UmkaStackSlot key)
 {
     Compiler *comp = umka;
-    return vmGetMapNodeData(&comp->vm, (Map *)map, *(Slot *)&key);
+    const Slot *keyPtr = (Slot *)&key;
+    return vmGetMapNodeData(&comp->vm, (Map *)map, *keyPtr);
 }
 
 
