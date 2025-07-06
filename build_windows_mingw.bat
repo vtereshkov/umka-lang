@@ -1,5 +1,5 @@
 set opts=-s -O3
-if "%1"=="-debug" set opts=-g3
+if "%1"=="-debug" set opts=-g3 -DUMKA_VM_DEBUG
 
 cd src
 
@@ -19,6 +19,8 @@ move /y src\libumka* umka_windows_mingw
 move /y src\umka.exe umka_windows_mingw
 copy src\umka_api.h umka_windows_mingw
 copy LICENSE umka_windows_mingw
+
+if "%1"=="-debug" exit /b
 
 mkdir umka_windows_mingw\examples
 mkdir umka_windows_mingw\examples\3dcam

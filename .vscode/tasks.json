@@ -5,12 +5,12 @@
         {
             "label": "build release",
             "type": "shell",
-            "command": "./build_windows_mingw.bat"
+            "command": "${workspaceRoot}/build_windows_mingw.bat"
         },
         {
             "label": "build debug",
             "type": "shell",
-            "command": "./build_windows_mingw.bat -debug",
+            "command": "${workspaceRoot}/build_windows_mingw.bat -debug",
             "problemMatcher": {
                 "base": "$gcc",
                 "fileLocation": ["relative", "${workspaceRoot}/src"]

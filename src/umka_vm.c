@@ -1,17 +1,22 @@
 #define __USE_MINGW_ANSI_STDIO 1
 
-#ifdef _MSC_VER  // MSVC++ only
-    #define FORCE_INLINE __forceinline
-    #define UNLIKELY(x)  (x)
-#else
-    #define FORCE_INLINE __attribute__((always_inline)) inline
-    #define UNLIKELY(x)  __builtin_expect(!!(x), 0)
-#endif
-
+//#define UMKA_VM_DEBUG
 //#define UMKA_STR_DEBUG
 //#define UMKA_REF_CNT_DEBUG
 //#define UMKA_DETAILED_LEAK_INFO
 
+#ifdef UMKA_VM_DEBUG
+    #define FORCE_INLINE
+    #define UNLIKELY(x)  (x)
+#else
+    #ifdef _MSC_VER  // MSVC++ only
+        #define FORCE_INLINE __forceinline
+        #define UNLIKELY(x)  (x)
+    #else
+        #define FORCE_INLINE __attribute__((always_inline)) inline
+        #define UNLIKELY(x)  __builtin_expect(!!(x), 0)
+    #endif
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>
