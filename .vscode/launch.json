@@ -6,7 +6,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceRoot}/umka_windows_mingw/umka.exe",
-            "args": ["../examples/raytracer/raytracer.um"],
+            "args": ["../test.um"],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
             "environment": [],
