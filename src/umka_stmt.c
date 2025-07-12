@@ -163,6 +163,21 @@ static bool doTypeSwitchStmtLookahead(Compiler *comp)
 }
 
 
+static bool doForPostIncDecStmtLookahead(Compiler *comp)
+{
+    // ident ("++" | "--")
+    Lexer lookaheadLex = comp->lex;
+    if (lookaheadLex.tok.kind != TOK_IDENT)
+        return false;
+
+    lexNext(&lookaheadLex);
+    if (lookaheadLex.tok.kind != TOK_PLUSPLUS && lookaheadLex.tok.kind != TOK_MINUSMINUS)
+        return false;
+
+    return true;
+}
+
+
 // singleAssignmentStmt = designator "=" expr.
 static void parseSingleAssignmentStmt(Compiler *comp, const Type *type, Const *varPtrConst)
 {
@@ -773,8 +788,16 @@ static void parseSwitchStmt(Compiler *comp)
 }
 
 
+typedef struct
+{
+    const Ident *indexIdent;
+    TokenKind op;
+    bool isDeferred;
+} ForPostStmt;
+
+
 // forHeader = [shortVarDecl ";"] expr [";" simpleStmt].
-static void parseForHeader(Compiler *comp)
+static void parseForHeader(Compiler *comp, ForPostStmt *postStmt)
 {
     // [shortVarDecl ";"]
     if (doShortVarDeclLookahead(comp))
@@ -798,29 +821,68 @@ static void parseForHeader(Compiler *comp)
     identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
     blocksLeave(&comp->blocks);
 
-    genForCondEpilog(&comp->gen);
-
     // [";" simpleStmt]
     if (comp->lex.tok.kind == TOK_SEMICOLON || comp->lex.tok.kind == TOK_IMPLICIT_SEMICOLON)
     {
-        // Additional scope embracing simpleStmt (needed for timely garbage collection in simpleStmt, since it is executed at each iteration)
-        blocksEnter(&comp->blocks);
-
         lexNext(&comp->lex);
-        parseSimpleStmt(comp);
 
-        // Additional scope embracing simpleStmt
-        doGarbageCollection(comp);
-        identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
-        blocksLeave(&comp->blocks);
+        if (doForPostIncDecStmtLookahead(comp))
+        {
+            // Special case: simpleStmt = ident ("++" | "--").
+            genWhileCondEpilog(&comp->gen);
+
+            postStmt->indexIdent = identAssertFind(&comp->idents, &comp->modules, &comp->blocks, comp->blocks.module, comp->lex.tok.name, NULL);
+
+            if (postStmt->indexIdent->kind != IDENT_VAR)
+                comp->error.handler(comp->error.context, "%s is not a variable", postStmt->indexIdent->name);           
+            
+            if (identIsOuterLocalVar(&comp->blocks, postStmt->indexIdent))
+                comp->error.handler(comp->error.context, "%s is not specified as a captured variable", postStmt->indexIdent->name);
+
+            typeAssertCompatible(&comp->types, comp->intType, postStmt->indexIdent->type);
+
+            lexNext(&comp->lex);
+            postStmt->op = comp->lex.tok.kind;
+
+            lexNext(&comp->lex);
+            postStmt->isDeferred = true;
+        }
+        else
+        {
+            // General case
+            genForCondEpilog(&comp->gen);
+            
+            // Additional scope embracing simpleStmt (needed for timely garbage collection in simpleStmt, since it is executed at each iteration)
+            blocksEnter(&comp->blocks);
+
+            parseSimpleStmt(comp);
+
+            // Additional scope embracing simpleStmt
+            doGarbageCollection(comp);
+            identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
+            blocksLeave(&comp->blocks);
+
+            genForPostStmtEpilog(&comp->gen);
+
+            postStmt->indexIdent = NULL;
+            postStmt->op = TOK_NONE;
+            postStmt->isDeferred = false;            
+        }
     }
+    else
+    {
+        // Special case: simpleStmt omitted - treat it as deferred
+        genWhileCondEpilog(&comp->gen);
 
-    genForPostStmtEpilog(&comp->gen);
+        postStmt->indexIdent = NULL;
+        postStmt->op = TOK_NONE;
+        postStmt->isDeferred = true;        
+    }
 }
 
 
 // forInHeader = ident ["," ident ["^"]] "in" expr.
-static void parseForInHeader(Compiler *comp)
+static void parseForInHeader(Compiler *comp, ForPostStmt *postStmt)
 {
     IdentName indexOrKeyName = {0}, itemName = {0};
     bool iterateByPtr = false;
@@ -904,9 +966,13 @@ static void parseForInHeader(Compiler *comp)
 
     // Declare variable for the collection index (for maps, it will be used for indexing keys())
     const char *indexName = (collectionType->kind == TYPE_MAP) ? "#index" : indexOrKeyName;
-    const Ident *indexIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, indexName, comp->intType, false);
-    identSetUsed(indexIdent);                            // Do not warn about unused index
-    doZeroVar(comp, indexIdent);
+    
+    postStmt->indexIdent = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, indexName, comp->intType, false);
+    postStmt->op = TOK_PLUSPLUS;
+    postStmt->isDeferred = true;
+
+    identSetUsed(postStmt->indexIdent);                    // Do not warn about unused index
+    doZeroVar(comp, postStmt->indexIdent);
 
     const Ident *keyIdent = NULL, *keysIdent = NULL;
     if (collectionType->kind == TYPE_MAP)
@@ -923,7 +989,7 @@ static void parseForInHeader(Compiler *comp)
         doZeroVar(comp, keysIdent);
 
         // Call keys()
-        int resultOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, keysType);
+        const int resultOffset = identAllocStack(&comp->idents, &comp->types, &comp->blocks, keysType);
         doPushVarPtr(comp, collectionIdent);        // Map
         genPushLocalPtr(&comp->gen, resultOffset);  // Pointer to result (hidden parameter)
         genCallTypedBuiltin(&comp->gen, keysType, BUILTIN_KEYS);
@@ -953,28 +1019,22 @@ static void parseForInHeader(Compiler *comp)
         doZeroVar(comp, itemIdent);
     }
 
-    genForCondProlog(&comp->gen);
+    genWhileCondProlog(&comp->gen);
 
     // Implicit conditional expression: #index < #len
-    doPushVarPtr(comp, indexIdent);
+    doPushVarPtr(comp, postStmt->indexIdent);
     genDeref(&comp->gen, TYPE_INT);
     doPushVarPtr(comp, lenIdent);
     genDeref(&comp->gen, TYPE_INT);
     genBinary(&comp->gen, TOK_LESS, TYPE_INT, 0);
 
-    genForCondEpilog(&comp->gen);
-
-    // Implicit simpleStmt: index++
-    doPushVarPtr(comp, indexIdent);
-    genUnary(&comp->gen, TOK_PLUSPLUS, TYPE_INT);
-
-    genForPostStmtEpilog(&comp->gen);
+    genWhileCondEpilog(&comp->gen);
 
     if (collectionType->kind == TYPE_MAP)
     {
         // Assign key = #keys[#index]
         doPushVarPtr(comp, keysIdent);
-        doPushVarPtr(comp, indexIdent);
+        doPushVarPtr(comp, postStmt->indexIdent);
         genDeref(&comp->gen, TYPE_INT);
         genGetDynArrayPtr(&comp->gen);
         genDeref(&comp->gen, keyIdent->type->kind);
@@ -998,7 +1058,7 @@ static void parseForInHeader(Compiler *comp)
         else
         {
             // Push item index
-            doPushVarPtr(comp, indexIdent);
+            doPushVarPtr(comp, postStmt->indexIdent);
             genDeref(&comp->gen, TYPE_INT);
         }
 
@@ -1039,13 +1099,15 @@ static void parseForStmt(Compiler *comp)
     comp->gen.continues = &continues;
     genGotosProlog(&comp->gen, comp->gen.continues, blocksCurrent(&comp->blocks));
 
+    ForPostStmt deferredPostStmt = {0};
+
     Lexer lookaheadLex = comp->lex;
     lexNext(&lookaheadLex);
 
     if (!doShortVarDeclLookahead(comp) && (lookaheadLex.tok.kind == TOK_COMMA || lookaheadLex.tok.kind == TOK_IN))
-        parseForInHeader(comp);
+        parseForInHeader(comp, &deferredPostStmt);
     else
-        parseForHeader(comp);
+        parseForHeader(comp, &deferredPostStmt);
 
     // block
     parseBlock(comp);
@@ -1054,13 +1116,26 @@ static void parseForStmt(Compiler *comp)
     genGotosEpilog(&comp->gen, comp->gen.continues);
     comp->gen.continues = outerContinues;
 
-    genForEpilog(&comp->gen);
+    // simpleStmt, if deferred
+    if (deferredPostStmt.isDeferred)
+    {
+        if (deferredPostStmt.indexIdent)
+        {
+            doPushVarPtr(comp, deferredPostStmt.indexIdent);
+            genUnary(&comp->gen, deferredPostStmt.op, deferredPostStmt.indexIdent->type->kind);            
+        }
+        genWhileEpilog(&comp->gen);
+    }
+    else
+    {
+        genForEpilog(&comp->gen);        
+    }
 
     // 'break' epilog
     genGotosEpilog(&comp->gen, comp->gen.breaks);
     comp->gen.breaks = outerBreaks;
 
-    // Additional scope embracing shortVarDecl in forHeader/forEachHeader and statement body
+    // Additional scope embracing shortVarDecl in forHeader/forInHeader and statement body
     doGarbageCollection(comp);
     identWarnIfUnusedAll(&comp->idents, blocksCurrent(&comp->blocks));
     blocksLeave(&comp->blocks);
