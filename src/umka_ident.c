@@ -130,41 +130,48 @@ static Ident *identAdd(Idents *idents, const Modules *modules, const Blocks *blo
 
     const Ident *existingIdent = identFindEx(idents, modules, blocks, blocks->module, name, rcvType, false, kind == IDENT_MODULE);
 
-    if (existingIdent && existingIdent->block == blocks->item[blocks->top].block)
+    if (existingIdent)
     {
-        // Forward type declaration resolution
-        if (existingIdent->kind == IDENT_TYPE && existingIdent->type->kind == TYPE_FORWARD &&
-            kind == IDENT_TYPE && type->kind != TYPE_FORWARD &&
-            strcmp(existingIdent->type->typeIdent->name, name) == 0)
+        if (existingIdent->block == blocks->item[blocks->top].block)
         {
-            Ident *modifiableIdent = (Ident *)existingIdent;
-            Type *modifiableType = (Type *)type;
-            Type *modifiableIdentType = (Type *)existingIdent->type;
+            // Forward type declaration resolution
+            if (existingIdent->kind == IDENT_TYPE && existingIdent->type->kind == TYPE_FORWARD &&
+                kind == IDENT_TYPE && type->kind != TYPE_FORWARD &&
+                strcmp(existingIdent->type->typeIdent->name, name) == 0)
+            {
+                Ident *modifiableIdent = (Ident *)existingIdent;
+                Type *modifiableType = (Type *)type;
+                Type *modifiableIdentType = (Type *)existingIdent->type;
 
-            modifiableType->typeIdent = existingIdent;
-            typeDeepCopy(idents->storage, modifiableIdentType, type);
-            modifiableIdent->exported = exported;
+                modifiableType->typeIdent = existingIdent;
+                typeDeepCopy(idents->storage, modifiableIdentType, type);
+                modifiableIdent->exported = exported;
 
-            return modifiableIdent;
+                return modifiableIdent;
+            }
+
+            // Function prototype resolution
+            if (existingIdent->kind == IDENT_CONST && existingIdent->type->kind == TYPE_FN &&
+                kind == IDENT_CONST && type->kind == TYPE_FN &&
+                existingIdent->exported == exported &&
+                strcmp(existingIdent->name, name) == 0 &&
+                typeCompatible(existingIdent->type, type) &&
+                existingIdent->prototypeOffset >= 0)
+            {
+                Ident *modifiableIdent = (Ident *)existingIdent;
+                Type *modifiableIdentType = (Type *)existingIdent->type;
+
+                typeDeepCopy(idents->storage, modifiableIdentType, type);
+
+                return modifiableIdent;
+            }
+
+            idents->error->handler(idents->error->context, "Duplicate identifier %s", name);
         }
-
-        // Function prototype resolution
-        if (existingIdent->kind == IDENT_CONST && existingIdent->type->kind == TYPE_FN &&
-            kind == IDENT_CONST && type->kind == TYPE_FN &&
-            existingIdent->exported == exported &&
-            strcmp(existingIdent->name, name) == 0 &&
-            typeCompatible(existingIdent->type, type) &&
-            existingIdent->prototypeOffset >= 0)
+        else if (!identIsHidden(name) && !identIsPlaceholder(name) && existingIdent->block != 0 && !identIsOuterLocalVar(blocks, existingIdent))
         {
-            Ident *modifiableIdent = (Ident *)existingIdent;
-            Type *modifiableIdentType = (Type *)existingIdent->type;
-
-            typeDeepCopy(idents->storage, modifiableIdentType, type);
-
-            return modifiableIdent;
+            idents->error->warningHandler(idents->error->context, idents->debug, "Shadowed identifier %s", name);
         }
-
-        idents->error->handler(idents->error->context, "Duplicate identifier %s", name);
     }
 
     if (exported && blocks->top != 0)
@@ -193,7 +200,7 @@ static Ident *identAdd(Idents *idents, const Modules *modules, const Blocks *blo
     ident->exported          = exported;
     ident->globallyAllocated = false;
     ident->temporary         = false;
-    ident->used              = exported || ident->module == 0 || ident->name[0] == '#' || (ident->name[0] == '_' && ident->name[1] == 0) || identIsMain(ident);  // Exported, predefined, temporary, placeholder identifiers and main() are always treated as used
+    ident->used              = exported || ident->module == 0 || identIsHidden(ident->name) || identIsPlaceholder(ident->name) || identIsMain(ident);  // Exported, predefined, hidden, placeholder identifiers and main() are always treated as used
     ident->prototypeOffset   = -1;
     ident->debug             = *(idents->debug);
 

@@ -20,10 +20,10 @@ fn offsetMomentum(b: ^Body, px, py, pz: real) {
 
 type System = []^Body
 
-fn NewSystem(body: ^[]Body): System {
-   sys := make([]^Body, len(body^))
+fn NewSystem(bodies: ^[]Body): System {
+   sys := make([]^Body, len(bodies^))
    for i in sys {
-      sys[i] = &body[i]
+      sys[i] = &bodies[i]
    }
    var px, py, pz: real
    for _, body in sys {
