@@ -168,7 +168,7 @@ static Ident *identAdd(Idents *idents, const Modules *modules, const Blocks *blo
 
             idents->error->handler(idents->error->context, "Duplicate identifier %s", name);
         }
-        else if (existingIdent->block != 0 && name[0] != '#' && !(name[0] == '_' && name[1] == 0) && !identIsOuterLocalVar(blocks, existingIdent))
+        else if (!identIsHidden(name) && !identIsPlaceholder(name) && existingIdent->block != 0 && !identIsOuterLocalVar(blocks, existingIdent))
         {
             idents->error->warningHandler(idents->error->context, idents->debug, "Shadowed identifier %s", name);
         }
@@ -200,7 +200,7 @@ static Ident *identAdd(Idents *idents, const Modules *modules, const Blocks *blo
     ident->exported          = exported;
     ident->globallyAllocated = false;
     ident->temporary         = false;
-    ident->used              = exported || ident->module == 0 || ident->name[0] == '#' || (ident->name[0] == '_' && ident->name[1] == 0) || identIsMain(ident);  // Exported, predefined, temporary, placeholder identifiers and main() are always treated as used
+    ident->used              = exported || ident->module == 0 || identIsHidden(ident->name) || identIsPlaceholder(ident->name) || identIsMain(ident);  // Exported, predefined, hidden, placeholder identifiers and main() are always treated as used
     ident->prototypeOffset   = -1;
     ident->debug             = *(idents->debug);
 

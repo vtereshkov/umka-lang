@@ -78,6 +78,16 @@ void identWarnIfUnused        (const Idents *idents, const Ident *ident);
 void identWarnIfUnusedAll     (const Idents *idents, int block);
 bool identIsMain              (const Ident *ident);
 
+static inline bool identIsHidden(const char *name)
+{
+    return name[0] == '#';
+}
+
+static inline bool identIsPlaceholder(const char *name)
+{
+    return name[0] == '_' && name[1] == 0;
+}
+
 static inline void identSetUsed(const Ident *ident)
 {
     ((Ident *)ident)->used = true;
