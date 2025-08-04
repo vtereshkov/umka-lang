@@ -207,6 +207,7 @@ static FORCE_INLINE Slot *doGetOnFreeResult(HeapPages *pages)
 static void pageInit(HeapPages *pages, Fiber *fiber, Error *error)
 {
     pages->first = NULL;
+    pages->lowest = pages->highest = NULL;
     pages->freeId = 1;
     pages->totalSize = 0;
     pages->fiber = fiber;
@@ -280,6 +281,12 @@ static FORCE_INLINE HeapPage *pageAdd(HeapPages *pages, int numChunks, int chunk
         pages->first->prev = page;
     pages->first = page;
 
+    if (!pages->lowest || pages->lowest > page->data)
+        pages->lowest = page->data;
+
+    if (!pages->highest || pages->highest < page->end)
+        pages->highest = page->end;        
+
 #ifdef UMKA_REF_CNT_DEBUG
     fprintf(stderr, "Add page at %p\n", page->data);
 #endif
@@ -318,6 +325,12 @@ static FORCE_INLINE HeapChunk *pageGetChunk(const HeapPage *page, void *ptr)
 
 static FORCE_INLINE HeapPage *pageFind(HeapPages *pages, void *ptr)
 {
+    if (pages->lowest && ptr < (void *)pages->lowest)
+        return NULL;
+
+    if (pages->highest && ptr >= (void *)pages->highest)
+        return NULL;
+        
     for (HeapPage *page = pages->first; page; page = page->next)
     {
         if (ptr >= (void *)page->data && ptr < (void *)page->end)
