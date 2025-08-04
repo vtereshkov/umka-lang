@@ -198,6 +198,7 @@ typedef struct tagHeapPage
 typedef struct
 {
     HeapPage *first;
+    char *lowest, *highest;
     int freeId;
     int64_t totalSize;
     struct tagFiber *fiber;
