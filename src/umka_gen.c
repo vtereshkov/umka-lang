@@ -674,21 +674,21 @@ void genChangeLeftRefCntAssign(CodeGen *gen, const Type *type)
 }
 
 
-void genUnary(CodeGen *gen, TokenKind tokKind, TypeKind typeKind)
+void genUnary(CodeGen *gen, TokenKind tokKind, const Type *type)
 {
-    if (!optimizeUnary(gen, tokKind, typeKind))
+    if (!optimizeUnary(gen, tokKind, type->kind))
     {
-        const Instruction instr = {.opcode = OP_UNARY, .tokKind = tokKind, .typeKind = typeKind, .operand.intVal = 0};
+        const Instruction instr = {.opcode = OP_UNARY, .tokKind = tokKind, .type = type};
         genAddInstr(gen, &instr);
     }
 }
 
 
-void genBinary(CodeGen *gen, TokenKind tokKind, TypeKind typeKind, int structSize)
+void genBinary(CodeGen *gen, TokenKind tokKind, const Type *type)
 {
-    if (!optimizeBinary(gen, tokKind, typeKind))
+    if (!optimizeBinary(gen, tokKind, type->kind))
     {
-        const Instruction instr = {.opcode = OP_BINARY, .tokKind = tokKind, .typeKind = typeKind, .operand.intVal = structSize};
+        const Instruction instr = {.opcode = OP_BINARY, .tokKind = tokKind, .type = type};
         genAddInstr(gen, &instr);
     }
 }
@@ -930,11 +930,11 @@ void genSwitchCondEpilog(CodeGen *gen)
 }
 
 
-void genCaseConstantCheck(CodeGen *gen, Const *constant)
+void genCaseConstantCheck(CodeGen *gen, const Type *type, Const *constant)
 {
     genPushReg(gen, REG_SWITCH_EXPR);                       // Compare switch expression to case constant
     genPushIntConst(gen, constant->intVal);
-    genBinary(gen, TOK_EQEQ, TYPE_INT, 0);
+    genBinary(gen, TOK_EQEQ, type);
     genSavePos(gen);
     genNop(gen);                                            // Goto "case" block start (stub)
 }

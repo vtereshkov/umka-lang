@@ -79,8 +79,8 @@ void genChangeRefCntAssign      (CodeGen *gen, const Type *type);
 void genSwapChangeRefCntAssign  (CodeGen *gen, const Type *type);
 void genChangeLeftRefCntAssign  (CodeGen *gen, const Type *type);
 
-void genUnary (CodeGen *gen, TokenKind tokKind, TypeKind typeKind);
-void genBinary(CodeGen *gen, TokenKind tokKind, TypeKind typeKind, int structSize);
+void genUnary (CodeGen *gen, TokenKind tokKind, const Type *type);
+void genBinary(CodeGen *gen, TokenKind tokKind, const Type *type);
 
 void genGetArrayPtr   (CodeGen *gen, int itemSize, int len);
 void genGetDynArrayPtr(CodeGen *gen);
@@ -120,7 +120,7 @@ void genElseProlog  (CodeGen *gen);
 void genIfElseEpilog(CodeGen *gen);
 
 void genSwitchCondEpilog    (CodeGen *gen);
-void genCaseConstantCheck   (CodeGen *gen, Const *constant);
+void genCaseConstantCheck   (CodeGen *gen, const Type *type, Const *constant);
 void genCaseBlockProlog     (CodeGen *gen, int numCaseConstants);
 void genCaseBlockEpilog     (CodeGen *gen);
 void genSwitchEpilog        (CodeGen *gen, int numCases);

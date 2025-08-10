@@ -282,7 +282,7 @@ static void doDynArrayToDynArrayConv(Compiler *comp, const Type *dest, const Typ
 
     genPushLocal(&comp->gen, TYPE_INT, lenOffset);
     genPushIntConst(&comp->gen, 1);
-    genBinary(&comp->gen, TOK_MINUS, TYPE_INT, 0);
+    genBinary(&comp->gen, TOK_MINUS, comp->intType);
     genPushLocalPtr(&comp->gen, indexOffset);
     genSwapAssign(&comp->gen, TYPE_INT, 0);
 
@@ -291,7 +291,7 @@ static void doDynArrayToDynArrayConv(Compiler *comp, const Type *dest, const Typ
 
     genPushLocal(&comp->gen, TYPE_INT, indexOffset);
     genPushIntConst(&comp->gen, 0);
-    genBinary(&comp->gen, TOK_GREATEREQ, TYPE_INT, 0);
+    genBinary(&comp->gen, TOK_GREATEREQ, comp->intType);
 
     genWhileCondEpilog(&comp->gen);
 
@@ -320,7 +320,7 @@ static void doDynArrayToDynArrayConv(Compiler *comp, const Type *dest, const Typ
     genSwapChangeRefCntAssign(&comp->gen, dest->base);
 
     genPushLocalPtr(&comp->gen, indexOffset);
-    genUnary(&comp->gen, TOK_MINUSMINUS, TYPE_INT);
+    genUnary(&comp->gen, TOK_MINUSMINUS, comp->intType);
 
     // Additional scope embracing temporary variables declaration
     doGarbageCollection(comp);
@@ -749,7 +749,7 @@ static void doApplyStrCat(Compiler *comp, Const *constant, const Const *rightCon
     }
     else
     {
-        genBinary(&comp->gen, op, TYPE_STR, 0);                                     // "+" or "+=" only
+        genBinary(&comp->gen, op, comp->strType);                                   // "+" or "+=" only
         doCopyResultToTempVar(comp, comp->strType);
     }
 }
@@ -776,7 +776,7 @@ void doApplyOperator(Compiler *comp, const Type **type, const Type **rightType, 
             if (constant)
                 constBinary(&comp->consts, constant, rightConstant, op, (*type)->kind);
             else
-                genBinary(&comp->gen, op, (*type)->kind, typeSize(&comp->types, *type));
+                genBinary(&comp->gen, op, *type);
         }
     }
 }
@@ -2721,7 +2721,7 @@ static void parseFactor(Compiler *comp, const Type **type, Const *constant)
             if (constant)
                 constUnary(&comp->consts, constant, op, (*type)->kind);
             else
-                genUnary(&comp->gen, op, (*type)->kind);
+                genUnary(&comp->gen, op, *type);
             break;
         }
 

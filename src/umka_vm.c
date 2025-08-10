@@ -712,6 +712,9 @@ static FORCE_INLINE void doCheckStr(const char *str, Error *error)
 }
 
 
+static FORCE_INLINE char *doGetEmptyStr(void);
+
+
 static FORCE_INLINE void doHook(Fiber *fiber, const HookFunc *hooks, HookEvent event)
 {
     if (!hooks || !hooks[event])
@@ -818,6 +821,64 @@ static FORCE_INLINE void doAssignImpl(void *lhs, Slot rhs, TypeKind typeKind, in
         case TYPE_FN:           *(int64_t       *)lhs = rhs.intVal;  break;
 
         default:                error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal type"); return;
+    }
+}
+
+
+static int64_t doCompareImpl(Slot lhs, Slot rhs, const Type *type, Error *error)
+{
+    switch (type->kind)
+    {
+        case TYPE_INT8:
+        case TYPE_INT16:
+        case TYPE_INT32:
+        case TYPE_INT:
+        case TYPE_UINT8:
+        case TYPE_UINT16:
+        case TYPE_UINT32:   return lhs.intVal - rhs.intVal;
+        case TYPE_UINT:     return lhs.uintVal - rhs.uintVal;
+        case TYPE_BOOL:
+        case TYPE_CHAR:     return lhs.intVal - rhs.intVal;
+        case TYPE_REAL32:
+        case TYPE_REAL:     return lhs.realVal - rhs.realVal;
+        case TYPE_PTR:      return lhs.ptrVal - rhs.ptrVal;
+        case TYPE_WEAKPTR:  return lhs.uintVal - rhs.uintVal;
+        case TYPE_STR:
+        {
+            char *lhsStr = (char *)lhs.ptrVal;
+            if (!lhsStr)
+                lhsStr = doGetEmptyStr();
+
+            char *rhsStr = (char *)rhs.ptrVal;
+            if (!rhsStr)
+                rhsStr = doGetEmptyStr();
+
+            doCheckStr(lhsStr, error);
+            doCheckStr(rhsStr, error);
+
+            return strcmp(lhsStr, rhsStr);
+        }
+        case TYPE_ARRAY:
+        case TYPE_STRUCT:
+        {
+            for (int i = 0; i < type->numItems; i++)
+            {
+                const Type *itemType = (type->kind == TYPE_ARRAY) ? type->base : type->field[i]->type;
+                const int itemOffset = (type->kind == TYPE_ARRAY) ? (i * itemType->size) : type->field[i]->offset;                
+                
+                Slot lhsItem = {.ptrVal = (char *)lhs.ptrVal + itemOffset};
+                Slot rhsItem = {.ptrVal = (char *)rhs.ptrVal + itemOffset};
+            
+                doDerefImpl(&lhsItem, itemType->kind, error);
+                doDerefImpl(&rhsItem, itemType->kind, error);
+
+                const int64_t itemDiff = doCompareImpl(lhsItem, rhsItem, itemType, error);
+                if (itemDiff != 0)
+                    return itemDiff;
+            }
+            return 0;
+        }
+        default: error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal type"); return 0;
     }
 }
 
@@ -1078,7 +1139,7 @@ static FORCE_INLINE char *doAllocStr(HeapPages *pages, int64_t len, Error *error
 }
 
 
-static FORCE_INLINE char *doGetEmptyStr()
+static FORCE_INLINE char *doGetEmptyStr(void)
 {
     StrDimensions dims = {.len = 0, .capacity = 1};
 
@@ -1129,54 +1190,6 @@ static FORCE_INLINE void doAllocMap(HeapPages *pages, Map *map, const Type *type
 }
 
 
-static void doGetMapKeyBytes(Slot key, const Type *keyType, Error *error, char **keyBytes, int *keySize)
-{
-    switch (keyType->kind)
-    {
-        case TYPE_INT8:
-        case TYPE_INT16:
-        case TYPE_INT32:
-        case TYPE_INT:
-        case TYPE_UINT8:
-        case TYPE_UINT16:
-        case TYPE_UINT32:
-        case TYPE_UINT:
-        case TYPE_BOOL:
-        case TYPE_CHAR:
-        case TYPE_REAL32:
-        case TYPE_REAL:
-        case TYPE_PTR:
-        case TYPE_WEAKPTR:
-        {
-            // keyBytes must point to a pre-allocated 8-byte buffer
-            doAssignImpl(*keyBytes, key, keyType->kind, 0, error);
-            *keySize = keyType->size;
-            break;
-        }
-        case TYPE_STR:
-        {
-            doCheckStr((char *)key.ptrVal, error);
-            *keyBytes = key.ptrVal ? (char *)key.ptrVal : doGetEmptyStr();
-            *keySize = getStrDims(*keyBytes)->len + 1;
-            break;
-        }
-        case TYPE_ARRAY:
-        case TYPE_STRUCT:
-        {
-            *keyBytes = (char *)key.ptrVal;
-            *keySize = keyType->size;
-            break;
-        }
-        default:
-        {
-            *keyBytes = NULL;
-            *keySize = 0;
-            break;
-        }
-    }
-}
-
-
 static FORCE_INLINE void doRebalanceMapNodes(MapNode **nodeInParent)
 {
     // A naive tree rotation to prevent degeneration into a linked list
@@ -1203,38 +1216,17 @@ static FORCE_INLINE MapNode **doGetMapNode(Map *map, Slot key, bool createMissin
     if (UNLIKELY(!map || !map->root))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Map is null");
 
-    Slot keyBytesBuffer = {0};
-    char *keyBytes = (char *)&keyBytesBuffer;
-    int keySize = 0;
-
-    doGetMapKeyBytes(key, typeMapKey(map->type), error, &keyBytes, &keySize);
-
-    if (UNLIKELY(!keyBytes))
-        error->runtimeHandler(error->context, ERR_RUNTIME, "Map key is null");
-
-    if (UNLIKELY(keySize == 0))
-        error->runtimeHandler(error->context, ERR_RUNTIME, "Map key has zero length");
-
     MapNode **node = &map->root;
 
     while (*node)
     {
-        Slot nodeKeyBytesBuffer = {0};
-        char *nodeKeyBytes = (char *)&nodeKeyBytesBuffer;
-        int nodeKeySize = 0;
-
+        int64_t keyDiff = 1;
         if ((*node)->key)
         {
-            Slot nodeKeySlot = {.ptrVal = (*node)->key};
-            doDerefImpl(&nodeKeySlot, typeMapKey(map->type)->kind, error);
-            doGetMapKeyBytes(nodeKeySlot, typeMapKey(map->type), error, &nodeKeyBytes, &nodeKeySize);
+            Slot nodeKey = {.ptrVal = (*node)->key};
+            doDerefImpl(&nodeKey, typeMapKey(map->type)->kind, error);
+            keyDiff = doCompareImpl(key, nodeKey, typeMapKey(map->type), error);
         }
-
-        int keyDiff = 0;
-        if (keySize != nodeKeySize)
-            keyDiff = keySize - nodeKeySize;
-        else
-            keyDiff = memcmp(keyBytes, nodeKeyBytes, keySize);
 
         if (keyDiff > 0)
             node = &(*node)->right;
@@ -3105,81 +3097,104 @@ static FORCE_INLINE void doChangeRefCntAssign(Fiber *fiber, HeapPages *pages, Er
 
 static FORCE_INLINE void doUnary(Fiber *fiber, Error *error)
 {
-    if (fiber->code[fiber->ip].typeKind == TYPE_REAL || fiber->code[fiber->ip].typeKind == TYPE_REAL32)
-        switch (fiber->code[fiber->ip].tokKind)
+    const TokenKind op = fiber->code[fiber->ip].tokKind;
+    const Type *type = fiber->code[fiber->ip].type;
+
+    Slot *slot = fiber->top;
+
+    if (typeReal(type))
+    {
+        switch (op)
         {
             case TOK_PLUS:  break;
-            case TOK_MINUS: fiber->top->realVal = -fiber->top->realVal; break;
+            case TOK_MINUS: slot->realVal = -slot->realVal; break;
+            
             default:        error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal instruction"); return;
         }
+    }
     else
-        switch (fiber->code[fiber->ip].tokKind)
+    {
+        switch (op)
         {
             case TOK_PLUS:       break;
-            case TOK_MINUS:      fiber->top->intVal = -fiber->top->intVal; break;
-            case TOK_NOT:        fiber->top->intVal = !fiber->top->intVal; break;
-            case TOK_XOR:        fiber->top->intVal = ~fiber->top->intVal; break;
+            case TOK_MINUS:      slot->intVal = -slot->intVal; break;
+            case TOK_NOT:        slot->intVal = !slot->intVal; break;
+            case TOK_XOR:        slot->intVal = ~slot->intVal; break;
 
             case TOK_PLUSPLUS:
             {
-                void *ptr = (fiber->top++)->ptrVal;
-                switch (fiber->code[fiber->ip].typeKind)
+                switch (type->kind)
                 {
-                    case TYPE_INT8:   (*(int8_t   *)ptr)++; break;
-                    case TYPE_INT16:  (*(int16_t  *)ptr)++; break;
-                    case TYPE_INT32:  (*(int32_t  *)ptr)++; break;
-                    case TYPE_INT:    (*(int64_t  *)ptr)++; break;
-                    case TYPE_UINT8:  (*(uint8_t  *)ptr)++; break;
-                    case TYPE_UINT16: (*(uint16_t *)ptr)++; break;
-                    case TYPE_UINT32: (*(uint32_t *)ptr)++; break;
-                    case TYPE_UINT:   (*(uint64_t *)ptr)++; break;
-                    // Structured, boolean, char and real types are not incremented/decremented
+                    case TYPE_INT8:   (*(int8_t   *)slot->ptrVal)++; break;
+                    case TYPE_INT16:  (*(int16_t  *)slot->ptrVal)++; break;
+                    case TYPE_INT32:  (*(int32_t  *)slot->ptrVal)++; break;
+                    case TYPE_INT:    (*(int64_t  *)slot->ptrVal)++; break;
+                    case TYPE_UINT8:  (*(uint8_t  *)slot->ptrVal)++; break;
+                    case TYPE_UINT16: (*(uint16_t *)slot->ptrVal)++; break;
+                    case TYPE_UINT32: (*(uint32_t *)slot->ptrVal)++; break;
+                    case TYPE_UINT:   (*(uint64_t *)slot->ptrVal)++; break;
+                    
                     default:          error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal type"); return;
                 }
-            break;
+                fiber->top++;
+                break;
             }
 
             case TOK_MINUSMINUS:
             {
-                void *ptr = (fiber->top++)->ptrVal;
-                switch (fiber->code[fiber->ip].typeKind)
+                switch (type->kind)
                 {
-                    case TYPE_INT8:   (*(int8_t   *)ptr)--; break;
-                    case TYPE_INT16:  (*(int16_t  *)ptr)--; break;
-                    case TYPE_INT32:  (*(int32_t  *)ptr)--; break;
-                    case TYPE_INT:    (*(int64_t  *)ptr)--; break;
-                    case TYPE_UINT8:  (*(uint8_t  *)ptr)--; break;
-                    case TYPE_UINT16: (*(uint16_t *)ptr)--; break;
-                    case TYPE_UINT32: (*(uint32_t *)ptr)--; break;
-                    case TYPE_UINT:   (*(uint64_t *)ptr)--; break;
-                    // Structured, boolean, char and real types are not incremented/decremented
+                    case TYPE_INT8:   (*(int8_t   *)slot->ptrVal)--; break;
+                    case TYPE_INT16:  (*(int16_t  *)slot->ptrVal)--; break;
+                    case TYPE_INT32:  (*(int32_t  *)slot->ptrVal)--; break;
+                    case TYPE_INT:    (*(int64_t  *)slot->ptrVal)--; break;
+                    case TYPE_UINT8:  (*(uint8_t  *)slot->ptrVal)--; break;
+                    case TYPE_UINT16: (*(uint16_t *)slot->ptrVal)--; break;
+                    case TYPE_UINT32: (*(uint32_t *)slot->ptrVal)--; break;
+                    case TYPE_UINT:   (*(uint64_t *)slot->ptrVal)--; break;
+                    
                     default:          error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal type"); return;
                 }
-            break;
+                fiber->top++;
+                break;
             }
 
             default: error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal instruction"); return;
         }
+    }
     fiber->ip++;
 }
 
 
 static FORCE_INLINE void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
 {
+    const TokenKind op = fiber->code[fiber->ip].tokKind;
+    const Type *type = fiber->code[fiber->ip].type;
+    
     const Slot rhs = *fiber->top++;
     Slot *lhs = fiber->top;
 
-    if (fiber->code[fiber->ip].typeKind == TYPE_PTR)
+    if (type->kind == TYPE_PTR)
     {
-        switch (fiber->code[fiber->ip].tokKind)
+        switch (op)
         {
             case TOK_EQEQ:      lhs->intVal = lhs->ptrVal == rhs.ptrVal; break;
             case TOK_NOTEQ:     lhs->intVal = lhs->ptrVal != rhs.ptrVal; break;
-
+            
             default:            error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal instruction"); return;
         }
     }
-    else if (fiber->code[fiber->ip].typeKind == TYPE_STR)
+    else if (type->kind == TYPE_WEAKPTR)
+    {
+        switch (op)
+        {
+            case TOK_EQEQ:      lhs->intVal = lhs->uintVal == rhs.uintVal; break;
+            case TOK_NOTEQ:     lhs->intVal = lhs->uintVal != rhs.uintVal; break;
+            
+            default:            error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal instruction"); return;
+        }        
+    }
+    else if (type->kind == TYPE_STR)
     {
         char *lhsStr = (char *)lhs->ptrVal;
         if (!lhsStr)
@@ -3192,7 +3207,7 @@ static FORCE_INLINE void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
         doCheckStr(lhsStr, error);
         doCheckStr(rhsStr, error);
 
-        switch (fiber->code[fiber->ip].tokKind)
+        switch (op)
         {
             case TOK_PLUS:
             case TOK_PLUSEQ:
@@ -3200,7 +3215,7 @@ static FORCE_INLINE void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
                 const int lhsLen = getStrDims(lhsStr)->len;
                 const int rhsLen = getStrDims(rhsStr)->len;
 
-                const bool inPlace = fiber->code[fiber->ip].tokKind == TOK_PLUSEQ && getStrDims(lhsStr)->capacity >= lhsLen + rhsLen + 1;
+                const bool inPlace = op == TOK_PLUSEQ && getStrDims(lhsStr)->capacity >= lhsLen + rhsLen + 1;
 
                 char *buf = NULL;
                 if (inPlace)
@@ -3228,25 +3243,23 @@ static FORCE_INLINE void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
             case TOK_LESS:      lhs->intVal = strcmp(lhsStr, rhsStr)  < 0; break;
             case TOK_GREATEREQ: lhs->intVal = strcmp(lhsStr, rhsStr) >= 0; break;
             case TOK_LESSEQ:    lhs->intVal = strcmp(lhsStr, rhsStr) <= 0; break;
-
+            
             default:            error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal instruction"); return;
         }
     }
-    else if (fiber->code[fiber->ip].typeKind == TYPE_ARRAY || fiber->code[fiber->ip].typeKind == TYPE_STRUCT)
+    else if (type->kind == TYPE_ARRAY || type->kind == TYPE_STRUCT)
     {
-        const int structSize = fiber->code[fiber->ip].operand.intVal;
-
-        switch (fiber->code[fiber->ip].tokKind)
+        switch (op)
         {
-            case TOK_EQEQ:      lhs->intVal = memcmp(lhs->ptrVal, rhs.ptrVal, structSize) == 0; break;
-            case TOK_NOTEQ:     lhs->intVal = memcmp(lhs->ptrVal, rhs.ptrVal, structSize) != 0; break;
-
+            case TOK_EQEQ:      lhs->intVal = doCompareImpl(*lhs, rhs, type, error) == 0; break;
+            case TOK_NOTEQ:     lhs->intVal = doCompareImpl(*lhs, rhs, type, error) != 0; break;
+            
             default:            error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal instruction"); return;
         }
     }
-    else if (typeKindReal(fiber->code[fiber->ip].typeKind))
+    else if (typeReal(type))
     {
-        switch (fiber->code[fiber->ip].tokKind)
+        switch (op)
         {
             case TOK_PLUS:  lhs->realVal += rhs.realVal; break;
             case TOK_MINUS: lhs->realVal -= rhs.realVal; break;
@@ -3272,13 +3285,13 @@ static FORCE_INLINE void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
             case TOK_LESS:      lhs->intVal = lhs->realVal <  rhs.realVal; break;
             case TOK_GREATEREQ: lhs->intVal = lhs->realVal >= rhs.realVal; break;
             case TOK_LESSEQ:    lhs->intVal = lhs->realVal <= rhs.realVal; break;
-
+            
             default:            error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal instruction"); return;
         }
     }
-    else if (fiber->code[fiber->ip].typeKind == TYPE_UINT)
+    else if (type->kind == TYPE_UINT)
     {
-        switch (fiber->code[fiber->ip].tokKind)
+        switch (op)
         {
             case TOK_PLUS:  lhs->uintVal += rhs.uintVal; break;
             case TOK_MINUS: lhs->uintVal -= rhs.uintVal; break;
@@ -3316,7 +3329,7 @@ static FORCE_INLINE void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
     }
     else  // All ordinal types except TYPE_UINT
     {
-        switch (fiber->code[fiber->ip].tokKind)
+        switch (op)
         {
             case TOK_PLUS:  lhs->intVal += rhs.intVal; break;
             case TOK_MINUS: lhs->intVal -= rhs.intVal; break;
@@ -3999,7 +4012,6 @@ int vmAsm(int ip, const Instruction *code, const DebugInfo *debugPerInstr, char 
         case OP_ZERO:
         case OP_ASSIGN:
         case OP_ASSIGN_PARAM:
-        case OP_BINARY:
         case OP_CHANGE_REF_CNT_LOCAL:
         case OP_GET_FIELD_PTR:
         case OP_GOTO:
