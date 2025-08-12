@@ -110,11 +110,19 @@ void typeDeepCopy(Storage *storage, Type *dest, const Type *src)
 }
 
 
-Type *typeAddPtrTo(Types *types, const Blocks *blocks, const Type *type)
+const Type *typeAddPtrTo(Types *types, const Blocks *blocks, const Type *type)
 {
     Type *ptrType = typeAdd(types, blocks, TYPE_PTR);
     ptrType->base = type;
     return ptrType;
+}
+
+
+const Type *typeAddWeakPtrTo(Types *types, const Blocks *blocks, const Type *type)
+{
+    Type *weakPtrType = typeAdd(types, blocks, TYPE_WEAKPTR);
+    weakPtrType->base = type;
+    return weakPtrType;
 }
 
 

@@ -261,11 +261,11 @@ static const Type *parsePtrType(Compiler *comp)
     lexEat(&comp->lex, TOK_CARET);
 
     const Type *baseType = parseTypeOrForwardType(comp);
-    Type *ptrType = typeAddPtrTo(&comp->types, &comp->blocks, baseType);
-    if (weak)
-        ptrType->kind = TYPE_WEAKPTR;
 
-    return ptrType;
+    if (weak)
+        return typeAddWeakPtrTo(&comp->types, &comp->blocks, baseType);
+    else
+        return typeAddPtrTo(&comp->types, &comp->blocks, baseType);
 }
 
 

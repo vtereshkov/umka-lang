@@ -130,7 +130,9 @@ void typeInit(Types *types, Storage *storage, Error *error);
 
 Type *typeAdd       (Types *types, const Blocks *blocks, TypeKind kind);
 void typeDeepCopy   (Storage *storage, Type *dest, const Type *src);
-Type *typeAddPtrTo  (Types *types, const Blocks *blocks, const Type *type);
+
+const Type *typeAddPtrTo    (Types *types, const Blocks *blocks, const Type *type);
+const Type *typeAddWeakPtrTo(Types *types, const Blocks *blocks, const Type *type);
 
 int typeSize     (const Types *types, const Type *type);
 int typeAlignment(const Types *types, const Type *type);
