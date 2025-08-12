@@ -1211,14 +1211,9 @@ static void parseBuiltinSortCall(Compiler *comp, const Type **type, Const *const
     {
         // "Fast" form
 
-        // Dynamic array item type must be either a simple comparable type, or a structure whose field having the given name is of a simple comparable type
-        if (typeValidOperator((*type)->base, TOK_LESS))
+        if (comp->lex.tok.kind == TOK_COMMA)
         {
-            genPushIntConst(&comp->gen, 0);
-            genCallBuiltin(&comp->gen, (*type)->base->kind, BUILTIN_SORTFAST);
-        }
-        else
-        {
+            // Item type is a structure with a comparable field
             typeAssertCompatibleBuiltin(&comp->types, *type, BUILTIN_SORT, (*type)->base->kind == TYPE_STRUCT);
 
             // Field name
@@ -1231,7 +1226,15 @@ static void parseBuiltinSortCall(Compiler *comp, const Type **type, Const *const
             lexNext(&comp->lex);
 
             genPushIntConst(&comp->gen, field->offset);
-            genCallBuiltin(&comp->gen, field->type->kind, BUILTIN_SORTFAST);
+            genCallTypedBuiltin(&comp->gen, field->type, BUILTIN_SORTFAST);
+        }
+        else
+        {
+            // Item type is comparable
+            typeAssertValidOperator(&comp->types, (*type)->base, TOK_LESS);
+
+            genPushIntConst(&comp->gen, 0);
+            genCallTypedBuiltin(&comp->gen, (*type)->base, BUILTIN_SORTFAST);
         }
     }
     else
@@ -1242,7 +1245,7 @@ static void parseBuiltinSortCall(Compiler *comp, const Type **type, Const *const
         doAssertImplicitTypeConv(comp, expectedCompareType, &compareOrFlagType, NULL);
         genPushGlobalPtr(&comp->gen, (Type *)compareOrFlagType);
 
-        genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_SORT);
+        genCallTypedBuiltin(&comp->gen, (*type)->base, BUILTIN_SORT);
     }
 
     *type = comp->voidType;

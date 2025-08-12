@@ -125,6 +125,23 @@ fn test8() {
 }
 
 fn test9() {
+	type Vec = struct {
+		x, y, z: real32
+	}
+
+	v := []Vec{}
+	for i := 0; i < 10000; i++ {
+		v = append(v, {std::rand(), std::rand(), std::rand()})
+	}
+
+	sort(v, false)
+
+	for i := 0; i < len(v) - 1; i++ {
+		std::assert(v[i + 1] <= v[i])
+	}	
+}
+
+fn test10() {
 	sort([]int{}, true)
 }
 
@@ -138,6 +155,7 @@ fn test*() {
 	test7()
 	test8()
 	test9()
+	test10()
 }
 
 fn main() {

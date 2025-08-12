@@ -502,14 +502,14 @@ bool typeValidOperator(const Type *type, TokenKind op)
         case TOK_OROR:      return type->kind == TYPE_BOOL;
         case TOK_PLUSPLUS:
         case TOK_MINUSMINUS:return typeInteger(type);
-        case TOK_EQEQ:      return typeComparable(type);
+        case TOK_EQEQ:
         case TOK_LESS:
-        case TOK_GREATER:   return typeOrdinal(type) || typeReal(type) || type->kind == TYPE_STR;
+        case TOK_GREATER:   return typeComparable(type);
         case TOK_EQ:        return true;
         case TOK_NOT:       return type->kind == TYPE_BOOL;
-        case TOK_NOTEQ:     return typeComparable(type);
+        case TOK_NOTEQ:
         case TOK_LESSEQ:
-        case TOK_GREATEREQ: return typeOrdinal(type) || typeReal(type) || type->kind == TYPE_STR;
+        case TOK_GREATEREQ: return typeComparable(type);
         default:            return false;
     }
 }

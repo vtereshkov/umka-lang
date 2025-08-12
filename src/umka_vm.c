@@ -2632,7 +2632,7 @@ static FORCE_INLINE void doBuiltinSort(Fiber *fiber, Error *error)
 // fn sort(array: [] type, ascending: bool [, ident])
 typedef struct
 {
-    TypeKind comparedTypeKind;
+    const Type *itemType;
     int64_t offset;
     bool ascending;
     Error *error;
@@ -2643,46 +2643,18 @@ static int qsortFastCompare(const void *a, const void *b, void *context)
 {
     FastCompareContext *fastCompareContext = (FastCompareContext *)context;
 
-    int sign = fastCompareContext->ascending ? 1 : -1;
-    const char *lhs = (const char *)a + fastCompareContext->offset;
-    const char *rhs = (const char *)b + fastCompareContext->offset;
+    const Type *itemType = fastCompareContext->itemType;
+    const int sign = fastCompareContext->ascending ? 1 : -1;
     Error *error = fastCompareContext->error;
 
-    switch (fastCompareContext->comparedTypeKind)
-    {
-        case TYPE_INT8:     {int64_t diff = (int64_t)(*(int8_t        *)lhs) - (int64_t)(*(int8_t        *)rhs);    return diff == 0 ? 0 : diff > 0 ? sign : -sign;}
-        case TYPE_INT16:    {int64_t diff = (int64_t)(*(int16_t       *)lhs) - (int64_t)(*(int16_t       *)rhs);    return diff == 0 ? 0 : diff > 0 ? sign : -sign;}
-        case TYPE_INT32:    {int64_t diff = (int64_t)(*(int32_t       *)lhs) - (int64_t)(*(int32_t       *)rhs);    return diff == 0 ? 0 : diff > 0 ? sign : -sign;}
-        case TYPE_INT:      {int64_t diff =          (*(int64_t       *)lhs) -          (*(int64_t       *)rhs);    return diff == 0 ? 0 : diff > 0 ? sign : -sign;}
-        case TYPE_UINT8:    {int64_t diff = (int64_t)(*(uint8_t       *)lhs) - (int64_t)(*(uint8_t       *)rhs);    return diff == 0 ? 0 : diff > 0 ? sign : -sign;}
-        case TYPE_UINT16:   {int64_t diff = (int64_t)(*(uint16_t      *)lhs) - (int64_t)(*(uint16_t      *)rhs);    return diff == 0 ? 0 : diff > 0 ? sign : -sign;}
-        case TYPE_UINT32:   {int64_t diff = (int64_t)(*(uint32_t      *)lhs) - (int64_t)(*(uint32_t      *)rhs);    return diff == 0 ? 0 : diff > 0 ? sign : -sign;}
-        case TYPE_UINT:     {int64_t diff =          (*(uint64_t      *)lhs) -          (*(uint64_t      *)rhs);    return diff == 0 ? 0 : diff > 0 ? sign : -sign;}
-        case TYPE_BOOL:     {int64_t diff = (int64_t)(*(bool          *)lhs) - (int64_t)(*(bool          *)rhs);    return diff == 0 ? 0 : diff > 0 ? sign : -sign;}
-        case TYPE_CHAR:     {int64_t diff = (int64_t)(*(unsigned char *)lhs) - (int64_t)(*(unsigned char *)rhs);    return diff == 0 ? 0 : diff > 0 ? sign : -sign;}
-        case TYPE_REAL32:   {double  diff = (double )(*(float         *)lhs) - (double )(*(float         *)rhs);    return diff == 0 ? 0 : diff > 0 ? sign : -sign;}
-        case TYPE_REAL:     {double  diff =          (*(double        *)lhs) -          (*(double        *)rhs);    return diff == 0 ? 0 : diff > 0 ? sign : -sign;}
-        case TYPE_STR:
-        {
-            const char *lhsStr = *(const char **)lhs;
-            if (!lhsStr)
-                lhsStr = doGetEmptyStr();
+    Slot lhsItem = {.ptrVal = (char *)a + fastCompareContext->offset};
+    Slot rhsItem = {.ptrVal = (char *)b + fastCompareContext->offset};
 
-            const char *rhsStr = *(const char **)rhs;
-            if (!rhsStr)
-                rhsStr = doGetEmptyStr();
+    doDerefImpl(&lhsItem, itemType->kind, error);
+    doDerefImpl(&rhsItem, itemType->kind, error);
 
-            doCheckStr(lhsStr, error);
-            doCheckStr(rhsStr, error);
-
-            return strcmp(lhsStr, rhsStr) * sign;
-        }
-        default:
-        {
-            error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal type");
-            return 0;
-        }
-    }
+    const int64_t itemDiff = doCompare(lhsItem, rhsItem, itemType, error); 
+    return itemDiff == 0 ? 0 : itemDiff > 0 ? sign : -sign;   
 }
 
 
@@ -2691,14 +2663,14 @@ static FORCE_INLINE void doBuiltinSortfast(Fiber *fiber, Error *error)
     const int64_t offset = (fiber->top++)->intVal;
     const bool ascending = (bool)(fiber->top++)->intVal;
     DynArray *array = (DynArray *)(fiber->top++)->ptrVal;
-    const TypeKind comparedTypeKind = fiber->code[fiber->ip].typeKind;
+    const Type *itemType = fiber->code[fiber->ip].type;
 
     if (UNLIKELY(!array))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Dynamic array is null");
 
     if (array->data && getDims(array)->len > 0)
     {
-        FastCompareContext context = {comparedTypeKind, offset, ascending, error};
+        FastCompareContext context = {itemType, offset, ascending, error};
 
         const int numTempSlots = align(array->itemSize, sizeof(Slot)) / sizeof(Slot);
         fiber->top -= numTempSlots;
