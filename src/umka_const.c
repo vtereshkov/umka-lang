@@ -91,39 +91,126 @@ void constAssign(const Consts *consts, void *lhs, const Const *rhs, TypeKind typ
 }
 
 
-void constUnary(const Consts *consts, Const *arg, TokenKind tokKind, TypeKind typeKind)
+static int64_t constCompare(const Consts *consts, Const *lhs, const Const *rhs, const Type *type)
 {
-    if (typeKind == TYPE_REAL || typeKind == TYPE_REAL32)
-        switch (tokKind)
+    switch (type->kind)
+    {
+        case TYPE_INT8:
+        case TYPE_INT16:
+        case TYPE_INT32:
+        case TYPE_INT:
+        case TYPE_UINT8:
+        case TYPE_UINT16:
+        case TYPE_UINT32:   return lhs->intVal - rhs->intVal;
+        case TYPE_UINT:     return lhs->uintVal - rhs->uintVal;
+        case TYPE_BOOL:
+        case TYPE_CHAR:     return lhs->intVal - rhs->intVal;
+        case TYPE_REAL32:
+        case TYPE_REAL:
+        {
+            const double diff = lhs->realVal - rhs->realVal;
+            return (diff == 0.0) ? 0 : (diff > 0.0) ? 1 : -1;
+        }
+        case TYPE_PTR:      return lhs->ptrVal - rhs->ptrVal;
+        case TYPE_WEAKPTR:  return lhs->weakPtrVal - rhs->weakPtrVal;
+        case TYPE_STR:
+        {
+            const char *lhsStr = (const char *)lhs->ptrVal;
+            if (!lhsStr)
+                lhsStr = "";
+
+            const char *rhsStr = (const char *)rhs->ptrVal;
+            if (!rhsStr)
+                rhsStr = "";
+
+            return strcmp(lhsStr, rhsStr);
+        }
+        case TYPE_ARRAY:
+        case TYPE_STRUCT:
+        {
+            for (int i = 0; i < type->numItems; i++)
+            {
+                const Type *itemType = (type->kind == TYPE_ARRAY) ? type->base : type->field[i]->type;
+                const int itemOffset = (type->kind == TYPE_ARRAY) ? (i * itemType->size) : type->field[i]->offset;                
+                
+                Const lhsItem = {.ptrVal = (char *)lhs->ptrVal + itemOffset};
+                Const rhsItem = {.ptrVal = (char *)rhs->ptrVal + itemOffset};
+            
+                constDeref(consts, &lhsItem, itemType->kind);
+                constDeref(consts, &rhsItem, itemType->kind);
+
+                const int64_t itemDiff = constCompare(consts, &lhsItem, &rhsItem, itemType);
+                if (itemDiff != 0)
+                    return itemDiff;
+            }
+            return 0;
+        }
+
+        default: consts->error->handler(consts->error->context, "Illegal type"); return 0;
+    }
+}
+
+
+void constUnary(const Consts *consts, Const *arg, TokenKind op, const Type *type)
+{
+    if (typeReal(type))
+    {
+        switch (op)
         {
             case TOK_PLUS:  break;
             case TOK_MINUS: arg->realVal = -arg->realVal; break;
+
             default:        consts->error->handler(consts->error->context, "Illegal operator");
         }
+    }
     else
-        switch (tokKind)
+    {
+        switch (op)
         {
             case TOK_PLUS:  break;
             case TOK_MINUS: arg->intVal = -arg->intVal; break;
             case TOK_NOT:   arg->intVal = !arg->intVal; break;
             case TOK_XOR:   arg->intVal = ~arg->intVal; break;
+
             default:        consts->error->handler(consts->error->context, "Illegal operator");
         }
+    }
 }
 
 
-void constBinary(const Consts *consts, Const *lhs, const Const *rhs, TokenKind tokKind, TypeKind typeKind)
+void constBinary(const Consts *consts, Const *lhs, const Const *rhs, TokenKind op, const Type *type)
 {
-    if (typeKind == TYPE_PTR)
-        switch (tokKind)
+    if (type->kind == TYPE_PTR)
+    {
+        switch (op)
         {
             case TOK_EQEQ:      lhs->intVal = lhs->ptrVal == rhs->ptrVal; break;
             case TOK_NOTEQ:     lhs->intVal = lhs->ptrVal != rhs->ptrVal; break;
+            case TOK_GREATER:   lhs->intVal = lhs->ptrVal >  rhs->ptrVal; break;
+            case TOK_LESS:      lhs->intVal = lhs->ptrVal <  rhs->ptrVal; break;
+            case TOK_GREATEREQ: lhs->intVal = lhs->ptrVal >= rhs->ptrVal; break;
+            case TOK_LESSEQ:    lhs->intVal = lhs->ptrVal <= rhs->ptrVal; break;             
 
-            default:            consts->error->handler(consts->error->context, "Illegal operator");
+            default:            consts->error->handler(consts->error->context, "Illegal operator"); return;
         }
-    else if (typeKind == TYPE_STR)
-        switch (tokKind)
+    }
+    else if (type->kind == TYPE_WEAKPTR)
+    {
+        switch (op)
+        {
+            case TOK_EQEQ:      lhs->intVal = lhs->weakPtrVal == rhs->weakPtrVal; break;
+            case TOK_NOTEQ:     lhs->intVal = lhs->weakPtrVal != rhs->weakPtrVal; break;
+            case TOK_GREATER:   lhs->intVal = lhs->weakPtrVal >  rhs->weakPtrVal; break;
+            case TOK_LESS:      lhs->intVal = lhs->weakPtrVal <  rhs->weakPtrVal; break;
+            case TOK_GREATEREQ: lhs->intVal = lhs->weakPtrVal >= rhs->weakPtrVal; break;
+            case TOK_LESSEQ:    lhs->intVal = lhs->weakPtrVal <= rhs->weakPtrVal; break;             
+            
+            default:            consts->error->handler(consts->error->context, "Illegal operator"); return;
+        }        
+    }    
+    else if (type->kind == TYPE_STR)
+    {
+        switch (op)
         {
             case TOK_PLUS:      strcat((char *)lhs->ptrVal, (char *)rhs->ptrVal); break;
 
@@ -134,10 +221,26 @@ void constBinary(const Consts *consts, Const *lhs, const Const *rhs, TokenKind t
             case TOK_GREATEREQ: lhs->intVal = strcmp((char *)lhs->ptrVal, (char *)rhs->ptrVal) >= 0; break;
             case TOK_LESSEQ:    lhs->intVal = strcmp((char *)lhs->ptrVal, (char *)rhs->ptrVal) <= 0; break;
 
-            default:            consts->error->handler(consts->error->context, "Illegal operator");
+            default:            consts->error->handler(consts->error->context, "Illegal operator"); return;
+        }        
+    }
+    else if (type->kind == TYPE_ARRAY || type->kind == TYPE_STRUCT)
+    {
+        switch (op)
+        {
+            case TOK_EQEQ:      lhs->intVal = constCompare(consts, lhs, rhs, type) == 0; break;
+            case TOK_NOTEQ:     lhs->intVal = constCompare(consts, lhs, rhs, type) != 0; break;
+            case TOK_GREATER:   lhs->intVal = constCompare(consts, lhs, rhs, type)  > 0; break;
+            case TOK_LESS:      lhs->intVal = constCompare(consts, lhs, rhs, type)  < 0; break;
+            case TOK_GREATEREQ: lhs->intVal = constCompare(consts, lhs, rhs, type) >= 0; break;
+            case TOK_LESSEQ:    lhs->intVal = constCompare(consts, lhs, rhs, type) <= 0; break;            
+            
+            default:            consts->error->handler(consts->error->context, "Illegal operator"); return;
         }
-    else if (typeKind == TYPE_REAL || typeKind == TYPE_REAL32)
-        switch (tokKind)
+    }    
+    else if (typeReal(type))
+    {
+        switch (op)
         {
             case TOK_PLUS:  lhs->realVal += rhs->realVal; break;
             case TOK_MINUS: lhs->realVal -= rhs->realVal; break;
@@ -164,10 +267,50 @@ void constBinary(const Consts *consts, Const *lhs, const Const *rhs, TokenKind t
             case TOK_GREATEREQ: lhs->intVal = lhs->realVal >= rhs->realVal; break;
             case TOK_LESSEQ:    lhs->intVal = lhs->realVal <= rhs->realVal; break;
 
-            default:            consts->error->handler(consts->error->context, "Illegal operator");
+            default:            consts->error->handler(consts->error->context, "Illegal operator"); return;
+        }       
+    }
+    else if (type->kind == TYPE_UINT)
+    {
+        switch (op)
+        {
+            case TOK_PLUS:  lhs->uintVal += rhs->uintVal; break;
+            case TOK_MINUS: lhs->uintVal -= rhs->uintVal; break;
+            case TOK_MUL:   lhs->uintVal *= rhs->uintVal; break;
+            case TOK_DIV:
+            {
+                if (rhs->uintVal == 0)
+                    consts->error->handler(consts->error->context, "Division by zero");
+                lhs->uintVal /= rhs->uintVal;
+                break;
+            }
+            case TOK_MOD:
+            {
+                if (rhs->uintVal == 0)
+                    consts->error->handler(consts->error->context, "Division by zero");
+                lhs->uintVal %= rhs->uintVal;
+                break;
+            }
+
+            case TOK_SHL:   lhs->uintVal <<= rhs->uintVal; break;
+            case TOK_SHR:   lhs->uintVal >>= rhs->uintVal; break;
+            case TOK_AND:   lhs->uintVal &= rhs->uintVal; break;
+            case TOK_OR:    lhs->uintVal |= rhs->uintVal; break;
+            case TOK_XOR:   lhs->uintVal ^= rhs->uintVal; break;
+
+            case TOK_EQEQ:      lhs->intVal = lhs->uintVal == rhs->uintVal; break;
+            case TOK_NOTEQ:     lhs->intVal = lhs->uintVal != rhs->uintVal; break;
+            case TOK_GREATER:   lhs->intVal = lhs->uintVal >  rhs->uintVal; break;
+            case TOK_LESS:      lhs->intVal = lhs->uintVal <  rhs->uintVal; break;
+            case TOK_GREATEREQ: lhs->intVal = lhs->uintVal >= rhs->uintVal; break;
+            case TOK_LESSEQ:    lhs->intVal = lhs->uintVal <= rhs->uintVal; break;
+
+            default:            consts->error->handler(consts->error->context, "Illegal operator"); return;
         }
-    else
-        switch (tokKind)
+    }
+    else  // All ordinal types except TYPE_UINT
+    {
+        switch (op)
         {
             case TOK_PLUS:  lhs->intVal += rhs->intVal; break;
             case TOK_MINUS: lhs->intVal -= rhs->intVal; break;
@@ -204,8 +347,9 @@ void constBinary(const Consts *consts, Const *lhs, const Const *rhs, TokenKind t
             case TOK_GREATEREQ: lhs->intVal = lhs->intVal >= rhs->intVal; break;
             case TOK_LESSEQ:    lhs->intVal = lhs->intVal <= rhs->intVal; break;
 
-            default:            consts->error->handler(consts->error->context, "Illegal operator");
+            default:            consts->error->handler(consts->error->context, "Illegal operator"); return;
         }
+    }
 }
 
 
@@ -293,7 +437,7 @@ int constArrayFind(const Consts *consts, const ConstArray *array, Const val)
     for (int i = 0; i < array->len; i++)
     {
         Const result = array->data[i];
-        constBinary(consts, &result, &val, TOK_EQEQ, array->type->kind);
+        constBinary(consts, &result, &val, TOK_EQEQ, array->type);
         if (result.intVal)
             return i;
     }

@@ -282,7 +282,7 @@ static void doDynArrayToDynArrayConv(Compiler *comp, const Type *dest, const Typ
 
     genPushLocal(&comp->gen, TYPE_INT, lenOffset);
     genPushIntConst(&comp->gen, 1);
-    genBinary(&comp->gen, TOK_MINUS, TYPE_INT, 0);
+    genBinary(&comp->gen, TOK_MINUS, comp->intType);
     genPushLocalPtr(&comp->gen, indexOffset);
     genSwapAssign(&comp->gen, TYPE_INT, 0);
 
@@ -291,7 +291,7 @@ static void doDynArrayToDynArrayConv(Compiler *comp, const Type *dest, const Typ
 
     genPushLocal(&comp->gen, TYPE_INT, indexOffset);
     genPushIntConst(&comp->gen, 0);
-    genBinary(&comp->gen, TOK_GREATEREQ, TYPE_INT, 0);
+    genBinary(&comp->gen, TOK_GREATEREQ, comp->intType);
 
     genWhileCondEpilog(&comp->gen);
 
@@ -320,7 +320,7 @@ static void doDynArrayToDynArrayConv(Compiler *comp, const Type *dest, const Typ
     genSwapChangeRefCntAssign(&comp->gen, dest->base);
 
     genPushLocalPtr(&comp->gen, indexOffset);
-    genUnary(&comp->gen, TOK_MINUSMINUS, TYPE_INT);
+    genUnary(&comp->gen, TOK_MINUSMINUS, comp->intType);
 
     // Additional scope embracing temporary variables declaration
     doGarbageCollection(comp);
@@ -745,11 +745,11 @@ static void doApplyStrCat(Compiler *comp, Const *constant, const Const *rightCon
         strcpy(buf, (char *)constant->ptrVal);
 
         constant->ptrVal = buf;
-        constBinary(&comp->consts, constant, rightConstant, TOK_PLUS, TYPE_STR);    // "+" only
+        constBinary(&comp->consts, constant, rightConstant, TOK_PLUS, comp->strType);   // "+" only
     }
     else
     {
-        genBinary(&comp->gen, op, TYPE_STR, 0);                                     // "+" or "+=" only
+        genBinary(&comp->gen, op, comp->strType);                                       // "+" or "+=" only
         doCopyResultToTempVar(comp, comp->strType);
     }
 }
@@ -774,9 +774,9 @@ void doApplyOperator(Compiler *comp, const Type **type, const Type **rightType, 
         else
         {
             if (constant)
-                constBinary(&comp->consts, constant, rightConstant, op, (*type)->kind);
+                constBinary(&comp->consts, constant, rightConstant, op, *type);
             else
-                genBinary(&comp->gen, op, (*type)->kind, typeSize(&comp->types, *type));
+                genBinary(&comp->gen, op, *type);
         }
     }
 }
@@ -1211,14 +1211,9 @@ static void parseBuiltinSortCall(Compiler *comp, const Type **type, Const *const
     {
         // "Fast" form
 
-        // Dynamic array item type must be either a simple comparable type, or a structure whose field having the given name is of a simple comparable type
-        if (typeValidOperator((*type)->base, TOK_LESS))
+        if (comp->lex.tok.kind == TOK_COMMA)
         {
-            genPushIntConst(&comp->gen, 0);
-            genCallBuiltin(&comp->gen, (*type)->base->kind, BUILTIN_SORTFAST);
-        }
-        else
-        {
+            // Item type is a structure with a comparable field
             typeAssertCompatibleBuiltin(&comp->types, *type, BUILTIN_SORT, (*type)->base->kind == TYPE_STRUCT);
 
             // Field name
@@ -1231,7 +1226,15 @@ static void parseBuiltinSortCall(Compiler *comp, const Type **type, Const *const
             lexNext(&comp->lex);
 
             genPushIntConst(&comp->gen, field->offset);
-            genCallBuiltin(&comp->gen, field->type->kind, BUILTIN_SORTFAST);
+            genCallTypedBuiltin(&comp->gen, field->type, BUILTIN_SORTFAST);
+        }
+        else
+        {
+            // Item type is comparable
+            typeAssertValidOperator(&comp->types, (*type)->base, TOK_LESS);
+
+            genPushIntConst(&comp->gen, 0);
+            genCallTypedBuiltin(&comp->gen, (*type)->base, BUILTIN_SORTFAST);
         }
     }
     else
@@ -1242,7 +1245,7 @@ static void parseBuiltinSortCall(Compiler *comp, const Type **type, Const *const
         doAssertImplicitTypeConv(comp, expectedCompareType, &compareOrFlagType, NULL);
         genPushGlobalPtr(&comp->gen, (Type *)compareOrFlagType);
 
-        genCallBuiltin(&comp->gen, TYPE_DYNARRAY, BUILTIN_SORT);
+        genCallTypedBuiltin(&comp->gen, (*type)->base, BUILTIN_SORT);
     }
 
     *type = comp->voidType;
@@ -2719,9 +2722,9 @@ static void parseFactor(Compiler *comp, const Type **type, Const *constant)
             typeAssertValidOperator(&comp->types, *type, op);
 
             if (constant)
-                constUnary(&comp->consts, constant, op, (*type)->kind);
+                constUnary(&comp->consts, constant, op, *type);
             else
-                genUnary(&comp->gen, op, (*type)->kind);
+                genUnary(&comp->gen, op, *type);
             break;
         }
 

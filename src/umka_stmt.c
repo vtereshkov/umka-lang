@@ -439,7 +439,7 @@ static void parseIncDecStmt(Compiler *comp, const Type *type, TokenKind op)
     }
 
     typeAssertCompatible(&comp->types, comp->intType, type);
-    genUnary(&comp->gen, op, type->kind);
+    genUnary(&comp->gen, op, type);
     lexNext(&comp->lex);
 }
 
@@ -562,7 +562,7 @@ static void parseExprCase(Compiler *comp, const Type *selectorType, ConstArray *
             comp->error.handler(comp->error.context, "Duplicate case constant");
         constArrayAppend(existingConstants, constant);
 
-        genCaseConstantCheck(&comp->gen, &constant);
+        genCaseConstantCheck(&comp->gen, type, &constant);
         numCaseConstants++;
 
         if (comp->lex.tok.kind != TOK_COMMA)
@@ -613,7 +613,7 @@ static void parseTypeCase(Compiler *comp, const char *concreteVarName, ConstArra
 
     genDup(&comp->gen);                             // Duplicate expression converted to the concrete type
     genPushGlobalPtr(&comp->gen, NULL);
-    genBinary(&comp->gen, TOK_NOTEQ, TYPE_PTR, 0);
+    genBinary(&comp->gen, TOK_NOTEQ, concretePtrType);
 
     genIfCondEpilog(&comp->gen);
 
@@ -1026,7 +1026,7 @@ static void parseForInHeader(Compiler *comp, ForPostStmt *postStmt)
     genDeref(&comp->gen, TYPE_INT);
     doPushVarPtr(comp, lenIdent);
     genDeref(&comp->gen, TYPE_INT);
-    genBinary(&comp->gen, TOK_LESS, TYPE_INT, 0);
+    genBinary(&comp->gen, TOK_LESS, comp->intType);
 
     genWhileCondEpilog(&comp->gen);
 
@@ -1122,7 +1122,7 @@ static void parseForStmt(Compiler *comp)
         if (deferredPostStmt.indexIdent)
         {
             doPushVarPtr(comp, deferredPostStmt.indexIdent);
-            genUnary(&comp->gen, deferredPostStmt.op, deferredPostStmt.indexIdent->type->kind);            
+            genUnary(&comp->gen, deferredPostStmt.op, deferredPostStmt.indexIdent->type);            
         }
         genWhileEpilog(&comp->gen);
     }

@@ -27,6 +27,12 @@ enum    // Memory manager settings
 };
 
 
+enum    // Map rebalancing settings
+{
+    MAP_MAX_DEGENERATE_BRANCH_LEN = 256
+};
+
+
 enum    // Special values for return addresses
 {
     RETURN_FROM_VM    = -2,                      // Used instead of return address in functions called by umkaCall()

@@ -277,7 +277,7 @@ Dynamic array assignment copies the pointer, but not the contents of the array.
 
 ### Map types
 
-A map is a collection of items of a single type indexed by unique values, called *keys*, of another type. The key type must be comparable, i.e., the `==` and `!=` operators must be applicable to operands of this type.
+A map is an collection of items of a single type indexed by unique values, called *keys*, of another type. The key type must be comparable. A map is ordered by ascending key values. 
 
 Syntax:
 
@@ -388,6 +388,17 @@ fn (msg: char, values: ..real)
 ### Fiber type
 
 The `fiber` type represents a fiber context to use in multitasking.
+
+### Comparable types
+
+A type to which the comparison operators `==`, `!=`, `<`, `<=`, `>`, `>=` may be applied, is called *comparable*. The following types are comparable:
+
+* Ordinal types
+* Real types
+* Pointer type
+* String type
+* Array types if their item types are comparable
+* Structure types if their field types are comparable
 
 ### Type compatibility
 
@@ -762,7 +773,7 @@ fn sort(d: []T, ascending: bool [, fieldName])  // (2)
 
 (1) Sorts the dynamic array `d` in ascending order as determined by the `compare` function. This function should return a negative number when `a^ < b^`, a positive number when `a^ > b^` and zero when `a^ == b^`.
 
-(2) Sorts the dynamic array `d` in ascending or descending order as determined by the `ascending` flag. The type `T` should be either a type for which the `<` operator is defined, or a structure type that has a field named `fieldName` and the `<` operator is defined for the type of this field. Generally performs faster than (1).   
+(2) Sorts the dynamic array `d` in ascending or descending order as determined by the `ascending` flag. The type `T` should be either a comparable type, or a structure type that has a field named `fieldName` of a comparable type. Generally performs faster than (1).   
 
 ```
 fn len(a: ([...]T | []T | map[K]T | str)): int
@@ -1082,19 +1093,19 @@ x < 3 ? 42.5 : 60
 >>  Right shift         Integers
 &&  Logical "and"       Booleans
 ||  Logical "or"        Booleans
-==  "Equal"             Ordinals, reals, pointers, strings, arrays, structures
-!=  "Not equal"         Ordinals, reals, pointers, strings, arrays, structures
->   "Greater"           Ordinals, reals, strings
-<   "Less"              Ordinals, reals, strings
->=  "Greater or equal"  Ordinals, reals, strings
-<=  "Less or equal"     Ordinals, reals, strings
+==  "Equal"             Comparable types
+!=  "Not equal"         Comparable types
+>   "Greater"           Comparable types
+<   "Less"              Comparable types
+>=  "Greater or equal"  Comparable types
+<=  "Less or equal"     Comparable types
 ```
 
 The `/` operator performs an integer division (with the remainder discarded) if both operands are of integer types, otherwise it performs a real division.
 
 The `&&` and `||` operators don't evaluate the second operand if the first operand is sufficient to evaluate the result.
 
-The `==` and `!=` operators, when applied to arrays or structures, perform bitwise comparison.
+The `==`, `!=`, `<`, `<=`, `>`, `>=` operators, when applied to strings, compare lexicographically. Wnen applied to arrays or structures, they recursively compare each array item or structure field and stop at the first non-equal item or field.
 
 ##### Operand type conversions
 

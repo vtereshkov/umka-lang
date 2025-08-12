@@ -153,6 +153,23 @@ fn test7(n: int) {
     }
 
     std::assert(cnt == 0) 
+    printf("OK\n")
+}
+
+
+fn test8() {
+    printf("\nTest 8\n")
+
+    var m: map[[2]str]int
+    m[{"abc", "def"}] = 3
+    m[{"abc", "Def"}] = 4
+    m[{"abc", "def"}] = 5
+    m[{"Abc", "def"}] = 6
+    printf("%v\n", m)
+
+    k := keys(m)
+    std::assert(k[0] < k[1])
+    std::assert(k[1] < k[2])
 }
 
 
@@ -164,6 +181,7 @@ fn test*() {
     test5()
     test6()
     test7(10000)
+    test8()
 }
 
 

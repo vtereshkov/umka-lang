@@ -90,12 +90,28 @@ fn test5() {
     printf("%v %v %v %v\n", c, str(c), len(c), len(str(c)))    
 }
 
+fn test6() {
+	type S = struct {
+    	a: int8
+    	b: int16
+	}
+
+    c1 := int32(0x01020304)
+    s1 := ^S(&c1)^
+    
+    c2 := int32(0x0102FF04)
+    s2 := ^S(&c2)^
+    
+    printf("%v %v %v\n", s1, s2, s1 == s2)
+}
+
 fn test*() {
 	test1()
 	test2()
 	test3()
 	test4()
 	test5()
+	test6()
 }
 
 fn main() {
