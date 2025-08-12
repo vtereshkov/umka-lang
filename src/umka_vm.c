@@ -825,7 +825,7 @@ static FORCE_INLINE void doAssignImpl(void *lhs, Slot rhs, TypeKind typeKind, in
 }
 
 
-static int64_t doCompareImpl(Slot lhs, Slot rhs, const Type *type, Error *error)
+static int64_t doCompare(Slot lhs, Slot rhs, const Type *type, Error *error)
 {
     switch (type->kind)
     {
@@ -872,7 +872,7 @@ static int64_t doCompareImpl(Slot lhs, Slot rhs, const Type *type, Error *error)
                 doDerefImpl(&lhsItem, itemType->kind, error);
                 doDerefImpl(&rhsItem, itemType->kind, error);
 
-                const int64_t itemDiff = doCompareImpl(lhsItem, rhsItem, itemType, error);
+                const int64_t itemDiff = doCompare(lhsItem, rhsItem, itemType, error);
                 if (itemDiff != 0)
                     return itemDiff;
             }
@@ -1192,16 +1192,12 @@ static FORCE_INLINE void doAllocMap(HeapPages *pages, Map *map, const Type *type
 
 static FORCE_INLINE void doRebalanceMapNodes(MapNode **degenerateBranchRoot, int degenerateBranchLen)
 {
-    if (degenerateBranchLen <= 8)
-        return;
-    
-    // Reduce by half the degenerate branch's total length by splitting it into two branches, left and right 
     MapNode *prev = NULL, *cur = *degenerateBranchRoot;    
 
     if ((*degenerateBranchRoot)->left)
     {
-        // Left-only branch - reverse its first half as a linked list and attach it to the middle as a right-only branch
-        for (int dist = 0; dist < degenerateBranchLen / 2; dist++) 
+        // Left-only branch - reverse and attach it as a right-only branch
+        for (int dist = 0; dist < degenerateBranchLen - 1; dist++) 
         {
             MapNode *next = cur->left;
 
@@ -1216,8 +1212,8 @@ static FORCE_INLINE void doRebalanceMapNodes(MapNode **degenerateBranchRoot, int
     }
     else
     {
-        // Right-only branch - reverse its first half as a linked list and attach it to the middle as a left-only branch
-        for (int dist = 0; dist < degenerateBranchLen / 2; dist++) 
+        // Right-only branch - reverse and attach it as a left-only branch
+        for (int dist = 0; dist < degenerateBranchLen - 1; dist++) 
         {
             MapNode *next = cur->right;
 
@@ -1232,9 +1228,6 @@ static FORCE_INLINE void doRebalanceMapNodes(MapNode **degenerateBranchRoot, int
     }
 
     *degenerateBranchRoot = prev;
-
-    //doRebalanceMapNodes(&(*degenerateBranchRoot)->left, degenerateBranchLen / 2);
-    //doRebalanceMapNodes(&(*degenerateBranchRoot)->right, degenerateBranchLen / 2);
 }
 
 
@@ -1258,11 +1251,11 @@ static FORCE_INLINE MapNode **doGetMapNode(Map *map, Slot key, bool createMissin
             // Get key difference
             Slot nodeKey = {.ptrVal = (*node)->key};
             doDerefImpl(&nodeKey, typeMapKey(map->type)->kind, error);
-            keyDiff = doCompareImpl(key, nodeKey, typeMapKey(map->type), error);
+            keyDiff = doCompare(key, nodeKey, typeMapKey(map->type), error);
 
-            // Check for degeneration
             if (createMissingNodes)
             {
+                // Check for degeneration
                 if ((!(*node)->left && (*node)->right) || ((*node)->left && !(*node)->right))
                 {
                     if (degenerateBranchRoot && (((*node)->left && (*degenerateBranchRoot)->left) || ((*node)->right && (*degenerateBranchRoot)->right)))
@@ -1279,7 +1272,7 @@ static FORCE_INLINE MapNode **doGetMapNode(Map *map, Slot key, bool createMissin
                     degenerateBranchLen = 0;                
                 }
                 
-                if (degenerateBranchLen == 256)
+                if (degenerateBranchLen == MAP_MAX_DEGENERATE_BRANCH_LEN)
                 {
                     doRebalanceMapNodes(degenerateBranchRoot, degenerateBranchLen);
                     degenerateBranchRoot = NULL;
@@ -3309,8 +3302,12 @@ static FORCE_INLINE void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
     {
         switch (op)
         {
-            case TOK_EQEQ:      lhs->intVal = doCompareImpl(*lhs, rhs, type, error) == 0; break;
-            case TOK_NOTEQ:     lhs->intVal = doCompareImpl(*lhs, rhs, type, error) != 0; break;
+            case TOK_EQEQ:      lhs->intVal = doCompare(*lhs, rhs, type, error) == 0; break;
+            case TOK_NOTEQ:     lhs->intVal = doCompare(*lhs, rhs, type, error) != 0; break;
+            case TOK_GREATER:   lhs->intVal = doCompare(*lhs, rhs, type, error)  > 0; break;
+            case TOK_LESS:      lhs->intVal = doCompare(*lhs, rhs, type, error)  < 0; break;
+            case TOK_GREATEREQ: lhs->intVal = doCompare(*lhs, rhs, type, error) >= 0; break;
+            case TOK_LESSEQ:    lhs->intVal = doCompare(*lhs, rhs, type, error) <= 0; break;            
             
             default:            error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal instruction"); return;
         }
