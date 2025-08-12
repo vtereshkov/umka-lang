@@ -840,9 +840,13 @@ static int64_t doCompare(Slot lhs, Slot rhs, const Type *type, Error *error)
         case TYPE_BOOL:
         case TYPE_CHAR:     return lhs.intVal - rhs.intVal;
         case TYPE_REAL32:
-        case TYPE_REAL:     return lhs.realVal - rhs.realVal;
+        case TYPE_REAL:
+        {
+            const double diff = lhs.realVal - rhs.realVal;
+            return (diff == 0.0) ? 0 : (diff > 0.0) ? 1 : -1;
+        }
         case TYPE_PTR:      return lhs.ptrVal - rhs.ptrVal;
-        case TYPE_WEAKPTR:  return lhs.uintVal - rhs.uintVal;
+        case TYPE_WEAKPTR:  return lhs.weakPtrVal - rhs.weakPtrVal;
         case TYPE_STR:
         {
             char *lhsStr = (char *)lhs.ptrVal;
@@ -3203,6 +3207,10 @@ static FORCE_INLINE void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
         {
             case TOK_EQEQ:      lhs->intVal = lhs->ptrVal == rhs.ptrVal; break;
             case TOK_NOTEQ:     lhs->intVal = lhs->ptrVal != rhs.ptrVal; break;
+            case TOK_GREATER:   lhs->intVal = lhs->ptrVal >  rhs.ptrVal; break;
+            case TOK_LESS:      lhs->intVal = lhs->ptrVal <  rhs.ptrVal; break;
+            case TOK_GREATEREQ: lhs->intVal = lhs->ptrVal >= rhs.ptrVal; break;
+            case TOK_LESSEQ:    lhs->intVal = lhs->ptrVal <= rhs.ptrVal; break;            
             
             default:            error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal instruction"); return;
         }
@@ -3211,8 +3219,12 @@ static FORCE_INLINE void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
     {
         switch (op)
         {
-            case TOK_EQEQ:      lhs->intVal = lhs->uintVal == rhs.uintVal; break;
-            case TOK_NOTEQ:     lhs->intVal = lhs->uintVal != rhs.uintVal; break;
+            case TOK_EQEQ:      lhs->intVal = lhs->weakPtrVal == rhs.weakPtrVal; break;
+            case TOK_NOTEQ:     lhs->intVal = lhs->weakPtrVal != rhs.weakPtrVal; break;
+            case TOK_GREATER:   lhs->intVal = lhs->weakPtrVal >  rhs.weakPtrVal; break;
+            case TOK_LESS:      lhs->intVal = lhs->weakPtrVal <  rhs.weakPtrVal; break;
+            case TOK_GREATEREQ: lhs->intVal = lhs->weakPtrVal >= rhs.weakPtrVal; break;
+            case TOK_LESSEQ:    lhs->intVal = lhs->weakPtrVal <= rhs.weakPtrVal; break;             
             
             default:            error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal instruction"); return;
         }        
@@ -3344,12 +3356,12 @@ static FORCE_INLINE void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
             case TOK_OR:    lhs->uintVal |= rhs.uintVal; break;
             case TOK_XOR:   lhs->uintVal ^= rhs.uintVal; break;
 
-            case TOK_EQEQ:      lhs->uintVal = lhs->uintVal == rhs.uintVal; break;
-            case TOK_NOTEQ:     lhs->uintVal = lhs->uintVal != rhs.uintVal; break;
-            case TOK_GREATER:   lhs->uintVal = lhs->uintVal >  rhs.uintVal; break;
-            case TOK_LESS:      lhs->uintVal = lhs->uintVal <  rhs.uintVal; break;
-            case TOK_GREATEREQ: lhs->uintVal = lhs->uintVal >= rhs.uintVal; break;
-            case TOK_LESSEQ:    lhs->uintVal = lhs->uintVal <= rhs.uintVal; break;
+            case TOK_EQEQ:      lhs->intVal = lhs->uintVal == rhs.uintVal; break;
+            case TOK_NOTEQ:     lhs->intVal = lhs->uintVal != rhs.uintVal; break;
+            case TOK_GREATER:   lhs->intVal = lhs->uintVal >  rhs.uintVal; break;
+            case TOK_LESS:      lhs->intVal = lhs->uintVal <  rhs.uintVal; break;
+            case TOK_GREATEREQ: lhs->intVal = lhs->uintVal >= rhs.uintVal; break;
+            case TOK_LESSEQ:    lhs->intVal = lhs->uintVal <= rhs.uintVal; break;
 
             default:            error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal instruction"); return;
         }

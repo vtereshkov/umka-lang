@@ -727,6 +727,8 @@ String representation:
 >>> Constant folding
 
 -1.47906 2 true true
+[false true false true]
+[false true false true]
 
 
 >>> Item pointers

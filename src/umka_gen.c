@@ -278,7 +278,7 @@ static bool optimizeGetFieldPtr(CodeGen *gen, int fieldOffset)
 }
 
 
-static bool optimizeUnary(CodeGen *gen, TokenKind tokKind, TypeKind typeKind)
+static bool optimizeUnary(CodeGen *gen, TokenKind tokKind, const Type *type)
 {
     Instruction *prev = getPrevInstr(gen, 1);
 
@@ -286,17 +286,17 @@ static bool optimizeUnary(CodeGen *gen, TokenKind tokKind, TypeKind typeKind)
     if (prev && prev->opcode == OP_PUSH && prev->inlineOpcode == OP_NOP && tokKind != TOK_PLUSPLUS && tokKind != TOK_MINUSMINUS)
     {
         Const arg;
-        if (typeKindReal(typeKind))
+        if (typeReal(type))
             arg.realVal = prev->operand.realVal;
         else
             arg.intVal = prev->operand.intVal;
 
         Consts consts = {.error = gen->error};
-        constUnary(&consts, &arg, tokKind, typeKind);
+        constUnary(&consts, &arg, tokKind, type);
 
-        prev->typeKind = typeKind;
+        prev->typeKind = type->kind;
 
-        if (typeKindReal(typeKind))
+        if (typeReal(type))
             prev->operand.realVal = arg.realVal;
         else
             prev->operand.intVal = arg.intVal;
@@ -309,17 +309,17 @@ static bool optimizeUnary(CodeGen *gen, TokenKind tokKind, TypeKind typeKind)
 }
 
 
-static bool optimizeBinary(CodeGen *gen, TokenKind tokKind, TypeKind typeKind)
+static bool optimizeBinary(CodeGen *gen, TokenKind tokKind, const Type *type)
 {
     Instruction *prev = getPrevInstr(gen, 1), *prev2 = getPrevInstr(gen, 2);
 
     // Optimization: PUSH + PUSH + BINARY -> PUSH
     if (prev  && prev->opcode  == OP_PUSH && prev->inlineOpcode  == OP_NOP &&
         prev2 && prev2->opcode == OP_PUSH && prev2->inlineOpcode == OP_NOP &&
-       (typeKindOrdinal(typeKind) || typeKindReal(typeKind) || typeKind == TYPE_BOOL))
+       (typeOrdinal(type) || typeReal(type) || type->kind == TYPE_BOOL))
     {
         Const lhs, rhs;
-        if (typeKindReal(typeKind))
+        if (typeReal(type))
         {
             lhs.realVal = prev2->operand.realVal;
             rhs.realVal = prev->operand.realVal;
@@ -334,9 +334,9 @@ static bool optimizeBinary(CodeGen *gen, TokenKind tokKind, TypeKind typeKind)
         genRemoveInstr(gen);
 
         Consts consts = {.error = gen->error};
-        constBinary(&consts, &lhs, &rhs, tokKind, typeKind);
+        constBinary(&consts, &lhs, &rhs, tokKind, type);
 
-        prev->typeKind = typeKind;
+        prev->typeKind = type->kind;
 
         if (tokKind == TOK_EQEQ      || tokKind == TOK_NOTEQ   ||
             tokKind == TOK_GREATER   || tokKind == TOK_LESS    ||
@@ -345,7 +345,7 @@ static bool optimizeBinary(CodeGen *gen, TokenKind tokKind, TypeKind typeKind)
             prev->typeKind = TYPE_BOOL;
         }
 
-        if (typeKindReal(typeKind))
+        if (typeReal(type))
             prev->operand.realVal = lhs.realVal;
         else
             prev->operand.intVal = lhs.intVal;
@@ -676,7 +676,7 @@ void genChangeLeftRefCntAssign(CodeGen *gen, const Type *type)
 
 void genUnary(CodeGen *gen, TokenKind tokKind, const Type *type)
 {
-    if (!optimizeUnary(gen, tokKind, type->kind))
+    if (!optimizeUnary(gen, tokKind, type))
     {
         const Instruction instr = {.opcode = OP_UNARY, .tokKind = tokKind, .type = type};
         genAddInstr(gen, &instr);
@@ -686,7 +686,7 @@ void genUnary(CodeGen *gen, TokenKind tokKind, const Type *type)
 
 void genBinary(CodeGen *gen, TokenKind tokKind, const Type *type)
 {
-    if (!optimizeBinary(gen, tokKind, type->kind))
+    if (!optimizeBinary(gen, tokKind, type))
     {
         const Instruction instr = {.opcode = OP_BINARY, .tokKind = tokKind, .type = type};
         genAddInstr(gen, &instr);

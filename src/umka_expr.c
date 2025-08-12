@@ -745,11 +745,11 @@ static void doApplyStrCat(Compiler *comp, Const *constant, const Const *rightCon
         strcpy(buf, (char *)constant->ptrVal);
 
         constant->ptrVal = buf;
-        constBinary(&comp->consts, constant, rightConstant, TOK_PLUS, TYPE_STR);    // "+" only
+        constBinary(&comp->consts, constant, rightConstant, TOK_PLUS, comp->strType);   // "+" only
     }
     else
     {
-        genBinary(&comp->gen, op, comp->strType);                                   // "+" or "+=" only
+        genBinary(&comp->gen, op, comp->strType);                                       // "+" or "+=" only
         doCopyResultToTempVar(comp, comp->strType);
     }
 }
@@ -774,7 +774,7 @@ void doApplyOperator(Compiler *comp, const Type **type, const Type **rightType, 
         else
         {
             if (constant)
-                constBinary(&comp->consts, constant, rightConstant, op, (*type)->kind);
+                constBinary(&comp->consts, constant, rightConstant, op, *type);
             else
                 genBinary(&comp->gen, op, *type);
         }
@@ -2722,7 +2722,7 @@ static void parseFactor(Compiler *comp, const Type **type, Const *constant)
             typeAssertValidOperator(&comp->types, *type, op);
 
             if (constant)
-                constUnary(&comp->consts, constant, op, (*type)->kind);
+                constUnary(&comp->consts, constant, op, *type);
             else
                 genUnary(&comp->gen, op, *type);
             break;

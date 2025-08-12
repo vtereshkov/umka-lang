@@ -1,4 +1,4 @@
-fn test*() {
+fn test1() {
 	x := -1 + atan2(2, 7) + sqrt(2) * trunc(3.6) - 1 + log(exp(3)) - round(7)
 	y := round(sin(3.14)) + 8 / 3
 
@@ -6,6 +6,35 @@ fn test*() {
 	c := fabs(sqrt(3) - 1.7) < 0.1
 
 	printf("%v %v %v %v\n", x, y, b, c)
+}
+
+type P = struct {
+	x, y: real32
+	color: enum {black; white}
+}
+
+cmp := []bool{
+	P{5, 7, .black} == P{5, 7, .white},		// false
+	P{5, 4, .white} <= P{5, 7, .black},		// true
+	
+	[3]str{"abc", "", "def"} > [3]str{"abc", "def", ""},	// false
+	[3]str{"abc", "def", ""} < [3]str{"abc", "def", "A"},	// true
+}
+
+fn test2() {
+	cmp2 := []bool{
+		P{5, 7, .black} == P{5, 7, .white},		// false
+		P{5, 4, .white} <= P{5, 7, .black},		// true
+		
+		[3]str{"abc", "", "def"} > [3]str{"abc", "def", ""},	// false
+		[3]str{"abc", "def", ""} < [3]str{"abc", "def", "A"},	// true
+	}	
+	printf("%v\n%v\n", cmp, cmp2)
+}
+
+fn test*() {
+	test1()
+	test2()
 }
 
 fn main() {
