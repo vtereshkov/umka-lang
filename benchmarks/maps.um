@@ -1,20 +1,42 @@
 import "std.um"
 
-fn test*(n: int, randomize: bool) {
+type Order* = enum {
+    Ascending
+    Descending
+    Random
+}
+
+fn test*(n: int, order: Order) {
     var m: map[int]int
 
     for i := 0; i < n; i++ {
-        k := randomize ? std::rand() % n : i
+        k := 0
+        switch order {
+            case .Ascending: k = i
+            case .Descending: k = -i
+            case .Random: k = std::rand() % n
+        }
         m[k] = -k
     }
 
+    kprev := -1_000_000_000
+
     for k, v in m {
+        std::assert(k > kprev)
         std::assert(v == -k)
+        kprev = k
     }
+
+    if order != .Random {
+        std::assert(len(m) == n)
+    }
+
+    printf("OK\n")
 }
 
 fn main() {
-    test(100000, false)
-    test(100000, true)
+    test(100000, .Ascending)
+    test(100000, .Descending)
+    test(100000, .Random)
 }
 

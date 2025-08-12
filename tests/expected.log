@@ -628,6 +628,10 @@ Test 6
 {"e": [2.72 5.44] "one": [1 2] "ten": [10 20]}
 
 Test 7
+OK
+
+Test 8
+{["Abc" "def"]: 6 ["abc" "Def"]: 4 ["abc" "def"]: 5}
 
 
 >>> Multiple returns
@@ -755,6 +759,7 @@ Hello, Brave New World!
 Hello, дивный новый мир!
 ['P' 'Q'] "PQ" 2 2
 ['P' 'Q' 0x00 'R'] "PQ" 4 2
+{a: 4 b: 258} {a: 4 b: 258} true
 
 
 >>> Non-local scope
