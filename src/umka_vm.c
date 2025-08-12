@@ -1190,24 +1190,51 @@ static FORCE_INLINE void doAllocMap(HeapPages *pages, Map *map, const Type *type
 }
 
 
-static FORCE_INLINE void doRebalanceMapNodes(MapNode **nodeInParent)
+static FORCE_INLINE void doRebalanceMapNodes(MapNode **degenerateBranchRoot, int degenerateBranchLen)
 {
-    // A naive tree rotation to prevent degeneration into a linked list
-    MapNode *node = *nodeInParent;
+    if (degenerateBranchLen <= 8)
+        return;
+    
+    // Reduce by half the degenerate branch's total length by splitting it into two branches, left and right 
+    MapNode *prev = NULL, *cur = *degenerateBranchRoot;    
 
-    if (node && !node->left && node->right && !node->right->left && node->right->right)
+    if ((*degenerateBranchRoot)->left)
     {
-        *nodeInParent = node->right;
-        node->right = NULL;
-        (*nodeInParent)->left = node;
+        // Left-only branch - reverse its first half as a linked list and attach it to the middle as a right-only branch
+        for (int dist = 0; dist < degenerateBranchLen / 2; dist++) 
+        {
+            MapNode *next = cur->left;
+
+            cur->left = NULL;
+            cur->right = prev;
+
+            prev = cur;
+            cur = next;
+        }
+        
+        prev->left = cur;
+    }
+    else
+    {
+        // Right-only branch - reverse its first half as a linked list and attach it to the middle as a left-only branch
+        for (int dist = 0; dist < degenerateBranchLen / 2; dist++) 
+        {
+            MapNode *next = cur->right;
+
+            cur->left = prev;
+            cur->right = NULL;
+
+            prev = cur;
+            cur = next;
+        }
+
+        prev->right = cur;
     }
 
-    if (node && node->left && !node->right && node->left->left && !node->left->right)
-    {
-        *nodeInParent = node->left;
-        node->left = NULL;
-        (*nodeInParent)->right = node;
-    }
+    *degenerateBranchRoot = prev;
+
+    //doRebalanceMapNodes(&(*degenerateBranchRoot)->left, degenerateBranchLen / 2);
+    //doRebalanceMapNodes(&(*degenerateBranchRoot)->right, degenerateBranchLen / 2);
 }
 
 
@@ -1218,14 +1245,47 @@ static FORCE_INLINE MapNode **doGetMapNode(Map *map, Slot key, bool createMissin
 
     MapNode **node = &map->root;
 
+    // Adding monotonically increasing or decreasing keys may produce long degenerate branches (i.e., linked lists) that need rebalancing
+    // TODO: Replace with an AVL or red-black tree    
+    MapNode **degenerateBranchRoot = NULL;
+    int degenerateBranchLen = 0;
+
     while (*node)
     {
         int64_t keyDiff = 1;
         if ((*node)->key)
         {
+            // Get key difference
             Slot nodeKey = {.ptrVal = (*node)->key};
             doDerefImpl(&nodeKey, typeMapKey(map->type)->kind, error);
             keyDiff = doCompareImpl(key, nodeKey, typeMapKey(map->type), error);
+
+            // Check for degeneration
+            if (createMissingNodes)
+            {
+                if ((!(*node)->left && (*node)->right) || ((*node)->left && !(*node)->right))
+                {
+                    if (degenerateBranchRoot && (((*node)->left && (*degenerateBranchRoot)->left) || ((*node)->right && (*degenerateBranchRoot)->right)))
+                        degenerateBranchLen++;
+                    else
+                    {
+                        degenerateBranchRoot = node;
+                        degenerateBranchLen = 1;
+                    }
+                }
+                else
+                {
+                    degenerateBranchRoot = NULL;
+                    degenerateBranchLen = 0;                
+                }
+                
+                if (degenerateBranchLen == 256)
+                {
+                    doRebalanceMapNodes(degenerateBranchRoot, degenerateBranchLen);
+                    degenerateBranchRoot = NULL;
+                    degenerateBranchLen = 0;
+                }
+            }
         }
 
         if (keyDiff > 0)
@@ -1234,8 +1294,6 @@ static FORCE_INLINE MapNode **doGetMapNode(Map *map, Slot key, bool createMissin
             node = &(*node)->left;
         else
             return node;
-
-        doRebalanceMapNodes(node);
     }
 
     if (createMissingNodes)
