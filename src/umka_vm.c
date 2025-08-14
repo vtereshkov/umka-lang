@@ -845,7 +845,7 @@ static int64_t doCompare(Slot lhs, Slot rhs, const Type *type, Error *error)
             const double diff = lhs.realVal - rhs.realVal;
             return (diff == 0.0) ? 0 : (diff > 0.0) ? 1 : -1;
         }
-        case TYPE_PTR:      return lhs.ptrVal - rhs.ptrVal;
+        case TYPE_PTR:      return (char *)lhs.ptrVal - (char *)rhs.ptrVal;
         case TYPE_WEAKPTR:  return lhs.weakPtrVal - rhs.weakPtrVal;
         case TYPE_STR:
         {
