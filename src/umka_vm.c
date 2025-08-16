@@ -713,6 +713,7 @@ static FORCE_INLINE void doCheckStr(const char *str, Error *error)
 
 
 static FORCE_INLINE char *doGetEmptyStr(void);
+static FORCE_INLINE void doGetEmptyDynArray(DynArray *array, const Type *type);
 
 
 static FORCE_INLINE void doHook(Fiber *fiber, const HookFunc *hooks, HookEvent event)
@@ -849,11 +850,11 @@ static int64_t doCompare(Slot lhs, Slot rhs, const Type *type, Error *error)
         case TYPE_WEAKPTR:  return lhs.weakPtrVal - rhs.weakPtrVal;
         case TYPE_STR:
         {
-            char *lhsStr = (char *)lhs.ptrVal;
+            const char *lhsStr = lhs.ptrVal;
             if (!lhsStr)
                 lhsStr = doGetEmptyStr();
 
-            char *rhsStr = (char *)rhs.ptrVal;
+            const char *rhsStr = rhs.ptrVal;
             if (!rhsStr)
                 rhsStr = doGetEmptyStr();
 
@@ -882,6 +883,44 @@ static int64_t doCompare(Slot lhs, Slot rhs, const Type *type, Error *error)
             }
             return 0;
         }
+        case TYPE_DYNARRAY:
+        {
+            const DynArray *lhsArray = lhs.ptrVal;
+            if (UNLIKELY(!lhsArray))
+                error->runtimeHandler(error->context, ERR_RUNTIME, "Dynamic array is null");
+
+            const int64_t lhsLen = lhsArray->data ? getDims(lhsArray)->len : 0;
+
+            const DynArray *rhsArray = rhs.ptrVal;
+            if (UNLIKELY(!rhsArray))
+                error->runtimeHandler(error->context, ERR_RUNTIME, "Dynamic array is null");
+
+            const int64_t rhsLen = rhsArray->data ? getDims(rhsArray)->len : 0;
+
+            for (int i = 0; ; i++)
+            {
+                if (i == lhsLen && i == rhsLen)
+                    return 0;
+                if (i == lhsLen)
+                    return -1;
+                if (i == rhsLen)
+                    return 1;
+                
+                const int itemOffset = i * type->base->size;                
+                
+                Slot lhsItem = {.ptrVal = (char *)lhsArray->data + itemOffset};
+                Slot rhsItem = {.ptrVal = (char *)rhsArray->data + itemOffset};
+            
+                doDerefImpl(&lhsItem, type->base->kind, error);
+                doDerefImpl(&rhsItem, type->base->kind, error);
+
+                const int64_t itemDiff = doCompare(lhsItem, rhsItem, type->base, error);
+                if (itemDiff != 0)
+                    return itemDiff;
+            }
+            return 0;
+        }
+                
         default: error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal type"); return 0;
     }
 }
@@ -3282,7 +3321,7 @@ static FORCE_INLINE void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
             default:            error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal instruction"); return;
         }
     }
-    else if (type->kind == TYPE_ARRAY || type->kind == TYPE_STRUCT)
+    else if (type->kind == TYPE_ARRAY || type->kind == TYPE_DYNARRAY || type->kind == TYPE_STRUCT)
     {
         switch (op)
         {

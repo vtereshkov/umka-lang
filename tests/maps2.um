@@ -167,9 +167,20 @@ fn test8() {
     m[{"Abc", "def"}] = 6
     printf("%v\n", m)
 
-    k := keys(m)
-    std::assert(k[0] < k[1])
-    std::assert(k[1] < k[2])
+    ks := keys(m)
+    std::assert(ks[0] < ks[1])
+    std::assert(ks[1] < ks[2])
+
+    var m2: map[[]str]int
+    m2[{"abc", "def"}] = 30
+    m2[{"abc", "Def"}] = 40
+    m2[{"abc", "def"}] = 50
+    m2[{"Abc", "def"}] = 60
+    printf("%v\n", m)
+    
+    for _, k in ks {
+        std::assert(m2[k] == 10 * m[k])
+    }
 }
 
 

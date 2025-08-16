@@ -8,6 +8,7 @@
 #include "umka_vm.h"
 #include "umka_types.h"
 #include "umka_ident.h"
+#include "umka_const.h"
 
 
 static const char *spelling [] =
@@ -255,30 +256,36 @@ bool typeHasPtr(const Type *type, bool alsoWeakPtr)
 }
 
 
-static bool typeDefaultParamEqual(const Const *left, const Const *right, const Type *type)
+bool typeComparable(const Type *type)
 {
-    if (typeOrdinal(type))
-        return left->intVal == right->intVal;
+    if (typeOrdinal(type) || typeReal(type) || type->kind == TYPE_PTR || type->kind == TYPE_WEAKPTR || type->kind == TYPE_STR)
+        return true;
 
-    if (typeReal(type))
-        return left->realVal == right->realVal;
+    if (type->kind == TYPE_ARRAY || type->kind == TYPE_DYNARRAY)
+        return typeComparable(type->base);
 
-    if (type->kind == TYPE_WEAKPTR)
-        return left->weakPtrVal == right->weakPtrVal;
-
-    if (!left->ptrVal || !right->ptrVal)
-        return left->ptrVal == right->ptrVal;
-
-    if (type->kind == TYPE_PTR)
-        return left->ptrVal == right->ptrVal;
-
-    if (type->kind == TYPE_STR)
-        return strcmp((char *)left->ptrVal, (char *)right->ptrVal) == 0;
-
-    if (type->kind == TYPE_ARRAY || type->kind == TYPE_STRUCT)
-        return memcmp(left->ptrVal, right->ptrVal, type->size) == 0;
+    if (type->kind == TYPE_STRUCT)
+    {
+        for (int i = 0; i < type->numItems; i++)
+            if (!typeComparable(type->field[i]->type))
+                return false;
+        return true;
+    }
 
     return false;
+}
+
+
+static bool typeDefaultParamEqual(const Const *left, const Const *right, const Type *type)
+{
+    if (type->kind == TYPE_INTERFACE)
+    {
+        const Interface *leftInterface = left->ptrVal;
+        const Interface *rightInterface = right->ptrVal;
+        return leftInterface && rightInterface && leftInterface->self == rightInterface->self;
+    }
+
+    return constCompare(NULL, left, right, type) == 0;
 }
 
 
@@ -377,7 +384,7 @@ static bool typeEquivalentRecursive(const Type *left, const Type *right, Visited
                 return false;
 
             // Parameters (skip interface method receiver)
-            int iStart = left->sig.offsetFromSelf == 0 ? 0 : 1;
+            const int iStart = left->sig.offsetFromSelf == 0 ? 0 : 1;
             for (int i = iStart; i < left->sig.numParams; i++)
             {
                 // Type
@@ -459,26 +466,6 @@ void typeAssertCompatibleBuiltin(const Types *types, const Type *type, /*Builtin
         char typeBuf[DEFAULT_STR_LEN + 1];
         types->error->handler(types->error->context, "Incompatible type %s in %s", typeSpelling(type, typeBuf), vmBuiltinSpelling(builtin));
     }
-}
-
-
-static bool typeComparable(const Type *type)
-{
-    if (typeOrdinal(type) || typeReal(type) || type->kind == TYPE_PTR || type->kind == TYPE_WEAKPTR || type->kind == TYPE_STR)
-        return true;
-
-    if (type->kind == TYPE_ARRAY)
-        return typeComparable(type->base);
-
-    if (type->kind == TYPE_STRUCT)
-    {
-        for (int i = 0; i < type->numItems; i++)
-            if (!typeComparable(type->field[i]->type))
-                return false;
-        return true;
-    }
-
-    return false;
 }
 
 
