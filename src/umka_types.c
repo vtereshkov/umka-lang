@@ -257,7 +257,7 @@ bool typeHasPtr(const Type *type, bool alsoWeakPtr)
 
 static bool typeDefaultParamEqual(const Const *left, const Const *right, const Type *type)
 {
-    if (typeOrdinal(type) || type->kind == TYPE_FN)
+    if (typeOrdinal(type))
         return left->intVal == right->intVal;
 
     if (typeReal(type))
@@ -275,7 +275,7 @@ static bool typeDefaultParamEqual(const Const *left, const Const *right, const T
     if (type->kind == TYPE_STR)
         return strcmp((char *)left->ptrVal, (char *)right->ptrVal) == 0;
 
-    if (type->kind == TYPE_ARRAY || type->kind == TYPE_STRUCT || type->kind == TYPE_CLOSURE)
+    if (type->kind == TYPE_ARRAY || type->kind == TYPE_STRUCT)
         return memcmp(left->ptrVal, right->ptrVal, type->size) == 0;
 
     return false;
