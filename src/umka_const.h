@@ -22,8 +22,10 @@ typedef struct
 
 void constInit(Consts *consts, Error *error);
 void constZero(void *lhs, int size);
-void constDeref(const Consts *consts, Const *constant, TypeKind typeKind);
-void constAssign(const Consts *consts, void *lhs, const Const *rhs, TypeKind typeKind, int size);
+bool constDeref(const Consts *consts, Const *constant, TypeKind typeKind);
+bool constAssign(const Consts *consts, void *lhs, const Const *rhs, TypeKind typeKind, int size);
+int64_t constCompare(const Consts *consts, const Const *lhs, const Const *rhs, const Type *type);
+
 void constUnary(const Consts *consts, Const *arg, TokenKind op, const Type *type);
 void constBinary(const Consts *consts, Const *lhs, const Const *rhs, TokenKind op, const Type *type);
 void constCallBuiltin(const Consts *consts, Const *arg, const Const *arg2, TypeKind argTypeKind, BuiltinFunc builtinVal);

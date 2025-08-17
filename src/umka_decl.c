@@ -139,6 +139,9 @@ static void parseSignature(Compiler *comp, Signature *sig)
                 if (paramType->isVariadicParamList)
                     comp->error.handler(comp->error.context, "Variadic parameter list cannot have default value");
 
+                if (!typeComparable(paramType) && !typeEquivalent(paramType, comp->anyType))
+                    comp->error.handler(comp->error.context, "Parameter must be of comparable or 'any' type to have default value");
+                
                 lexNext(&comp->lex);
 
                 const Type *defaultType = paramType;

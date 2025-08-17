@@ -145,6 +145,30 @@ fn test10() {
 	sort([]int{}, true)
 }
 
+fn test11() {
+    m := make([][]int, 10)
+    for i in m {
+        m[i] = make([]int, 10)
+        for j in m[i] {
+            m[i][j] = 2 + (i % 7) - (j % 3)
+        }
+    }
+
+    for i in m {
+        printf("%v\n", m[i])
+    }
+    printf("\n")
+
+    for i in m {
+        sort(m[i], true)
+    }
+    sort(m, true)
+
+    for i in m {
+        printf("%v\n", m[i])
+    } 
+}
+
 fn test*() {
 	test1()
 	test2()
@@ -156,6 +180,7 @@ fn test*() {
 	test8()
 	test9()
 	test10()
+	test11()
 }
 
 fn main() {

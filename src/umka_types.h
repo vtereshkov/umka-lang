@@ -227,6 +227,7 @@ static inline bool typeExprListStruct(const Type *type)
 }
 
 
+bool typeComparable             (const Type *type);
 bool typeEquivalent             (const Type *left, const Type *right);
 bool typeSameExceptMaybeIdent   (const Type *left, const Type *right);
 bool typeCompatible             (const Type *left, const Type *right);

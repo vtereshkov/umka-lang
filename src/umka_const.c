@@ -21,10 +21,14 @@ void constZero(void *lhs, int size)
 }
 
 
-void constDeref(const Consts *consts, Const *constant, TypeKind typeKind)
+bool constDeref(const Consts *consts, Const *constant, TypeKind typeKind)
 {
     if (!constant->ptrVal)
-        consts->error->handler(consts->error->context, "Pointer is null");
+    {
+        if (consts)
+            consts->error->handler(consts->error->context, "Pointer is null");
+        return false;
+    }
 
     switch (typeKind)
     {
@@ -51,15 +55,26 @@ void constDeref(const Consts *consts, Const *constant, TypeKind typeKind)
         case TYPE_FIBER:        constant->ptrVal     = *(void *         *)constant->ptrVal; break;
         case TYPE_FN:           constant->intVal     = *(int64_t        *)constant->ptrVal; break;
 
-        default:                consts->error->handler(consts->error->context, "Illegal type"); return;
+        default:
+        {
+            if (consts)
+                consts->error->handler(consts->error->context, "Illegal type");
+            return false;
+        }
     }
+
+    return true;
 }
 
 
-void constAssign(const Consts *consts, void *lhs, const Const *rhs, TypeKind typeKind, int size)
+bool constAssign(const Consts *consts, void *lhs, const Const *rhs, TypeKind typeKind, int size)
 {
     if (typeOverflow(typeKind, *rhs))
-        consts->error->handler(consts->error->context, "Overflow in assignment to %s", typeKindSpelling(typeKind));
+    {
+        if (consts)
+            consts->error->handler(consts->error->context, "Overflow in assignment to %s", typeKindSpelling(typeKind));
+        return false;
+    }
 
     switch (typeKind)
     {
@@ -86,12 +101,19 @@ void constAssign(const Consts *consts, void *lhs, const Const *rhs, TypeKind typ
         case TYPE_FIBER:        *(void *        *)lhs = rhs->ptrVal;         break;
         case TYPE_FN:           *(int64_t       *)lhs = rhs->intVal;         break;
 
-        default:          consts->error->handler(consts->error->context, "Illegal type"); return;
+        default:
+        {
+            if (consts)
+                consts->error->handler(consts->error->context, "Illegal type"); 
+            return false;
+        }
     }
+
+    return true;
 }
 
 
-static int64_t constCompare(const Consts *consts, Const *lhs, const Const *rhs, const Type *type)
+int64_t constCompare(const Consts *consts, const Const *lhs, const Const *rhs, const Type *type)
 {
     switch (type->kind)
     {
@@ -115,11 +137,11 @@ static int64_t constCompare(const Consts *consts, Const *lhs, const Const *rhs, 
         case TYPE_WEAKPTR:  return lhs->weakPtrVal - rhs->weakPtrVal;
         case TYPE_STR:
         {
-            const char *lhsStr = (const char *)lhs->ptrVal;
+            const char *lhsStr = lhs->ptrVal;
             if (!lhsStr)
                 lhsStr = "";
 
-            const char *rhsStr = (const char *)rhs->ptrVal;
+            const char *rhsStr = rhs->ptrVal;
             if (!rhsStr)
                 rhsStr = "";
 
@@ -128,6 +150,9 @@ static int64_t constCompare(const Consts *consts, Const *lhs, const Const *rhs, 
         case TYPE_ARRAY:
         case TYPE_STRUCT:
         {
+            if (!lhs->ptrVal || !rhs->ptrVal)
+                return (char *)lhs->ptrVal - (char *)rhs->ptrVal;
+            
             for (int i = 0; i < type->numItems; i++)
             {
                 const Type *itemType = (type->kind == TYPE_ARRAY) ? type->base : type->field[i]->type;
@@ -136,8 +161,8 @@ static int64_t constCompare(const Consts *consts, Const *lhs, const Const *rhs, 
                 Const lhsItem = {.ptrVal = (char *)lhs->ptrVal + itemOffset};
                 Const rhsItem = {.ptrVal = (char *)rhs->ptrVal + itemOffset};
             
-                constDeref(consts, &lhsItem, itemType->kind);
-                constDeref(consts, &rhsItem, itemType->kind);
+                if (!constDeref(consts, &lhsItem, itemType->kind) || !constDeref(consts, &rhsItem, itemType->kind))
+                    return (char *)lhs->ptrVal - (char *)rhs->ptrVal;
 
                 const int64_t itemDiff = constCompare(consts, &lhsItem, &rhsItem, itemType);
                 if (itemDiff != 0)
@@ -145,8 +170,46 @@ static int64_t constCompare(const Consts *consts, Const *lhs, const Const *rhs, 
             }
             return 0;
         }
+        case TYPE_DYNARRAY:
+        {
+            if (!lhs->ptrVal || !rhs->ptrVal)
+                return (char *)lhs->ptrVal - (char *)rhs->ptrVal;
+            
+            const DynArray *lhsArray = lhs->ptrVal;
+            const int64_t lhsLen = lhsArray->data ? getDims(lhsArray)->len : 0;
 
-        default: consts->error->handler(consts->error->context, "Illegal type"); return 0;
+            const DynArray *rhsArray = rhs->ptrVal;
+            const int64_t rhsLen = rhsArray->data ? getDims(rhsArray)->len : 0;
+
+            for (int i = 0; ; i++)
+            {
+                if (i == lhsLen && i == rhsLen)
+                    return 0;
+                if (i == lhsLen)
+                    return -1;
+                if (i == rhsLen)
+                    return 1;
+                
+                const int itemOffset = i * type->base->size;                
+                
+                Const lhsItem = {.ptrVal = (char *)lhsArray->data + itemOffset};
+                Const rhsItem = {.ptrVal = (char *)rhsArray->data + itemOffset};
+            
+                if (!constDeref(consts, &lhsItem, type->base->kind) || !constDeref(consts, &rhsItem, type->base->kind))
+                    return (char *)lhs->ptrVal - (char *)rhs->ptrVal;
+
+                const int64_t itemDiff = constCompare(consts, &lhsItem, &rhsItem, type->base);
+                if (itemDiff != 0)
+                    return itemDiff;
+            }
+            return 0;
+        }
+        default:
+        {
+            if (consts)
+                consts->error->handler(consts->error->context, "Illegal type"); 
+            return 0;
+        }
     }
 }
 
@@ -224,7 +287,7 @@ void constBinary(const Consts *consts, Const *lhs, const Const *rhs, TokenKind o
             default:            consts->error->handler(consts->error->context, "Illegal operator"); return;
         }        
     }
-    else if (type->kind == TYPE_ARRAY || type->kind == TYPE_STRUCT)
+    else if (type->kind == TYPE_ARRAY || type->kind == TYPE_DYNARRAY || type->kind == TYPE_STRUCT)
     {
         switch (op)
         {
