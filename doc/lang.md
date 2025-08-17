@@ -348,7 +348,11 @@ Interface assignment copies the pointer, but not the contents of the variable th
 
 ### Function types
 
-A constant that stores an entry point of a function has a function type. A function is characterized by its *signature* that consists of a set of parameter names, types and optional default values, and an optional set of returned value types. The type of the last parameter in the function signature may be prefixed with `..`. The type `..T` is equivalent to `[]T` within the function. Such a function is called *variadic*.
+A constant that stores an entry point of a function has a function type. A function is characterized by its *signature* that consists of a set of parameter names, types and optional default values, and an optional set of returned value types. 
+
+For a parameter to have a default value, it must be of a comparable type. As a special case, a parameter of type `any` can have the default value `null`.
+
+The type of the last parameter in the function signature may be prefixed with `..`. The type `..T` is equivalent to `[]T` within the function. Such a function is called *variadic*.
 
 Syntax:
 
@@ -362,7 +366,7 @@ Each function definition in the module scope defines a constant of a function ty
 Examples:
 
 ```
-fn foo(code: int)
+fn foo(code: int = 42)
 fn MyFunc(p: int, x, y: real): (bool, real)
 fn printMsg(msg: char, values: ..real)
 ```
@@ -395,9 +399,10 @@ A type to which the comparison operators `==`, `!=`, `<`, `<=`, `>`, `>=` may be
 
 * Ordinal types
 * Real types
-* Pointer type
+* Pointer types
 * String type
 * Array types if their item types are comparable
+* Dynamic array types if their item types are comparable
 * Structure types if their field types are comparable
 
 ### Type compatibility
