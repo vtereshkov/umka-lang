@@ -410,6 +410,7 @@ static const Type *parseMapType(Compiler *comp)
     const Type *ptrNodeType = typeAddPtrTo(&comp->types, &comp->blocks, nodeType);
 
     typeAddField(&comp->types, nodeType, comp->intType, "#len");
+    typeAddField(&comp->types, nodeType, comp->intType, "#priority");
     typeAddField(&comp->types, nodeType, ptrKeyType,    "#key");
     typeAddField(&comp->types, nodeType, ptrItemType,   "#data");
     typeAddField(&comp->types, nodeType, ptrNodeType,   "#left");

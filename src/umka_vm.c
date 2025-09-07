@@ -672,6 +672,8 @@ void vmInit(VM *vm, Storage *storage, int stackSize, bool fileSystemEnabled, Err
     memset(&vm->hooks, 0, sizeof(vm->hooks));
     vm->terminatedNormally = false;
     vm->error = error;
+
+    srand(1);
 }
 
 
@@ -1233,44 +1235,23 @@ static FORCE_INLINE void doAllocMap(HeapPages *pages, Map *map, const Type *type
 }
 
 
-static FORCE_INLINE void doRebalanceMapNodes(MapNode **degenerateBranchRoot, int degenerateBranchLen)
+static FORCE_INLINE void doRebalanceMapNodes(MapNode **parent, MapNode *child)
 {
-    MapNode *prev = NULL, *cur = *degenerateBranchRoot;    
-
-    if ((*degenerateBranchRoot)->left)
+    // Rotate tree to swap parent and child nodes
+    if (child == (*parent)->right)
     {
-        // Left-only branch - reverse and attach it as a right-only branch
-        for (int dist = 0; dist < degenerateBranchLen - 1; dist++) 
-        {
-            MapNode *next = cur->left;
-
-            cur->left = NULL;
-            cur->right = prev;
-
-            prev = cur;
-            cur = next;
-        }
-        
-        prev->left = cur;
+        (*parent)->right = child->left;
+        child->left = (*parent);
+    }
+    else if (child == (*parent)->left)
+    {
+        (*parent)->left = child->right;
+        child->right = (*parent);      
     }
     else
-    {
-        // Right-only branch - reverse and attach it as a left-only branch
-        for (int dist = 0; dist < degenerateBranchLen - 1; dist++) 
-        {
-            MapNode *next = cur->right;
+        return;
 
-            cur->left = prev;
-            cur->right = NULL;
-
-            prev = cur;
-            cur = next;
-        }
-
-        prev->right = cur;
-    }
-
-    *degenerateBranchRoot = prev;
+    (*parent) = child;
 }
 
 
@@ -1281,11 +1262,6 @@ static FORCE_INLINE MapNode **doGetMapNode(Map *map, Slot key, bool createMissin
 
     MapNode **node = &map->root;
 
-    // Adding monotonically increasing or decreasing keys may produce long degenerate branches (i.e., linked lists) that need rebalancing
-    // TODO: Replace with an AVL or red-black tree    
-    MapNode **degenerateBranchRoot = NULL;
-    int degenerateBranchLen = 0;
-
     while (*node)
     {
         int64_t keyDiff = 1;
@@ -1295,41 +1271,22 @@ static FORCE_INLINE MapNode **doGetMapNode(Map *map, Slot key, bool createMissin
             Slot nodeKey = {.ptrVal = (*node)->key};
             doDerefImpl(&nodeKey, typeMapKey(map->type)->kind, error);
             keyDiff = doCompare(key, nodeKey, typeMapKey(map->type), error);
-
-            if (createMissingNodes)
-            {
-                // Check for degeneration
-                if ((!(*node)->left && (*node)->right) || ((*node)->left && !(*node)->right))
-                {
-                    if (degenerateBranchRoot && (((*node)->left && (*degenerateBranchRoot)->left) || ((*node)->right && (*degenerateBranchRoot)->right)))
-                        degenerateBranchLen++;
-                    else
-                    {
-                        degenerateBranchRoot = node;
-                        degenerateBranchLen = 1;
-                    }
-                }
-                else
-                {
-                    degenerateBranchRoot = NULL;
-                    degenerateBranchLen = 0;                
-                }
-                
-                if (degenerateBranchLen == MAP_MAX_DEGENERATE_BRANCH_LEN)
-                {
-                    doRebalanceMapNodes(degenerateBranchRoot, degenerateBranchLen);
-                    degenerateBranchRoot = NULL;
-                    degenerateBranchLen = 0;
-                }
-            }
         }
 
+        MapNode **child = NULL;
+
         if (keyDiff > 0)
-            node = &(*node)->right;
+            child = &(*node)->right;
         else if (keyDiff < 0)
-            node = &(*node)->left;
+            child = &(*node)->left;
         else
             return node;
+
+        // Rebalance as a randomized binary search tree (treap)
+        if ((*node)->priority > 0 && (*child) && (*child)->priority > (*node)->priority)
+            doRebalanceMapNodes(node, *child);
+        else
+            node = child;
     }
 
     if (createMissingNodes)
@@ -1351,6 +1308,7 @@ static MapNode *doCopyMapNode(Map *map, MapNode *node, Fiber *fiber, HeapPages *
     MapNode *result = (MapNode *)chunkAlloc(pages, nodeType->size, nodeType, NULL, false, error);
 
     result->len = node->len;
+    result->priority = node->priority;
 
     if (node->key)
     {
@@ -3526,6 +3484,8 @@ static FORCE_INLINE void doGetMapPtr(Fiber *fiber, HeapPages *pages, Error *erro
     MapNode *node = *doGetMapNode(map, key, true, pages, error);
     if (!node->data)
     {
+        node->priority = (int64_t)rand() + 1;
+        
         // When allocating dynamic arrays, we mark with type the data chunk, not the header chunk
         node->key  = chunkAlloc(pages, keyType->size,  keyType->kind  == TYPE_DYNARRAY ? NULL : keyType,  NULL, false, error);
         node->data = chunkAlloc(pages, itemType->size, itemType->kind == TYPE_DYNARRAY ? NULL : itemType, NULL, false, error);
