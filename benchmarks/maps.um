@@ -35,8 +35,8 @@ fn test*(n: int, order: Order) {
 }
 
 fn main() {
-    test(100000, .Ascending)
-    test(100000, .Descending)
-    test(100000, .Random)
+    test(1000000, .Ascending)
+    test(1000000, .Descending)
+    test(1000000, .Random)
 }
 

@@ -1,2 +1,4 @@
+CompileFlags:
+  Add: [-DUMKA_BUILD -DUMKA_EXT_LIBS]
 InlayHints:
   Enabled: No

@@ -18,7 +18,7 @@ fn main() {
     printf("\n\n>>> Binary trees\n\n");             benchmark({trees::test()})
     printf("\n\n>>> N body problem\n\n");           benchmark({nbody::test(100000)})
     printf("\n\n>>> Matrix multiplication\n\n");    benchmark({matrices::test()})
-    printf("\n\n>>> Maps (ascending keys)\n\n");    benchmark({maps::test(100000, .Ascending)})
-    printf("\n\n>>> Maps (descending keys)\n\n");   benchmark({maps::test(100000, .Descending)})
-    printf("\n\n>>> Maps (randomized keys)\n\n");   benchmark({maps::test(100000, .Random)})
+    printf("\n\n>>> Maps (ascending keys)\n\n");    benchmark({maps::test(1000000, .Ascending)})
+    printf("\n\n>>> Maps (descending keys)\n\n");   benchmark({maps::test(1000000, .Descending)})
+    printf("\n\n>>> Maps (randomized keys)\n\n");   benchmark({maps::test(1000000, .Random)})
 }

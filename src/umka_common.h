@@ -21,11 +21,12 @@ enum
 
 enum
 {
-    MAP_NODE_FIELD_LEN   = 0,
-    MAP_NODE_FIELD_KEY   = 1,
-    MAP_NODE_FIELD_DATA  = 2,
-    MAP_NODE_FIELD_LEFT  = 3,
-    MAP_NODE_FIELD_RIGHT = 4,
+    MAP_NODE_FIELD_LEN      = 0,
+    MAP_NODE_FIELD_PRIORITY = 1,
+    MAP_NODE_FIELD_KEY      = 2,
+    MAP_NODE_FIELD_DATA     = 3,
+    MAP_NODE_FIELD_LEFT     = 4,
+    MAP_NODE_FIELD_RIGHT    = 5,
 };
 
 
@@ -68,6 +69,7 @@ typedef struct tagMapNode
 {
     // The C equivalent of the Umka map base type
     int64_t len;            // Non-zero for the root node only
+    int64_t priority;       // Random priority for rebalancing
     void *key, *data;
     struct tagMapNode *left, *right;
 } MapNode;
