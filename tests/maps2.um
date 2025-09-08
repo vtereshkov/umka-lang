@@ -184,6 +184,16 @@ fn test8() {
 }
 
 
+fn test9() {
+    printf("\nTest 9\n")
+
+    m := map[uint]str{}
+    m[0] = "hello"
+    m[18446744073709551615] = "world"    
+    printf("%v\n", m)
+}
+
+
 fn test*() {
     test1()
     test2()
@@ -193,6 +203,7 @@ fn test*() {
     test6()
     test7(10000)
     test8()
+    test9()
 }
 
 

@@ -839,7 +839,7 @@ static int64_t doCompare(Slot lhs, Slot rhs, const Type *type, Error *error)
         case TYPE_UINT8:
         case TYPE_UINT16:
         case TYPE_UINT32:   return lhs.intVal - rhs.intVal;
-        case TYPE_UINT:     return lhs.uintVal - rhs.uintVal;
+        case TYPE_UINT:     return (lhs.uintVal == rhs.uintVal) ? 0 : (lhs.uintVal > rhs.uintVal) ? 1 : -1;
         case TYPE_BOOL:
         case TYPE_CHAR:     return lhs.intVal - rhs.intVal;
         case TYPE_REAL32:

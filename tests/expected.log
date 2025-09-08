@@ -634,6 +634,9 @@ Test 8
 {["Abc" "def"]: 6 ["abc" "Def"]: 4 ["abc" "def"]: 5}
 {["Abc" "def"]: 6 ["abc" "Def"]: 4 ["abc" "def"]: 5}
 
+Test 9
+{0: "hello" 18446744073709551615: "world"}
+
 
 >>> Multiple returns
 
