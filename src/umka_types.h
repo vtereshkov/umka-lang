@@ -126,6 +126,16 @@ typedef struct
 } Types;
 
 
+typedef enum
+{
+    FORMAT_SIZE_SHORT_SHORT,
+    FORMAT_SIZE_SHORT,
+    FORMAT_SIZE_NORMAL,
+    FORMAT_SIZE_LONG,
+    FORMAT_SIZE_LONG_LONG
+} FormatStringTypeSize;
+
+
 void typeInit(Types *types, Storage *storage, Error *error);
 
 Type *typeAdd       (Types *types, const Blocks *blocks, TypeKind kind);
@@ -227,13 +237,43 @@ static inline bool typeExprListStruct(const Type *type)
 }
 
 
-bool typeComparable             (const Type *type);
-bool typeEquivalent             (const Type *left, const Type *right);
-bool typeSameExceptMaybeIdent   (const Type *left, const Type *right);
-bool typeCompatible             (const Type *left, const Type *right);
-void typeAssertCompatible       (const Types *types, const Type *left, const Type *right);
-void typeAssertCompatibleParam  (const Types *types, const Type *left, const Type *right, const Type *fnType, int paramIndex);
-void typeAssertCompatibleBuiltin(const Types *types, const Type *type, /*BuiltinFunc*/ int builtin, bool condition);
+bool typeComparable                 (const Type *type);
+bool typeEquivalent                 (const Type *left, const Type *right);
+bool typeSameExceptMaybeIdent       (const Type *left, const Type *right);
+bool typeCompatible                 (const Type *left, const Type *right);
+void typeAssertCompatible           (const Types *types, const Type *left, const Type *right);
+void typeAssertCompatibleParam      (const Types *types, const Type *left, const Type *right, const Type *fnType, int paramIndex);
+void typeAssertCompatibleBuiltin    (const Types *types, const Type *type, /*BuiltinFunc*/ int builtin, bool compatible);
+void typeAssertCompatibleIOBuiltin  (const Types *types, TypeKind expectedTypeKind, const Type *type, /*BuiltinFunc*/ int builtin, bool allowVoid);
+
+
+static inline bool typeCompatiblePrintf(TypeKind expectedTypeKind, TypeKind typeKind, bool allowVoid)
+{
+    if (typeKind == TYPE_VOID && !allowVoid)    
+        return false;
+
+    // Skip detailed checks if the expected type is not known at compile time
+    if (expectedTypeKind == TYPE_NONE)
+        return true;
+
+    return  (typeKind == expectedTypeKind) ||
+            (typeKindIntegerOrEnum(typeKind) && typeKindIntegerOrEnum(expectedTypeKind)) ||
+            (typeKindReal(typeKind) && typeKindReal(expectedTypeKind)) ||
+            (expectedTypeKind == TYPE_INTERFACE); 
+}
+
+
+static inline bool typeCompatibleScanf(TypeKind expectedBaseTypeKind, TypeKind baseTypeKind, bool allowVoid)
+{
+    if (!(typeKindOrdinal(baseTypeKind) || typeKindReal(baseTypeKind) || baseTypeKind == TYPE_STR || (baseTypeKind == TYPE_VOID && allowVoid)))
+        return false;
+
+    // Skip detailed checks if the expected type is not known at compile time
+    if (expectedBaseTypeKind == TYPE_NONE)
+        return true;
+    
+    return baseTypeKind == expectedBaseTypeKind;
+}
 
 
 static inline bool typeCompatibleRcv(const Type *left, const Type *right)
@@ -342,6 +382,8 @@ const ParamAndLocalVarLayout *typeMakeParamAndLocalVarLayout(const Types *types,
 
 const char *typeKindSpelling(TypeKind kind);
 char *typeSpelling          (const Type *type, char *buf);
+
+bool typeFormatStringValid(const char *format, int *formatLen, int *typeLetterPos, TypeKind *typeKind, FormatStringTypeSize *size);
 
 
 static inline const Type *typeMapKey(const Type *mapType)

@@ -1668,144 +1668,6 @@ static int doFillReprBuf(const Slot *slot, const Type *type, char *buf, int maxL
 }
 
 
-typedef enum
-{
-    FORMAT_SIZE_SHORT_SHORT,
-    FORMAT_SIZE_SHORT,
-    FORMAT_SIZE_NORMAL,
-    FORMAT_SIZE_LONG,
-    FORMAT_SIZE_LONG_LONG
-} FormatStringTypeSize;
-
-
-static FORCE_INLINE void doCheckFormatString(const char *format, int *formatLen, int *typeLetterPos, TypeKind *typeKind, FormatStringTypeSize *size, Error *error)
-{
-    *size = FORMAT_SIZE_NORMAL;
-    *typeKind = TYPE_VOID;
-    int i = 0;
-
-    while (format[i])
-    {
-        *size = FORMAT_SIZE_NORMAL;
-        *typeKind = TYPE_VOID;
-
-        while (format[i] && format[i] != '%')
-            i++;
-
-        // "%" [flags] [width] ["." precision] [length] type
-        // "%"
-        if (format[i] == '%')
-        {
-            i++;
-
-            // [flags]
-            while (format[i] == '+' || format[i] == '-'  || format[i] == ' ' ||
-                   format[i] == '0' || format[i] == '\'' || format[i] == '#')
-                i++;
-
-            // [width]
-            while (format[i] >= '0' && format[i] <= '9')
-                i++;
-
-            // [.precision]
-            if (format[i] == '.')
-            {
-                i++;
-                while (format[i] >= '0' && format[i] <= '9')
-                    i++;
-            }
-
-            // [length]
-            if (format[i] == 'h')
-            {
-                *size = FORMAT_SIZE_SHORT;
-                i++;
-
-                if (format[i] == 'h')
-                {
-                    *size = FORMAT_SIZE_SHORT_SHORT;
-                    i++;
-                }
-            }
-            else if (format[i] == 'l')
-            {
-                *size = FORMAT_SIZE_LONG;
-                i++;
-
-                if (format[i] == 'l')
-                {
-                    *size = FORMAT_SIZE_LONG_LONG;
-                    i++;
-                }
-            }
-
-            // type
-            *typeLetterPos = i;
-            switch (format[i])
-            {
-                case '%': i++; continue;
-                case 'd':
-                case 'i':
-                {
-                    switch (*size)
-                    {
-                        case FORMAT_SIZE_SHORT_SHORT:  *typeKind = TYPE_INT8;      break;
-                        case FORMAT_SIZE_SHORT:        *typeKind = TYPE_INT16;     break;
-                        case FORMAT_SIZE_NORMAL:
-                        case FORMAT_SIZE_LONG:         *typeKind = TYPE_INT32;     break;
-                        case FORMAT_SIZE_LONG_LONG:    *typeKind = TYPE_INT;       break;
-                    }
-                    break;
-                }
-                case 'u':
-                case 'x':
-                case 'X':
-                {
-                    switch (*size)
-                    {
-                        case FORMAT_SIZE_SHORT_SHORT:  *typeKind = TYPE_UINT8;      break;
-                        case FORMAT_SIZE_SHORT:        *typeKind = TYPE_UINT16;     break;
-                        case FORMAT_SIZE_NORMAL:
-                        case FORMAT_SIZE_LONG:         *typeKind = TYPE_UINT32;     break;
-                        case FORMAT_SIZE_LONG_LONG:    *typeKind = TYPE_UINT;       break;
-                    }
-                    break;
-                }
-                case 'f':
-                case 'F':
-                case 'e':
-                case 'E':
-                case 'g':
-                case 'G':
-                {
-                    switch (*size)
-                    {
-                        case FORMAT_SIZE_NORMAL:        *typeKind = TYPE_REAL32;    break;
-                        case FORMAT_SIZE_LONG:          *typeKind = TYPE_REAL;      break;
-                        default:                        error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal size specifier"); break;
-                    }
-                    break;
-                }
-                case 's':
-                case 'c':
-                {
-                    *typeKind = format[i] == 's' ? TYPE_STR : TYPE_CHAR;
-                    if (UNLIKELY(*size != FORMAT_SIZE_NORMAL))
-                        error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal size specifier");
-                    break;
-                }
-                case 'v': *typeKind = TYPE_INTERFACE;  /* Actually any type */      break;
-
-                default : error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal type character %c in format string", format[i]);
-            }
-            i++;
-        }
-        break;
-    }
-    *formatLen = i;
-}
-
-
 static FORCE_INLINE int doPrintSlot(bool string, void *stream, int maxLen, const char *format, Slot slot, TypeKind typeKind, Error *error)
 {
     int len = -1;
@@ -1854,11 +1716,11 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
     const char *format = (const char *)fiber->top[STACK_OFFSET_FORMAT].ptrVal;
     Slot value         = fiber->top[STACK_OFFSET_VALUE];
 
-    const Type *type         = fiber->code[fiber->ip].type;
+    const Type *type   = fiber->code[fiber->ip].type;
     TypeKind typeKind  = type->kind;
 
     if (UNLIKELY(!string && (!stream || (!fiber->fileSystemEnabled && !console))))
-        error->runtimeHandler(error->context, ERR_RUNTIME, "printf() destination is null");
+        error->runtimeHandler(error->context, ERR_RUNTIME, "printf destination is null");
 
     if (!format)
         format = doGetEmptyStr();
@@ -1867,17 +1729,13 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
     TypeKind expectedTypeKind = TYPE_NONE;
     FormatStringTypeSize formatStringTypeSize = FORMAT_SIZE_NORMAL;
 
-    doCheckFormatString(format, &formatLen, &typeLetterPos, &expectedTypeKind, &formatStringTypeSize, error);
+    if (UNLIKELY(!typeFormatStringValid(format, &formatLen, &typeLetterPos, &expectedTypeKind, &formatStringTypeSize)))
+        error->runtimeHandler(error->context, ERR_RUNTIME, "Invalid format string");
 
-    const bool hasAnyTypeFormatter = expectedTypeKind == TYPE_INTERFACE && typeLetterPos >= 0 && typeLetterPos < formatLen;     // %v
-
-    if (UNLIKELY(type->kind != expectedTypeKind &&
-        !(type->kind != TYPE_VOID            && expectedTypeKind == TYPE_INTERFACE) &&
-        !(typeKindIntegerOrEnum(type->kind)  && typeKindIntegerOrEnum(expectedTypeKind)) &&
-        !(typeKindReal(type->kind)           && typeKindReal(expectedTypeKind))))
+    if (UNLIKELY(!typeCompatiblePrintf(expectedTypeKind, type->kind, true)))
     {
         char typeBuf[DEFAULT_STR_LEN + 1];
-        error->runtimeHandler(error->context, ERR_RUNTIME, "Incompatible types %s and %s in printf()", typeKindSpelling(expectedTypeKind), typeSpelling(type, typeBuf));
+        error->runtimeHandler(error->context, ERR_RUNTIME, "Incompatible types %s and %s in printf", typeKindSpelling(expectedTypeKind), typeSpelling(type, typeBuf));
     }
 
     // Check overflow
@@ -1909,6 +1767,7 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
 
     bool isReprBufInHeap = false;
 
+    const bool hasAnyTypeFormatter = expectedTypeKind == TYPE_INTERFACE && typeLetterPos >= 0 && typeLetterPos < formatLen;     // %v
     if (hasAnyTypeFormatter)
     {
         // %hhv -> %  s
@@ -1994,11 +1853,11 @@ static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool con
     const char *format = (const char *)fiber->top[STACK_OFFSET_FORMAT].ptrVal;
     Slot value         = fiber->top[STACK_OFFSET_VALUE];
 
-    const Type *type         = fiber->code[fiber->ip].type;
+    const Type *type   = fiber->code[fiber->ip].type;
     TypeKind typeKind  = type->kind;
 
     if (UNLIKELY(!stream || (!fiber->fileSystemEnabled && !console && !string)))
-        error->runtimeHandler(error->context, ERR_RUNTIME, "scanf() source is null");
+        error->runtimeHandler(error->context, ERR_RUNTIME, "scanf source is null");
 
     if (!format)
         format = doGetEmptyStr();
@@ -2007,12 +1866,11 @@ static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool con
     TypeKind expectedTypeKind = TYPE_NONE;
     FormatStringTypeSize formatStringTypeSize = FORMAT_SIZE_NORMAL;
 
-    doCheckFormatString(format, &formatLen, &typeLetterPos, &expectedTypeKind, &formatStringTypeSize, error);
+    if (UNLIKELY(!typeFormatStringValid(format, &formatLen, &typeLetterPos, &expectedTypeKind, &formatStringTypeSize)))
+        error->runtimeHandler(error->context, ERR_RUNTIME, "Invalid format string");
 
-    if (UNLIKELY(typeKind != expectedTypeKind || expectedTypeKind == TYPE_INTERFACE))
-    {
-        error->runtimeHandler(error->context, ERR_RUNTIME, "Incompatible types %s and %s in scanf()", typeKindSpelling(expectedTypeKind), typeKindSpelling(typeKind));
-    }
+    if (UNLIKELY(!typeCompatibleScanf(expectedTypeKind, typeKind, true)))
+        error->runtimeHandler(error->context, ERR_RUNTIME, "Incompatible types %s and %s in scanf", typeKindSpelling(expectedTypeKind), typeKindSpelling(typeKind));
 
     char curFormatBuf[DEFAULT_STR_LEN + 1];
     char *curFormat = curFormatBuf;
@@ -2033,7 +1891,7 @@ static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool con
     else
     {
         if (UNLIKELY(!value.ptrVal))
-            error->runtimeHandler(error->context, ERR_RUNTIME, "scanf() destination is null");
+            error->runtimeHandler(error->context, ERR_RUNTIME, "scanf destination is null");
 
         // Strings need special handling, as the required buffer size is unknown
         if (typeKind == TYPE_STR)

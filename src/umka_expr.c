@@ -833,35 +833,65 @@ static void parseBuiltinIOCall(Compiler *comp, const Type **type, Const *constan
     else
         genPushGlobalPtr(&comp->gen, NULL);
 
-    // Format string
+    // Format string - statically checked if given as a string literal
+    const char *formatLiteral = NULL;
+    if (comp->lex.tok.kind == TOK_STRLITERAL)
+    {
+        Lexer lookaheadLex = comp->lex;
+        lexNext(&lookaheadLex);
+        if (lookaheadLex.tok.kind == TOK_COMMA || lookaheadLex.tok.kind == TOK_RPAR)
+            formatLiteral = comp->lex.tok.strVal;
+    }
+
     *type = comp->strType;
     parseExpr(comp, type, constant);
     typeAssertCompatible(&comp->types, comp->strType, *type);
 
     // Values, if any
+    int formatLen = -1, typeLetterPos = -1;
+    TypeKind expectedTypeKind = TYPE_NONE;
+    FormatStringTypeSize formatStringTypeSize = FORMAT_SIZE_NORMAL;
+
     while (comp->lex.tok.kind == TOK_COMMA)
-    {
+    {     
         lexNext(&comp->lex);
         *type = NULL;
         parseExpr(comp, type, constant);
 
-        if (builtin == BUILTIN_PRINTF || builtin == BUILTIN_FPRINTF || builtin == BUILTIN_SPRINTF)
+        if (formatLiteral)
         {
-            typeAssertCompatibleBuiltin(&comp->types, *type, builtin, (*type)->kind != TYPE_VOID);
-            genCallTypedBuiltin(&comp->gen, *type, builtin);
+            if (!typeFormatStringValid(formatLiteral, &formatLen, &typeLetterPos, &expectedTypeKind, &formatStringTypeSize))
+                comp->error.handler(comp->error.context, "Invalid format string");
+            formatLiteral += formatLen;
         }
-        else  // BUILTIN_SCANF, BUILTIN_FSCANF, BUILTIN_SSCANF
-        {
-            typeAssertCompatibleBuiltin(&comp->types, *type, builtin, (*type)->kind == TYPE_PTR && (typeOrdinal((*type)->base) || typeReal((*type)->base) || (*type)->base->kind == TYPE_STR));
-            genCallTypedBuiltin(&comp->gen, (*type)->base, builtin);
-        }
+
+        typeAssertCompatibleIOBuiltin(&comp->types, expectedTypeKind, *type, builtin, false);
+
+        if (builtin == BUILTIN_SCANF || builtin == BUILTIN_FSCANF || builtin == BUILTIN_SSCANF)
+            *type = (*type)->base;
+
+        genCallTypedBuiltin(&comp->gen, *type, builtin); 
     } // while
 
     // The rest of format string
     genPushIntConst(&comp->gen, 0);
+
+    if (formatLiteral)
+    {
+        if (!typeFormatStringValid(formatLiteral, &formatLen, &typeLetterPos, &expectedTypeKind, &formatStringTypeSize))
+            comp->error.handler(comp->error.context, "Invalid format string");
+        formatLiteral += formatLen;
+    }
+
+    if (builtin == BUILTIN_SCANF || builtin == BUILTIN_FSCANF || builtin == BUILTIN_SSCANF)
+        *type = comp->ptrVoidType;
+    else
+        *type = comp->voidType;
+
+    typeAssertCompatibleIOBuiltin(&comp->types, expectedTypeKind, *type, builtin, true);
     genCallTypedBuiltin(&comp->gen, comp->voidType, builtin);
 
-    genPop(&comp->gen);  // Remove format string
+    genPop(&comp->gen);                         // Remove format string
 
     // Result
     if (builtin == BUILTIN_SPRINTF)
