@@ -865,16 +865,12 @@ static void parseBuiltinIOCall(Compiler *comp, const Type **type, Const *constan
             formatLiteral += formatLen;
         }
 
-        if (builtin == BUILTIN_PRINTF || builtin == BUILTIN_FPRINTF || builtin == BUILTIN_SPRINTF)
-        {
-            typeAssertCompatibleBuiltin(&comp->types, *type, builtin, typeCompatiblePrintf(expectedTypeKind, (*type)->kind));
-            genCallTypedBuiltin(&comp->gen, *type, builtin);
-        }
-        else  // BUILTIN_SCANF, BUILTIN_FSCANF, BUILTIN_SSCANF
-        {
-            typeAssertCompatibleBuiltin(&comp->types, *type, builtin, (*type)->kind == TYPE_PTR && typeCompatibleScanf(expectedTypeKind, (*type)->base->kind));
-            genCallTypedBuiltin(&comp->gen, (*type)->base, builtin);
-        }
+        typeAssertCompatibleIOBuiltin(&comp->types, expectedTypeKind, *type, builtin, false);
+
+        if (builtin == BUILTIN_SCANF || builtin == BUILTIN_FSCANF || builtin == BUILTIN_SSCANF)
+            *type = (*type)->base;
+
+        genCallTypedBuiltin(&comp->gen, *type, builtin); 
     } // while
 
     // The rest of format string
@@ -887,7 +883,12 @@ static void parseBuiltinIOCall(Compiler *comp, const Type **type, Const *constan
         formatLiteral += formatLen;
     }
 
-    typeAssertCompatibleBuiltin(&comp->types, comp->voidType, builtin, expectedTypeKind == TYPE_NONE || expectedTypeKind == TYPE_VOID);
+    if (builtin == BUILTIN_SCANF || builtin == BUILTIN_FSCANF || builtin == BUILTIN_SSCANF)
+        *type = comp->ptrVoidType;
+    else
+        *type = comp->voidType;
+
+    typeAssertCompatibleIOBuiltin(&comp->types, expectedTypeKind, *type, builtin, true);
     genCallTypedBuiltin(&comp->gen, comp->voidType, builtin);
 
     genPop(&comp->gen);                         // Remove format string

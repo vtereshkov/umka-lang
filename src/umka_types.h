@@ -237,18 +237,19 @@ static inline bool typeExprListStruct(const Type *type)
 }
 
 
-bool typeComparable             (const Type *type);
-bool typeEquivalent             (const Type *left, const Type *right);
-bool typeSameExceptMaybeIdent   (const Type *left, const Type *right);
-bool typeCompatible             (const Type *left, const Type *right);
-void typeAssertCompatible       (const Types *types, const Type *left, const Type *right);
-void typeAssertCompatibleParam  (const Types *types, const Type *left, const Type *right, const Type *fnType, int paramIndex);
-void typeAssertCompatibleBuiltin(const Types *types, const Type *type, /*BuiltinFunc*/ int builtin, bool condition);
+bool typeComparable                 (const Type *type);
+bool typeEquivalent                 (const Type *left, const Type *right);
+bool typeSameExceptMaybeIdent       (const Type *left, const Type *right);
+bool typeCompatible                 (const Type *left, const Type *right);
+void typeAssertCompatible           (const Types *types, const Type *left, const Type *right);
+void typeAssertCompatibleParam      (const Types *types, const Type *left, const Type *right, const Type *fnType, int paramIndex);
+void typeAssertCompatibleBuiltin    (const Types *types, const Type *type, /*BuiltinFunc*/ int builtin, bool compatible);
+void typeAssertCompatibleIOBuiltin  (const Types *types, TypeKind expectedTypeKind, const Type *type, /*BuiltinFunc*/ int builtin, bool allowVoid);
 
 
-static inline bool typeCompatiblePrintf(TypeKind expectedTypeKind, TypeKind typeKind)
+static inline bool typeCompatiblePrintf(TypeKind expectedTypeKind, TypeKind typeKind, bool allowVoid)
 {
-    if (typeKind == TYPE_VOID)    
+    if (typeKind == TYPE_VOID && !allowVoid)    
         return false;
 
     // Skip detailed checks if the expected type is not known at compile time
@@ -262,9 +263,9 @@ static inline bool typeCompatiblePrintf(TypeKind expectedTypeKind, TypeKind type
 }
 
 
-static inline bool typeCompatibleScanf(TypeKind expectedBaseTypeKind, TypeKind baseTypeKind)
+static inline bool typeCompatibleScanf(TypeKind expectedBaseTypeKind, TypeKind baseTypeKind, bool allowVoid)
 {
-    if (!typeKindOrdinal(baseTypeKind) && !typeKindReal(baseTypeKind) && baseTypeKind != TYPE_STR)
+    if (!(typeKindOrdinal(baseTypeKind) || typeKindReal(baseTypeKind) || baseTypeKind == TYPE_STR || (baseTypeKind == TYPE_VOID && allowVoid)))
         return false;
 
     // Skip detailed checks if the expected type is not known at compile time

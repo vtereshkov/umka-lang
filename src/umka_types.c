@@ -459,13 +459,37 @@ void typeAssertCompatibleParam(const Types *types, const Type *left, const Type 
 }
 
 
-void typeAssertCompatibleBuiltin(const Types *types, const Type *type, /*BuiltinFunc*/ int builtin, bool condition)
+void typeAssertCompatibleBuiltin(const Types *types, const Type *type, /*BuiltinFunc*/ int builtin, bool compatible)
 {
-    if (!condition)
+    if (!compatible)
     {
         char typeBuf[DEFAULT_STR_LEN + 1];
         types->error->handler(types->error->context, "Incompatible type %s in %s", typeSpelling(type, typeBuf), vmBuiltinSpelling(builtin));
     }
+}
+
+
+void typeAssertCompatibleIOBuiltin(const Types *types, TypeKind expectedTypeKind, const Type *type, /*BuiltinFunc*/ int builtin, bool allowVoid)
+{
+    bool compatible = false;
+    if (builtin == BUILTIN_PRINTF || builtin == BUILTIN_FPRINTF || builtin == BUILTIN_SPRINTF)
+        compatible = typeCompatiblePrintf(expectedTypeKind, type->kind, allowVoid);
+    else
+    {
+        if (type->kind != TYPE_PTR)
+            types->error->handler(types->error->context, "Pointer expected in %s", vmBuiltinSpelling(builtin));
+        type = type->base;
+        compatible = typeCompatibleScanf(expectedTypeKind, type->kind, allowVoid);
+    }
+
+    if (!compatible)
+    {
+        char typeBuf[DEFAULT_STR_LEN + 1];
+        if (expectedTypeKind == TYPE_NONE)
+            types->error->handler(types->error->context, "Incompatible type %s in %s", typeSpelling(type, typeBuf), vmBuiltinSpelling(builtin));
+        else
+            types->error->handler(types->error->context, "Incompatible types %s and %s in %s", typeKindSpelling(expectedTypeKind), typeSpelling(type, typeBuf), vmBuiltinSpelling(builtin));
+    }        
 }
 
 

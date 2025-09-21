@@ -1720,7 +1720,7 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
     TypeKind typeKind  = type->kind;
 
     if (UNLIKELY(!string && (!stream || (!fiber->fileSystemEnabled && !console))))
-        error->runtimeHandler(error->context, ERR_RUNTIME, "printf() destination is null");
+        error->runtimeHandler(error->context, ERR_RUNTIME, "printf destination is null");
 
     if (!format)
         format = doGetEmptyStr();
@@ -1732,10 +1732,10 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
     if (UNLIKELY(!typeFormatStringValid(format, &formatLen, &typeLetterPos, &expectedTypeKind, &formatStringTypeSize)))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Invalid format string");
 
-    if (UNLIKELY(!typeCompatiblePrintf(expectedTypeKind, type->kind)))
+    if (UNLIKELY(!typeCompatiblePrintf(expectedTypeKind, type->kind, true)))
     {
         char typeBuf[DEFAULT_STR_LEN + 1];
-        error->runtimeHandler(error->context, ERR_RUNTIME, "Incompatible types %s and %s in printf()", typeKindSpelling(expectedTypeKind), typeSpelling(type, typeBuf));
+        error->runtimeHandler(error->context, ERR_RUNTIME, "Incompatible types %s and %s in printf", typeKindSpelling(expectedTypeKind), typeSpelling(type, typeBuf));
     }
 
     // Check overflow
@@ -1857,7 +1857,7 @@ static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool con
     TypeKind typeKind  = type->kind;
 
     if (UNLIKELY(!stream || (!fiber->fileSystemEnabled && !console && !string)))
-        error->runtimeHandler(error->context, ERR_RUNTIME, "scanf() source is null");
+        error->runtimeHandler(error->context, ERR_RUNTIME, "scanf source is null");
 
     if (!format)
         format = doGetEmptyStr();
@@ -1869,8 +1869,8 @@ static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool con
     if (UNLIKELY(!typeFormatStringValid(format, &formatLen, &typeLetterPos, &expectedTypeKind, &formatStringTypeSize)))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Invalid format string");
 
-    if (UNLIKELY(!typeCompatibleScanf(expectedTypeKind, typeKind)))
-        error->runtimeHandler(error->context, ERR_RUNTIME, "Incompatible types %s and %s in scanf()", typeKindSpelling(expectedTypeKind), typeKindSpelling(typeKind));
+    if (UNLIKELY(!typeCompatibleScanf(expectedTypeKind, typeKind, true)))
+        error->runtimeHandler(error->context, ERR_RUNTIME, "Incompatible types %s and %s in scanf", typeKindSpelling(expectedTypeKind), typeKindSpelling(typeKind));
 
     char curFormatBuf[DEFAULT_STR_LEN + 1];
     char *curFormat = curFormatBuf;
@@ -1891,7 +1891,7 @@ static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool con
     else
     {
         if (UNLIKELY(!value.ptrVal))
-            error->runtimeHandler(error->context, ERR_RUNTIME, "scanf() destination is null");
+            error->runtimeHandler(error->context, ERR_RUNTIME, "scanf destination is null");
 
         // Strings need special handling, as the required buffer size is unknown
         if (typeKind == TYPE_STR)
