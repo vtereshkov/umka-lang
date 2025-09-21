@@ -26,6 +26,7 @@ void help(void)
     printf("    -check                  - Compile only\n");
     printf("    -warn                   - Enable warnings\n");
     printf("    -sandbox                - Run in sandbox mode\n");
+    printf("    -version                - Print version information\n");
 }
 
 
@@ -175,6 +176,10 @@ int main(int argc, char **argv)
             isSandbox = true;
             i += 1;
         }
+        else if (!strcmp(argv[i], "-version"))
+        {
+            return puts(umkaGetVersion());
+        }
         else
             break;
     }
@@ -215,3 +220,4 @@ int main(int argc, char **argv)
 }
 
 #endif // EMSCRIPTEN
+
