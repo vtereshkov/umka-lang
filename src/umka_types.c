@@ -859,3 +859,131 @@ char *typeSpelling(const Type *type, char *buf)
     return typeSpellingRecursive(type, buf, DEFAULT_STR_LEN + 1, MAX_TYPE_SPELLING_DEPTH);
 }
 
+
+bool typeFormatStringValid(const char *format, int *formatLen, int *typeLetterPos, TypeKind *typeKind, FormatStringTypeSize *size)
+{
+    *size = FORMAT_SIZE_NORMAL;
+    *typeKind = TYPE_VOID;
+    int i = 0;
+
+    while (format[i])
+    {
+        *size = FORMAT_SIZE_NORMAL;
+        *typeKind = TYPE_VOID;
+
+        while (format[i] && format[i] != '%')
+            i++;
+
+        // "%" [flags] [width] ["." precision] [length] type
+        // "%"
+        if (format[i] == '%')
+        {
+            i++;
+
+            // [flags]
+            while (format[i] == '+' || format[i] == '-'  || format[i] == ' ' ||
+                   format[i] == '0' || format[i] == '\'' || format[i] == '#')
+                i++;
+
+            // [width]
+            while (format[i] >= '0' && format[i] <= '9')
+                i++;
+
+            // [.precision]
+            if (format[i] == '.')
+            {
+                i++;
+                while (format[i] >= '0' && format[i] <= '9')
+                    i++;
+            }
+
+            // [length]
+            if (format[i] == 'h')
+            {
+                *size = FORMAT_SIZE_SHORT;
+                i++;
+
+                if (format[i] == 'h')
+                {
+                    *size = FORMAT_SIZE_SHORT_SHORT;
+                    i++;
+                }
+            }
+            else if (format[i] == 'l')
+            {
+                *size = FORMAT_SIZE_LONG;
+                i++;
+
+                if (format[i] == 'l')
+                {
+                    *size = FORMAT_SIZE_LONG_LONG;
+                    i++;
+                }
+            }
+
+            // type
+            *typeLetterPos = i;
+            switch (format[i])
+            {
+                case '%': i++; continue;
+                case 'd':
+                case 'i':
+                {
+                    switch (*size)
+                    {
+                        case FORMAT_SIZE_SHORT_SHORT:  *typeKind = TYPE_INT8;      break;
+                        case FORMAT_SIZE_SHORT:        *typeKind = TYPE_INT16;     break;
+                        case FORMAT_SIZE_NORMAL:
+                        case FORMAT_SIZE_LONG:         *typeKind = TYPE_INT32;     break;
+                        case FORMAT_SIZE_LONG_LONG:    *typeKind = TYPE_INT;       break;
+                    }
+                    break;
+                }
+                case 'u':
+                case 'x':
+                case 'X':
+                {
+                    switch (*size)
+                    {
+                        case FORMAT_SIZE_SHORT_SHORT:  *typeKind = TYPE_UINT8;      break;
+                        case FORMAT_SIZE_SHORT:        *typeKind = TYPE_UINT16;     break;
+                        case FORMAT_SIZE_NORMAL:
+                        case FORMAT_SIZE_LONG:         *typeKind = TYPE_UINT32;     break;
+                        case FORMAT_SIZE_LONG_LONG:    *typeKind = TYPE_UINT;       break;
+                    }
+                    break;
+                }
+                case 'f':
+                case 'F':
+                case 'e':
+                case 'E':
+                case 'g':
+                case 'G':
+                {
+                    switch (*size)
+                    {
+                        case FORMAT_SIZE_NORMAL:        *typeKind = TYPE_REAL32;    break;
+                        case FORMAT_SIZE_LONG:          *typeKind = TYPE_REAL;      break;
+                        default:                        return false;
+                    }
+                    break;
+                }
+                case 's':
+                case 'c':
+                {
+                    *typeKind = format[i] == 's' ? TYPE_STR : TYPE_CHAR;
+                    if (*size != FORMAT_SIZE_NORMAL)
+                        return false;
+                    break;
+                }
+                case 'v': *typeKind = TYPE_INTERFACE;  /* Actually any type */      break;
+
+                default: return false;
+            }
+            i++;
+        }
+        break;
+    }
+    *formatLen = i;
+    return true;
+}

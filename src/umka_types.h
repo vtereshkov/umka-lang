@@ -126,6 +126,16 @@ typedef struct
 } Types;
 
 
+typedef enum
+{
+    FORMAT_SIZE_SHORT_SHORT,
+    FORMAT_SIZE_SHORT,
+    FORMAT_SIZE_NORMAL,
+    FORMAT_SIZE_LONG,
+    FORMAT_SIZE_LONG_LONG
+} FormatStringTypeSize;
+
+
 void typeInit(Types *types, Storage *storage, Error *error);
 
 Type *typeAdd       (Types *types, const Blocks *blocks, TypeKind kind);
@@ -236,6 +246,35 @@ void typeAssertCompatibleParam  (const Types *types, const Type *left, const Typ
 void typeAssertCompatibleBuiltin(const Types *types, const Type *type, /*BuiltinFunc*/ int builtin, bool condition);
 
 
+static inline bool typeCompatiblePrintf(TypeKind expectedTypeKind, TypeKind typeKind)
+{
+    if (typeKind == TYPE_VOID)    
+        return false;
+
+    // Skip detailed checks if the expected type is not known at compile time
+    if (expectedTypeKind == TYPE_NONE)
+        return true;
+
+    return  (typeKind == expectedTypeKind) ||
+            (typeKindIntegerOrEnum(typeKind) && typeKindIntegerOrEnum(expectedTypeKind)) ||
+            (typeKindReal(typeKind) && typeKindReal(expectedTypeKind)) ||
+            (expectedTypeKind == TYPE_INTERFACE); 
+}
+
+
+static inline bool typeCompatibleScanf(TypeKind expectedBaseTypeKind, TypeKind baseTypeKind)
+{
+    if (!typeKindOrdinal(baseTypeKind) && !typeKindReal(baseTypeKind) && baseTypeKind != TYPE_STR)
+        return false;
+
+    // Skip detailed checks if the expected type is not known at compile time
+    if (expectedBaseTypeKind == TYPE_NONE)
+        return true;
+    
+    return baseTypeKind == expectedBaseTypeKind;
+}
+
+
 static inline bool typeCompatibleRcv(const Type *left, const Type *right)
 {
     return left->kind  == TYPE_PTR && right->kind == TYPE_PTR && left->base->typeIdent == right->base->typeIdent;
@@ -342,6 +381,8 @@ const ParamAndLocalVarLayout *typeMakeParamAndLocalVarLayout(const Types *types,
 
 const char *typeKindSpelling(TypeKind kind);
 char *typeSpelling          (const Type *type, char *buf);
+
+bool typeFormatStringValid(const char *format, int *formatLen, int *typeLetterPos, TypeKind *typeKind, FormatStringTypeSize *size);
 
 
 static inline const Type *typeMapKey(const Type *mapType)
