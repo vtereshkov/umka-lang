@@ -17,7 +17,7 @@ clang -shared -fPIC *.o -o libumka.dylib -lm -ldl
 libtool -static -o libumka_static_darwin.a *.o
 
 clang $clangflags -c umka.c
-clang umka.o -o umka -L$PWD -lm -lumka -Wl,-rpath,'$ORIGIN'
+clang umka.o -o umka -L$PWD -lm -lumka_static_darwin -Wl,-rpath,'$ORIGIN'
 
 rm -f *.o
 
