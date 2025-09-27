@@ -158,6 +158,9 @@ Umka says Meow Purr Meow
 
 >>> Strings
 
+
+Test 1
+
 Left trimming
 "Hello World"
 "Hello World"
@@ -179,6 +182,21 @@ Left & right trimming
 "Hello World"
 ""
 ""
+
+Test 2
+
+aaa
+    bb
+c
+
+    //
+    /*
+    "\\\"
+    
+[97 97 97 10 32 32 32 32 98 98 10 99 10 10 32 32 32 32 47 47 10 32 32 32 32 47 42 10 32 32 32 32 34 92 92 92 34 10 32 32 32 32]
+
+Hello
+World\n
 
 
 >>> Fibers

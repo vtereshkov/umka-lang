@@ -805,10 +805,9 @@ static void lexCharLiteral(Lexer *lex)
 }
 
 
-static int lexStrLiteralAndGetSize(Lexer *lex)
+static int lexSingleLineStrLiteralAndGetSize(Lexer *lex)
 {
     lex->tok.kind = TOK_STRLITERAL;
-
     int size = 0;
     bool escaped = false;
     char ch = lexEscChar(lex, &escaped);
@@ -816,11 +815,7 @@ static int lexStrLiteralAndGetSize(Lexer *lex)
     while (ch != '\"' || escaped)
     {
         if (ch == 0 || (ch == '\n' && !escaped))
-        {
             lex->error->handler(lex->error->context, "Unterminated string");
-            lex->tok.kind = TOK_NONE;
-            return 0;
-        }
 
         if (lex->tok.strVal)
             lex->tok.strVal[size] = ch;
@@ -834,6 +829,45 @@ static int lexStrLiteralAndGetSize(Lexer *lex)
     lexChar(lex);
 
     return size;
+}
+
+
+static int lexMultiLineStrLiteralAndGetSize(Lexer *lex)
+{
+    lex->tok.kind = TOK_STRLITERAL;
+    int size = 0;
+    char ch = lexChar(lex);
+
+    while (ch != '`')
+    {
+        if (ch == 0)
+            lex->error->handler(lex->error->context, "Unterminated string");
+
+        if (ch != '\r')
+        {
+            if (lex->tok.strVal)
+                lex->tok.strVal[size] = ch;
+            size++;            
+        }
+
+        ch = lexChar(lex);
+    }
+
+    if (lex->tok.strVal)
+        lex->tok.strVal[size] = 0;
+    size++;
+    lexChar(lex);
+
+    return size;
+}
+
+
+static int lexStrLiteralAndGetSize(Lexer *lex)
+{
+    if (lex->buf[lex->bufPos] == '\"')
+        return lexSingleLineStrLiteralAndGetSize(lex);
+    else
+        return lexMultiLineStrLiteralAndGetSize(lex);
 }
 
 
@@ -856,14 +890,14 @@ static void lexNextWithEOLN(Lexer *lex)
     lex->tok.line = lex->debug->line = lex->line;
     lex->tok.pos = lex->pos;
 
-    char ch = lex->buf[lex->bufPos];
+    const char ch = lex->buf[lex->bufPos];
     if ((ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || ch == '_')
         lexKeywordOrIdent(lex);
     else if ((ch >= '0' && ch <= '9') || ch == '.')
         lexNumber(lex);
     else if (ch == '\'')
         lexCharLiteral(lex);
-    else if (ch == '"')
+    else if (ch == '"' || ch == '`')
         lexStrLiteral(lex);
 
     if (lex->tok.kind == TOK_NONE)

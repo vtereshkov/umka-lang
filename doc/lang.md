@@ -70,7 +70,7 @@ Examples:
 
 ### Character literals
 
-A character literal is an ASCII character enclosed in single quotes. Character literals can be specified "as is" or by an escape sequence. Escape sequence prefixes have the same meaning as in C or other languages.
+A character literal is an ASCII character enclosed in single quotes `''`. The character can be specified "as is" or by an escape sequence. Escape sequence prefixes have the same meaning as in C or other languages.
 
 Syntax:
 
@@ -91,20 +91,30 @@ Examples:
 
 ### String literals
 
-A string literal is a sequence of UTF-8 characters enclosed in double quotes. Characters can be specified "as is" or by an escape sequence.
+A string literal is a sequence of UTF-8 characters. 
+
+A single-line string literal is enclosed in double quotes `""`. A character can be specified "as is" or by an escape sequence. A new line character can only be specified by the escape sequence `"\n"`.
+
+A multi-line string literal is enclosed in back quotes `` ` ` ``. Any character is treated "as is", escape sequences and carriage return characters are ignored.
 
 Syntax:
 
 ```
-stringLiteral = """ {char | escSeq} """.
+stringLiteral     = singleLineLiteral | multiLineLiteral.
+singleLineLiteral = """ {char | escSeq} """.
+multiLineLiteral  = "`" {char} "`".
 ```
 
 Examples:
 
 ```
-"A long string"
+"A single-line string"
 "Hello, World\n"
 ""
+`A
+multi-
+line
+    string`
 ```
 
 ### Operators and punctuation
@@ -1594,7 +1604,9 @@ decNumber           = digit {["_"] digit}.
 hexNumber           = "0" ("X | "x") ["_"] hexDigit {["_"] hexDigit}.
 realNumber          = decNumber ["." decNumber] [("E" | "e") decNumber].
 charLiteral         = "'" (char | escSeq) "'".
-stringLiteral       = """ {char | escSeq} """.
+stringLiteral       = singleLineLiteral | multiLineLiteral.
+singleLineLiteral   = """ {char | escSeq} """.
+multiLineLiteral    = "`" {char} "`".
 escSeq              = "\" ("0" | "a" | "b" | "e" | "f" | "n" | "r" | "t" | "v" | 
                            "x" hexNumber).
 letter              = "A".."Z" | "a".."z".

@@ -1,6 +1,8 @@
 import "std.um"
 
-fn test*() {
+fn test1() {
+	printf("\nTest 1\n\n")
+
 	printf("Left trimming\n")
 
 	printf("%v\n", std::ltrim("Hello World"))
@@ -27,6 +29,31 @@ fn test*() {
 	printf("%v\n", std::trim(" \tHello World   "))
 	printf("%v\n", std::trim("    "))
 	printf("%v\n", std::trim(""))
+}
+
+fn test2() {
+	printf("\nTest 2\n\n")
+
+    s := `aaa
+    bb
+c
+
+    //
+    /*
+    "\\\"
+    `
+    printf("%s\n", s)
+    printf("%v\n", []uint8(s))
+
+    printf(`
+Hello
+World\n
+`)    
+}
+
+fn test*() {
+	test1()
+	test2()
 }
 
 fn main() {
