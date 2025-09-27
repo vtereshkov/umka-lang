@@ -473,6 +473,10 @@ contexts:
       scope: punctuation.definition.string.begin.umka
       push: double_quoted_string
 
+    - match: '`'
+      scope: punctuation.definition.string.begin.umka
+      push: back_quoted_string      
+
     # Character literals
     - match: ''''
       scope: punctuation.definition.string.begin.umka
@@ -497,6 +501,12 @@ contexts:
     - match: '(\\x[A-Fa-f0-9][A-Fa-f0-9]|\\.)'
       scope: constant.character.escape.umka
     - match: '"'
+      scope: punctuation.definition.string.end.umka
+      pop: true
+
+  back_quoted_string:
+    - meta_scope: string.quoted.back.umka
+    - match: '`'
       scope: punctuation.definition.string.end.umka
       pop: true
 
