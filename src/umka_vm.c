@@ -207,6 +207,7 @@ static FORCE_INLINE Slot *doGetOnFreeResult(HeapPages *pages)
 static void pageInit(HeapPages *pages, Fiber *fiber, Error *error)
 {
     pages->first = NULL;
+    pages->lastAccessed = NULL;
     pages->lowest = pages->highest = NULL;
     pages->freeId = 1;
     pages->totalSize = 0;
@@ -285,7 +286,9 @@ static FORCE_INLINE HeapPage *pageAdd(HeapPages *pages, int numChunks, int chunk
         pages->lowest = page->data;
 
     if (!pages->highest || pages->highest < page->end)
-        pages->highest = page->end;        
+        pages->highest = page->end;
+
+    pages->lastAccessed = page;
 
 #ifdef UMKA_REF_CNT_DEBUG
     fprintf(stderr, "Add page at %p\n", page->data);
@@ -312,6 +315,9 @@ static FORCE_INLINE void pageRemove(HeapPages *pages, HeapPage *page)
     if (page->next)
         page->next->prev = page->prev;
 
+    if (page == pages->lastAccessed)
+        pages->lastAccessed = pages->first;        
+
     free(page);
 }
 
@@ -323,25 +329,39 @@ static FORCE_INLINE HeapChunk *pageGetChunk(const HeapPage *page, void *ptr)
 }
 
 
+static FORCE_INLINE bool pageContainsPtr(HeapPages *pages, const HeapPage *page, void *ptr)
+{
+    if (ptr >= (void *)page->data && ptr < (void *)page->end)
+    {
+        const HeapChunk *chunk = pageGetChunk(page, ptr);
+        if (UNLIKELY(chunk->refCnt <= 0))
+            pages->error->runtimeHandler(pages->error->context, ERR_RUNTIME, "Dangling pointer at %p", ptr);
+        return true;
+    }
+    return false;
+}
+
+
 static FORCE_INLINE HeapPage *pageFind(HeapPages *pages, void *ptr)
 {
     if (pages->lowest && ptr < (void *)pages->lowest)
         return NULL;
 
-    if (pages->highest && ptr >= (void *)pages->highest)
+    if (UNLIKELY(pages->highest && ptr >= (void *)pages->highest))
         return NULL;
+
+    if (pages->lastAccessed && pageContainsPtr(pages, pages->lastAccessed, ptr))
+        return pages->lastAccessed;
         
     for (HeapPage *page = pages->first; page; page = page->next)
     {
-        if (ptr >= (void *)page->data && ptr < (void *)page->end)
+        if (page != pages->lastAccessed && pageContainsPtr(pages, page, ptr))
         {
-            const HeapChunk *chunk = pageGetChunk(page, ptr);
-            if (UNLIKELY(chunk->refCnt <= 0))
-                pages->error->runtimeHandler(pages->error->context, ERR_RUNTIME, "Dangling pointer at %p", ptr);
-
+            pages->lastAccessed = page;
             return page;
         }
     }
+
     return NULL;
 }
 
@@ -356,7 +376,10 @@ static FORCE_INLINE HeapPage *pageFindForAlloc(HeapPages *pages, int chunkSize)
         if (page->numOccupiedChunks < page->numChunks)
         {
             if (page->chunkSize == chunkSize)
+            {
+                pages->lastAccessed = page;
                 return page;
+            }
 
             if (page->chunkSize > chunkSize && page->chunkSize < bestSize)
             {
@@ -365,6 +388,9 @@ static FORCE_INLINE HeapPage *pageFindForAlloc(HeapPages *pages, int chunkSize)
             }
         }
     }
+
+    if (bestPage)
+        pages->lastAccessed = bestPage;
     return bestPage;
 }
 
