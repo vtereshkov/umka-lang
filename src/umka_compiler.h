@@ -12,7 +12,7 @@
 #include "umka_api.h"
 
 
-typedef struct
+typedef struct tagUmka
 {
     // User API - must be the first field
     UmkaAPI     api;
@@ -56,18 +56,18 @@ typedef struct
     // Original codepages (Windows only)
     unsigned int originalInputCodepage, originalOutputCodepage;
 
-} Compiler;
+} Umka;
 
 
-void compilerInit               (Compiler *comp, const char *fileName, const char *sourceString, int stackSize, int argc, char **argv, bool fileSystemEnabled, bool implLibsEnabled);
-void compilerFree               (Compiler *comp);
-void compilerCompile            (Compiler *comp);
-void compilerRun                (Compiler *comp);
-void compilerCall               (Compiler *comp, FuncContext *fn);
-char *compilerAsm               (Compiler *comp);
-bool compilerAddModule          (Compiler *comp, const char *fileName, const char *sourceString);
-bool compilerAddFunc            (Compiler *comp, const char *name, ExternFunc func);
-bool compilerGetFunc            (Compiler *comp, const char *moduleName, const char *funcName, FuncContext *fn);
-void compilerMakeFuncContext    (Compiler *comp, const Type *fnType, int entryOffset, FuncContext *fn);
+void compilerInit               (Umka *umka, const char *fileName, const char *sourceString, int stackSize, int argc, char **argv, bool fileSystemEnabled, bool implLibsEnabled);
+void compilerFree               (Umka *umka);
+void compilerCompile            (Umka *umka);
+void compilerRun                (Umka *umka);
+void compilerCall               (Umka *umka, UmkaFuncContext *fn);
+char *compilerAsm               (Umka *umka);
+bool compilerAddModule          (Umka *umka, const char *fileName, const char *sourceString);
+bool compilerAddFunc            (Umka *umka, const char *name, UmkaExternFunc func);
+bool compilerGetFunc            (Umka *umka, const char *moduleName, const char *funcName, UmkaFuncContext *fn);
+void compilerMakeFuncContext    (Umka *umka, const Type *fnType, int entryOffset, UmkaFuncContext *fn);
 
 #endif // UMKA_COMPILER_H_INCLUDED

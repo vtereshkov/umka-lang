@@ -6,6 +6,8 @@
 #include <stdarg.h>
 #include <setjmp.h>
 
+#include "umka_api.h"
+
 
 enum
 {
@@ -30,6 +32,9 @@ enum
 };
 
 
+typedef struct tagUmka Umka;
+
+
 typedef struct
 {
     int64_t len, capacity;
@@ -39,48 +44,21 @@ typedef struct
 typedef StrDimensions DynArrayDimensions;
 
 
-typedef struct
-{
-    // Must have 8 byte alignment
-    const struct tagType *type;
-    int64_t itemSize;           // Duplicates information contained in type, but useful for better performance
-    void *data;                 // Allocated chunk should start at (char *)data - sizeof(DynArrayDimensions)
-} DynArray;
+typedef UmkaDynArray(void) DynArray;    // The C equivalent of the Umka dynamic array type. Must have 8 byte alignment. Allocated chunk should start at (char *)data - sizeof(DynArrayDimensions)
+typedef UmkaAny Interface;              // The C equivalent of the Umka interface type. Methods are omitted - do not use sizeof() for non-empty interfaces
+typedef UmkaClosure Closure;            // The C equivalent of the Umka closure type
 
 
-typedef struct
-{
-    // The C equivalent of the Umka interface type
-    void *self;
-    const struct tagType *selfType;
-    // Methods are omitted - do not use sizeof() for non-empty interfaces
-} Interface;
-
-
-typedef struct
-{
-    // The C equivalent of the Umka closure type
-    int64_t entryOffset;
-    Interface upvalue;      // No methods - equivalent to "any"
-} Closure;
-
-
-typedef struct tagMapNode
-{
-    // The C equivalent of the Umka map base type
-    int64_t len;            // Non-zero for the root node only
-    int64_t priority;       // Random priority for rebalancing
+typedef struct tagMapNode               // The C equivalent of the Umka map base type
+{   
+    int64_t len;                        // Non-zero for the root node only
+    int64_t priority;                   // Random priority for rebalancing
     void *key, *data;
     struct tagMapNode *left, *right;
 } MapNode;
 
 
-typedef struct
-{
-    // Must have 8 byte alignment
-    const struct tagType *type;
-    MapNode *root;
-} Map;
+typedef UmkaMap Map;                    // The C equivalent of the Umka map type. Must have 8 byte alignment
 
 
 typedef struct
@@ -91,28 +69,16 @@ typedef struct
 } DebugInfo;
 
 
-typedef void (*WarningCallback)(void * /*UmkaError*/ warning);
-
-
-typedef struct      // Must be identical to UmkaError
-{
-    const char *fileName;
-    const char *fnName;
-    int line, pos, code;
-    const char *msg;
-} ErrorReport;
-
-
 typedef struct
 {
-    void (*handler)(void *context, const char *format, ...);
-    void (*runtimeHandler)(void *context, int code, const char *format, ...);
-    void (*warningHandler)(void *context, const DebugInfo *debug, const char *format, ...);
-    WarningCallback warningCallback;
-    void *context;
+    void (*handler)(Umka *umka, const char *format, ...);
+    void (*runtimeHandler)(Umka *umka, int code, const char *format, ...);
+    void (*warningHandler)(Umka *umka, const DebugInfo *debug, const char *format, ...);
+    UmkaWarningCallback warningCallback;
+    Umka *context;
     jmp_buf jumper;
     int jumperNesting;
-    ErrorReport report;
+    UmkaError report;
 } Error;
 
 
@@ -214,7 +180,7 @@ typedef struct
 } ParamAndLocalVarLayout;
 
 
-void errorReportInit(ErrorReport *report, Storage *storage, const char *fileName, const char *fnName, int line, int pos, int code, const char *format, va_list args);
+void errorReportInit(UmkaError *report, Storage *storage, const char *fileName, const char *fnName, int line, int pos, int code, const char *format, va_list args);
 
 void  storageInit               (Storage *storage, Error *error);
 void  storageFree               (Storage *storage);

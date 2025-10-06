@@ -86,71 +86,7 @@ typedef enum
 } Opcode;
 
 
-typedef enum
-{
-    // I/O
-    BUILTIN_PRINTF,
-    BUILTIN_FPRINTF,
-    BUILTIN_SPRINTF,
-    BUILTIN_SCANF,
-    BUILTIN_FSCANF,
-    BUILTIN_SSCANF,
-
-    // Math
-    BUILTIN_REAL,           // Integer to real at stack top (right operand)
-    BUILTIN_REAL_LHS,       // Integer to real at stack top + 1 (left operand) - implicit calls only
-    BUILTIN_ROUND,
-    BUILTIN_TRUNC,
-    BUILTIN_CEIL,
-    BUILTIN_FLOOR,
-    BUILTIN_ABS,
-    BUILTIN_FABS,
-    BUILTIN_SQRT,
-    BUILTIN_SIN,
-    BUILTIN_COS,
-    BUILTIN_ATAN,
-    BUILTIN_ATAN2,
-    BUILTIN_EXP,
-    BUILTIN_LOG,
-
-    // Memory
-    BUILTIN_NEW,
-    BUILTIN_MAKE,
-    BUILTIN_MAKEFROMARR,    // Array to dynamic array - implicit calls only
-    BUILTIN_MAKEFROMSTR,    // String to dynamic array - implicit calls only
-    BUILTIN_MAKETOARR,      // Dynamic array to array - implicit calls only
-    BUILTIN_MAKETOSTR,      // Character or dynamic array to string - implicit calls only
-    BUILTIN_COPY,
-    BUILTIN_APPEND,
-    BUILTIN_INSERT,
-    BUILTIN_DELETE,
-    BUILTIN_SLICE,
-    BUILTIN_SORT,
-    BUILTIN_SORTFAST,
-    BUILTIN_LEN,
-    BUILTIN_CAP,
-    BUILTIN_SIZEOF,
-    BUILTIN_SIZEOFSELF,
-    BUILTIN_SELFPTR,
-    BUILTIN_SELFHASPTR,
-    BUILTIN_SELFTYPEEQ,
-    BUILTIN_TYPEPTR,
-    BUILTIN_VALID,
-
-    // Maps
-    BUILTIN_VALIDKEY,
-    BUILTIN_KEYS,
-
-    // Fibers
-    BUILTIN_RESUME,
-
-    // Misc
-    BUILTIN_MEMUSAGE,
-    BUILTIN_EXIT
-} BuiltinFunc;
-
-
-typedef union
+typedef union               // Extended version of UmkaStackSlot
 {
     int64_t intVal;         // For all ordinal types except uint
     uint64_t uintVal;
@@ -159,6 +95,7 @@ typedef union
     uint64_t weakPtrVal;    // For global pointers, stores the pointer. For heap pointers, stores the heap flag (bit 63), page ID (bits 32...62), offset within page (bits 0..31)
     double realVal;         // For all real types
     BuiltinFunc builtinVal;
+    UmkaStackSlot apiSlot;  // For compatibility with C API
 } Slot;
 
 
@@ -171,17 +108,6 @@ typedef struct
     const Type *type;
     Slot operand;
 } Instruction;
-
-
-typedef struct
-{
-    int64_t entryOffset;
-    Slot *params;
-    Slot *result;
-} FuncContext;
-
-
-typedef void (*ExternFunc)(Slot *params, Slot *result);
 
 
 typedef struct tagHeapPage
@@ -211,8 +137,8 @@ typedef struct
 {
     int refCnt;
     int size;
-    const struct tagType *type; // Optional type for garbage collection
-    ExternFunc onFree;          // Optional callback called when ref count reaches zero
+    const Type *type;           // Optional type for garbage collection
+    UmkaExternFunc onFree;      // Optional callback called when ref count reaches zero
     int64_t ip;                 // Optional instruction pointer at which the chunk has been allocated
     bool isStack;
     bool reserved[7];
@@ -234,18 +160,6 @@ typedef struct
     int top, capacity;
     Storage *storage;
 } RefCntChangeCandidates;
-
-
-typedef enum
-{
-    HOOK_CALL,
-    HOOK_RETURN,
-
-    NUM_HOOKS
-} HookEvent;
-
-
-typedef void (*HookFunc)(const char *fileName, const char *funcName, int line);
 
 
 typedef struct tagFiber
@@ -270,23 +184,23 @@ typedef struct tagVM
     Fiber *fiber, *mainFiber;
     HeapPages pages;
     RefCntChangeCandidates refCntChangeCandidates;
-    HookFunc hooks[NUM_HOOKS];
+    UmkaHookFunc hooks[UMKA_NUM_HOOKS];
     bool terminatedNormally;
     Storage *storage;
     Error *error;
 } VM;
 
 
-void vmInit                     (VM *vm, Storage *storage, int stackSize /* slots */, bool fileSystemEnabled, Error *error);
+void vmInit                     (VM *vm, Storage *storage, int stackSize, bool fileSystemEnabled, Error *error);
 void vmFree                     (VM *vm);
 void vmReset                    (VM *vm, const Instruction *code, const DebugInfo *debugPerInstr);
-void vmRun                      (VM *vm, FuncContext *fn);
+void vmRun                      (VM *vm, UmkaFuncContext *fn);
 bool vmAlive                    (VM *vm);
 void vmKill                     (VM *vm);
 int vmAsm                       (int ip, const Instruction *code, const DebugInfo *debugPerInstr, char *buf, int size);
 bool vmUnwindCallStack          (VM *vm, Slot **base, int *ip);
-void vmSetHook                  (VM *vm, HookEvent event, HookFunc hook);
-void *vmAllocData               (VM *vm, int size, ExternFunc onFree);
+void vmSetHook                  (VM *vm, UmkaHookEvent event, UmkaHookFunc hook);
+void *vmAllocData               (VM *vm, int size, UmkaExternFunc onFree);
 void vmIncRef                   (VM *vm, void *ptr, const Type *type);
 void vmDecRef                   (VM *vm, void *ptr, const Type *type);
 void *vmGetMapNodeData          (VM *vm, Map *map, Slot key);

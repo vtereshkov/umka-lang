@@ -20,7 +20,7 @@
 
 // Errors
 
-void errorReportInit(ErrorReport *report, Storage *storage, const char *fileName, const char *fnName, int line, int pos, int code, const char *format, va_list args)
+void errorReportInit(UmkaError *report, Storage *storage, const char *fileName, const char *fnName, int line, int pos, int code, const char *format, va_list args)
 {
     char *reportFileName = storageAdd(storage, strlen(fileName) + 1);
     strcpy(reportFileName, fileName);

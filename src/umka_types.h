@@ -41,6 +41,70 @@ typedef enum
 } TypeKind;
 
 
+typedef enum
+{
+    // I/O
+    BUILTIN_PRINTF,
+    BUILTIN_FPRINTF,
+    BUILTIN_SPRINTF,
+    BUILTIN_SCANF,
+    BUILTIN_FSCANF,
+    BUILTIN_SSCANF,
+
+    // Math
+    BUILTIN_REAL,           // Integer to real at stack top (right operand)
+    BUILTIN_REAL_LHS,       // Integer to real at stack top + 1 (left operand) - implicit calls only
+    BUILTIN_ROUND,
+    BUILTIN_TRUNC,
+    BUILTIN_CEIL,
+    BUILTIN_FLOOR,
+    BUILTIN_ABS,
+    BUILTIN_FABS,
+    BUILTIN_SQRT,
+    BUILTIN_SIN,
+    BUILTIN_COS,
+    BUILTIN_ATAN,
+    BUILTIN_ATAN2,
+    BUILTIN_EXP,
+    BUILTIN_LOG,
+
+    // Memory
+    BUILTIN_NEW,
+    BUILTIN_MAKE,
+    BUILTIN_MAKEFROMARR,    // Array to dynamic array - implicit calls only
+    BUILTIN_MAKEFROMSTR,    // String to dynamic array - implicit calls only
+    BUILTIN_MAKETOARR,      // Dynamic array to array - implicit calls only
+    BUILTIN_MAKETOSTR,      // Character or dynamic array to string - implicit calls only
+    BUILTIN_COPY,
+    BUILTIN_APPEND,
+    BUILTIN_INSERT,
+    BUILTIN_DELETE,
+    BUILTIN_SLICE,
+    BUILTIN_SORT,
+    BUILTIN_SORTFAST,
+    BUILTIN_LEN,
+    BUILTIN_CAP,
+    BUILTIN_SIZEOF,
+    BUILTIN_SIZEOFSELF,
+    BUILTIN_SELFPTR,
+    BUILTIN_SELFHASPTR,
+    BUILTIN_SELFTYPEEQ,
+    BUILTIN_TYPEPTR,
+    BUILTIN_VALID,
+
+    // Maps
+    BUILTIN_VALIDKEY,
+    BUILTIN_KEYS,
+
+    // Fibers
+    BUILTIN_RESUME,
+
+    // Misc
+    BUILTIN_MEMUSAGE,
+    BUILTIN_EXIT
+} BuiltinFunc;
+
+
 typedef union
 {
     int64_t intVal;
@@ -243,8 +307,8 @@ bool typeSameExceptMaybeIdent       (const Type *left, const Type *right);
 bool typeCompatible                 (const Type *left, const Type *right);
 void typeAssertCompatible           (const Types *types, const Type *left, const Type *right);
 void typeAssertCompatibleParam      (const Types *types, const Type *left, const Type *right, const Type *fnType, int paramIndex);
-void typeAssertCompatibleBuiltin    (const Types *types, const Type *type, /*BuiltinFunc*/ int builtin, bool compatible);
-void typeAssertCompatibleIOBuiltin  (const Types *types, TypeKind expectedTypeKind, const Type *type, /*BuiltinFunc*/ int builtin, bool allowVoid);
+void typeAssertCompatibleBuiltin    (const Types *types, const Type *type, BuiltinFunc builtin, bool compatible);
+void typeAssertCompatibleIOBuiltin  (const Types *types, TypeKind expectedTypeKind, const Type *type, BuiltinFunc builtin, bool allowVoid);
 
 
 static inline bool typeCompatiblePrintf(TypeKind expectedTypeKind, TypeKind typeKind, bool allowVoid)

@@ -248,7 +248,7 @@ void rtlmktime(UmkaStackSlot *params, UmkaStackSlot *result)
 void rtlgetenv(UmkaStackSlot *params, UmkaStackSlot *result)
 {
     const char *name = (const char *)umkaGetParam(params, 0)->ptrVal;
-    void *umka = umkaGetInstance(result);
+    Umka *umka = umkaGetInstance(result);
 
     const char *env = getenv(name);
     umkaGetResult(params, result)->ptrVal = umkaMakeStr(umka, env);
@@ -279,7 +279,7 @@ void rtltrace(UmkaStackSlot *params, UmkaStackSlot *result)
     const int depth = umkaGetParam(params, 0)->intVal;
     RTLErrPos *pos = umkaGetParam(params, 1)->ptrVal;
 
-    void *umka = umkaGetInstance(result);
+    Umka *umka = umkaGetInstance(result);
 
     char fileName[DEFAULT_STR_LEN + 1], fnName[DEFAULT_STR_LEN + 1];
     int line;
