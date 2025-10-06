@@ -174,7 +174,7 @@ Parameters:
 Returned value: `true` if the function was found and its context filled.
 
 ```
-UMKA_API void umkaMakeFuncContext(Umka *umka, UmkaType *closureType, int entryOffset, 
+UMKA_API void umkaMakeFuncContext(Umka *umka, const UmkaType *closureType, int entryOffset, 
                                   UmkaFuncContext *fn);
 ```
 Fills in the function context required by `umkaCall`, if it could not be filled in by `umkaGetFunc`.
@@ -238,7 +238,7 @@ Returned value: Pointer to the stack slot allocated for storing the returned val
 * Before calling an Umka function from C, the user must allocate a memory area needed for storing the actual returned value and put the area pointer to the stack slot returned by `umkaGetResult`
 
 ```
-static inline void *umkaGetInstance(UmkaStackSlot *result);
+static inline Umka *umkaGetInstance(UmkaStackSlot *result);
 ```
 Returns the interpreter instance handle. Must not be called after the first call to `umkaGetResult`.
 
@@ -277,6 +277,8 @@ typedef enum
 {
     UMKA_HOOK_CALL,
     UMKA_HOOK_RETURN,
+
+    UMKA_NUM_HOOKS
 } UmkaHookEvent;
 ```
 Umka debug hook event kind. A `UMKA_HOOK_CALL` hook is called after calling any Umka function, `UMKA_HOOK_RETURN` before returning from any Umka function.
@@ -374,7 +376,7 @@ Returned value: String buffer pointer. It stays valid until `umkaFree` is called
 ```
 #define UmkaDynArray(T) struct \
 { \
-    void *internal; \
+    const UmkaType *type; \
     int64_t itemSize; \
     T *data; \
 }
@@ -384,8 +386,8 @@ Umka dynamic array containing items of type `T`. Can be initialized by calling `
 ```
 typedef struct
 {
-    void *internal1;
-    void *internal2;
+    const UmkaType *type;
+    struct tagMapNode *root;
 } UmkaMap;
 ```
 Umka map. Can be accessed by calling `umkaGetMapItem`.
@@ -393,8 +395,17 @@ Umka map. Can be accessed by calling `umkaGetMapItem`.
 ```
 typedef struct
 {
-    void *data;
-    UmkaType *type;
+    // Different field names are allowed for backward compatibility
+    union
+    {
+        void *data;
+        void *self;
+    };
+    union
+    {
+        const UmkaType *type;
+        const UmkaType *selfType;        
+    };
 } UmkaAny;
 ```
 Umka `any` interface.
@@ -480,14 +491,14 @@ Parameters:
 Returned value: String length, in bytes, not including the null character.
 
 ```
-UMKA_API void umkaMakeDynArray(Umka *umka, void *array, UmkaType *type, int len);
+UMKA_API void umkaMakeDynArray(Umka *umka, void *array, const UmkaType *type, int len);
 ```
 Creates a dynamic array. Equivalent to `array = make(type, len)` in Umka.
 
 Parameters:
 
 * `umka`: Interpreter instance handle
-* `array`: Pointer to the dynamic array represented as `UmkaDynArray(ItemType)`
+* `array`: Pointer to the dynamic array, actually of type `UmkaDynArray(ItemType)`
 * `type`: Dynamic array type that can be obtained by calling `typeptr([]ItemType)` in Umka
 * `len`: Dynamic array length 
 
@@ -498,7 +509,7 @@ Returns the length of a dynamic array. Equivalent to `len(array)` in Umka.
 
 Parameters:
 
-* `array`: Pointer to the dynamic array represented as `UmkaDynArray(ItemType)`
+* `array`: Pointer to the dynamic array, actually of type `UmkaDynArray(ItemType)`
 
 Returned value: Dynamic array length
 
@@ -509,7 +520,7 @@ Using the Umka API functions generally requires linking against the Umka interpr
 ### Types
 
 ```
-typedef void *(*UmkaAlloc) (void);
+typedef Umka *(*UmkaAlloc) (void);
 // ... all other API function pointer types
 
 typedef struct
