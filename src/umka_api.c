@@ -11,254 +11,229 @@
 #define UMKA_VERSION    "1.5.5"
 
 
-static void compileWarning(void *context, const DebugInfo *debug, const char *format, ...)
+static void compileWarning(Umka *umka, const DebugInfo *debug, const char *format, ...)
 {
     va_list args;
     va_start(args, format);
 
-    Compiler *comp = context;
-
-    ErrorReport report = {0};
-    errorReportInit(&report, &comp->storage,
-                    debug ? debug->fileName : comp->lex.fileName,
-                    debug ? debug->fnName : comp->debug.fnName,
-                    debug ? debug->line : comp->lex.tok.line,
-                    debug ? 1 : comp->lex.tok.pos,
+    UmkaError report = {0};
+    errorReportInit(&report, &umka->storage,
+                    debug ? debug->fileName : umka->lex.fileName,
+                    debug ? debug->fnName : umka->debug.fnName,
+                    debug ? debug->line : umka->lex.tok.line,
+                    debug ? 1 : umka->lex.tok.pos,
                     0,
                     format, args);
 
-    if (comp->error.warningCallback)
-        ((UmkaWarningCallback)comp->error.warningCallback)((UmkaError *)&report);
+    if (umka->error.warningCallback)
+        ((UmkaWarningCallback)umka->error.warningCallback)(&report);
 
     va_end(args);
 }
 
 
-static void compileError(void *context, const char *format, ...)
+static void compileError(Umka *umka, const char *format, ...)
 {
     va_list args;
     va_start(args, format);
 
-    Compiler *comp = context;
-    errorReportInit(&comp->error.report, &comp->storage, comp->lex.fileName, comp->debug.fnName, comp->lex.tok.line, comp->lex.tok.pos, 1, format, args);
+    errorReportInit(&umka->error.report, &umka->storage, umka->lex.fileName, umka->debug.fnName, umka->lex.tok.line, umka->lex.tok.pos, 1, format, args);
 
-    vmKill(&comp->vm);
+    vmKill(&umka->vm);
 
     va_end(args);
-    longjmp(comp->error.jumper, 1);
+    longjmp(umka->error.jumper, 1);
 }
 
 
-static void runtimeError(void *context, int code, const char *format, ...)
+static void runtimeError(Umka *umka, int code, const char *format, ...)
 {
     va_list args;
     va_start(args, format);
 
-    Compiler *comp = context;
-    const DebugInfo *debug = &comp->vm.fiber->debugPerInstr[comp->vm.fiber->ip];
-    errorReportInit(&comp->error.report, &comp->storage, debug->fileName, debug->fnName, debug->line, 1, code, format, args);
+    const DebugInfo *debug = &umka->vm.fiber->debugPerInstr[umka->vm.fiber->ip];
+    errorReportInit(&umka->error.report, &umka->storage, debug->fileName, debug->fnName, debug->line, 1, code, format, args);
 
-    vmKill(&comp->vm);
+    vmKill(&umka->vm);
 
     va_end(args);
-    longjmp(comp->error.jumper, 1);
+    longjmp(umka->error.jumper, 1);
 }
 
 
 // API functions
 
-UMKA_API void *umkaAlloc(void)
+UMKA_API Umka *umkaAlloc(void)
 {
-    return malloc(sizeof(Compiler));
+    return malloc(sizeof(Umka));
 }
 
 
-UMKA_API bool umkaInit(void *umka, const char *fileName, const char *sourceString, int stackSize, void *reserved, int argc, char **argv, bool fileSystemEnabled, bool implLibsEnabled, UmkaWarningCallback warningCallback)
+UMKA_API bool umkaInit(Umka *umka, const char *fileName, const char *sourceString, int stackSize, void *reserved, int argc, char **argv, bool fileSystemEnabled, bool implLibsEnabled, UmkaWarningCallback warningCallback)
 {
-    Compiler *comp = umka;
-    memset(comp, 0, sizeof(Compiler));
+    memset(umka, 0, sizeof(Umka));
 
     // First set error handlers
-    comp->error.handler = compileError;
-    comp->error.runtimeHandler = runtimeError;
-    comp->error.warningHandler = compileWarning;
-    comp->error.warningCallback = (WarningCallback)warningCallback;
-    comp->error.context = comp;
+    umka->error.handler = compileError;
+    umka->error.runtimeHandler = runtimeError;
+    umka->error.warningHandler = compileWarning;
+    umka->error.warningCallback = warningCallback;
+    umka->error.context = umka;
 
-    if (setjmp(comp->error.jumper) == 0)
+    if (setjmp(umka->error.jumper) == 0)
     {
-        compilerInit(comp, fileName, sourceString, stackSize, argc, argv, fileSystemEnabled, implLibsEnabled);
+        compilerInit(umka, fileName, sourceString, stackSize, argc, argv, fileSystemEnabled, implLibsEnabled);
         return true;
     }
     return false;
 }
 
 
-UMKA_API bool umkaCompile(void *umka)
+UMKA_API bool umkaCompile(Umka *umka)
 {
-    Compiler *comp = umka;
-
-    if (setjmp(comp->error.jumper) == 0)
+    if (setjmp(umka->error.jumper) == 0)
     {
-        compilerCompile(comp);
+        compilerCompile(umka);
         return true;
     }
     return false;
 }
 
 
-UMKA_API int umkaRun(void *umka)
+UMKA_API int umkaRun(Umka *umka)
 {
-    Compiler *comp = umka;
-
-    if (setjmp(comp->error.jumper) == 0)
+    if (setjmp(umka->error.jumper) == 0)
     {
-        comp->error.jumperNesting++;
-        compilerRun(comp);
-        comp->error.jumperNesting--;
+        umka->error.jumperNesting++;
+        compilerRun(umka);
+        umka->error.jumperNesting--;
         return 0;
     }
 
-    return comp->error.report.code;
+    return umka->error.report.code;
 }
 
 
-UMKA_API int umkaCall(void *umka, UmkaFuncContext *fn)
+UMKA_API int umkaCall(Umka *umka, UmkaFuncContext *fn)
 {
-    Compiler *comp = umka;
-
     // Nested calls to umkaCall() should not reset the error jumper
     jmp_buf dummyJumper;
-    jmp_buf *jumper = comp->error.jumperNesting == 0 ? &comp->error.jumper : &dummyJumper;
+    jmp_buf *jumper = umka->error.jumperNesting == 0 ? &umka->error.jumper : &dummyJumper;
 
     if (setjmp(*jumper) == 0)
     {
-        comp->error.jumperNesting++;
-        compilerCall(comp, (FuncContext *)fn);
-        comp->error.jumperNesting--;
+        umka->error.jumperNesting++;
+        compilerCall(umka, fn);
+        umka->error.jumperNesting--;
         return 0;
     }
 
-    return comp->error.report.code;
+    return umka->error.report.code;
 }
 
 
-UMKA_API void umkaFree(void *umka)
+UMKA_API void umkaFree(Umka *umka)
 {
-    Compiler *comp = umka;
-    compilerFree(comp);
-    free(comp);
+    compilerFree(umka);
+    free(umka);
 }
 
 
-UMKA_API UmkaError *umkaGetError(void *umka)
+UMKA_API UmkaError *umkaGetError(Umka *umka)
 {
-    Compiler *comp = umka;
-    return (UmkaError *)(&comp->error.report);
+    return &umka->error.report;
 }
 
 
-UMKA_API bool umkaAlive(void *umka)
+UMKA_API bool umkaAlive(Umka *umka)
 {
-    Compiler *comp = umka;
-    return vmAlive(&comp->vm);
+    return vmAlive(&umka->vm);
 }
 
 
-UMKA_API char *umkaAsm(void *umka)
+UMKA_API char *umkaAsm(Umka *umka)
 {
-    Compiler *comp = umka;
-    return compilerAsm(comp);
+    return compilerAsm(umka);
 }
 
 
-UMKA_API bool umkaAddModule(void *umka, const char *fileName, const char *sourceString)
+UMKA_API bool umkaAddModule(Umka *umka, const char *fileName, const char *sourceString)
 {
-    Compiler *comp = umka;
-    return compilerAddModule(comp, fileName, sourceString);
+    return compilerAddModule(umka, fileName, sourceString);
 }
 
 
-UMKA_API bool umkaAddFunc(void *umka, const char *name, UmkaExternFunc func)
+UMKA_API bool umkaAddFunc(Umka *umka, const char *name, UmkaExternFunc func)
 {
-    Compiler *comp = umka;
-    return compilerAddFunc(comp, name, (ExternFunc)func);
+    return compilerAddFunc(umka, name, func);
 }
 
 
-UMKA_API bool umkaGetFunc(void *umka, const char *moduleName, const char *fnName, UmkaFuncContext *fn)
+UMKA_API bool umkaGetFunc(Umka *umka, const char *moduleName, const char *fnName, UmkaFuncContext *fn)
 {
-    Compiler *comp = umka;
-    return compilerGetFunc(comp, moduleName, fnName, (FuncContext *)fn);
+    return compilerGetFunc(umka, moduleName, fnName, fn);
 }
 
 
-UMKA_API bool umkaGetCallStack(void *umka, int depth, int nameSize, int *offset, char *fileName, char *fnName, int *line)
+UMKA_API bool umkaGetCallStack(Umka *umka, int depth, int nameSize, int *offset, char *fileName, char *fnName, int *line)
 {
-    Compiler *comp = umka;
-    Slot *base = comp->vm.fiber->base;
-    int ip = comp->vm.fiber->ip;
+    Slot *base = umka->vm.fiber->base;
+    int ip = umka->vm.fiber->ip;
 
     while (depth-- > 0)
-        if (!vmUnwindCallStack(&comp->vm, &base, &ip))
+        if (!vmUnwindCallStack(&umka->vm, &base, &ip))
             return false;
 
     if (offset)
         *offset = ip;
 
     if (fileName)
-        snprintf(fileName, nameSize, "%s", comp->vm.fiber->debugPerInstr[ip].fileName);
+        snprintf(fileName, nameSize, "%s", umka->vm.fiber->debugPerInstr[ip].fileName);
 
     if (fnName)
-        snprintf(fnName, nameSize, "%s", comp->vm.fiber->debugPerInstr[ip].fnName);
+        snprintf(fnName, nameSize, "%s", umka->vm.fiber->debugPerInstr[ip].fnName);
 
     if (line)
-        *line = comp->vm.fiber->debugPerInstr[ip].line;
+        *line = umka->vm.fiber->debugPerInstr[ip].line;
 
     return true;
 }
 
 
-UMKA_API void umkaSetHook(void *umka, UmkaHookEvent event, UmkaHookFunc hook)
+UMKA_API void umkaSetHook(Umka *umka, UmkaHookEvent event, UmkaHookFunc hook)
 {
-    Compiler *comp = umka;
-    vmSetHook(&comp->vm, (HookEvent)event, hook);
+    vmSetHook(&umka->vm, event, hook);
 }
 
 
-UMKA_API void *umkaAllocData(void *umka, int size, UmkaExternFunc onFree)
+UMKA_API void *umkaAllocData(Umka *umka, int size, UmkaExternFunc onFree)
 {
-    Compiler *comp = umka;
-    return vmAllocData(&comp->vm, size, (ExternFunc)onFree);
+    return vmAllocData(&umka->vm, size, onFree);
 }
 
 
-UMKA_API void umkaIncRef(void *umka, void *ptr)
+UMKA_API void umkaIncRef(Umka *umka, void *ptr)
 {
-    Compiler *comp = umka;
-    vmIncRef(&comp->vm, ptr, comp->ptrVoidType);    // We have no actual type info provided by the user, so we can only rely on the type info from the heap chunk header, if any
+    vmIncRef(&umka->vm, ptr, umka->ptrVoidType);    // We have no actual type info provided by the user, so we can only rely on the type info from the heap chunk header, if any
 }
 
 
-UMKA_API void umkaDecRef(void *umka, void *ptr)
+UMKA_API void umkaDecRef(Umka *umka, void *ptr)
 {
-    Compiler *comp = umka;
-    vmDecRef(&comp->vm, ptr, comp->ptrVoidType);    // We have no actual type info provided by the user, so we can only rely on the type info from the heap chunk header, if any
+    vmDecRef(&umka->vm, ptr, umka->ptrVoidType);    // We have no actual type info provided by the user, so we can only rely on the type info from the heap chunk header, if any
 }
 
 
-UMKA_API void *umkaGetMapItem(void *umka, UmkaMap *map, UmkaStackSlot key)
+UMKA_API void *umkaGetMapItem(Umka *umka, UmkaMap *map, UmkaStackSlot key)
 {
-    Compiler *comp = umka;
     const Slot *keyPtr = (Slot *)&key;
-    return vmGetMapNodeData(&comp->vm, (Map *)map, *keyPtr);
+    return vmGetMapNodeData(&umka->vm, (Map *)map, *keyPtr);
 }
 
 
-UMKA_API char *umkaMakeStr(void *umka, const char *str)
+UMKA_API char *umkaMakeStr(Umka *umka, const char *str)
 {
-    Compiler *comp = umka;
-    return vmMakeStr(&comp->vm, str);
+    return vmMakeStr(&umka->vm, str);
 }
 
 
@@ -270,10 +245,9 @@ UMKA_API int umkaGetStrLen(const char *str)
 }
 
 
-UMKA_API void umkaMakeDynArray(void *umka, void *array, void *type, int len)
+UMKA_API void umkaMakeDynArray(Umka *umka, void *array, const UmkaType *type, int len)
 {
-    Compiler *comp = umka;
-    vmMakeDynArray(&comp->vm, (DynArray *)array, (Type *)type, len);
+    vmMakeDynArray(&umka->vm, (DynArray *)array, type, len);
 }
 
 
@@ -297,17 +271,15 @@ UMKA_API const char *umkaGetVersion(void)
 }
 
 
-UMKA_API int64_t umkaGetMemUsage(void *umka)
+UMKA_API int64_t umkaGetMemUsage(Umka *umka)
 {
-    Compiler *comp = umka;
-    return vmGetMemUsage(&comp->vm);
+    return vmGetMemUsage(&umka->vm);
 }
 
 
-UMKA_API void umkaMakeFuncContext(void *umka, void *closureType, int entryOffset, UmkaFuncContext *fn)
+UMKA_API void umkaMakeFuncContext(Umka *umka, const UmkaType *closureType, int entryOffset, UmkaFuncContext *fn)
 {
-    Compiler *comp = umka;
-    compilerMakeFuncContext(comp, ((Type *)closureType)->field[0]->type, entryOffset, (FuncContext *)fn);
+    compilerMakeFuncContext(umka, closureType->field[0]->type, entryOffset, fn);
 }
 
 
@@ -336,16 +308,14 @@ UMKA_API UmkaStackSlot *umkaGetResult(UmkaStackSlot *params, UmkaStackSlot *resu
 }
 
 
-UMKA_API void *umkaGetMetadata(void *umka)
+UMKA_API void *umkaGetMetadata(Umka *umka)
 {
-    Compiler *comp = umka;
-    return comp->metadata;
+    return umka->metadata;
 }
 
 
-UMKA_API void umkaSetMetadata(void *umka, void *metadata)
+UMKA_API void umkaSetMetadata(Umka *umka, void *metadata)
 {
-    Compiler *comp = umka;
-    comp->metadata = metadata;
+    umka->metadata = metadata;
 }
 

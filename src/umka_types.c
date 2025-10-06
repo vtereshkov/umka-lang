@@ -459,7 +459,7 @@ void typeAssertCompatibleParam(const Types *types, const Type *left, const Type 
 }
 
 
-void typeAssertCompatibleBuiltin(const Types *types, const Type *type, /*BuiltinFunc*/ int builtin, bool compatible)
+void typeAssertCompatibleBuiltin(const Types *types, const Type *type, BuiltinFunc builtin, bool compatible)
 {
     if (!compatible)
     {
@@ -469,7 +469,7 @@ void typeAssertCompatibleBuiltin(const Types *types, const Type *type, /*Builtin
 }
 
 
-void typeAssertCompatibleIOBuiltin(const Types *types, TypeKind expectedTypeKind, const Type *type, /*BuiltinFunc*/ int builtin, bool allowVoid)
+void typeAssertCompatibleIOBuiltin(const Types *types, TypeKind expectedTypeKind, const Type *type, BuiltinFunc builtin, bool allowVoid)
 {
     bool compatible = false;
     if (builtin == BUILTIN_PRINTF || builtin == BUILTIN_FPRINTF || builtin == BUILTIN_SPRINTF)

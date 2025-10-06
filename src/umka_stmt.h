@@ -3,17 +3,17 @@
 
 #include "umka_compiler.h"
 
-void doGarbageCollection(Compiler *comp);
-void doGarbageCollectionDownToBlock(Compiler *comp, int block);
+void doGarbageCollection(Umka *umka);
+void doGarbageCollectionDownToBlock(Umka *umka, int block);
 
-void doZeroVar(Compiler *comp, const Ident *ident);
-void doResolveExtern(Compiler *comp);
+void doZeroVar(Umka *umka, const Ident *ident);
+void doResolveExtern(Umka *umka);
 
-void parseAssignmentStmt(Compiler *comp, const Type *type, Const *varPtrConstList);
-void parseDeclAssignmentStmt(Compiler *comp, IdentName *names, const bool *exported, int num, bool constExpr);
+void parseAssignmentStmt(Umka *umka, const Type *type, Const *varPtrConstList);
+void parseDeclAssignmentStmt(Umka *umka, IdentName *names, const bool *exported, int num, bool constExpr);
 
-void parseFnBlock(Compiler *comp, Ident *fn, const Type *upvaluesStructType);
-void parseFnPrototype(Compiler *comp, Ident *fn);
+void parseFnBlock(Umka *umka, Ident *fn, const Type *upvaluesStructType);
+void parseFnPrototype(Umka *umka, Ident *fn);
 
 
 #endif // UMKA_STMT_H_INCLUDED

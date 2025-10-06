@@ -29,7 +29,7 @@ void help(void)
 }
 
 
-bool writeAsmFile(void *umka, const char *mainPath)
+bool writeAsmFile(Umka *umka, const char *mainPath)
 {
     bool ok = false;
 
@@ -69,14 +69,14 @@ void printCompileWarning(UmkaError *warning)
 }
 
 
-void printCompileError(void *umka)
+void printCompileError(Umka *umka)
 {
     const UmkaError *error = umkaGetError(umka);
     fprintf(stderr, "Error %s (%d, %d): %s\n", error->fileName, error->line, error->pos, error->msg);
 }
 
 
-void printRuntimeError(void *umka)
+void printRuntimeError(Umka *umka)
 {
     const UmkaError *error = umkaGetError(umka);
 
@@ -103,7 +103,7 @@ void printRuntimeError(void *umka)
 
 int runPlayground(const char *fileName, const char *sourceString)
 {
-    void *umka = umkaAlloc();
+    Umka *umka = umkaAlloc();
     bool ok = umkaInit(umka, fileName, sourceString, DEFAULT_STACK_SIZE, NULL, 0, NULL, false, false, printCompileWarning);
     if (ok)
         ok = umkaCompile(umka);
@@ -186,7 +186,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    void *umka = umkaAlloc();
+    Umka *umka = umkaAlloc();
     bool ok = umkaInit(umka, argv[i], NULL, stackSize, NULL, argc - i, argv + i, !isSandbox, !isSandbox, printWarnings ? printCompileWarning : NULL);
     int exitCode = 0;
 

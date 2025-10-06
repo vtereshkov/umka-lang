@@ -13,263 +13,263 @@
 #include "umka_runtime_src.h"
 
 
-void parseProgram(Compiler *comp);
+void parseProgram(Umka *umka);
 
 
-static void compilerSetAPI(Compiler *comp)
+static void compilerSetAPI(Umka *umka)
 {
-    comp->api.umkaAlloc             = umkaAlloc;
-    comp->api.umkaInit              = umkaInit;
-    comp->api.umkaCompile           = umkaCompile;
-    comp->api.umkaRun               = umkaRun;
-    comp->api.umkaCall              = umkaCall;
-    comp->api.umkaFree              = umkaFree;
-    comp->api.umkaGetError          = umkaGetError;
-    comp->api.umkaAlive             = umkaAlive;
-    comp->api.umkaAsm               = umkaAsm;
-    comp->api.umkaAddModule         = umkaAddModule;
-    comp->api.umkaAddFunc           = umkaAddFunc;
-    comp->api.umkaGetFunc           = umkaGetFunc;
-    comp->api.umkaGetCallStack      = umkaGetCallStack;
-    comp->api.umkaSetHook           = umkaSetHook;
-    comp->api.umkaAllocData         = umkaAllocData;
-    comp->api.umkaIncRef            = umkaIncRef;
-    comp->api.umkaDecRef            = umkaDecRef;
-    comp->api.umkaGetMapItem        = umkaGetMapItem;
-    comp->api.umkaMakeStr           = umkaMakeStr;
-    comp->api.umkaGetStrLen         = umkaGetStrLen;
-    comp->api.umkaMakeDynArray      = umkaMakeDynArray;
-    comp->api.umkaGetDynArrayLen    = umkaGetDynArrayLen;
-    comp->api.umkaGetVersion        = umkaGetVersion;
-    comp->api.umkaGetMemUsage       = umkaGetMemUsage;
-    comp->api.umkaMakeFuncContext   = umkaMakeFuncContext;
-    comp->api.umkaGetParam          = umkaGetParam;
-    comp->api.umkaGetUpvalue        = umkaGetUpvalue;
-    comp->api.umkaGetResult         = umkaGetResult;
-    comp->api.umkaGetMetadata       = umkaGetMetadata;
-    comp->api.umkaSetMetadata       = umkaSetMetadata;
+    umka->api.umkaAlloc             = umkaAlloc;
+    umka->api.umkaInit              = umkaInit;
+    umka->api.umkaCompile           = umkaCompile;
+    umka->api.umkaRun               = umkaRun;
+    umka->api.umkaCall              = umkaCall;
+    umka->api.umkaFree              = umkaFree;
+    umka->api.umkaGetError          = umkaGetError;
+    umka->api.umkaAlive             = umkaAlive;
+    umka->api.umkaAsm               = umkaAsm;
+    umka->api.umkaAddModule         = umkaAddModule;
+    umka->api.umkaAddFunc           = umkaAddFunc;
+    umka->api.umkaGetFunc           = umkaGetFunc;
+    umka->api.umkaGetCallStack      = umkaGetCallStack;
+    umka->api.umkaSetHook           = umkaSetHook;
+    umka->api.umkaAllocData         = umkaAllocData;
+    umka->api.umkaIncRef            = umkaIncRef;
+    umka->api.umkaDecRef            = umkaDecRef;
+    umka->api.umkaGetMapItem        = umkaGetMapItem;
+    umka->api.umkaMakeStr           = umkaMakeStr;
+    umka->api.umkaGetStrLen         = umkaGetStrLen;
+    umka->api.umkaMakeDynArray      = umkaMakeDynArray;
+    umka->api.umkaGetDynArrayLen    = umkaGetDynArrayLen;
+    umka->api.umkaGetVersion        = umkaGetVersion;
+    umka->api.umkaGetMemUsage       = umkaGetMemUsage;
+    umka->api.umkaMakeFuncContext   = umkaMakeFuncContext;
+    umka->api.umkaGetParam          = umkaGetParam;
+    umka->api.umkaGetUpvalue        = umkaGetUpvalue;
+    umka->api.umkaGetResult         = umkaGetResult;
+    umka->api.umkaGetMetadata       = umkaGetMetadata;
+    umka->api.umkaSetMetadata       = umkaSetMetadata;
 }
 
 
-static void compilerDeclareBuiltinTypes(Compiler *comp)
+static void compilerDeclareBuiltinTypes(Umka *umka)
 {
-    comp->voidType    = typeAdd(&comp->types, &comp->blocks, TYPE_VOID);
-    comp->nullType    = typeAdd(&comp->types, &comp->blocks, TYPE_NULL);
-    comp->int8Type    = typeAdd(&comp->types, &comp->blocks, TYPE_INT8);
-    comp->int16Type   = typeAdd(&comp->types, &comp->blocks, TYPE_INT16);
-    comp->int32Type   = typeAdd(&comp->types, &comp->blocks, TYPE_INT32);
-    comp->intType     = typeAdd(&comp->types, &comp->blocks, TYPE_INT);
-    comp->uint8Type   = typeAdd(&comp->types, &comp->blocks, TYPE_UINT8);
-    comp->uint16Type  = typeAdd(&comp->types, &comp->blocks, TYPE_UINT16);
-    comp->uint32Type  = typeAdd(&comp->types, &comp->blocks, TYPE_UINT32);
-    comp->uintType    = typeAdd(&comp->types, &comp->blocks, TYPE_UINT);
-    comp->boolType    = typeAdd(&comp->types, &comp->blocks, TYPE_BOOL);
-    comp->charType    = typeAdd(&comp->types, &comp->blocks, TYPE_CHAR);
-    comp->real32Type  = typeAdd(&comp->types, &comp->blocks, TYPE_REAL32);
-    comp->realType    = typeAdd(&comp->types, &comp->blocks, TYPE_REAL);
-    comp->strType     = typeAdd(&comp->types, &comp->blocks, TYPE_STR);
+    umka->voidType    = typeAdd(&umka->types, &umka->blocks, TYPE_VOID);
+    umka->nullType    = typeAdd(&umka->types, &umka->blocks, TYPE_NULL);
+    umka->int8Type    = typeAdd(&umka->types, &umka->blocks, TYPE_INT8);
+    umka->int16Type   = typeAdd(&umka->types, &umka->blocks, TYPE_INT16);
+    umka->int32Type   = typeAdd(&umka->types, &umka->blocks, TYPE_INT32);
+    umka->intType     = typeAdd(&umka->types, &umka->blocks, TYPE_INT);
+    umka->uint8Type   = typeAdd(&umka->types, &umka->blocks, TYPE_UINT8);
+    umka->uint16Type  = typeAdd(&umka->types, &umka->blocks, TYPE_UINT16);
+    umka->uint32Type  = typeAdd(&umka->types, &umka->blocks, TYPE_UINT32);
+    umka->uintType    = typeAdd(&umka->types, &umka->blocks, TYPE_UINT);
+    umka->boolType    = typeAdd(&umka->types, &umka->blocks, TYPE_BOOL);
+    umka->charType    = typeAdd(&umka->types, &umka->blocks, TYPE_CHAR);
+    umka->real32Type  = typeAdd(&umka->types, &umka->blocks, TYPE_REAL32);
+    umka->realType    = typeAdd(&umka->types, &umka->blocks, TYPE_REAL);
+    umka->strType     = typeAdd(&umka->types, &umka->blocks, TYPE_STR);
 
-    comp->ptrVoidType = typeAddPtrTo(&comp->types, &comp->blocks, comp->voidType);
-    comp->ptrNullType = typeAddPtrTo(&comp->types, &comp->blocks, comp->nullType);
+    umka->ptrVoidType = typeAddPtrTo(&umka->types, &umka->blocks, umka->voidType);
+    umka->ptrNullType = typeAddPtrTo(&umka->types, &umka->blocks, umka->nullType);
 
     // any
-    Type *anyType = typeAdd(&comp->types, &comp->blocks, TYPE_INTERFACE);
+    Type *anyType = typeAdd(&umka->types, &umka->blocks, TYPE_INTERFACE);
 
-    typeAddField(&comp->types, anyType, comp->ptrVoidType, "#self");
-    typeAddField(&comp->types, anyType, comp->ptrVoidType, "#selftype");
+    typeAddField(&umka->types, anyType, umka->ptrVoidType, "#self");
+    typeAddField(&umka->types, anyType, umka->ptrVoidType, "#selftype");
 
-    comp->anyType = anyType;
+    umka->anyType = anyType;
 
     // fiber
-    Type *fiberType = typeAdd(&comp->types, &comp->blocks, TYPE_FIBER);
+    Type *fiberType = typeAdd(&umka->types, &umka->blocks, TYPE_FIBER);
 
-    Type *fnType = typeAdd(&comp->types, &comp->blocks, TYPE_FN);
-    typeAddParam(&comp->types, &fnType->sig, comp->anyType, "#upvalues", (Const){0});
+    Type *fnType = typeAdd(&umka->types, &umka->blocks, TYPE_FN);
+    typeAddParam(&umka->types, &fnType->sig, umka->anyType, "#upvalues", (Const){0});
 
-    fnType->sig.resultType = comp->voidType;
+    fnType->sig.resultType = umka->voidType;
 
-    Type *fiberClosureType = typeAdd(&comp->types, &comp->blocks, TYPE_CLOSURE);
-    typeAddField(&comp->types, fiberClosureType, fnType, "#fn");
-    typeAddField(&comp->types, fiberClosureType, comp->anyType, "#upvalues");
+    Type *fiberClosureType = typeAdd(&umka->types, &umka->blocks, TYPE_CLOSURE);
+    typeAddField(&umka->types, fiberClosureType, fnType, "#fn");
+    typeAddField(&umka->types, fiberClosureType, umka->anyType, "#upvalues");
     fiberType->base = fiberClosureType;
 
-    comp->fiberType = fiberType;
+    umka->fiberType = fiberType;
 
     // __file
-    Type *fileDataType = typeAdd(&comp->types, &comp->blocks, TYPE_STRUCT);
-    typeAddField(&comp->types, fileDataType, comp->ptrVoidType, "#data");
+    Type *fileDataType = typeAdd(&umka->types, &umka->blocks, TYPE_STRUCT);
+    typeAddField(&umka->types, fileDataType, umka->ptrVoidType, "#data");
 
-    comp->fileType = typeAddPtrTo(&comp->types, &comp->blocks, fileDataType);
+    umka->fileType = typeAddPtrTo(&umka->types, &umka->blocks, fileDataType);
 }
 
 
-static void compilerDeclareBuiltinIdents(Compiler *comp)
+static void compilerDeclareBuiltinIdents(Umka *umka)
 {
     // Constants
     Const trueConst  = {.intVal = true};
     Const falseConst = {.intVal = false};
     Const nullConst  = {.ptrVal = 0};
 
-    identAddConst(&comp->idents, &comp->modules, &comp->blocks, "true",  comp->boolType,    true, trueConst);
-    identAddConst(&comp->idents, &comp->modules, &comp->blocks, "false", comp->boolType,    true, falseConst);
-    identAddConst(&comp->idents, &comp->modules, &comp->blocks, "null",  comp->ptrNullType, true, nullConst);
+    identAddConst(&umka->idents, &umka->modules, &umka->blocks, "true",  umka->boolType,    true, trueConst);
+    identAddConst(&umka->idents, &umka->modules, &umka->blocks, "false", umka->boolType,    true, falseConst);
+    identAddConst(&umka->idents, &umka->modules, &umka->blocks, "null",  umka->ptrNullType, true, nullConst);
 
     // Types
-    identAddType(&comp->idents, &comp->modules, &comp->blocks,  "void",     comp->voidType,    true);
-    identAddType(&comp->idents, &comp->modules, &comp->blocks,  "int8",     comp->int8Type,    true);
-    identAddType(&comp->idents, &comp->modules, &comp->blocks,  "int16",    comp->int16Type,   true);
-    identAddType(&comp->idents, &comp->modules, &comp->blocks,  "int32",    comp->int32Type,   true);
-    identAddType(&comp->idents, &comp->modules, &comp->blocks,  "int",      comp->intType,     true);
-    identAddType(&comp->idents, &comp->modules, &comp->blocks,  "uint8",    comp->uint8Type,   true);
-    identAddType(&comp->idents, &comp->modules, &comp->blocks,  "uint16",   comp->uint16Type,  true);
-    identAddType(&comp->idents, &comp->modules, &comp->blocks,  "uint32",   comp->uint32Type,  true);
-    identAddType(&comp->idents, &comp->modules, &comp->blocks,  "uint",     comp->uintType,    true);
-    identAddType(&comp->idents, &comp->modules, &comp->blocks,  "bool",     comp->boolType,    true);
-    identAddType(&comp->idents, &comp->modules, &comp->blocks,  "char",     comp->charType,    true);
-    identAddType(&comp->idents, &comp->modules, &comp->blocks,  "real32",   comp->real32Type,  true);
-    identAddType(&comp->idents, &comp->modules, &comp->blocks,  "real",     comp->realType,    true);
-    identAddType(&comp->idents, &comp->modules, &comp->blocks,  "fiber",    comp->fiberType,   true);
-    identAddType(&comp->idents, &comp->modules, &comp->blocks,  "any",      comp->anyType,     true);
-    identAddType(&comp->idents, &comp->modules, &comp->blocks,  "__file",   comp->fileType,    true);
+    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "void",     umka->voidType,    true);
+    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "int8",     umka->int8Type,    true);
+    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "int16",    umka->int16Type,   true);
+    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "int32",    umka->int32Type,   true);
+    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "int",      umka->intType,     true);
+    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "uint8",    umka->uint8Type,   true);
+    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "uint16",   umka->uint16Type,  true);
+    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "uint32",   umka->uint32Type,  true);
+    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "uint",     umka->uintType,    true);
+    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "bool",     umka->boolType,    true);
+    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "char",     umka->charType,    true);
+    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "real32",   umka->real32Type,  true);
+    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "real",     umka->realType,    true);
+    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "fiber",    umka->fiberType,   true);
+    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "any",      umka->anyType,     true);
+    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "__file",   umka->fileType,    true);
 
     // Built-in functions
     // I/O
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "printf",     comp->intType,     BUILTIN_PRINTF);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "fprintf",    comp->intType,     BUILTIN_FPRINTF);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "sprintf",    comp->strType,     BUILTIN_SPRINTF);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "scanf",      comp->intType,     BUILTIN_SCANF);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "fscanf",     comp->intType,     BUILTIN_FSCANF);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "sscanf",     comp->intType,     BUILTIN_SSCANF);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "printf",     umka->intType,     BUILTIN_PRINTF);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "fprintf",    umka->intType,     BUILTIN_FPRINTF);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "sprintf",    umka->strType,     BUILTIN_SPRINTF);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "scanf",      umka->intType,     BUILTIN_SCANF);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "fscanf",     umka->intType,     BUILTIN_FSCANF);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "sscanf",     umka->intType,     BUILTIN_SSCANF);
 
     // Math
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "round",      comp->intType,     BUILTIN_ROUND);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "trunc",      comp->intType,     BUILTIN_TRUNC);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "ceil",       comp->intType,     BUILTIN_CEIL);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "floor",      comp->intType,     BUILTIN_FLOOR);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "abs",        comp->intType,     BUILTIN_ABS);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "fabs",       comp->realType,    BUILTIN_FABS);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "sqrt",       comp->realType,    BUILTIN_SQRT);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "sin",        comp->realType,    BUILTIN_SIN);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "cos",        comp->realType,    BUILTIN_COS);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "atan",       comp->realType,    BUILTIN_ATAN);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "atan2",      comp->realType,    BUILTIN_ATAN2);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "exp",        comp->realType,    BUILTIN_EXP);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "log",        comp->realType,    BUILTIN_LOG);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "round",      umka->intType,     BUILTIN_ROUND);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "trunc",      umka->intType,     BUILTIN_TRUNC);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "ceil",       umka->intType,     BUILTIN_CEIL);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "floor",      umka->intType,     BUILTIN_FLOOR);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "abs",        umka->intType,     BUILTIN_ABS);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "fabs",       umka->realType,    BUILTIN_FABS);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "sqrt",       umka->realType,    BUILTIN_SQRT);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "sin",        umka->realType,    BUILTIN_SIN);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "cos",        umka->realType,    BUILTIN_COS);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "atan",       umka->realType,    BUILTIN_ATAN);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "atan2",      umka->realType,    BUILTIN_ATAN2);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "exp",        umka->realType,    BUILTIN_EXP);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "log",        umka->realType,    BUILTIN_LOG);
 
     // Memory
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "new",        comp->ptrVoidType, BUILTIN_NEW);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "make",       comp->ptrVoidType, BUILTIN_MAKE);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "copy",       comp->ptrVoidType, BUILTIN_COPY);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "append",     comp->ptrVoidType, BUILTIN_APPEND);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "insert",     comp->ptrVoidType, BUILTIN_INSERT);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "delete",     comp->ptrVoidType, BUILTIN_DELETE);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "slice",      comp->ptrVoidType, BUILTIN_SLICE);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "sort",       comp->voidType,    BUILTIN_SORT);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "len",        comp->intType,     BUILTIN_LEN);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "cap",        comp->intType,     BUILTIN_CAP);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "sizeof",     comp->intType,     BUILTIN_SIZEOF);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "sizeofself", comp->intType,     BUILTIN_SIZEOFSELF);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "selfptr",    comp->ptrVoidType, BUILTIN_SELFPTR);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "selfhasptr", comp->boolType,    BUILTIN_SELFHASPTR);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "selftypeeq", comp->boolType,    BUILTIN_SELFTYPEEQ);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "typeptr",    comp->ptrVoidType, BUILTIN_TYPEPTR);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "valid",      comp->boolType,    BUILTIN_VALID);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "new",        umka->ptrVoidType, BUILTIN_NEW);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "make",       umka->ptrVoidType, BUILTIN_MAKE);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "copy",       umka->ptrVoidType, BUILTIN_COPY);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "append",     umka->ptrVoidType, BUILTIN_APPEND);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "insert",     umka->ptrVoidType, BUILTIN_INSERT);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "delete",     umka->ptrVoidType, BUILTIN_DELETE);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "slice",      umka->ptrVoidType, BUILTIN_SLICE);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "sort",       umka->voidType,    BUILTIN_SORT);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "len",        umka->intType,     BUILTIN_LEN);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "cap",        umka->intType,     BUILTIN_CAP);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "sizeof",     umka->intType,     BUILTIN_SIZEOF);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "sizeofself", umka->intType,     BUILTIN_SIZEOFSELF);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "selfptr",    umka->ptrVoidType, BUILTIN_SELFPTR);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "selfhasptr", umka->boolType,    BUILTIN_SELFHASPTR);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "selftypeeq", umka->boolType,    BUILTIN_SELFTYPEEQ);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "typeptr",    umka->ptrVoidType, BUILTIN_TYPEPTR);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "valid",      umka->boolType,    BUILTIN_VALID);
 
     // Maps
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "validkey",   comp->boolType,    BUILTIN_VALIDKEY);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "keys",       comp->ptrVoidType, BUILTIN_KEYS);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "validkey",   umka->boolType,    BUILTIN_VALIDKEY);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "keys",       umka->ptrVoidType, BUILTIN_KEYS);
 
     // Fibers
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "resume",     comp->voidType,    BUILTIN_RESUME);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "resume",     umka->voidType,    BUILTIN_RESUME);
 
     // Misc
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "memusage",   comp->intType,     BUILTIN_MEMUSAGE);
-    identAddBuiltinFunc(&comp->idents, &comp->modules, &comp->blocks, "exit",       comp->voidType,    BUILTIN_EXIT);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "memusage",   umka->intType,     BUILTIN_MEMUSAGE);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "exit",       umka->voidType,    BUILTIN_EXIT);
 }
 
 
-static void compilerDeclareExternalFuncs(Compiler *comp, bool fileSystemEnabled)
+static void compilerDeclareExternalFuncs(Umka *umka, bool fileSystemEnabled)
 {
-    externalAdd(&comp->externals, "rtlmemcpy",      &rtlmemcpy,                                           true);
-    externalAdd(&comp->externals, "rtlstdin",       &rtlstdin,                                            true);
-    externalAdd(&comp->externals, "rtlstdout",      &rtlstdout,                                           true);
-    externalAdd(&comp->externals, "rtlstderr",      &rtlstderr,                                           true);
-    externalAdd(&comp->externals, "rtlfopen",       fileSystemEnabled ? &rtlfopen  : &rtlfopenSandbox,    true);
-    externalAdd(&comp->externals, "rtlfclose",      fileSystemEnabled ? &rtlfclose : &rtlfcloseSandbox,   true);
-    externalAdd(&comp->externals, "rtlfread",       fileSystemEnabled ? &rtlfread  : &rtlfreadSandbox,    true);
-    externalAdd(&comp->externals, "rtlfwrite",      fileSystemEnabled ? &rtlfwrite : &rtlfwriteSandbox,   true);
-    externalAdd(&comp->externals, "rtlfseek",       fileSystemEnabled ? &rtlfseek  : &rtlfseekSandbox,    true);
-    externalAdd(&comp->externals, "rtlftell",       fileSystemEnabled ? &rtlftell  : &rtlftellSandbox,    true);
-    externalAdd(&comp->externals, "rtlremove",      fileSystemEnabled ? &rtlremove : &rtlremoveSandbox,   true);
-    externalAdd(&comp->externals, "rtlfeof",        fileSystemEnabled ? &rtlfeof   : &rtlfeofSandbox,     true);
-    externalAdd(&comp->externals, "rtlfflush",      &rtlfflush,                                           true);
-    externalAdd(&comp->externals, "rtltime",        &rtltime,                                             true);
-    externalAdd(&comp->externals, "rtlclock",       &rtlclock,                                            true);
-    externalAdd(&comp->externals, "rtllocaltime",   &rtllocaltime,                                        true);
-    externalAdd(&comp->externals, "rtlgmtime",      &rtlgmtime,                                           true);
-    externalAdd(&comp->externals, "rtlmktime",      &rtlmktime,                                           true);
-    externalAdd(&comp->externals, "rtlgetenv",      fileSystemEnabled ? &rtlgetenv : &rtlgetenvSandbox,   true);
-    externalAdd(&comp->externals, "rtlsystem",      fileSystemEnabled ? &rtlsystem : &rtlsystemSandbox,   true);
-    externalAdd(&comp->externals, "rtltrace",       &rtltrace,                                            true);
+    externalAdd(&umka->externals, "rtlmemcpy",      &rtlmemcpy,                                           true);
+    externalAdd(&umka->externals, "rtlstdin",       &rtlstdin,                                            true);
+    externalAdd(&umka->externals, "rtlstdout",      &rtlstdout,                                           true);
+    externalAdd(&umka->externals, "rtlstderr",      &rtlstderr,                                           true);
+    externalAdd(&umka->externals, "rtlfopen",       fileSystemEnabled ? &rtlfopen  : &rtlfopenSandbox,    true);
+    externalAdd(&umka->externals, "rtlfclose",      fileSystemEnabled ? &rtlfclose : &rtlfcloseSandbox,   true);
+    externalAdd(&umka->externals, "rtlfread",       fileSystemEnabled ? &rtlfread  : &rtlfreadSandbox,    true);
+    externalAdd(&umka->externals, "rtlfwrite",      fileSystemEnabled ? &rtlfwrite : &rtlfwriteSandbox,   true);
+    externalAdd(&umka->externals, "rtlfseek",       fileSystemEnabled ? &rtlfseek  : &rtlfseekSandbox,    true);
+    externalAdd(&umka->externals, "rtlftell",       fileSystemEnabled ? &rtlftell  : &rtlftellSandbox,    true);
+    externalAdd(&umka->externals, "rtlremove",      fileSystemEnabled ? &rtlremove : &rtlremoveSandbox,   true);
+    externalAdd(&umka->externals, "rtlfeof",        fileSystemEnabled ? &rtlfeof   : &rtlfeofSandbox,     true);
+    externalAdd(&umka->externals, "rtlfflush",      &rtlfflush,                                           true);
+    externalAdd(&umka->externals, "rtltime",        &rtltime,                                             true);
+    externalAdd(&umka->externals, "rtlclock",       &rtlclock,                                            true);
+    externalAdd(&umka->externals, "rtllocaltime",   &rtllocaltime,                                        true);
+    externalAdd(&umka->externals, "rtlgmtime",      &rtlgmtime,                                           true);
+    externalAdd(&umka->externals, "rtlmktime",      &rtlmktime,                                           true);
+    externalAdd(&umka->externals, "rtlgetenv",      fileSystemEnabled ? &rtlgetenv : &rtlgetenvSandbox,   true);
+    externalAdd(&umka->externals, "rtlsystem",      fileSystemEnabled ? &rtlsystem : &rtlsystemSandbox,   true);
+    externalAdd(&umka->externals, "rtltrace",       &rtltrace,                                            true);
 }
 
 
-void compilerInit(Compiler *comp, const char *fileName, const char *sourceString, int stackSize, int argc, char **argv, bool fileSystemEnabled, bool implLibsEnabled)
+void compilerInit(Umka *umka, const char *fileName, const char *sourceString, int stackSize, int argc, char **argv, bool fileSystemEnabled, bool implLibsEnabled)
 {
 #ifdef _WIN32
-    comp->originalInputCodepage = GetConsoleCP();
-    comp->originalOutputCodepage = GetConsoleOutputCP();
+    umka->originalInputCodepage = GetConsoleCP();
+    umka->originalOutputCodepage = GetConsoleOutputCP();
     SetConsoleCP(CP_UTF8);
     SetConsoleOutputCP(CP_UTF8);
 #endif
 
-    compilerSetAPI(comp);
+    compilerSetAPI(umka);
 
-    storageInit  (&comp->storage, &comp->error);
-    moduleInit   (&comp->modules, &comp->storage, implLibsEnabled, &comp->error);
-    blocksInit   (&comp->blocks, &comp->error);
-    externalInit (&comp->externals, &comp->storage);
-    typeInit     (&comp->types, &comp->storage, &comp->error);
-    identInit    (&comp->idents, &comp->storage, &comp->debug, &comp->error);
-    constInit    (&comp->consts, &comp->error);
-    genInit      (&comp->gen, &comp->storage, &comp->debug, &comp->error);
-    vmInit       (&comp->vm, &comp->storage, stackSize, fileSystemEnabled, &comp->error);
+    storageInit  (&umka->storage, &umka->error);
+    moduleInit   (&umka->modules, &umka->storage, implLibsEnabled, &umka->error);
+    blocksInit   (&umka->blocks, &umka->error);
+    externalInit (&umka->externals, &umka->storage);
+    typeInit     (&umka->types, &umka->storage, &umka->error);
+    identInit    (&umka->idents, &umka->storage, &umka->debug, &umka->error);
+    constInit    (&umka->consts, &umka->error);
+    genInit      (&umka->gen, &umka->storage, &umka->debug, &umka->error);
+    vmInit       (&umka->vm, &umka->storage, stackSize, fileSystemEnabled, &umka->error);
 
-    vmReset(&comp->vm, comp->gen.code, comp->gen.debugPerInstr);
+    vmReset(&umka->vm, umka->gen.code, umka->gen.debugPerInstr);
 
-    comp->lex.fileName = "<unknown>";
-    comp->lex.tok.line = 1;
-    comp->lex.tok.pos = 1;
-    comp->debug.fnName = "<unknown>";
+    umka->lex.fileName = "<unknown>";
+    umka->lex.tok.line = 1;
+    umka->lex.tok.pos = 1;
+    umka->debug.fnName = "<unknown>";
 
     char filePath[DEFAULT_STR_LEN + 1] = "";
-    moduleAssertRegularizePath(&comp->modules, fileName, comp->modules.curFolder, filePath, DEFAULT_STR_LEN + 1);
+    moduleAssertRegularizePath(&umka->modules, fileName, umka->modules.curFolder, filePath, DEFAULT_STR_LEN + 1);
 
-    comp->lex.fileName = filePath;
+    umka->lex.fileName = filePath;
 
-    lexInit(&comp->lex, &comp->storage, &comp->debug, filePath, sourceString, false, &comp->error);
+    lexInit(&umka->lex, &umka->storage, &umka->debug, filePath, sourceString, false, &umka->error);
 
-    comp->argc  = argc;
-    comp->argv  = argv;
+    umka->argc  = argc;
+    umka->argv  = argv;
 
-    comp->blocks.module = moduleAdd(&comp->modules, "#universe");
+    umka->blocks.module = moduleAdd(&umka->modules, "#universe");
 
-    compilerDeclareBuiltinTypes (comp);
-    compilerDeclareBuiltinIdents(comp);
-    compilerDeclareExternalFuncs(comp, fileSystemEnabled);
+    compilerDeclareBuiltinTypes (umka);
+    compilerDeclareBuiltinIdents(umka);
+    compilerDeclareExternalFuncs(umka, fileSystemEnabled);
 
     // Command-line-arguments
-    Type *argvType = typeAdd(&comp->types, &comp->blocks, TYPE_ARRAY);
-    argvType->base = comp->strType;
-    typeResizeArray(argvType, comp->argc);
+    Type *argvType = typeAdd(&umka->types, &umka->blocks, TYPE_ARRAY);
+    argvType->base = umka->strType;
+    typeResizeArray(argvType, umka->argc);
 
-    Ident *rtlargv = identAllocVar(&comp->idents, &comp->types, &comp->modules, &comp->blocks, "rtlargv", argvType, true);
+    Ident *rtlargv = identAllocVar(&umka->idents, &umka->types, &umka->modules, &umka->blocks, "rtlargv", argvType, true);
     char **argArray = (char **)rtlargv->ptr;
 
-    for (int i = 0; i < comp->argc; i++)
+    for (int i = 0; i < umka->argc; i++)
     {
-        argArray[i] = storageAddStr(&comp->storage, strlen(comp->argv[i]));
-        strcpy(argArray[i], comp->argv[i]);
+        argArray[i] = storageAddStr(&umka->storage, strlen(umka->argv[i]));
+        strcpy(argArray[i], umka->argv[i]);
     }
 
     // Embedded standard library modules
@@ -277,112 +277,112 @@ void compilerInit(Compiler *comp, const char *fileName, const char *sourceString
     for (int i = 0; i < numRuntimeModules; i++)
     {
         char runtimeModulePath[DEFAULT_STR_LEN + 1] = "";
-        moduleAssertRegularizePath(&comp->modules, runtimeModuleNames[i], comp->modules.curFolder, runtimeModulePath, DEFAULT_STR_LEN + 1);
+        moduleAssertRegularizePath(&umka->modules, runtimeModuleNames[i], umka->modules.curFolder, runtimeModulePath, DEFAULT_STR_LEN + 1);
 
         const bool runtimeModuleTrusted = strcmp(runtimeModuleNames[i], "std.um") == 0;
-        moduleAddSource(&comp->modules, runtimeModulePath, runtimeModuleSources[i], runtimeModuleTrusted);
+        moduleAddSource(&umka->modules, runtimeModulePath, runtimeModuleSources[i], runtimeModuleTrusted);
     }
 }
 
 
-void compilerFree(Compiler *comp)
+void compilerFree(Umka *umka)
 {
-    vmFree          (&comp->vm);
-    moduleFree      (&comp->modules);
-    storageFree     (&comp->storage);
+    vmFree          (&umka->vm);
+    moduleFree      (&umka->modules);
+    storageFree     (&umka->storage);
 
 #ifdef _WIN32
-    SetConsoleCP(comp->originalInputCodepage);
-    SetConsoleOutputCP(comp->originalOutputCodepage);
+    SetConsoleCP(umka->originalInputCodepage);
+    SetConsoleOutputCP(umka->originalOutputCodepage);
 #endif
 }
 
 
-void compilerCompile(Compiler *comp)
+void compilerCompile(Umka *umka)
 {
-    parseProgram(comp);
-    vmReset(&comp->vm, comp->gen.code, comp->gen.debugPerInstr);
+    parseProgram(umka);
+    vmReset(&umka->vm, umka->gen.code, umka->gen.debugPerInstr);
 }
 
 
-void compilerRun(Compiler *comp)
+void compilerRun(Umka *umka)
 {
-    vmRun(&comp->vm, NULL);
+    vmRun(&umka->vm, NULL);
 }
 
 
-void compilerCall(Compiler *comp, FuncContext *fn)
+void compilerCall(Umka *umka, UmkaFuncContext *fn)
 {
-    vmRun(&comp->vm, fn);
+    vmRun(&umka->vm, fn);
 }
 
 
-char *compilerAsm(Compiler *comp)
+char *compilerAsm(Umka *umka)
 {
-    const int chars = genAsm(&comp->gen, NULL, 0);
+    const int chars = genAsm(&umka->gen, NULL, 0);
     if (chars < 0)
         return NULL;
 
-    char *buf = storageAdd(&comp->storage, chars + 1);
-    genAsm(&comp->gen, buf, chars);
+    char *buf = storageAdd(&umka->storage, chars + 1);
+    genAsm(&umka->gen, buf, chars);
     buf[chars] = 0;
     return buf;
 }
 
 
-bool compilerAddModule(Compiler *comp, const char *fileName, const char *sourceString)
+bool compilerAddModule(Umka *umka, const char *fileName, const char *sourceString)
 {
     char modulePath[DEFAULT_STR_LEN + 1] = "";
-    moduleAssertRegularizePath(&comp->modules, fileName, comp->modules.curFolder, modulePath, DEFAULT_STR_LEN + 1);
+    moduleAssertRegularizePath(&umka->modules, fileName, umka->modules.curFolder, modulePath, DEFAULT_STR_LEN + 1);
 
-    if (moduleFindSource(&comp->modules, modulePath))
+    if (moduleFindSource(&umka->modules, modulePath))
         return false;
 
-    moduleAddSource(&comp->modules, modulePath, sourceString, false);
+    moduleAddSource(&umka->modules, modulePath, sourceString, false);
     return true;
 }
 
 
-bool compilerAddFunc(Compiler *comp, const char *name, ExternFunc func)
+bool compilerAddFunc(Umka *umka, const char *name, UmkaExternFunc func)
 {
-    if (externalFind(&comp->externals, name))
+    if (externalFind(&umka->externals, name))
         return false;
 
-    externalAdd(&comp->externals, name, func, false);
+    externalAdd(&umka->externals, name, func, false);
     return true;
 }
 
 
-bool compilerGetFunc(Compiler *comp, const char *moduleName, const char *funcName, FuncContext *fn)
+bool compilerGetFunc(Umka *umka, const char *moduleName, const char *funcName, UmkaFuncContext *fn)
 {
     int module = 1;
     if (moduleName)
     {
         char modulePath[DEFAULT_STR_LEN + 1] = "";
-        moduleAssertRegularizePath(&comp->modules, moduleName, comp->modules.curFolder, modulePath, DEFAULT_STR_LEN + 1);
-        module = moduleFind(&comp->modules, modulePath);
+        moduleAssertRegularizePath(&umka->modules, moduleName, umka->modules.curFolder, modulePath, DEFAULT_STR_LEN + 1);
+        module = moduleFind(&umka->modules, modulePath);
     }
 
-    const Ident *fnIdent = identFind(&comp->idents, &comp->modules, &comp->blocks, module, funcName, NULL, false);
+    const Ident *fnIdent = identFind(&umka->idents, &umka->modules, &umka->blocks, module, funcName, NULL, false);
     if (!fnIdent || fnIdent->kind != IDENT_CONST || fnIdent->type->kind != TYPE_FN)
         return false;
 
     identSetUsed(fnIdent);
 
-    compilerMakeFuncContext(comp, fnIdent->type, fnIdent->offset, fn);
+    compilerMakeFuncContext(umka, fnIdent->type, fnIdent->offset, fn);
     return true;
 }
 
 
-void compilerMakeFuncContext(Compiler *comp, const Type *fnType, int entryOffset, FuncContext *fn)
+void compilerMakeFuncContext(Umka *umka, const Type *fnType, int entryOffset, UmkaFuncContext *fn)
 {
     fn->entryOffset = entryOffset;
 
-    int paramSlots = typeParamSizeTotal(&comp->types, &fnType->sig) / sizeof(Slot);
-    fn->params = (Slot *)storageAdd(&comp->storage, (paramSlots + 4) * sizeof(Slot)) + 4;          // + 4 slots for compatibility with umkaGetParam()
+    const int paramSlots = typeParamSizeTotal(&umka->types, &fnType->sig) / sizeof(Slot);
+    fn->params = (UmkaStackSlot *)storageAdd(&umka->storage, (paramSlots + 4) * sizeof(Slot)) + 4;          // + 4 slots for compatibility with umkaGetParam()
 
-    const ParamLayout *paramLayout = typeMakeParamLayout(&comp->types, &fnType->sig);
+    const ParamLayout *paramLayout = typeMakeParamLayout(&umka->types, &fnType->sig);
     fn->params[-4].ptrVal = (ParamLayout *)paramLayout;
 
-    fn->result = storageAdd(&comp->storage, sizeof(Slot));
+    fn->result = storageAdd(&umka->storage, sizeof(Slot));
 }

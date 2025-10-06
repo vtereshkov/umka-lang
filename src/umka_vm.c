@@ -248,7 +248,7 @@ static void pageFree(HeapPages *pages, bool warnLeak)
             if (chunk->refCnt == 0 || !chunk->onFree)
                 continue;
 
-            chunk->onFree(doGetOnFreeParams(chunk->data), doGetOnFreeResult(pages));
+            chunk->onFree(&doGetOnFreeParams(chunk->data)->apiSlot, &doGetOnFreeResult(pages)->apiSlot);
             page->numChunksWithOnFree--;
         }
 
@@ -443,7 +443,7 @@ static FORCE_INLINE void stackChangeFrameRefCnt(Fiber *fiber, HeapPages *pages, 
 }
 
 
-static FORCE_INLINE void *chunkAlloc(HeapPages *pages, int64_t size, const Type *type, ExternFunc onFree, bool isStack, Error *error)
+static FORCE_INLINE void *chunkAlloc(HeapPages *pages, int64_t size, const Type *type, UmkaExternFunc onFree, bool isStack, Error *error)
 {
     // Page layout: header, data, footer (char), padding, header, data, footer (char), padding...
     const int64_t chunkSize = align(sizeof(HeapChunk) + align(size + 1, sizeof(int64_t)), MEM_MIN_HEAP_CHUNK);
@@ -494,7 +494,7 @@ static FORCE_INLINE int chunkChangeRefCnt(HeapPages *pages, HeapPage *page, void
 
     if (chunk->onFree && chunk->refCnt == 1 && delta == -1)
     {
-        chunk->onFree(doGetOnFreeParams(ptr), doGetOnFreeResult(pages));
+        chunk->onFree(&doGetOnFreeParams(ptr)->apiSlot, &doGetOnFreeResult(pages)->apiSlot);
         page->numChunksWithOnFree--;
     }
 
@@ -744,7 +744,7 @@ static FORCE_INLINE char *doGetEmptyStr(void);
 static FORCE_INLINE void doGetEmptyDynArray(DynArray *array, const Type *type);
 
 
-static FORCE_INLINE void doHook(Fiber *fiber, const HookFunc *hooks, HookEvent event)
+static FORCE_INLINE void doHook(Fiber *fiber, const UmkaHookFunc *hooks, UmkaHookEvent event)
 {
     if (!hooks || !hooks[event])
         return;
@@ -3540,12 +3540,12 @@ static FORCE_INLINE void doCallIndirect(Fiber *fiber, Error *error)
 
 static FORCE_INLINE void doCallExtern(Fiber *fiber, Error *error)
 {
-    const ExternFunc fn = (ExternFunc)fiber->code[fiber->ip].operand.ptrVal;
+    const UmkaExternFunc fn = (UmkaExternFunc)fiber->code[fiber->ip].operand.ptrVal;
 
     fiber->reg[REG_RESULT].ptrVal = error->context;    // Upon entry, the result slot stores the Umka instance
 
     const int ip = fiber->ip;
-    fn(fiber->base + 2, &fiber->reg[REG_RESULT]);      // + 2 for old base pointer and return address
+    fn(&fiber->base[2].apiSlot, &fiber->reg[REG_RESULT].apiSlot);      // + 2 from base pointer for old base pointer and return address
     fiber->ip = ip;
 
     fiber->ip++;
@@ -3682,7 +3682,7 @@ static FORCE_INLINE void doReturn(Fiber *fiber, Fiber **newFiber)
 }
 
 
-static FORCE_INLINE void doEnterFrame(Fiber *fiber, const HookFunc *hooks, Error *error)
+static FORCE_INLINE void doEnterFrame(Fiber *fiber, const UmkaHookFunc *hooks, Error *error)
 {
     const ParamAndLocalVarLayout *layout = fiber->code[fiber->ip].operand.ptrVal;
 
@@ -3707,13 +3707,13 @@ static FORCE_INLINE void doEnterFrame(Fiber *fiber, const HookFunc *hooks, Error
     memset(fiber->top, 0, layout->localVarSlots * sizeof(Slot));
 
     // Call 'call' hook, if any
-    doHook(fiber, hooks, HOOK_CALL);
+    doHook(fiber, hooks, UMKA_HOOK_CALL);
 
     fiber->ip++;
 }
 
 
-static FORCE_INLINE void doLeaveFrame(Fiber *fiber, const HookFunc *hooks, Error *error)
+static FORCE_INLINE void doLeaveFrame(Fiber *fiber, const UmkaHookFunc *hooks, Error *error)
 {
     // Check stack frame ref count
     const int64_t stackFrameRefCnt = fiber->base[-1].intVal;
@@ -3721,7 +3721,7 @@ static FORCE_INLINE void doLeaveFrame(Fiber *fiber, const HookFunc *hooks, Error
         error->runtimeHandler(error->context, ERR_RUNTIME, "Pointer to a local variable escapes from the function");
 
     // Call 'return' hook, if any
-    doHook(fiber, hooks, HOOK_RETURN);
+    doHook(fiber, hooks, UMKA_HOOK_RETURN);
 
     // Restore stack top
     fiber->top = fiber->base;
@@ -3744,7 +3744,7 @@ static FORCE_INLINE void vmLoop(VM *vm)
 {
     Fiber *fiber = vm->fiber;
     HeapPages *pages = &vm->pages;
-    const HookFunc *hooks = vm->hooks;
+    const UmkaHookFunc *hooks = vm->hooks;
     Error *error = vm->error;
 
     while (1)
@@ -3825,7 +3825,7 @@ static FORCE_INLINE void vmLoop(VM *vm)
 }
 
 
-void vmRun(VM *vm, FuncContext *fn)
+void vmRun(VM *vm, UmkaFuncContext *fn)
 {
     if (UNLIKELY(!vm->fiber->alive))
         vm->error->runtimeHandler(vm->error->context, ERR_RUNTIME, "Cannot run a dead fiber");
@@ -3855,9 +3855,9 @@ void vmRun(VM *vm, FuncContext *fn)
 
         vm->fiber->top -= numParamSlots;
 
-        Slot empty = {0};
+        UmkaStackSlot empty = {0};
         for (int i = 0; i < numParamSlots; i++)
-            vm->fiber->top[i] = fn->params ? fn->params[i] : empty;
+            vm->fiber->top[i].apiSlot = fn->params ? fn->params[i] : empty;
 
         // Push 'return from VM' signal as return address
         (--vm->fiber->top)->intVal = RETURN_FROM_VM;
@@ -3876,7 +3876,7 @@ void vmRun(VM *vm, FuncContext *fn)
 
     // Save result
     if (fn && fn->result)
-        *(fn->result) = vm->fiber->reg[REG_RESULT];
+        *(fn->result) = vm->fiber->reg[REG_RESULT].apiSlot;
 }
 
 
@@ -3970,13 +3970,13 @@ bool vmUnwindCallStack(VM *vm, Slot **base, int *ip)
 }
 
 
-void vmSetHook(VM *vm, HookEvent event, HookFunc hook)
+void vmSetHook(VM *vm, UmkaHookEvent event, UmkaHookFunc hook)
 {
     vm->hooks[event] = hook;
 }
 
 
-void *vmAllocData(VM *vm, int size, ExternFunc onFree)
+void *vmAllocData(VM *vm, int size, UmkaExternFunc onFree)
 {
     return chunkAlloc(&vm->pages, size, NULL, onFree, false, vm->error);
 }
