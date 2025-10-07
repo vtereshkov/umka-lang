@@ -4,10 +4,17 @@ The Umka interpreter is a static or shared library that provides the API for emb
 
 ## Initialization and running
 
+### Types
+
+```
+typedef struct tagUmka Umka;
+```
+Umka interpreter instance handle.
+
 ### Functions
 
 ```
-UMKA_API void *umkaAlloc(void);
+UMKA_API Umka *umkaAlloc(void);
 ```
 Allocates memory for the interpreter.
 
@@ -372,6 +379,11 @@ Returned value: String buffer pointer. It stays valid until `umkaFree` is called
 ## Accessing Umka data types
 
 ### Types
+
+```
+typedef struct tagType UmkaType;
+```
+Umka data type.
 
 ```
 #define UmkaDynArray(T) struct \
