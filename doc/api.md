@@ -69,7 +69,7 @@ Returned value: `true` if the compilation is successful and no compile-time erro
 ```
 UMKA_API int umkaRun(Umka *umka);
 ```
-Runs the Umka program previously compiled to bytecode, i.e., calls its `main` function, if it exists. After it returns,  gracefully deallocates heap memory referenced by global variables. 
+Runs the Umka program previously compiled to bytecode, i.e., calls its `main` function, if it exists. After it returns, gracefully deallocates heap memory referenced by global variables. 
 
 Parameters:
 
@@ -434,9 +434,20 @@ Umka closure.
 ### Functions
 
 ```
+UMKA_API const UmkaType *umkaGetBaseType(const UmkaType *type);
+```
+For a pointer type, returns the base type. For an array or dynamic array type, returns the item type.
+
+Parameters:
+
+* `type`: Pointer, array or dynamic array type
+
+Returned value: Base type of a pointer type; item type of an array or dynamic array type; `NULL` otherwise.
+
+```
 UMKA_API void *umkaAllocData(Umka *umka, int size, UmkaExternFunc onFree);
 ```
-Allocates a reference-counted memory chunk.
+Allocates an untyped chunk of heap memory.
 
 Parameters:
 
@@ -465,19 +476,6 @@ Parameters:
 
 * `umka`: Interpreter instance handle
 * `ptr`: Chunk pointer
-
-```
-UMKA_API void *umkaGetMapItem(Umka *umka, UmkaMap *map, UmkaStackSlot key);
-```
-Finds the map item by the given key.
-
-Parameters:
-
-* `umka`: Interpreter instance handle
-* `map`: Umka map
-* `key`: Key value
-
-Returned value: Pointer to the map item, `NULL` if the item does not exist.
 
 ```
 UMKA_API char *umkaMakeStr(Umka *umka, const char *str);
@@ -524,6 +522,31 @@ Parameters:
 * `array`: Pointer to the dynamic array, actually of type `UmkaDynArray(ItemType)`
 
 Returned value: Dynamic array length
+
+```
+UMKA_API void *umkaMakeStruct(Umka *umka, const UmkaType *type);
+```
+Creates a structure or array in heap memory.
+
+Parameters:
+
+* `umka`: Interpreter instance handle
+* `type`: Structure or array type
+
+Returned value: Pointer to the created structure or array.
+
+```
+UMKA_API void *umkaGetMapItem(Umka *umka, UmkaMap *map, UmkaStackSlot key);
+```
+Finds the map item by the given key.
+
+Parameters:
+
+* `umka`: Interpreter instance handle
+* `map`: Umka map
+* `key`: Key value
+
+Returned value: Pointer to the map item, `NULL` if the item does not exist.
 
 ## Accessing Umka API dynamically
 

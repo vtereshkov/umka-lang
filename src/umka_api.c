@@ -319,3 +319,16 @@ UMKA_API void umkaSetMetadata(Umka *umka, void *metadata)
     umka->metadata = metadata;
 }
 
+
+UMKA_API void *umkaMakeStruct(Umka *umka, const UmkaType *type)
+{
+    return vmMakeStruct(&umka->vm, type);
+}
+
+
+UMKA_API const UmkaType *umkaGetBaseType(const UmkaType *type) 
+{
+    if (type->kind == TYPE_PTR || type->kind == TYPE_WEAKPTR || type->kind == TYPE_ARRAY || type->kind == TYPE_DYNARRAY)
+        return type->base;
+    return NULL;
+}

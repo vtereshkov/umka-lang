@@ -48,6 +48,8 @@ static void compilerSetAPI(Umka *umka)
     umka->api.umkaGetResult         = umkaGetResult;
     umka->api.umkaGetMetadata       = umkaGetMetadata;
     umka->api.umkaSetMetadata       = umkaSetMetadata;
+    umka->api.umkaMakeStruct        = umkaMakeStruct;
+    umka->api.umkaGetBaseType       = umkaGetBaseType;
 }
 
 

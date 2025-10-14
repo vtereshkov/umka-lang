@@ -4025,6 +4025,12 @@ void vmMakeDynArray(VM *vm, DynArray *array, const Type *type, int len)
 }
 
 
+void *vmMakeStruct(VM *vm, const Type *type)
+{
+    return chunkAlloc(&vm->pages, type->size, type, NULL, false, vm->error);
+}
+
+
 int64_t vmGetMemUsage(VM *vm)
 {
     return vm->pages.totalSize;

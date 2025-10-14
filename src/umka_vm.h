@@ -206,6 +206,7 @@ void vmDecRef                   (VM *vm, void *ptr, const Type *type);
 void *vmGetMapNodeData          (VM *vm, Map *map, Slot key);
 char *vmMakeStr                 (VM *vm, const char *str);
 void vmMakeDynArray             (VM *vm, DynArray *array, const Type *type, int len);
+void *vmMakeStruct              (VM *vm, const Type *type);
 int64_t vmGetMemUsage           (VM *vm);
 const char *vmBuiltinSpelling   (BuiltinFunc builtin);
 
