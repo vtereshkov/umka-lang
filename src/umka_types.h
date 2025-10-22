@@ -323,7 +323,7 @@ static inline bool typeCompatiblePrintf(TypeKind expectedTypeKind, TypeKind type
     return  (typeKind == expectedTypeKind) ||
             (typeKindIntegerOrEnum(typeKind) && typeKindIntegerOrEnum(expectedTypeKind)) ||
             (typeKindReal(typeKind) && typeKindReal(expectedTypeKind)) ||
-            (expectedTypeKind == TYPE_INTERFACE); 
+            (typeKind != TYPE_VOID && expectedTypeKind == TYPE_INTERFACE); 
 }
 
 
