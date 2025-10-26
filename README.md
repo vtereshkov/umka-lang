@@ -84,6 +84,10 @@ _400 x 400 matrix multiplication (AMD A4-3300M @ 1.9 GHz, Windows 7)_
 
 ![](resources/spacesim.png)
 
+* [Hover! maze demo](https://github.com/vtereshkov/hover-maze): A 3D demo program that loads the original assets of the game Hover! and uses a software renderer similar to that of SpaceSim
+
+![](resources/hover.png) 
+
 * [Umka OS](https://github.com/skejeton/umka-os): A proof of concept operating system written in C and Umka
 
 ![](resources/os.png)
