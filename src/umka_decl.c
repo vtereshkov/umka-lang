@@ -946,20 +946,14 @@ void parseProgram(Umka *umka)
     // Entry point
     genEntryPoint(&umka->gen, 0);
 
-    const Ident *mainFn = identFind(&umka->idents, &umka->modules, &umka->blocks, mainModule, "main", NULL, false);
-    if (mainFn)
+    const Ident *mainIdent = identFind(&umka->idents, &umka->modules, &umka->blocks, mainModule, "main", NULL, false);
+    if (mainIdent)
     {
-        if (identIsMain(mainFn))
-        {
-            genPushZero(&umka->gen, sizeof(Interface) / sizeof(Slot));  // Dummy upvalue
-            genCall(&umka->gen, mainFn->offset);
-        }
-        else
-        {
-            char typeBuf[DEFAULT_STR_LEN + 1];
-            typeSpelling(mainFn->type, typeBuf);
-            umka->error.handler(umka->error.context, "Entry point 'main' has incorrect signature %s; expected 'fn main()' with no arguments and no return value", typeBuf);
-        }
+        if (!identIsMain(mainIdent))
+            umka->error.handler(umka->error.context, "Identifier main must be fn main()");
+
+        genPushZero(&umka->gen, sizeof(Interface) / sizeof(Slot));  // Dummy upvalue
+        genCall(&umka->gen, mainIdent->offset);
     }
 
     doGarbageCollection(umka);
