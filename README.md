@@ -268,3 +268,6 @@ Umka is very similar to Go syntactically. However, in some aspects it's differen
 
 ### Semantics
 Umka allows implicit type casts and supports default parameters in function declarations. It features the ternary conditional operator deliberately omitted from Go. It doesn't have slices as separate data types. Instead, it supports dynamic arrays, which are declared like Go's slices and initialized by calling `make()`. Method receivers must be pointers. The multithreading model in Umka is inspired by Lua and Wren rather than Go. It offers lightweight threads called fibers instead of goroutines and channels. The garbage collection mechanism is based on reference counting, so Umka needs to support `weak` pointers. Full Unicode support is under development.
+
+## Reviews
+* [Tsoding Daily](https://www.youtube.com/watch?v=wRnJgrOcjqg)
