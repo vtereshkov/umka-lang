@@ -247,8 +247,6 @@ void compilerInit(Umka *umka, const char *fileName, const char *sourceString, in
     char filePath[DEFAULT_STR_LEN + 1] = "";
     moduleAssertRegularizePath(&umka->modules, fileName, umka->modules.curFolder, filePath, DEFAULT_STR_LEN + 1);
 
-    umka->lex.fileName = filePath;
-
     lexInit(&umka->lex, &umka->storage, &umka->debug, filePath, sourceString, false, &umka->error);
 
     umka->argc  = argc;
