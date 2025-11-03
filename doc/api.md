@@ -42,6 +42,25 @@ Parameters:
 
 Returned value: `true` if the source has been successfully loaded.
 
+```c
+UMKA_API bool umkaInitEx(Umka *umka, UmkaInitOpts *opts);
+```
+
+Initializes the interpreter instance, but copies the configuration arguments from a pointer to an `UmkaInitOpts` structure.
+See `umkaDefaultInitOpts` for initializing `opts` with default values.
+
+Returned value: `true` if the source has been successfully loaded.
+
+```c
+UMKA_API bool umkaDefaultInitOpts(UmkaInitOpts *opts);
+```
+
+Initializes a pointer to an `UmkaInitOpts` structure with default values.
+
+This function sets:
+- `stackSize`: 1 MiB (roughly 131k stack slots)
+- `fileSystemEnabled`: filesystem access (for `import`ing modules and usage of `std::File` manipulation functions)
+
 ```
 UMKA_API bool umkaAddModule(Umka *umka, const char *fileName, const char *sourceString);
 ```
@@ -279,6 +298,22 @@ Parameters:
 
 * `warning`: Warning description
 
+```c
+typedef struct
+{
+    const char *fileName;
+    const char *sourceString;
+    size_t stackSize;
+    int argc;
+    char **argv;
+    bool fileSystemEnabled;
+    bool implLibsEnabled;
+    UmkaWarningCallback warningCallback;
+} UmkaInitOpts;
+```
+
+Initialization options struct for `umkaInitEx`. See `umkaDefaultInitOpts` for initializing with default values.
+
 ```
 typedef enum
 {
@@ -416,7 +451,7 @@ typedef struct
     union
     {
         const UmkaType *type;
-        const UmkaType *selfType;        
+        const UmkaType *selfType;
     };
 } UmkaAny;
 ```
