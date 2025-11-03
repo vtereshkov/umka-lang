@@ -25,6 +25,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <string.h>
 
 
 #if defined(__cplusplus)
@@ -136,14 +137,10 @@ typedef struct
 
 static inline void umkaDefaultInitOpts(UmkaInitOpts *opts)
 {
+	memset(opts, 0, sizeof *opts);
 	opts->stackSize = 1024 * 1024; // 1 MiB
 	opts->fileSystemEnabled = true;
 	opts->implLibsEnabled = false;
-
-	opts->fileName = opts->sourceString = NULL;
-	opts->argc = 0;
-	opts->argv = NULL;
-	opts->warningCallback = NULL;
 }
 
 
