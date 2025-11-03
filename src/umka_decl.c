@@ -937,14 +937,13 @@ static int parseModule(Umka *umka)
 // program = module.
 void parseProgram(Umka *umka)
 {
-    // Entry point stub
-    genNop(&umka->gen);
+    genNop(&umka->gen);                                 // main() entry point jump stub
+    genNop(&umka->gen);                                 // Cleanup code jump stub
 
     lexNext(&umka->lex);
-    int mainModule = parseModule(umka);
-
-    // Entry point
-    genEntryPoint(&umka->gen, 0);
+    const int mainModule = parseModule(umka);
+    
+    genEntryPoint(&umka->gen, JUMP_TO_MAIN);            // main() entry point jump
 
     const Ident *mainIdent = identFind(&umka->idents, &umka->modules, &umka->blocks, mainModule, "main", NULL, false);
     if (mainIdent)
@@ -955,6 +954,8 @@ void parseProgram(Umka *umka)
         genPushZero(&umka->gen, sizeof(Interface) / sizeof(Slot));  // Dummy upvalue
         genCall(&umka->gen, mainIdent->offset);
     }
+
+    genEntryPoint(&umka->gen, JUMP_TO_CLEANUP);         // Cleanup code jump
 
     doGarbageCollection(umka);
     genHalt(&umka->gen);

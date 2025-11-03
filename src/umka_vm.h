@@ -27,6 +27,13 @@ enum    // Memory manager settings
 };
 
 
+typedef enum
+{
+    JUMP_TO_MAIN     = 0,
+    JUMP_TO_CLEANUP  = 1
+} FixedOffset;
+
+
 enum    // Special values for return addresses
 {
     RETURN_FROM_VM    = -2,                      // Used instead of return address in functions called by umkaCall()
@@ -194,7 +201,7 @@ typedef struct tagVM
 void vmInit                     (VM *vm, Storage *storage, int stackSize, bool fileSystemEnabled, Error *error);
 void vmFree                     (VM *vm);
 void vmReset                    (VM *vm, const Instruction *code, const DebugInfo *debugPerInstr);
-void vmRun                      (VM *vm, UmkaFuncContext *fn);
+void vmRun                      (VM *vm, FixedOffset fixedOffset, UmkaFuncContext *fn);
 bool vmAlive                    (VM *vm);
 void vmKill                     (VM *vm);
 int vmAsm                       (int ip, const Instruction *code, const DebugInfo *debugPerInstr, char *buf, int size);

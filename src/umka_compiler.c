@@ -286,6 +286,9 @@ void compilerInit(Umka *umka, const char *fileName, const char *sourceString, in
 
 void compilerFree(Umka *umka)
 {
+    if (vmAlive(&umka->vm))
+        vmRun(&umka->vm, JUMP_TO_CLEANUP, NULL);
+    
     vmFree          (&umka->vm);
     moduleFree      (&umka->modules);
     storageFree     (&umka->storage);
@@ -306,13 +309,13 @@ void compilerCompile(Umka *umka)
 
 void compilerRun(Umka *umka)
 {
-    vmRun(&umka->vm, NULL);
+    vmRun(&umka->vm, JUMP_TO_MAIN, NULL);
 }
 
 
 void compilerCall(Umka *umka, UmkaFuncContext *fn)
 {
-    vmRun(&umka->vm, fn);
+    vmRun(&umka->vm, -1, fn);
 }
 
 
