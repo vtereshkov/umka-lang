@@ -20,6 +20,7 @@ static void compilerSetAPI(Umka *umka)
 {
     umka->api.umkaAlloc             = umkaAlloc;
     umka->api.umkaInit              = umkaInit;
+    umka->api.umkaInitEx            = umkaInitEx;
     umka->api.umkaCompile           = umkaCompile;
     umka->api.umkaRun               = umkaRun;
     umka->api.umkaCall              = umkaCall;

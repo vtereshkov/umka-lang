@@ -97,7 +97,7 @@ typedef struct
     union
     {
         const UmkaType *type;
-        const UmkaType *selfType;        
+        const UmkaType *selfType;
     };
 } UmkaAny;
 
@@ -121,8 +121,22 @@ typedef struct
 typedef void (*UmkaWarningCallback)(UmkaError *warning);
 
 
+typedef struct
+{
+    const char *fileName;
+    const char *sourceString;
+    size_t stackSize;
+    int argc;
+    char **argv;
+    bool fileSystemEnabled;
+    bool implLibsEnabled;
+    UmkaWarningCallback warningCallback;
+} UmkaInitOpts;
+
+
 typedef Umka *(*UmkaAlloc)                      (void);
 typedef bool (*UmkaInit)                        (Umka *umka, const char *fileName, const char *sourceString, int stackSize, void *reserved, int argc, char **argv, bool fileSystemEnabled, bool implLibsEnabled, UmkaWarningCallback warningCallback);
+typedef bool (*UmkaInitEx)                      (Umka *umka, UmkaInitOpts *opts);
 typedef bool (*UmkaCompile)                     (Umka *umka);
 typedef int  (*UmkaRun)                         (Umka *umka);
 typedef int  (*UmkaCall)                        (Umka *umka, UmkaFuncContext *fn);
@@ -159,6 +173,7 @@ typedef struct
 {
     UmkaAlloc           umkaAlloc;
     UmkaInit            umkaInit;
+    UmkaInitEx          umkaInitEx;
     UmkaCompile         umkaCompile;
     UmkaRun             umkaRun;
     UmkaCall            umkaCall;
@@ -194,6 +209,7 @@ typedef struct
 
 UMKA_API Umka *umkaAlloc                    (void);
 UMKA_API bool umkaInit                      (Umka *umka, const char *fileName, const char *sourceString, int stackSize, void *reserved, int argc, char **argv, bool fileSystemEnabled, bool implLibsEnabled, UmkaWarningCallback warningCallback);
+UMKA_API bool umkaInitEx                    (Umka *umka, UmkaInitOpts *opts);
 UMKA_API bool umkaCompile                   (Umka *umka);
 UMKA_API int  umkaRun                       (Umka *umka);
 UMKA_API int  umkaCall                      (Umka *umka, UmkaFuncContext *fn);
