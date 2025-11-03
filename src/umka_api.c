@@ -89,6 +89,20 @@ UMKA_API bool umkaInit(Umka *umka, const char *fileName, const char *sourceStrin
 }
 
 
+UMKA_API bool umkaInitEx(Umka *umka, UmkaInitOpts *opts)
+{
+	return umkaInit(
+		umka,
+		opts->fileName, opts->sourceString,
+		opts->stackSize,
+		NULL,
+		opts->argc, opts->argv,
+		opts->fileSystemEnabled, opts->implLibsEnabled,
+		opts->warningCallback
+	);
+}
+
+
 UMKA_API bool umkaCompile(Umka *umka)
 {
     if (setjmp(umka->error.jumper) == 0)
