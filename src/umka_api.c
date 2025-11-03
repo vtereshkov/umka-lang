@@ -89,6 +89,15 @@ UMKA_API bool umkaInit(Umka *umka, const char *fileName, const char *sourceStrin
 }
 
 
+UMKA_API void umkaDefaultInitOpts(UmkaInitOpts *opts)
+{
+	memset(opts, 0, sizeof *opts);
+	// 1 MiB / 1 StackSlot (8 bytes) approx eq. 131k stack slots
+	opts->stackSize = (1024 * 1024) / sizeof(UmkaStackSlot);
+	opts->fileSystemEnabled = true;
+}
+
+
 UMKA_API bool umkaInitEx(Umka *umka, UmkaInitOpts *opts)
 {
 	return umkaInit(
@@ -345,14 +354,4 @@ UMKA_API const UmkaType *umkaGetBaseType(const UmkaType *type)
     if (type->kind == TYPE_PTR || type->kind == TYPE_WEAKPTR || type->kind == TYPE_ARRAY || type->kind == TYPE_DYNARRAY)
         return type->base;
     return NULL;
-}
-
-
-UMKA_API void umkaDefaultInitOpts(UmkaInitOpts *opts)
-{
-	memset(opts, 0, sizeof *opts);
-	// 1 MiB / 1 StackSlot (8 bytes) approx eq. 131k stack slots
-	opts->stackSize = (1024 * 1024) / sizeof(UmkaStackSlot);
-	opts->fileSystemEnabled = true;
-	opts->implLibsEnabled = false;
 }

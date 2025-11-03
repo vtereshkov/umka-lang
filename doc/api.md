@@ -57,9 +57,9 @@ UMKA_API bool umkaDefaultInitOpts(UmkaInitOpts *opts);
 
 Initializes a pointer to an `UmkaInitOpts` structure with default values.
 
-This function sets:
-- `stackSize`: 1 MiB (roughly 131k stack slots)
-- `fileSystemEnabled`: filesystem access (for `import`ing modules and usage of `std::File` manipulation functions)
+Defaults:
+- `stackSize`: 131k stack slots (roughly 1 MiB)
+- `fileSystemEnabled`: `true` (for `import`ing modules and usage of `std::File` manipulation functions)
 
 ```
 UMKA_API bool umkaAddModule(Umka *umka, const char *fileName, const char *sourceString);
