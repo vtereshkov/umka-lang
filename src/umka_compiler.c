@@ -246,13 +246,10 @@ void compilerInit(Umka *umka, const char *fileName, const char *sourceString, in
 
     char filePath[DEFAULT_STR_LEN + 1] = "";
     moduleAssertRegularizePath(&umka->modules, fileName, umka->modules.curFolder, filePath, DEFAULT_STR_LEN + 1);
-
+    
     umka->lex.fileName = filePath;
 
     lexInit(&umka->lex, &umka->storage, &umka->debug, filePath, sourceString, false, &umka->error);
-
-    umka->argc  = argc;
-    umka->argv  = argv;
 
     umka->blocks.module = moduleAdd(&umka->modules, "#universe");
 
@@ -263,15 +260,15 @@ void compilerInit(Umka *umka, const char *fileName, const char *sourceString, in
     // Command-line-arguments
     Type *argvType = typeAdd(&umka->types, &umka->blocks, TYPE_ARRAY);
     argvType->base = umka->strType;
-    typeResizeArray(argvType, umka->argc);
+    typeResizeArray(argvType, argc);
 
     Ident *rtlargv = identAllocVar(&umka->idents, &umka->types, &umka->modules, &umka->blocks, "rtlargv", argvType, true);
     char **argArray = (char **)rtlargv->ptr;
 
-    for (int i = 0; i < umka->argc; i++)
+    for (int i = 0; i < argc; i++)
     {
-        argArray[i] = storageAddStr(&umka->storage, strlen(umka->argv[i]));
-        strcpy(argArray[i], umka->argv[i]);
+        argArray[i] = storageAddStr(&umka->storage, strlen(argv[i]));
+        strcpy(argArray[i], argv[i]);
     }
 
     // Embedded standard library modules

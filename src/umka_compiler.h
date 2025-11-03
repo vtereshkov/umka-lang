@@ -46,10 +46,6 @@ typedef struct tagUmka
          *anyType,
          *fileType;
 
-    // Command-line arguments
-    int argc;
-    char **argv;
-
     // Arbitrary metadata
     void *metadata;
 

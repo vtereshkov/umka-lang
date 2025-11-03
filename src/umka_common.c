@@ -411,11 +411,11 @@ char *moduleCurFolder(char *buf, int size)
 
 bool modulePathIsAbsolute(const char *path)
 {
-    while (path && (*path == ' ' || *path == '\t'))
-        path++;
-
     if (!path)
         return false;
+
+    while (*path == ' ' || *path == '\t')
+        path++;
 
 #ifdef _WIN32
     return isalpha(path[0]) && path[1] == ':';
