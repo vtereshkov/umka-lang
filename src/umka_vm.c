@@ -3825,7 +3825,7 @@ static FORCE_INLINE void vmLoop(VM *vm)
 }
 
 
-void vmRun(VM *vm, UmkaFuncContext *fn)
+void vmRun(VM *vm, FixedOffset fixedOffset, UmkaFuncContext *fn)
 {
     if (UNLIKELY(!vm->fiber->alive))
         vm->error->runtimeHandler(vm->error->context, ERR_RUNTIME, "Cannot run a dead fiber");
@@ -3867,8 +3867,8 @@ void vmRun(VM *vm, UmkaFuncContext *fn)
     }
     else
     {
-        // Calling main()
-        vm->fiber->ip = 0;
+        // Calling main() or cleanup code
+        vm->fiber->ip = fixedOffset;
     }
 
     // Main loop
