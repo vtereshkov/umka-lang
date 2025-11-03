@@ -209,6 +209,7 @@ typedef struct
 
 UMKA_API Umka *umkaAlloc                    (void);
 UMKA_API bool umkaInit                      (Umka *umka, const char *fileName, const char *sourceString, int stackSize, void *reserved, int argc, char **argv, bool fileSystemEnabled, bool implLibsEnabled, UmkaWarningCallback warningCallback);
+UMKA_API void umkaDefaultInitOpts           (UmkaInitOpts *opts);
 UMKA_API bool umkaInitEx                    (Umka *umka, UmkaInitOpts *opts);
 UMKA_API bool umkaCompile                   (Umka *umka);
 UMKA_API int  umkaRun                       (Umka *umka);

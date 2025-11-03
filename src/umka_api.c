@@ -351,7 +351,8 @@ UMKA_API const UmkaType *umkaGetBaseType(const UmkaType *type)
 UMKA_API void umkaDefaultInitOpts(UmkaInitOpts *opts)
 {
 	memset(opts, 0, sizeof *opts);
-	opts->stackSize = 1024 * 1024; // 1 MiB
+	// 1 MiB / 1 StackSlot (8 bytes) approx eq. 131k stack slots
+	opts->stackSize = (1024 * 1024) / sizeof(UmkaStackSlot);
 	opts->fileSystemEnabled = true;
 	opts->implLibsEnabled = false;
 }
