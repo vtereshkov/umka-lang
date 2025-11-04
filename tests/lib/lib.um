@@ -1,9 +1,4 @@
 fn add*(a, b: real): real
 fn mulVec*(a: real, v: [2]real): [2]real
 fn hello*(): str
-
-type Callback = fn (i: int): int
-fn sumImpl(callback: Callback, callbackType: ^void, n: int): int
-fn sum*(callback: Callback, n: int): int {
-	return sumImpl(callback, typeptr(Callback), n)
-}
+fn sum*(callback: fn (i: int): int, n: int): int

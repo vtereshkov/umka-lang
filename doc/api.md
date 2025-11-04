@@ -189,7 +189,7 @@ Fills in the function context required by `umkaCall`, if it could not be filled 
 Parameters:
 
 * `umka`: Interpreter instance handle
-* `closureType`: Umka function type. Must be obtained by calling `typeptr` and passed to the C/C++ code
+* `closureType`: Umka function type. Can be obtained by calling `umkaGetParamType`
 * `entryOffset`: Function entry point offset
 * `fn`: Function context to be filled in
 
@@ -208,7 +208,7 @@ Returned value: 0 if the Umka function returns successfully and no run-time erro
 ```
 UMKA_API UmkaStackSlot *umkaGetParam(UmkaStackSlot *params, int index);
 ```
-Finds the parameter slot.
+Finds function parameter slot.
 
 Parameters:
 
@@ -220,7 +220,7 @@ Returned value: Pointer to the first stack slot occupied by the parameter, `NULL
 ```
 UMKA_API UmkaAny *umkaGetUpvalue(UmkaStackSlot *params);
 ```
-Finds the captured variables.
+Finds variables captured by a closure.
 
 Parameters:
 
@@ -434,6 +434,30 @@ Umka closure.
 ### Functions
 
 ```
+UMKA_API const UmkaType *umkaGetParamType(UmkaStackSlot *params, int index);
+```
+Returns function parameter type.
+
+Parameters:
+
+* `params`: Parameter stack slots
+* `index`: Parameter position. The leftmost parameter is at position 0
+
+Returned value: Parameter type, or `NULL` if there is no such parameter or if `umkaGetParamType` is called from an `onFree` callback.
+
+```
+UMKA_API const UmkaType *umkaGetResultType(UmkaStackSlot *params, UmkaStackSlot *result);
+```
+Returns function result type.
+
+Parameters:
+
+* `params`: Parameter stack slots
+* `result`: Returned value stack slots
+
+Returned value: Function result type, or `NULL` if `umkaGetResultType` is called from an `onFree` callback.
+
+```
 UMKA_API const UmkaType *umkaGetBaseType(const UmkaType *type);
 ```
 For a pointer type, returns the base type. For an array or dynamic array type, returns the item type.
@@ -509,7 +533,7 @@ Parameters:
 
 * `umka`: Interpreter instance handle
 * `array`: Pointer to the dynamic array, actually of type `UmkaDynArray(ItemType)`
-* `type`: Dynamic array type that can be obtained by calling `typeptr([]ItemType)` in Umka
+* `type`: Dynamic array type. Can be obtained by calling `UmkaGetParamType`
 * `len`: Dynamic array length 
 
 ```
