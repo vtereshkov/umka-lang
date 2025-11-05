@@ -173,11 +173,22 @@ typedef struct
 } ParamLayout;
 
 
+typedef struct      // Appended to the end of ParamLayout
+{
+    const struct tagType *resultType;
+    const struct tagType *paramType[];
+} ParamLayoutTypes;
+
+
 typedef struct
 {
     const ParamLayout *paramLayout;
     int64_t localVarSlots;
 } ParamAndLocalVarLayout;
+
+
+#define PARAM_LAYOUT_SIZE(numParams) (sizeof(ParamLayout) + (numParams) * sizeof(int64_t) + sizeof(ParamLayoutTypes) + (numParams) * sizeof(struct tagType *))
+#define PARAM_LAYOUT_TYPES(layout)   ((ParamLayoutTypes *)((char *)(layout) + sizeof(ParamLayout) + (layout)->numParams * sizeof(int64_t)))
 
 
 void errorReportInit(UmkaError *report, Storage *storage, const char *fileName, const char *fnName, int line, int pos, int code, const char *format, va_list args);

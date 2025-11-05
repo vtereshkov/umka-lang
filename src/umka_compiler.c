@@ -50,6 +50,8 @@ static void compilerSetAPI(Umka *umka)
     umka->api.umkaSetMetadata       = umkaSetMetadata;
     umka->api.umkaMakeStruct        = umkaMakeStruct;
     umka->api.umkaGetBaseType       = umkaGetBaseType;
+    umka->api.umkaGetParamType      = umkaGetParamType;
+    umka->api.umkaGetResultType     = umkaGetResultType;    
 }
 
 
@@ -174,7 +176,7 @@ static void compilerDeclareBuiltinIdents(Umka *umka)
     identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "selfptr",    umka->ptrVoidType, BUILTIN_SELFPTR);
     identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "selfhasptr", umka->boolType,    BUILTIN_SELFHASPTR);
     identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "selftypeeq", umka->boolType,    BUILTIN_SELFTYPEEQ);
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "typeptr",    umka->ptrVoidType, BUILTIN_TYPEPTR);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "typeptr",    umka->ptrVoidType, BUILTIN_TYPEPTR);        // Deprecated
     identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "valid",      umka->boolType,    BUILTIN_VALID);
 
     // Maps
@@ -384,7 +386,7 @@ void compilerMakeFuncContext(Umka *umka, const Type *fnType, int entryOffset, Um
     fn->params = (UmkaStackSlot *)storageAdd(&umka->storage, (paramSlots + 4) * sizeof(Slot)) + 4;          // + 4 slots for compatibility with umkaGetParam()
 
     const ParamLayout *paramLayout = typeMakeParamLayout(&umka->types, &fnType->sig);
-    fn->params[-4].ptrVal = (ParamLayout *)paramLayout;
+    *vmGetParamLayout(fn->params) = paramLayout;
 
     fn->result = storageAdd(&umka->storage, sizeof(Slot));
 }

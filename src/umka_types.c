@@ -761,7 +761,7 @@ int typeParamOffset(const Types *types, const Signature *sig, int index)
 
 const ParamLayout *typeMakeParamLayout(const Types *types, const Signature *sig)
 {
-    ParamLayout *layout = storageAdd(types->storage, sizeof(ParamLayout) + sig->numParams * sizeof(int64_t));
+    ParamLayout *layout = storageAdd(types->storage, PARAM_LAYOUT_SIZE(sig->numParams));
 
     layout->numParams = sig->numParams;
     layout->numResultParams = typeStructured(sig->resultType) ? 1 : 0;
@@ -770,6 +770,13 @@ const ParamLayout *typeMakeParamLayout(const Types *types, const Signature *sig)
     for (int i = 0; i < sig->numParams; i++)
         layout->firstSlotIndex[i] = typeParamOffset(types, sig, i) / sizeof(Slot) - 2;   // - 2 slots for old base pointer and return address
 
+    ParamLayoutTypes *layoutTypes = PARAM_LAYOUT_TYPES(layout);
+
+    layoutTypes->resultType = sig->resultType;
+
+    for (int i = 0; i < sig->numParams; i++)
+        layoutTypes->paramType[i] = sig->param[i]->type;    
+    
     return layout;
 }
 
@@ -877,7 +884,7 @@ static char *typeSpellingRecursive(const Type *type, char *buf, int size, int de
 }
 
 
-char *typeSpelling(const Type *type, char *buf)
+const char *typeSpelling(const Type *type, char *buf)
 {
     enum {MAX_TYPE_SPELLING_DEPTH = 10};
     return typeSpellingRecursive(type, buf, DEFAULT_STR_LEN + 1, MAX_TYPE_SPELLING_DEPTH);

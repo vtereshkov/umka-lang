@@ -153,6 +153,8 @@ typedef void *(*UmkaGetMetadata)                (Umka *umka);
 typedef void (*UmkaSetMetadata)                 (Umka *umka, void *metadata);
 typedef void *(*UmkaMakeStruct)                 (Umka *umka, const UmkaType *type);
 typedef const UmkaType *(*UmkaGetBaseType)      (const UmkaType *type);
+typedef const UmkaType *(*UmkaGetParamType)     (UmkaStackSlot *params, int index);
+typedef const UmkaType *(*UmkaGetResultType)    (UmkaStackSlot *params, UmkaStackSlot *result);
 
 
 typedef struct
@@ -189,6 +191,8 @@ typedef struct
     UmkaSetMetadata     umkaSetMetadata;
     UmkaMakeStruct      umkaMakeStruct;
     UmkaGetBaseType     umkaGetBaseType;
+    UmkaGetParamType    umkaGetParamType;
+    UmkaGetResultType   umkaGetResultType;    
 } UmkaAPI;
 
 
@@ -224,6 +228,8 @@ UMKA_API void *umkaGetMetadata              (Umka *umka);
 UMKA_API void umkaSetMetadata               (Umka *umka, void *metadata);
 UMKA_API void *umkaMakeStruct               (Umka *umka, const UmkaType *type);
 UMKA_API const UmkaType *umkaGetBaseType    (const UmkaType *type);
+UMKA_API const UmkaType *umkaGetParamType   (UmkaStackSlot *params, int index);
+UMKA_API const UmkaType *umkaGetResultType  (UmkaStackSlot *params, UmkaStackSlot *result);
 
 
 static inline UmkaAPI *umkaGetAPI(Umka *umka)

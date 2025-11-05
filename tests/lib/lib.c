@@ -6,8 +6,8 @@ UMKA_EXPORT void add(UmkaStackSlot *params, UmkaStackSlot *result)
     Umka *umka = umkaGetInstance(result);
     UmkaAPI *api = umkaGetAPI(umka);
 
-    double a = api->umkaGetParam(params, 0)->realVal;
-    double b = api->umkaGetParam(params, 1)->realVal;
+    const double a = api->umkaGetParam(params, 0)->realVal;
+    const double b = api->umkaGetParam(params, 1)->realVal;
     api->umkaGetResult(params, result)->realVal = a + b;
 }
 
@@ -17,8 +17,8 @@ UMKA_EXPORT void mulVec(UmkaStackSlot *params, UmkaStackSlot *result)
     Umka *umka = umkaGetInstance(result);
     UmkaAPI *api = umkaGetAPI(umka); 
 
-    double a = api->umkaGetParam(params, 0)->realVal;
-    double* v = (double *)api->umkaGetParam(params, 1);
+    const double a = api->umkaGetParam(params, 0)->realVal;
+    const double* v = (const double *)api->umkaGetParam(params, 1);
     double* out = api->umkaGetResult(params, result)->ptrVal;
 
     out[0] = a * v[0];
@@ -34,16 +34,36 @@ UMKA_EXPORT void hello(UmkaStackSlot *params, UmkaStackSlot *result)
     api->umkaGetResult(params, result)->ptrVal = api->umkaMakeStr(umka, "Hello");
 }
 
+
+UMKA_EXPORT void squares(UmkaStackSlot *params, UmkaStackSlot *result)
+{
+    Umka *umka = umkaGetInstance(result);
+    UmkaAPI *api = umkaGetAPI(umka);
+
+    const int n = api->umkaGetParam(params, 0)->intVal;
+
+    typedef UmkaDynArray(int64_t) IntArray;
+    IntArray *array = api->umkaGetResult(params, result)->ptrVal;
+    const UmkaType *arrayType = api->umkaGetResultType(params, result); 
+
+    api->umkaMakeDynArray(umka, array, arrayType, n);
+
+    for (int i = 0; i < n; i++)
+        array->data[i] = i * i;
+}
+
+
 UmkaFuncContext callbackContext = {0};
 
-UMKA_EXPORT void sumImpl(UmkaStackSlot *params, UmkaStackSlot *result)
+UMKA_EXPORT void sum(UmkaStackSlot *params, UmkaStackSlot *result)
 {
     Umka *umka = umkaGetInstance(result);
     UmkaAPI *api = umkaGetAPI(umka);    
 
-    UmkaClosure *callback = (UmkaClosure *)api->umkaGetParam(params, 0);
-    void *callbackType = api->umkaGetParam(params, 1)->ptrVal;
-    int n = api->umkaGetParam(params, 2)->intVal;
+    const UmkaClosure *callback = (UmkaClosure *)api->umkaGetParam(params, 0);
+    const UmkaType *callbackType = api->umkaGetParamType(params, 0);
+
+    const int n = api->umkaGetParam(params, 1)->intVal;
 
     if (callbackContext.entryOffset != callback->entryOffset)
     {

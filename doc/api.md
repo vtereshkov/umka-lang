@@ -189,7 +189,7 @@ Fills in the function context required by `umkaCall`, if it could not be filled 
 Parameters:
 
 * `umka`: Interpreter instance handle
-* `closureType`: Umka function type. Must be obtained by calling `typeptr` and passed to the C/C++ code
+* `closureType`: Umka function type. Can be obtained by calling `umkaGetParamType`
 * `entryOffset`: Function entry point offset
 * `fn`: Function context to be filled in
 
@@ -208,7 +208,7 @@ Returned value: 0 if the Umka function returns successfully and no run-time erro
 ```
 UMKA_API UmkaStackSlot *umkaGetParam(UmkaStackSlot *params, int index);
 ```
-Finds the parameter slot.
+Finds function parameter slot.
 
 Parameters:
 
@@ -220,7 +220,7 @@ Returned value: Pointer to the first stack slot occupied by the parameter, `NULL
 ```
 UMKA_API UmkaAny *umkaGetUpvalue(UmkaStackSlot *params);
 ```
-Finds the captured variables.
+Finds variables captured by a closure.
 
 Parameters:
 
@@ -434,6 +434,30 @@ Umka closure.
 ### Functions
 
 ```
+UMKA_API const UmkaType *umkaGetParamType(UmkaStackSlot *params, int index);
+```
+Returns function parameter type.
+
+Parameters:
+
+* `params`: Parameter stack slots
+* `index`: Parameter position. The leftmost parameter is at position 0
+
+Returned value: Parameter type, or `NULL` if there is no such parameter or if `umkaGetParamType` is called from an `onFree` callback.
+
+```
+UMKA_API const UmkaType *umkaGetResultType(UmkaStackSlot *params, UmkaStackSlot *result);
+```
+Returns function result type.
+
+Parameters:
+
+* `params`: Parameter stack slots
+* `result`: Returned value stack slots
+
+Returned value: Function result type, or `NULL` if `umkaGetResultType` is called from an `onFree` callback.
+
+```
 UMKA_API const UmkaType *umkaGetBaseType(const UmkaType *type);
 ```
 For a pointer type, returns the base type. For an array or dynamic array type, returns the item type.
@@ -509,7 +533,7 @@ Parameters:
 
 * `umka`: Interpreter instance handle
 * `array`: Pointer to the dynamic array, actually of type `UmkaDynArray(ItemType)`
-* `type`: Dynamic array type that can be obtained by calling `typeptr([]ItemType)` in Umka
+* `type`: Dynamic array type. Can be obtained by calling `UmkaGetParamType`
 * `len`: Dynamic array length 
 
 ```
@@ -579,7 +603,7 @@ Parameters:
 
 Returned value: Collection of Umka API function pointers
 
-Example:
+## Appendix: UMI example
 
 ```
 // lib.um - UMI interface
@@ -587,6 +611,7 @@ Example:
 fn add*(a, b: real): real
 fn mulVec*(a: real, v: [2]real): [2]real
 fn hello*(): str
+fn squares*(n: int): []int
 ```
 ```
 // lib.c - UMI implementation
@@ -598,25 +623,23 @@ UMKA_EXPORT void add(UmkaStackSlot *params, UmkaStackSlot *result)
     Umka *umka = umkaGetInstance(result);
     UmkaAPI *api = umkaGetAPI(umka);
 
-    double a = api->umkaGetParam(params, 0)->realVal;
-    double b = api->umkaGetParam(params, 1)->realVal;
+    const double a = api->umkaGetParam(params, 0)->realVal;
+    const double b = api->umkaGetParam(params, 1)->realVal;
     api->umkaGetResult(params, result)->realVal = a + b;
 }
-
 
 UMKA_EXPORT void mulVec(UmkaStackSlot *params, UmkaStackSlot *result)
 {
     Umka *umka = umkaGetInstance(result);
     UmkaAPI *api = umkaGetAPI(umka); 
 
-    double a = api->umkaGetParam(params, 0)->realVal;
-    double* v = (double *)api->umkaGetParam(params, 1);
+    const double a = api->umkaGetParam(params, 0)->realVal;
+    const double* v = (const double *)api->umkaGetParam(params, 1);
     double* out = api->umkaGetResult(params, result)->ptrVal;
 
     out[0] = a * v[0];
     out[1] = a * v[1];
 }
-
 
 UMKA_EXPORT void hello(UmkaStackSlot *params, UmkaStackSlot *result)
 {
@@ -624,5 +647,22 @@ UMKA_EXPORT void hello(UmkaStackSlot *params, UmkaStackSlot *result)
     UmkaAPI *api = umkaGetAPI(umka);
     
     api->umkaGetResult(params, result)->ptrVal = api->umkaMakeStr(umka, "Hello");
+}
+
+UMKA_EXPORT void squares(UmkaStackSlot *params, UmkaStackSlot *result)
+{
+    Umka *umka = umkaGetInstance(result);
+    UmkaAPI *api = umkaGetAPI(umka);
+
+    const int n = api->umkaGetParam(params, 0)->intVal;
+
+    typedef UmkaDynArray(int64_t) IntArray;
+    IntArray *array = api->umkaGetResult(params, result)->ptrVal;
+    const UmkaType *arrayType = api->umkaGetResultType(params, result); 
+
+    api->umkaMakeDynArray(umka, array, arrayType, n);
+
+    for (int i = 0; i < n; i++)
+        array->data[i] = i * i;
 }
 ```

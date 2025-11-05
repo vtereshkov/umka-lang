@@ -445,7 +445,7 @@ const ParamLayout            *typeMakeParamLayout           (const Types *types,
 const ParamAndLocalVarLayout *typeMakeParamAndLocalVarLayout(const Types *types, const ParamLayout *paramLayout, int localVarSlots);
 
 const char *typeKindSpelling(TypeKind kind);
-char *typeSpelling          (const Type *type, char *buf);
+const char *typeSpelling    (const Type *type, char *buf);
 
 bool typeFormatStringValid(const char *format, int *formatLen, int *typeLetterPos, TypeKind *typeKind, FormatStringTypeSize *size);
 
