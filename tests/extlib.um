@@ -6,7 +6,11 @@ fn test*() {
 		lib::add(3, 5), 
 		lib::sum(|a| {return a * i * i}, 10) == a * (10 * 11 * 21) / 6, 
 		lib::hello()		
-	)      
+	)
+	
+	for n := 0; n < 12; n++ {
+		printf("%v\n", lib::squares(n))
+	}
 }
 
 fn main() {

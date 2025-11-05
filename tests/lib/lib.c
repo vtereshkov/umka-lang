@@ -34,6 +34,25 @@ UMKA_EXPORT void hello(UmkaStackSlot *params, UmkaStackSlot *result)
     api->umkaGetResult(params, result)->ptrVal = api->umkaMakeStr(umka, "Hello");
 }
 
+
+UMKA_EXPORT void squares(UmkaStackSlot *params, UmkaStackSlot *result)
+{
+    Umka *umka = umkaGetInstance(result);
+    UmkaAPI *api = umkaGetAPI(umka);
+
+    const int n = api->umkaGetParam(params, 0)->intVal;
+
+    typedef UmkaDynArray(int64_t) IntArray;
+    IntArray *array = api->umkaGetResult(params, result)->ptrVal;
+    const UmkaType *arrayType = api->umkaGetResultType(params, result); 
+
+    api->umkaMakeDynArray(umka, array, arrayType, n);
+
+    for (int i = 0; i < n; i++)
+        array->data[i] = i * i;
+}
+
+
 UmkaFuncContext callbackContext = {0};
 
 UMKA_EXPORT void sum(UmkaStackSlot *params, UmkaStackSlot *result)
