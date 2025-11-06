@@ -1,153 +1,208 @@
 <!DOCTYPE html>
 <html>
-    <body>
-        <h2 style="font-family:arial">The Umka playground</h2>
-        <a href="https://github.com/vtereshkov/umka-lang" style="text-decoration: none; font-family:arial">Umka on GitHub</a>
-        <br><br>
-        <button id="runButton">Run</button>
-        <br><br>
-        <textarea id="sourceTextArea" rows="20" style="width:100%; resize:vertical; background-color:LightYellow"></textarea>
-        <br><br>
-        <textarea id="outputTextArea" rows="10" style="width:100%; resize:vertical; background-color:WhiteSmoke" readonly></textarea>
+  <head>
+    <style>
+      body {
+        display: flex;
+        justify-content: center;
+        width: 100vw;
+        height: 100vh;
+        background-color: oklch(0.1 0 0);
+        margin: 0;
+      }
 
-        <script>
-            const tabWidth = 4
+      #sourceTextArea {
+        font-family: monospace;
+        width: 100%;
+        max-width: 1000px;
+        font-size: 14px;
+        padding: 10px;
+        background-color: oklch(0.2 0 0);
+        color: oklch(0.9 0 0);
+        border: none;
+      }
 
-            var runButton = document.getElementById("runButton")
-            var sourceTextArea = document.getElementById("sourceTextArea")
-            var outputTextArea = document.getElementById("outputTextArea")
+      #outputTextArea {
+        font-family: monospace;
+        width: 100%;
+        font-size: 14px;
+        padding: 10px;
+        background-color: oklch(0.2 0.1 110);
+        color: oklch(0.9 0 0);
+        border: none;
+      }
 
-            sourceTextArea.value = 
+      #container {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        flex-grow: 1;
+        max-width: 1000px;
+      }
 
-`fn main() {
+      #runButton {
+        width: fit-content;
+        background-color: oklch(0.3 0.5 110);
+        border: none;
+        border-radius: 0;
+        padding: 8px 12px;
+        color: oklch(0.9 0 0);
+        font-size: 15px;
+        cursor: pointer;
+      }
+
+      a {
+        color: oklch(0.7 1 110);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <h2 style="font-family: arial">The Umka playground</h2>
+      <a
+        href="https://github.com/vtereshkov/umka-lang"
+        style="text-decoration: none; font-family: arial"
+        >Umka on GitHub</a
+      >
+      <button id="runButton">Run</button>
+      <textarea
+        id="sourceTextArea"
+        autocorrect="off"
+        autocapitalize="off"
+        autocomplete="off"
+        autofocus
+        aria-autocomplete="none"
+        rows="20"
+      ></textarea>
+      <textarea id="outputTextArea" rows="10" readonly></textarea>
+    </div>
+
+    <script>
+      const tabWidth = 4;
+
+      var runButton = document.getElementById("runButton");
+      var sourceTextArea = document.getElementById("sourceTextArea");
+      var outputTextArea = document.getElementById("outputTextArea");
+
+      sourceTextArea.value = `fn main() {
     printf("Hello, World!\\n")
-}`
-            
-            sourceTextArea.onkeydown = onKey  
-            runButton.onclick = onRun
+}`;
 
-            var Module = {'print': onPrint, 'printErr': onPrintErr}            
+      sourceTextArea.onkeydown = onKey;
+      runButton.onclick = onRun;
 
-            function onKey(e) 
-            {
-                var start = this.selectionStart
-                var end = this.selectionEnd                
+      var Module = { print: onPrint, printErr: onPrintErr };
 
-                if (e.key == 'Tab') 
-                {
-                    e.preventDefault()
-                    this.value = this.value.substring(0, start) + ' '.repeat(tabWidth) + this.value.substring(end)
-                    this.selectionStart = this.selectionEnd = start + tabWidth
-                }
-                else if (e.key == 'Enter')
-                {
-                    e.preventDefault()
-                    var indent = getLineIndent(start)              
-                    this.value = this.value.substring(0, start) + '\n' + ' '.repeat(indent) + this.value.substring(end)
-                    this.selectionStart = this.selectionEnd = start + 1 + indent
-                }
-                else if (e.key == '(')
-                {
-                    e.preventDefault()
-                    this.value = this.value.substring(0, start) + '()' + this.value.substring(end)
-                    this.selectionStart = this.selectionEnd = start + 1                    
-                }
-                else if (e.key == '[')
-                {
-                    e.preventDefault()
-                    this.value = this.value.substring(0, start) + '[]' + this.value.substring(end)
-                    this.selectionStart = this.selectionEnd = start + 1                    
-                }
-                else if (e.key == '{')
-                {
-                    e.preventDefault()
-                    this.value = this.value.substring(0, start) + '{}' + this.value.substring(end)
-                    this.selectionStart = this.selectionEnd = start + 1                    
-                }
-                else if (e.key == '"')
-                {
-                    e.preventDefault()
-                    this.value = this.value.substring(0, start) + '""' + this.value.substring(end)
-                    this.selectionStart = this.selectionEnd = start + 1                    
-                }
-                else if (e.key == "'")
-                {
-                    e.preventDefault()
-                    this.value = this.value.substring(0, start) + "''" + this.value.substring(end)
-                    this.selectionStart = this.selectionEnd = start + 1                    
-                }
-            }
+      function onKey(e) {
+        var start = this.selectionStart;
+        var end = this.selectionEnd;
 
-            function onPrint(text)
-            {
-                outputTextArea.value += text + '\n'
-            }
+        if (e.key == "Tab") {
+          e.preventDefault();
+          this.value =
+            this.value.substring(0, start) +
+            " ".repeat(tabWidth) +
+            this.value.substring(end);
+          this.selectionStart = this.selectionEnd = start + tabWidth;
+        } else if (e.key == "Enter") {
+          e.preventDefault();
+          var indent = getLineIndent(start);
+          this.value =
+            this.value.substring(0, start) +
+            "\n" +
+            " ".repeat(indent) +
+            this.value.substring(end);
+          this.selectionStart = this.selectionEnd = start + 1 + indent;
+        } else if (e.key == "(") {
+          e.preventDefault();
+          this.value =
+            this.value.substring(0, start) + "()" + this.value.substring(end);
+          this.selectionStart = this.selectionEnd = start + 1;
+        } else if (e.key == "[") {
+          e.preventDefault();
+          this.value =
+            this.value.substring(0, start) + "[]" + this.value.substring(end);
+          this.selectionStart = this.selectionEnd = start + 1;
+        } else if (e.key == "{") {
+          e.preventDefault();
+          this.value =
+            this.value.substring(0, start) + "{}" + this.value.substring(end);
+          this.selectionStart = this.selectionEnd = start + 1;
+        } else if (e.key == '"') {
+          e.preventDefault();
+          this.value =
+            this.value.substring(0, start) + '""' + this.value.substring(end);
+          this.selectionStart = this.selectionEnd = start + 1;
+        } else if (e.key == "'") {
+          e.preventDefault();
+          this.value =
+            this.value.substring(0, start) + "''" + this.value.substring(end);
+          this.selectionStart = this.selectionEnd = start + 1;
+        }
+      }
 
-            function onPrintErr(text)
-            {
-                onPrint(text)
-                
-                var words = text.split(' ')
-                if (words[0] != "Error" || typeof(words[2]) == "undefined")
-                    return
+      function onPrint(text) {
+        outputTextArea.value += text + "\n";
+      }
 
-                var lineNum = words[2].replace(',', '').replace('(', '')
-                selectLine(lineNum)
-            }            
+      function onPrintErr(text) {
+        onPrint(text);
 
-            function onRun()
-            {
-                runPlayground = Module.cwrap('runPlayground', 'number', ['string', 'string'])
-                source = sourceTextArea.value
-                outputTextArea.value = ""
-                runPlayground("playground.um", source)
-            }
+        var words = text.split(" ");
+        if (words[0] != "Error" || typeof words[2] == "undefined") return;
 
-            function selectLine(lineNum) 
-            {
-                lineNum--
-                var lines = sourceTextArea.value.split("\n")
+        var lineNum = words[2].replace(",", "").replace("(", "");
+        selectLine(lineNum);
+      }
 
-                var startPos = 0, endPos = sourceTextArea.value.length
-                for (var i = 0; i < lines.length; i++) 
-                {
-                    if (i == lineNum)
-                        break;
-                    startPos += lines[i].length + 1
-                }
+      function onRun() {
+        runPlayground = Module.cwrap("runPlayground", "number", [
+          "string",
+          "string",
+        ]);
+        source = sourceTextArea.value;
+        outputTextArea.value = "";
+        runPlayground("playground.um", source);
+      }
 
-                var endPos = lines[lineNum].length + startPos
+      function selectLine(lineNum) {
+        lineNum--;
+        var lines = sourceTextArea.value.split("\n");
 
-                if (typeof(sourceTextArea.selectionStart) != "undefined") 
-                {
-                    sourceTextArea.focus()
-                    sourceTextArea.selectionStart = startPos
-                    sourceTextArea.selectionEnd = endPos
-                    return true
-                }
+        var startPos = 0,
+          endPos = sourceTextArea.value.length;
+        for (var i = 0; i < lines.length; i++) {
+          if (i == lineNum) break;
+          startPos += lines[i].length + 1;
+        }
 
-                return false
-            }
+        var endPos = lines[lineNum].length + startPos;
 
-            function getLineIndent(curPos)
-            {
-                var lineStart = sourceTextArea.value.substring(0, curPos).lastIndexOf('\n') + 1
-                var indent = 0
+        if (typeof sourceTextArea.selectionStart != "undefined") {
+          sourceTextArea.focus();
+          sourceTextArea.selectionStart = startPos;
+          sourceTextArea.selectionEnd = endPos;
+          return true;
+        }
 
-                for (var i = lineStart; i < curPos; i++)
-                {
-                    if (sourceTextArea.value[i] == ' ')
-                        indent++
-                    else if (sourceTextArea.value[i] == '\t')
-                        indent += tabWidth
-                    else 
-                        break
-                }
+        return false;
+      }
 
-                return indent
-            }          
-        </script>
+      function getLineIndent(curPos) {
+        var lineStart =
+          sourceTextArea.value.substring(0, curPos).lastIndexOf("\n") + 1;
+        var indent = 0;
 
-        <script src="playground/umka.js"></script>
-    </body>
+        for (var i = lineStart; i < curPos; i++) {
+          if (sourceTextArea.value[i] == " ") indent++;
+          else if (sourceTextArea.value[i] == "\t") indent += tabWidth;
+          else break;
+        }
+
+        return indent;
+      }
+    </script>
+
+    <script src="playground/umka.js"></script>
+  </body>
 </html>
