@@ -13,7 +13,7 @@ rm -f *.o
 rm -f *.a
 
 clang $clangflags -c $sourcefiles
-clang -shared -fPIC *.o -o libumka.dylib -lm -ldl
+clang -dynamiclib -install_name @loader_path/libumka.dylib -fPIC *.o -o libumka.dylib -lm -ldl
 libtool -static -o libumka_static_darwin.a *.o
 
 clang $clangflags -c umka.c
@@ -38,3 +38,4 @@ cp doc/* umka_darwin/doc
 cp editors/* umka_darwin/editors
 
 echo Build finished
+
