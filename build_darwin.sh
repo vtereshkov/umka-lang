@@ -13,11 +13,11 @@ rm -f *.o
 rm -f *.a
 
 clang $clangflags -c $sourcefiles
-clang -shared -fPIC *.o -o libumka.dylib -lm -ldl
+clang -shared -fPIC *.o -o libumka.dylib -lm -ldl -Wl,-install_name,@rpath/libumka.dylib
 libtool -static -o libumka_static_darwin.a *.o
 
 clang $clangflags -c umka.c
-clang umka.o -o umka -L$PWD -lm -lumka -Wl,-rpath,'$ORIGIN'
+clang umka.o -o umka -L$PWD -lm -lumka -Wl,-rpath,@executable_path
 
 rm -f *.o
 
