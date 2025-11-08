@@ -731,7 +731,7 @@ void vmReset(VM *vm, const Instruction *code, const DebugInfo *debugPerInstr)
 }
 
 
-static FORCE_INLINE void vmLoop(VM *vm);
+static void vmLoop(VM *vm);
 
 
 static FORCE_INLINE void doCheckStr(const char *str, Error *error)
@@ -3747,7 +3747,7 @@ static FORCE_INLINE void doHalt(VM *vm)
 }
 
 
-static FORCE_INLINE void vmLoop(VM *vm)
+static void vmLoop(VM *vm)
 {
     Fiber *fiber = vm->fiber;
     HeapPages *pages = &vm->pages;
