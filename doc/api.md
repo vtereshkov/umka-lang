@@ -69,7 +69,7 @@ Returned value: `true` if the compilation is successful and no compile-time erro
 ```
 UMKA_API int umkaRun(Umka *umka);
 ```
-Runs the Umka program previously compiled to bytecode, i.e., calls its `main` function, if it exists. After it returns, gracefully deallocates heap memory referenced by global variables. 
+Runs the Umka program previously compiled to bytecode, i.e., calls its `main` function, if it exists. 
 
 Parameters:
 
@@ -80,7 +80,7 @@ Returned value: 0 if the program execution finishes successfully and no run-time
 ```
 UMKA_API void umkaFree(Umka *umka);
 ```
-Deallocates memory allocated for the interpreter.
+Deallocates memory allocated for the interpreter and program's global variables.
 
 Parameters:
 
@@ -317,7 +317,7 @@ Returned value: Pointer to the error description. The pointer is valid until eit
 ```
 UMKA_API bool umkaAlive(Umka *umka);
 ```
-Checks if the interpreter instance has been initialized and not yet terminated. Termination means that either the `main` function has exited, or `exit` has been called. Neither `umkaRun`, nor `umkaCall` can be called after the termination.
+Checks if the interpreter instance has been initialized and not yet terminated. Termination means that either a runtime error has happened, or `exit` has been called. Neither `umkaRun`, nor `umkaCall` can be called after the termination.
 
 Parameters:
 

@@ -218,14 +218,29 @@ static void compilerDeclareExternalFuncs(Umka *umka, bool fileSystemEnabled)
 }
 
 
-void compilerInit(Umka *umka, const char *fileName, const char *sourceString, int stackSize, int argc, char **argv, bool fileSystemEnabled, bool implLibsEnabled)
+static void compilerSetCodepage(Umka *umka)
 {
 #ifdef _WIN32
     umka->originalInputCodepage = GetConsoleCP();
     umka->originalOutputCodepage = GetConsoleOutputCP();
     SetConsoleCP(CP_UTF8);
     SetConsoleOutputCP(CP_UTF8);
-#endif
+#endif    
+}
+
+
+static void compilerRestoreCodepage(Umka *umka)
+{
+#ifdef _WIN32
+    SetConsoleCP(umka->originalInputCodepage);
+    SetConsoleOutputCP(umka->originalOutputCodepage);
+#endif  
+}
+
+
+void compilerInit(Umka *umka, const char *fileName, const char *sourceString, int stackSize, int argc, char **argv, bool fileSystemEnabled, bool implLibsEnabled)
+{
+    compilerSetCodepage(umka);
 
     compilerSetAPI(umka);
 
@@ -289,16 +304,13 @@ void compilerInit(Umka *umka, const char *fileName, const char *sourceString, in
 void compilerFree(Umka *umka)
 {
     if (vmAlive(&umka->vm))
-        vmRun(&umka->vm, JUMP_TO_CLEANUP, NULL);
+        vmCleanup(&umka->vm);
     
-    vmFree          (&umka->vm);
-    moduleFree      (&umka->modules);
-    storageFree     (&umka->storage);
+    vmFree      (&umka->vm);
+    moduleFree  (&umka->modules);
+    storageFree (&umka->storage);
 
-#ifdef _WIN32
-    SetConsoleCP(umka->originalInputCodepage);
-    SetConsoleOutputCP(umka->originalOutputCodepage);
-#endif
+    compilerRestoreCodepage(umka);
 }
 
 
@@ -311,13 +323,14 @@ void compilerCompile(Umka *umka)
 
 void compilerRun(Umka *umka)
 {
-    vmRun(&umka->vm, JUMP_TO_MAIN, NULL);
+    if (umka->mainFn.entryOffset > 0)
+        vmCall(&umka->vm, &umka->mainFn);
 }
 
 
 void compilerCall(Umka *umka, UmkaFuncContext *fn)
 {
-    vmRun(&umka->vm, -1, fn);
+    vmCall(&umka->vm, fn);
 }
 
 
@@ -372,7 +385,6 @@ bool compilerGetFunc(Umka *umka, const char *moduleName, const char *funcName, U
         return false;
 
     identSetUsed(fnIdent);
-
     compilerMakeFuncContext(umka, fnIdent->type, fnIdent->offset, fn);
     return true;
 }

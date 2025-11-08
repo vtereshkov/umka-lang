@@ -731,7 +731,7 @@ void vmReset(VM *vm, const Instruction *code, const DebugInfo *debugPerInstr)
 }
 
 
-static FORCE_INLINE void vmLoop(VM *vm);
+static void vmLoop(VM *vm);
 
 
 static FORCE_INLINE void doCheckStr(const char *str, Error *error)
@@ -3747,7 +3747,7 @@ static FORCE_INLINE void doHalt(VM *vm)
 }
 
 
-static FORCE_INLINE void vmLoop(VM *vm)
+static void vmLoop(VM *vm)
 {
     Fiber *fiber = vm->fiber;
     HeapPages *pages = &vm->pages;
@@ -3832,58 +3832,56 @@ static FORCE_INLINE void vmLoop(VM *vm)
 }
 
 
-void vmRun(VM *vm, FixedOffset fixedOffset, UmkaFuncContext *fn)
+void vmCall(VM *vm, UmkaFuncContext *fn)
 {
     if (UNLIKELY(!vm->fiber->alive))
         vm->error->runtimeHandler(vm->error->context, ERR_RUNTIME, "Cannot run a dead fiber");
 
-    if (fn)
+    if (UNLIKELY(!fn || fn->entryOffset <= 0))
+        vm->error->runtimeHandler(vm->error->context, ERR_RUNTIME, "Called function is not defined");
+
+    // Push parameters
+    int numParamSlots = 0;
+    if (fn->params)
     {
-        // Calling individual function
-        if (UNLIKELY(fn->entryOffset <= 0))
-            vm->error->runtimeHandler(vm->error->context, ERR_RUNTIME, "Called function is not defined");
+        const ParamLayout *paramLayout = *vmGetParamLayout(fn->params);
+        numParamSlots = paramLayout->numParamSlots;
 
-        // Push parameters
-        int numParamSlots = 0;
-        if (fn->params)
+        if (paramLayout->numResultParams > 0)
         {
-            const ParamLayout *paramLayout = *vmGetParamLayout(fn->params);
-            numParamSlots = paramLayout->numParamSlots;
-
-            if (paramLayout->numResultParams > 0)
-            {
-                if (UNLIKELY(!fn->result || !fn->result->ptrVal))
-                    vm->error->runtimeHandler(vm->error->context, ERR_RUNTIME, "Storage for structured result is not specified");
-                fn->params[paramLayout->firstSlotIndex[paramLayout->numParams - 1]].ptrVal = fn->result->ptrVal;
-            }
+            if (UNLIKELY(!fn->result || !fn->result->ptrVal))
+                vm->error->runtimeHandler(vm->error->context, ERR_RUNTIME, "Storage for structured result is not specified");
+            fn->params[paramLayout->firstSlotIndex[paramLayout->numParams - 1]].ptrVal = fn->result->ptrVal;
         }
-        else
-            numParamSlots = sizeof(Interface) / sizeof(Slot);    // Only upvalue
-
-        vm->fiber->top -= numParamSlots;
-
-        UmkaStackSlot empty = {0};
-        for (int i = 0; i < numParamSlots; i++)
-            vm->fiber->top[i].apiSlot = fn->params ? fn->params[i] : empty;
-
-        // Push 'return from VM' signal as return address
-        (--vm->fiber->top)->intVal = RETURN_FROM_VM;
-
-        // Go to the entry point
-        vm->fiber->ip = fn->entryOffset;
     }
     else
-    {
-        // Calling main() or cleanup code
-        vm->fiber->ip = fixedOffset;
-    }
+        numParamSlots = sizeof(Interface) / sizeof(Slot);    // Only upvalue
+
+    vm->fiber->top -= numParamSlots;
+
+    UmkaStackSlot empty = {0};
+    for (int i = 0; i < numParamSlots; i++)
+        vm->fiber->top[i].apiSlot = fn->params ? fn->params[i] : empty;
+
+    // Push 'return from VM' signal as return address
+    (--vm->fiber->top)->intVal = RETURN_FROM_VM;
+
+    // Go to the entry point
+    vm->fiber->ip = fn->entryOffset;
 
     // Main loop
     vmLoop(vm);
 
     // Save result
-    if (fn && fn->result)
+    if (fn->result)
         *(fn->result) = vm->fiber->reg[REG_RESULT].apiSlot;
+}
+
+
+void vmCleanup(VM *vm)
+{
+    vm->fiber->ip = JUMP_TO_CLEANUP;
+    vmLoop(vm);
 }
 
 
