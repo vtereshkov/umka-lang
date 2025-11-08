@@ -46,6 +46,9 @@ typedef struct tagUmka
          *anyType,
          *fileType;
 
+    // main() context
+    UmkaFuncContext mainFn;
+    
     // Arbitrary metadata
     void *metadata;
 

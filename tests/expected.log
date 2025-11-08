@@ -689,7 +689,6 @@ Error: Empty string (code -2) from "foo":
     fooTest: (11)
     test: (25)
     main: (74)
-    <unknown>: (108)
 9
 
 
