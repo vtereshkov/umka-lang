@@ -27,7 +27,7 @@ void help(void)
 {
     printf("%s\n", umkaGetVersion());
     printf("(C) Vasiliy Tereshkov, 2020-2025\n");
-    printf("Usage: umka [<parameters>] <file.um> [<script-parameters>]\n");
+    printf("Usage: umka [<parameters>] [<file.um>] [<script-parameters>]\n");
     printf("Parameters:\n");
     printf("    -stack <stack-size>     - Set stack size\n");
     printf("    -asm                    - Write assembly listing\n");
