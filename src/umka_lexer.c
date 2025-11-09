@@ -316,6 +316,18 @@ static void lexSpacesAndComments(Lexer *lex)
 }
 
 
+static void lexShebang(Lexer *lex)
+{
+    if (lex->line != 1 && lex->pos != 1)
+        return;
+    if (!lexCharIf(lex, '#'))
+        return;
+    if (!lexCharIf(lex, '!'))
+        return;
+    lexSingleLineComment(lex);
+}
+
+
 static void lexKeywordOrIdent(Lexer *lex)
 {
     lex->tok.kind = TOK_NONE;
@@ -884,6 +896,7 @@ static void lexStrLiteral(Lexer *lex)
 
 static void lexNextWithEOLN(Lexer *lex)
 {
+    lexShebang(lex);
     lexSpacesAndComments(lex);
 
     lex->tok.kind = TOK_NONE;
@@ -1002,8 +1015,3 @@ TokenKind lexShortAssignment(TokenKind kind)
     }
 
 }
-
-
-
-
-
