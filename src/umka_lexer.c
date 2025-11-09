@@ -316,7 +316,7 @@ static void lexSpacesAndComments(Lexer *lex)
 }
 
 
-static void lexShebang(Lexer *lex)
+void lexShebang(Lexer *lex)
 {
     if (lex->line != 1 && lex->pos != 1)
         return;
@@ -896,7 +896,6 @@ static void lexStrLiteral(Lexer *lex)
 
 static void lexNextWithEOLN(Lexer *lex)
 {
-    lexShebang(lex);
     lexSpacesAndComments(lex);
 
     lex->tok.kind = TOK_NONE;

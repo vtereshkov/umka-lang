@@ -134,6 +134,7 @@ void lexNext(Lexer *lex);
 void lexNextForcedSemicolon(Lexer *lex);
 bool lexCheck(Lexer *lex, TokenKind kind);
 void lexEat(Lexer *lex, TokenKind kind);
+void lexShebang(Lexer *lex);
 const char *lexSpelling(TokenKind kind);
 TokenKind lexShortAssignment(TokenKind kind);
 

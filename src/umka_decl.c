@@ -940,6 +940,7 @@ void parseProgram(Umka *umka)
     genNop(&umka->gen);                                 // main() entry point jump stub
     genNop(&umka->gen);                                 // Cleanup code jump stub
 
+    lexShebang(&umka->lex);
     lexNext(&umka->lex);
     const int mainModule = parseModule(umka);
     
