@@ -624,7 +624,7 @@ static void doImplicitTypeConvEx(Umka *umka, const Type *dest, const Type **src,
 
             doPtrToInterfaceConv(umka, dest, src, constant);
         }
-        else if ((*src)->kind != TYPE_VOID)
+        else if ((*src)->kind != TYPE_VOID && !(*src)->isExprList)
         {
             // Value to interface
             doValueToInterfaceConv(umka, dest, src, constant);
