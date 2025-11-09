@@ -6,6 +6,14 @@
 
 #include "umka_api.h"
 
+#ifdef _WIN32
+    #include <io.h>
+    #define isatty _isatty
+    #define fileno _fileno
+#else
+    #include <unistd.h>
+#endif
+
 
 enum
 {
@@ -125,6 +133,40 @@ int runPlayground(const char *fileName, const char *sourceString)
 
 #else
 
+#define STDIN_BUF_SIZE 1024
+
+// Allocates a new buffer and reads stdin until EOF
+char* readStdinSourceString(void)
+{
+    char buffer[STDIN_BUF_SIZE];
+    size_t sourceStringSize = 1; // includes NULL
+    char* sourceString = malloc(sizeof(char) * STDIN_BUF_SIZE);
+
+    if (sourceString == NULL)
+    {
+        fprintf(stderr, "Error: failed to allocate stdin read buffer\n");
+        return NULL;
+    }
+
+    sourceString[0] = '\0';
+    while(fgets(buffer, STDIN_BUF_SIZE, stdin))
+    {
+        char *old = sourceString;
+        sourceStringSize += strlen(buffer);
+        sourceString = realloc(sourceString, sourceStringSize);
+
+        if(sourceString == NULL)
+        {
+            fprintf(stderr, "Error: Failed to reallocate stdin read buffer\n");
+            free(old);
+            return NULL;
+        }
+
+        strcat(sourceString, buffer);
+    }
+
+    return sourceString;
+}
 
 int main(int argc, char **argv)
 {
@@ -179,15 +221,49 @@ int main(int argc, char **argv)
             break;
     }
 
-    // Parse file name
-    if (i >= argc)
+    char* sourceString = NULL;
+    char* fileName;
+    int scriptArgc = argc - i;
+    char** scriptArgv;
+
+    if (!isatty(fileno(stdin)))
+    {
+        fileName = argv[0];
+        sourceString = readStdinSourceString();
+        scriptArgc = argc - i + 1;
+        scriptArgv = malloc(scriptArgc * sizeof(char*));
+        scriptArgv[0] = argv[0];
+        for (int j = 0; j < (argc - i); j++) {
+            scriptArgv[j + 1] = argv[j + i];
+        }
+    }
+    else if (i < argc)
+    {
+        fileName = argv[i];
+        scriptArgv = &argv[i];
+        scriptArgc = argc - i;
+    }
+    else
     {
         help();
         return 1;
     }
 
     Umka *umka = umkaAlloc();
-    bool ok = umkaInit(umka, argv[i], NULL, stackSize, NULL, argc - i, argv + i, !isSandbox, !isSandbox, printWarnings ? printCompileWarning : NULL);
+
+    bool ok = umkaInit(
+        umka,
+        fileName,
+        sourceString,
+        stackSize,
+        NULL,
+        scriptArgc,
+        scriptArgv,
+        !isSandbox,
+        !isSandbox,
+        printWarnings ? printCompileWarning : NULL
+    );
+
     int exitCode = 0;
 
     if (ok)
@@ -211,6 +287,9 @@ int main(int argc, char **argv)
         exitCode = 1;
 
     umkaFree(umka);
+
+    // sourceString and scriptArgv are freed at the end of program execution
+
     return exitCode;
 }
 
