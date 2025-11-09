@@ -870,6 +870,7 @@ static void parseImportItem(Umka *umka)
         Lexer currentLex        = umka->lex;
         lexInit(&umka->lex, &umka->storage, &umka->debug, path, sourceString, sourceTrusted, &umka->error);
 
+        lexShebang(&umka->lex);
         lexNext(&umka->lex);
         importedModule = parseModule(umka);
 
