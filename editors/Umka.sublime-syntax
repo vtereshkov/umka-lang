@@ -184,6 +184,13 @@ contexts:
 
     - include: main
 
+  enum_header_scoped:
+    - match: '\{'
+      scope: punctuation.definition.parameters.begin.umka
+      set: enum_scoped
+
+    - include: main
+
   enum_scoped:
     - match: '\b({{ident}})\b'
       scope: constant.enum.umka
@@ -344,11 +351,9 @@ contexts:
       push: struct_scoped
 
     # Enum definitions
-    - match: '\b(enum){{space}}(\{)'
-      captures:
-        1: keyword.control.umka
-        2: punctuation.definition.parameters.begin.umka
-      push: enum_scoped
+    - match: '\b(enum)\b'
+      scope: keyword.control.umka
+      push: enum_header_scoped
 
     # Interface definitions
     - match: '\b(interface){{space}}(\{)'
