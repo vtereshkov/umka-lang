@@ -11,6 +11,10 @@ fn test*() {
 	for n := 0; n < 12; n++ {
 		printf("%v\n", lib::squares(n))
 	}
+
+	for n := 0; n < 12; n++ {
+		printf("%v\n", lib::squaresOk(n))
+	}	
 }
 
 fn main() {

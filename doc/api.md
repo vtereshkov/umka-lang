@@ -469,6 +469,40 @@ Parameters:
 Returned value: Base type of a pointer type; item type of an array or dynamic array type; `NULL` otherwise.
 
 ```
+UMKA_API const UmkaType *umkaGetFieldType(const UmkaType *structType, const char *fieldName);
+```
+Returns structure field type.
+
+Parameters:
+
+* `structType`: Structure type
+* `fieldName`: Field name
+
+Returned value: Field type; `NULL` if `structType` is not a structure type or has no field `fieldName`.
+
+```
+UMKA_API const UmkaType *umkaGetMapKeyType(const UmkaType *mapType);
+```
+Returns map key type.
+
+Parameters:
+
+* `mapType`: Map type
+
+Returned value: Key type; `NULL` if `mapType` is not a map type.
+
+```
+UMKA_API const UmkaType *umkaGetMapItemType(const UmkaType *mapType);
+```
+Returns map item type.
+
+Parameters:
+
+* `mapType`: Map type
+
+Returned value: Item type; `NULL` if `mapType` is not a map type.
+
+```
 UMKA_API void *umkaAllocData(Umka *umka, int size, UmkaExternFunc onFree);
 ```
 Allocates an untyped chunk of heap memory.

@@ -348,3 +348,31 @@ UMKA_API const UmkaType *umkaGetResultType(UmkaStackSlot *params, UmkaStackSlot 
     const ParamLayout *paramLayout = *vmGetParamLayout(params);
     return PARAM_LAYOUT_TYPES(paramLayout)->resultType;
 }
+
+
+UMKA_API const UmkaType *umkaGetFieldType(const UmkaType *structType, const char *fieldName)
+{
+    if (structType->kind == TYPE_STRUCT)
+    {
+        const Field *field = typeFindField(structType, fieldName, NULL);
+        if (field)
+            return field->type;
+    }
+    return NULL;
+}
+
+
+UMKA_API const UmkaType *umkaGetMapKeyType(const UmkaType *mapType)
+{
+    if (mapType->kind == TYPE_MAP)
+        return typeMapKey(mapType);
+    return NULL;
+}
+
+
+UMKA_API const UmkaType *umkaGetMapItemType(const UmkaType *mapType)
+{
+    if (mapType->kind == TYPE_MAP)
+        return typeMapItem(mapType);
+    return NULL;
+}
