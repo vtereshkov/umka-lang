@@ -23,6 +23,7 @@ Umka is a statically typed embeddable scripting language. It combines simplicity
   * [Vim](https://github.com/marekmaskarinec/vim-umka)
   * [Kakoune](https://github.com/thacuber2a03/highlighters.kak/blob/main/umka.kak)
   * [Emacs](https://github.com/rexim/umka-mode)
+  * [Unreal Engine](https://github.com/Solessfir/UEmka)
 * [Community](https://discord.gg/PcT7cn59h9)
 
 ## Features
