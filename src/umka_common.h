@@ -13,7 +13,7 @@ enum
 {
     DEFAULT_STR_LEN     = 255,
     MAX_IDENT_LEN       = DEFAULT_STR_LEN,
-    MAX_IDENTS_IN_LIST  = 256,
+    MAX_IDENTS_IN_LIST  = 16,
     MAX_MODULES         = 1024,
     MAX_PARAMS          = 16,
     MAX_BLOCK_NESTING   = 100,
