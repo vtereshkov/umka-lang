@@ -718,7 +718,7 @@ const Param *typeAddParam(const Types *types, Signature *sig, const Type *type, 
     if (typeFindParam(sig, name))
         types->error->handler(types->error->context, "Duplicate parameter %s", name);
 
-    if (sig->numParams > MAX_PARAMS)
+    if (sig->numParams >= MAX_PARAMS)
         types->error->handler(types->error->context, "Too many parameters");
 
     Param *param = storageAdd(types->storage, sizeof(Param));
