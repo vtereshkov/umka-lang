@@ -1,4 +1,5 @@
 import (
+    "parsing.um"
     "print.um"
     "binfileio.um"
     "dynarrays.um"
@@ -53,6 +54,7 @@ import (
 )
 
 fn main() {
+    printf("\n\n>>> Parsing\n\n");                  parsing::test()
     printf("\n\n>>> Printing\n\n");                 print::test()
     printf("\n\n>>> Binary file I/O\n\n");          binfileio::test()
     printf("\n\n>>> Dynamic arrays - 1\n\n");       dynarrays::test()
