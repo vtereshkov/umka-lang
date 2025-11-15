@@ -605,7 +605,7 @@ static const char *runtimeModuleSources[] = {
 "    return s\n"
 "}\n"
 "\n"
-"fn decodeRune*(chars: []char, pos: int): Rune {\n"
+"fn decodeRune*(chars: []char, pos: int = 0): Rune {\n"
 "    // Process header byte\n"
 "    header := uint8(chars[pos])\n"
 "\n"

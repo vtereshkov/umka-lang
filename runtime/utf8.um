@@ -44,7 +44,7 @@ fn encode*(runes: []Rune): str {
     return s
 }
 
-fn decodeRune*(chars: []char, pos: int): Rune {
+fn decodeRune*(chars: []char, pos: int = 0): Rune {
     // Process header byte
     header := uint8(chars[pos])
 
