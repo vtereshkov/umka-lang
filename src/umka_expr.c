@@ -1070,12 +1070,12 @@ static void parseBuiltinAppendCall(Umka *umka, const Type **type, Const *constan
     {
         doAssertImplicitTypeConv(umka, (*type)->base, &itemType, NULL);
 
-        if (!typeStructured(itemType))
+        if (!typeStructured((*type)->base))
         {
             // Assignment to an anonymous stack area does not require updating reference counts
-            const int itemOffset = identAllocStack(&umka->idents, &umka->types, &umka->blocks, itemType);
+            const int itemOffset = identAllocStack(&umka->idents, &umka->types, &umka->blocks, (*type)->base);
             genPushLocalPtr(&umka->gen, itemOffset);
-            genSwapAssign(&umka->gen, itemType->kind, 0);
+            genSwapAssign(&umka->gen, (*type)->base->kind, 0);
 
             genPushLocalPtr(&umka->gen, itemOffset);
         }
@@ -1117,12 +1117,12 @@ static void parseBuiltinInsertCall(Umka *umka, const Type **type, Const *constan
     parseExpr(umka, &itemType, NULL);
     doAssertImplicitTypeConv(umka, (*type)->base, &itemType, NULL);
 
-    if (!typeStructured(itemType))
+    if (!typeStructured((*type)->base))
     {
         // Assignment to an anonymous stack area does not require updating reference counts
-        const int itemOffset = identAllocStack(&umka->idents, &umka->types, &umka->blocks, itemType);
+        const int itemOffset = identAllocStack(&umka->idents, &umka->types, &umka->blocks, (*type)->base);
         genPushLocalPtr(&umka->gen, itemOffset);
-        genSwapAssign(&umka->gen, itemType->kind, 0);
+        genSwapAssign(&umka->gen, (*type)->base->kind, 0);
 
         genPushLocalPtr(&umka->gen, itemOffset);
     }

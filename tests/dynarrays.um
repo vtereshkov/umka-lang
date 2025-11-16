@@ -61,6 +61,27 @@ fn copies() {
     b := copy(a)
     a[1] = []int{10, 12}
     printf("%v %v\n", a, b)
+}
+
+fn conv1() {
+    x := real32(1.0)
+    a := []real{}
+    a = append(a, x)
+    a = insert(a, 1, 2 * x)
+    printf("%v\n", a)
+}
+
+fn conv2() {
+    x := 1.0
+    a := []real32{}
+    a = append(a, x)
+    a = insert(a, 1, 2 * x)
+    printf("%v\n", a)
+}
+
+fn conv() {
+    conv1()
+    conv2()
 }     
 
 fn test*() {    
@@ -131,7 +152,10 @@ fn test*() {
     slices()
 
     std::println("Copying...") 
-    copies()          
+    copies()
+
+    std::println("Conversions...") 
+    conv()              
 }
 
 fn main() {
