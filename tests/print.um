@@ -16,7 +16,10 @@ fn test*() {
 	chars, err := std::freadall(f2)
 	std::exitif(err)
 	std::fclose(f2)
-	printf("%s", str(chars))	
+	printf("%s", str(chars))
+
+	a, b := '\xD0', '\xBF'
+    printf("%c%c\n", a, b)	
 }
 
 fn main() {
