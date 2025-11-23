@@ -94,6 +94,10 @@ _400 x 400 matrix multiplication (AMD A4-3300M @ 1.9 GHz, Windows 7)_
 
 ![](resources/os.png)
 
+* [kilocat](https://github.com/thacuber2a03/kilocat): A port of the [kilo](https://github.com/antirez/kilo) text editor
+
+![](resources/kilocat.png)
+
 * [VDrift/Umka](https://github.com/vtereshkov/vdrift): A racing simulator that lets you design, tune and test your own car autopilot
 
 ![](resources/vdrift.png)
