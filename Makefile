@@ -29,12 +29,17 @@ else ifneq ($(findstring MINGW64_NT,$(PLATFORM)),)
 	DYNAMIC_CFLAGS_EXTRA  = -shared -fvisibility=hidden
 endif
 
+LIBS = -L../libffi/build/.libs \
+	-lffi
+INCLUDE = -I../libffi/build/include
+
 # identical for all platforms:
 UMKA_LIB_STATIC  = $(BUILD_PATH)/libumka.a
 UMKA_LIB_DYNAMIC = $(BUILD_PATH)/libumka.$(LIBEXT)
 UMKA_EXE = $(BUILD_PATH)/umka
 
-CFLAGS = -s -fPIC -O3 -Wall -Wno-format-security -malign-double -fno-strict-aliasing -DUMKA_EXT_LIBS
+#CFLAGS = -s -fPIC -O3 -Wall -Wno-format-security -malign-double -fno-strict-aliasing -DUMKA_EXT_LIBS
+CFLAGS = -fPIC -ggdb -Wall -Wno-format-security -malign-double -fno-strict-aliasing -DUMKA_EXT_LIBS $(LIBS) $(INCLUDE)
 STATIC_CFLAGS  = $(CFLAGS) -DUMKA_STATIC
 DYNAMIC_CFLAGS = $(CFLAGS) -DUMKA_BUILD $(DYNAMIC_CFLAGS_EXTRA)
 

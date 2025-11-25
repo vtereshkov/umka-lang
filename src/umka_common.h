@@ -210,6 +210,7 @@ int   moduleAdd                 (Modules *modules, const char *path);
 const ModuleSource *moduleFindSource(const Modules *modules, const char *path);
 void  moduleAddSource           (Modules *modules, const char *path, const char *source, bool trusted);
 void *moduleGetImplLibFunc      (const Module  *module,  const char *name);
+void *getExternalDynamicFunc    (const char* name);
 char *moduleCurFolder           (char *buf, int size);
 bool  modulePathIsAbsolute      (const char *path);
 bool  moduleRegularizePath      (const Modules *modules, const char *path, const char *curFolder, char *regularizedPath, int size);

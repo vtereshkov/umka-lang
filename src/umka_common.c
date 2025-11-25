@@ -376,7 +376,6 @@ void moduleAddSource(Modules *modules, const char *path, const char *source, boo
     modules->moduleSource[modules->numModuleSources++] = moduleSource;
 }
 
-
 void *moduleGetImplLibFunc(const Module *module, const char *name)
 {
     if (module->implLib)

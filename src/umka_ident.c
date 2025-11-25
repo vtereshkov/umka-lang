@@ -260,6 +260,15 @@ Ident *identAddBuiltinFunc(Idents *idents, const Modules *modules, const Blocks 
     return ident;
 }
 
+Ident *identAddExternFunc(Idents *idents, const Modules *modules, const Blocks *blocks, const char *name, const Type *type, bool exported, Const constant)
+{
+    Ident *ident = identAdd(idents, modules, blocks, IDENT_EXTERN_FN, name, type, false);
+    ident->exported = exported;
+    ident->_extern = true;
+    ident->constant = constant;
+    return ident;
+}
+
 
 Ident *identAddModule(Idents *idents, const Modules *modules, const Blocks *blocks, const char *name, const Type *type, int moduleVal)
 {

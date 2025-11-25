@@ -37,7 +37,8 @@ typedef enum
     TYPE_INTERFACE,
     TYPE_CLOSURE,
     TYPE_FIBER,         // Pointer of a special kind
-    TYPE_FN
+    TYPE_FN,
+    TYPE_EXTERNFN
 } TypeKind;
 
 

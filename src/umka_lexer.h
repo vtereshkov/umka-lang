@@ -30,6 +30,7 @@ typedef enum
     TOK_TYPE,
     TOK_VAR,
     TOK_WEAK,
+    TOK_EXTERN,
 
     // Operators
     TOK_PLUS,

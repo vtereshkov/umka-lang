@@ -1,4 +1,4 @@
 CompileFlags:
-  Add: [-DUMKA_BUILD -DUMKA_EXT_LIBS]
+  Add: [-DUMKA_BUILD -DUMKA_EXT_LIBS -I../libffi/build/include]
 InlayHints:
   Enabled: No

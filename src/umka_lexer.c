@@ -37,6 +37,7 @@ static const char *spelling [] =
     "type",
     "var",
     "weak",
+    "extern",
 
     // Operators
     "+",
@@ -102,7 +103,7 @@ static const char *spelling [] =
 
 enum
 {
-    NUM_KEYWORDS = TOK_WEAK - TOK_BREAK + 1
+    NUM_KEYWORDS = TOK_EXTERN - TOK_BREAK + 1
 };
 
 

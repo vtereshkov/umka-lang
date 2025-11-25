@@ -1,3 +1,8 @@
+#include "umka_api.h"
+#include "umka_compiler.h"
+#include "umka_gen.h"
+#include "umka_ident.h"
+#include "umka_types.h"
 #define __USE_MINGW_ANSI_STDIO 1
 
 //#define UMKA_VM_DEBUG
@@ -27,6 +32,8 @@
 #include <limits.h>
 #include <ctype.h>
 #include <inttypes.h>
+
+#include <ffi.h>
 
 #include "umka_vm.h"
 
@@ -804,6 +811,7 @@ static FORCE_INLINE void doDerefImpl(Slot *slot, TypeKind typeKind, Error *error
         case TYPE_CLOSURE:      break;  // Always represented by pointer, not dereferenced
         case TYPE_FIBER:        slot->ptrVal     = *(void *         *)slot->ptrVal; break;
         case TYPE_FN:           slot->intVal     = *(int64_t        *)slot->ptrVal; break;
+        case TYPE_EXTERNFN:     slot->intVal     = *(int64_t        *)slot->ptrVal; break;
 
         default:                error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal type"); return;
     }
@@ -855,6 +863,7 @@ static FORCE_INLINE void doAssignImpl(void *lhs, Slot rhs, TypeKind typeKind, in
         }
         case TYPE_FIBER:        *(void *        *)lhs = rhs.ptrVal;  break;
         case TYPE_FN:           *(int64_t       *)lhs = rhs.intVal;  break;
+        case TYPE_EXTERNFN:     *(int64_t       *)lhs = rhs.intVal;  break;
 
         default:                error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal type"); return;
     }
@@ -1694,6 +1703,7 @@ static int doFillReprBuf(const Slot *slot, const Type *type, char *buf, int maxL
 
         case TYPE_FIBER:    len += snprintf(buf + len, maxLen, "fiber @ %p", slot->ptrVal);                break;
         case TYPE_FN:       len += snprintf(buf + len, maxLen, "fn @ %lld", (long long int)slot->intVal);  break;
+        case TYPE_EXTERNFN: len += snprintf(buf + len, maxLen, "extern fn @ %lld", (long long int)slot->intVal);  break;
         default:            break;
     }
 
@@ -2699,6 +2709,7 @@ static FORCE_INLINE void doBuiltinValid(Fiber *fiber, Error *error)
             break;
         }
         case TYPE_FN:
+        case TYPE_EXTERNFN:
         {
             const int entryOffset = fiber->top->intVal;
             isValid = entryOffset > 0;
@@ -3558,6 +3569,41 @@ static FORCE_INLINE void doCallExtern(Fiber *fiber, Error *error)
     fiber->ip++;
 }
 
+static FORCE_INLINE void ffiEntry(UmkaStackSlot *params, UmkaStackSlot *result, const DynamicCall *dynamicCall)
+{
+    void* args[16] = {0};
+    for (unsigned int i = 0; i < dynamicCall->cif.nargs; i++) {
+        args[i] = &umkaGetParam(params, i)->ptrVal;
+    }
+
+    UmkaStackSlot *resultSlot = umkaGetResult(params, result);
+    void* retPtr = resultSlot;
+    if (dynamicCall->cif.rtype->type == FFI_TYPE_STRUCT) {
+        retPtr = resultSlot->ptrVal;
+    }
+
+    ffi_call((ffi_cif *)&dynamicCall->cif, dynamicCall->entry, retPtr, args);
+    // workaround for real32 -> cast float to double
+    if (dynamicCall->cif.rtype->type == FFI_TYPE_FLOAT) {
+        resultSlot->realVal = resultSlot->real32Val;
+    }
+
+}
+
+
+static FORCE_INLINE void doCallExternDynamic(Fiber *fiber, Error *error)
+{
+    const DynamicCall *dynamicCall = fiber->code[fiber->ip].operand.ptrVal;
+
+    fiber->reg[REG_RESULT].ptrVal = error->context;    // Upon entry, the result slot stores the Umka instance
+
+    const int ip = fiber->ip;
+    ffiEntry(&fiber->base[2].apiSlot, &fiber->reg[REG_RESULT].apiSlot, dynamicCall);
+    fiber->ip = ip;
+
+    fiber->ip++;
+}
+
 
 static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages *pages, Error *error)
 {
@@ -3796,6 +3842,7 @@ static void vmLoop(VM *vm)
             case OP_CALL:                           doCall(fiber, error);                         break;
             case OP_CALL_INDIRECT:                  doCallIndirect(fiber, error);                 break;
             case OP_CALL_EXTERN:                    doCallExtern(fiber, error);                   break;
+            case OP_CALL_EXTERN_DYNAMIC:            doCallExternDynamic(fiber, error);            break;
             case OP_CALL_BUILTIN:
             {
                 Fiber *newFiber = NULL;

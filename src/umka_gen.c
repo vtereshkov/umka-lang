@@ -806,6 +806,12 @@ void genCallExtern(CodeGen *gen, void *entry)
     genAddInstr(gen, &instr);
 }
 
+void genCallExternDynamic(CodeGen *gen, DynamicCall *dynamicCall)
+{
+    const Instruction instr = {.opcode = OP_CALL_EXTERN_DYNAMIC, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.ptrVal = dynamicCall};
+    genAddInstr(gen, &instr);
+}
+
 
 void genCallBuiltin(CodeGen *gen, TypeKind typeKind, BuiltinFunc builtin)
 {

@@ -12,6 +12,7 @@ typedef enum
     IDENT_VAR,
     IDENT_TYPE,
     IDENT_BUILTIN_FN,
+    IDENT_EXTERN_FN,
     IDENT_MODULE
 } IdentKind;
 
@@ -23,7 +24,7 @@ typedef struct tagIdent
     unsigned int hash;
     const Type *type;
     int module, block;                  // Place of definition (global identifiers are in block 0)
-    bool exported, globallyAllocated, used, temporary;
+    bool exported, globallyAllocated, used, temporary, _extern;
     int prototypeOffset;                // For function prototypes
     union
     {
@@ -65,6 +66,7 @@ Ident *identAddGlobalVar  (Idents *idents, const Modules *modules, const Blocks 
 Ident *identAddLocalVar   (Idents *idents, const Modules *modules, const Blocks *blocks, const char *name, const Type *type, bool exported, int offset);
 Ident *identAddType       (Idents *idents, const Modules *modules, const Blocks *blocks, const char *name, const Type *type, bool exported);
 Ident *identAddBuiltinFunc(Idents *idents, const Modules *modules, const Blocks *blocks, const char *name, const Type *type, BuiltinFunc builtin);
+Ident *identAddExternFunc (Idents *idents, const Modules *modules, const Blocks *blocks, const char *name, const Type *type, bool exported, Const constant);
 Ident *identAddModule     (Idents *idents, const Modules *modules, const Blocks *blocks, const char *name, const Type *type, int moduleVal);
 
 int    identAllocStack    (Idents *idents, const Types *types, Blocks *blocks, const Type *type);

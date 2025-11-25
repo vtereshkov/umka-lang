@@ -1,3 +1,4 @@
+#include "umka_lexer.h"
 #define __USE_MINGW_ANSI_STDIO 1
 
 #include <stdlib.h>
@@ -743,6 +744,37 @@ void parseShortVarDecl(Umka *umka)
 
 
 // fnDecl = "fn" [rcvSignature] ident exportMark signature [block].
+static void parseExternFnDecl(Umka *umka)
+{
+    if (umka->blocks.top != 0)
+        umka->error.handler(umka->error.context, "Extern functions can only be declared at top-level");
+
+    lexEat(&umka->lex, TOK_EXTERN);
+    lexEat(&umka->lex, TOK_FN);
+    Type *fnType = typeAdd(&umka->types, &umka->blocks, TYPE_EXTERNFN);
+
+    if (umka->lex.tok.kind == TOK_LPAR)
+        parseRcvSignature(umka, &fnType->sig);
+
+    lexCheck(&umka->lex, TOK_IDENT);
+    IdentName name;
+    strcpy(name, umka->lex.tok.name);
+
+    lexNext(&umka->lex);
+    bool exported = parseExportMark(umka);
+
+    parseSignature(umka, &fnType->sig);
+
+    Const constant = {.intVal = umka->gen.ip};
+    Ident *fn = identAddExternFunc(&umka->idents, &umka->modules, &umka->blocks, name, fnType, exported, constant);
+
+    if (umka->lex.tok.kind == TOK_LBRACE)
+        umka->error.handler(umka->error.context, "Extern functions can only be declared as prototype");
+    else
+        parseFnPrototype(umka, fn);
+}
+
+// fnDecl = "fn" [rcvSignature] ident exportMark signature [block].
 static void parseFnDecl(Umka *umka)
 {
     if (umka->blocks.top != 0)
@@ -791,6 +823,7 @@ void parseDecl(Umka *umka)
         case TOK_CONST:  parseConstDecl(umka);      break;
         case TOK_VAR:    parseFullVarDecl(umka);    break;
         case TOK_IDENT:  parseShortVarDecl(umka);   break;
+        case TOK_EXTERN: parseExternFnDecl(umka);   break;
         case TOK_FN:     parseFnDecl(umka);         break;
 
         case TOK_EOF:    if (umka->blocks.top == 0)

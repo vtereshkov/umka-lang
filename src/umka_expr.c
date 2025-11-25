@@ -19,7 +19,7 @@ void doPushConst(Umka *umka, const Type *type, const Const *constant)
 {
     if (type->kind == TYPE_UINT)
         genPushUIntConst(&umka->gen, constant->uintVal);
-    else if (typeOrdinal(type) || type->kind == TYPE_FN)
+    else if (typeOrdinal(type) || type->kind == TYPE_FN || type->kind == TYPE_EXTERNFN)
         genPushIntConst(&umka->gen, constant->intVal);
     else if (typeReal(type))
         genPushRealConst(&umka->gen, constant->realVal);
@@ -1814,6 +1814,7 @@ static void parsePrimary(Umka *umka, const Ident *ident, const Type **type, Cons
     switch (ident->kind)
     {
         case IDENT_CONST:
+        case IDENT_EXTERN_FN:
         {
             if (constant)
                 *constant = ident->constant;
@@ -2548,13 +2549,13 @@ static void parseCallSelector(Umka *umka, const Type **type, bool *isVar, bool *
     // Implicit dereferencing: f^(x) == f(x)
     doTryImplicitDeref(umka, type);
 
-    if ((*type)->kind == TYPE_PTR && ((*type)->base->kind == TYPE_FN || (*type)->base->kind == TYPE_CLOSURE))
+    if ((*type)->kind == TYPE_PTR && ((*type)->base->kind == TYPE_FN || (*type)->base->kind == TYPE_EXTERNFN ||(*type)->base->kind == TYPE_CLOSURE))
     {
         genDeref(&umka->gen, (*type)->base->kind);
         *type = (*type)->base;
     }
 
-    if ((*type)->kind != TYPE_FN && (*type)->kind != TYPE_CLOSURE)
+    if ((*type)->kind != TYPE_FN && (*type)->kind != TYPE_EXTERNFN && (*type)->kind != TYPE_CLOSURE)
         umka->error.handler(umka->error.context, "Function or closure expected");
 
     parseCall(umka, type);
