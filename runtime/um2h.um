@@ -49,11 +49,7 @@ fn main() {
 		} else {
 			fprintf(fout, "\"\n};\n\n")
 		}
-
-		std::fclose(fin)
 	}
 
 	fprintf(fout, "#endif // UMKA_RUNTIME_SRC_H_INCLUDED\n")
-	
-	std::fclose(fout)
 }

@@ -283,7 +283,6 @@ fn main() {
     std::exitif(err)
     fprintf(f, "P6\n%lld %lld\n255\n", width, height)
     std::fwrite(f, pixels)
-    std::fclose(f)
     std::println("Done. See " + fileName)
     std::getchar()
     std::getchar()
