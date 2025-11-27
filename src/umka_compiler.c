@@ -104,7 +104,7 @@ static void compilerDeclareBuiltinTypes(Umka *umka)
 
     // __file
     Type *fileDataType = typeAdd(&umka->types, &umka->blocks, TYPE_STRUCT);
-    typeAddField(&umka->types, fileDataType, umka->ptrVoidType, "#data");
+    typeAddField(&umka->types, fileDataType, umka->ptrVoidType, "#stream");
 
     umka->fileType = typeAddPtrTo(&umka->types, &umka->blocks, fileDataType);
 }

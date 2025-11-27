@@ -573,39 +573,39 @@ static FORCE_INLINE void candidatePop(RefCntChangeCandidates *candidates, void *
 
 // Helper functions
 
-static FORCE_INLINE int fsgetc(bool string, void *stream, int *len)
+static FORCE_INLINE int fsgetc(FILE *file, char *string, int *len)
 {
-    int ch = string ? ((char *)stream)[*len] : fgetc((FILE *)stream);
+    const int ch = string ? string[*len] : fgetc(file);
     (*len)++;
     return ch;
 }
 
 
-static int fsnprintf(bool string, void *stream, int size, const char *format, ...)
+static int fsnprintf(FILE *file, char *string, int size, const char *format, ...)
 {
     va_list args;
     va_start(args, format);
 
-    int res = string ? vsnprintf((char *)stream, size, format, args) : vfprintf((FILE *)stream, format, args);
+    const int res = string ? vsnprintf(string, size, format, args) : vfprintf(file, format, args);
 
     va_end(args);
     return res;
 }
 
 
-static int fsscanf(bool string, void *stream, const char *format, ...)
+static int fsscanf(FILE *file, char *string, const char *format, ...)
 {
     va_list args;
     va_start(args, format);
 
-    int res = string ? vsscanf((char *)stream, format, args) : vfscanf((FILE *)stream, format, args);
+    int res = string ? vsscanf(string, format, args) : vfscanf(file, format, args);
 
     va_end(args);
     return res;
 }
 
 
-static FORCE_INLINE char *fsscanfString(Storage *storage, bool string, void *stream, int *len)
+static FORCE_INLINE char *fsscanfString(Storage *storage, FILE *file, char *string, int *len)
 {
     int capacity = 8;
     char *str = storageAdd(storage, capacity);
@@ -616,7 +616,7 @@ static FORCE_INLINE char *fsscanfString(Storage *storage, bool string, void *str
 
     // Skip whitespace
     while (isspace(ch))
-        ch = fsgetc(string, stream, len);
+        ch = fsgetc(file, string, len);
 
     // Read string
     while (ch && ch != EOF && !isspace(ch))
@@ -627,7 +627,7 @@ static FORCE_INLINE char *fsscanfString(Storage *storage, bool string, void *str
             capacity *= 2;
             str = storageRealloc(storage, str, capacity);
         }
-        ch = fsgetc(string, stream, len);
+        ch = fsgetc(file, string, len);
     }
 
     str[writtenLen] = '\0';
@@ -1701,29 +1701,29 @@ static int doFillReprBuf(const Slot *slot, const Type *type, char *buf, int maxL
 }
 
 
-static FORCE_INLINE int doPrintSlot(bool string, void *stream, int maxLen, const char *format, Slot slot, TypeKind typeKind, Error *error)
+static FORCE_INLINE int doPrintSlot(FILE *file, char *string, int maxLen, const char *format, Slot slot, TypeKind typeKind, Error *error)
 {
     int len = -1;
 
     switch (typeKind)
     {
-        case TYPE_VOID:         len = fsnprintf(string, stream, maxLen, format);                               break;
-        case TYPE_INT8:         len = fsnprintf(string, stream, maxLen, format, (int8_t        )slot.intVal);  break;
-        case TYPE_INT16:        len = fsnprintf(string, stream, maxLen, format, (int16_t       )slot.intVal);  break;
-        case TYPE_INT32:        len = fsnprintf(string, stream, maxLen, format, (int32_t       )slot.intVal);  break;
-        case TYPE_INT:          len = fsnprintf(string, stream, maxLen, format,                 slot.intVal);  break;
-        case TYPE_UINT8:        len = fsnprintf(string, stream, maxLen, format, (uint8_t       )slot.intVal);  break;
-        case TYPE_UINT16:       len = fsnprintf(string, stream, maxLen, format, (uint16_t      )slot.intVal);  break;
-        case TYPE_UINT32:       len = fsnprintf(string, stream, maxLen, format, (uint32_t      )slot.intVal);  break;
-        case TYPE_UINT:         len = fsnprintf(string, stream, maxLen, format,                 slot.uintVal); break;
-        case TYPE_BOOL:         len = fsnprintf(string, stream, maxLen, format, (bool          )slot.intVal);  break;
-        case TYPE_CHAR:         len = fsnprintf(string, stream, maxLen, format, (unsigned char )slot.intVal);  break;
+        case TYPE_VOID:         len = fsnprintf(file, string, maxLen, format);                               break;
+        case TYPE_INT8:         len = fsnprintf(file, string, maxLen, format, (int8_t        )slot.intVal);  break;
+        case TYPE_INT16:        len = fsnprintf(file, string, maxLen, format, (int16_t       )slot.intVal);  break;
+        case TYPE_INT32:        len = fsnprintf(file, string, maxLen, format, (int32_t       )slot.intVal);  break;
+        case TYPE_INT:          len = fsnprintf(file, string, maxLen, format,                 slot.intVal);  break;
+        case TYPE_UINT8:        len = fsnprintf(file, string, maxLen, format, (uint8_t       )slot.intVal);  break;
+        case TYPE_UINT16:       len = fsnprintf(file, string, maxLen, format, (uint16_t      )slot.intVal);  break;
+        case TYPE_UINT32:       len = fsnprintf(file, string, maxLen, format, (uint32_t      )slot.intVal);  break;
+        case TYPE_UINT:         len = fsnprintf(file, string, maxLen, format,                 slot.uintVal); break;
+        case TYPE_BOOL:         len = fsnprintf(file, string, maxLen, format, (bool          )slot.intVal);  break;
+        case TYPE_CHAR:         len = fsnprintf(file, string, maxLen, format, (unsigned char )slot.intVal);  break;
         case TYPE_REAL32:
-        case TYPE_REAL:         len = fsnprintf(string, stream, maxLen, format,                 slot.realVal); break;
+        case TYPE_REAL:         len = fsnprintf(file, string, maxLen, format,                 slot.realVal); break;
         case TYPE_STR:
         {
             doCheckStr((char *)slot.ptrVal, error);
-            len = fsnprintf(string, stream, maxLen, format, slot.ptrVal ? (char *)slot.ptrVal : "");
+            len = fsnprintf(file, string, maxLen, format, slot.ptrVal ? (char *)slot.ptrVal : "");
             break;
         }
         default:                error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal type"); break;
@@ -1742,21 +1742,40 @@ enum
 };
 
 
-static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool console, bool string, Error *error)
+static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool isConsole, bool isString, Error *error)
 {
-    const int prevLen  = fiber->top[STACK_OFFSET_COUNT].intVal;
-    void *stream       = console ? stdout : fiber->top[STACK_OFFSET_STREAM].ptrVal;
-    const char *format = (const char *)fiber->top[STACK_OFFSET_FORMAT].ptrVal;
-    Slot value         = fiber->top[STACK_OFFSET_VALUE];
+    FILE *file = NULL;
+    char *string = NULL;
+    if (isString)
+    {
+        string = fiber->top[STACK_OFFSET_STREAM].ptrVal;
+        if (!string)
+            string = doGetEmptyStr();
+    }
+    else if (isConsole)
+    {
+        file = stdout;
+    }
+    else if (fiber->fileSystemEnabled)
+    {
+        const File *umkaFile = fiber->top[STACK_OFFSET_STREAM].ptrVal;
+        if (umkaFile)
+            file = umkaFile->stream;
+    }
 
-    const Type *type   = fiber->code[fiber->ip].type;
-    TypeKind typeKind  = type->kind;
-
-    if (UNLIKELY(!string && (!stream || (!fiber->fileSystemEnabled && !console))))
+    if (UNLIKELY(!string && !file))
         error->runtimeHandler(error->context, ERR_RUNTIME, "printf destination is null");
 
+    const char *format = fiber->top[STACK_OFFSET_FORMAT].ptrVal;
     if (!format)
         format = doGetEmptyStr();
+
+    const int prevLen  = fiber->top[STACK_OFFSET_COUNT].intVal;
+
+    Slot value = fiber->top[STACK_OFFSET_VALUE];        
+
+    const Type *type = fiber->code[fiber->ip].type;
+    TypeKind typeKind = type->kind;
 
     int formatLen = -1, typeLetterPos = -1;
     TypeKind expectedTypeKind = TYPE_NONE;
@@ -1840,35 +1859,37 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
     int len = 0;
     if (string)
     {
-        len = doPrintSlot(true, NULL, 0, curFormat, value, typeKind, error);
+        len = doPrintSlot(NULL, string, 0, curFormat, value, typeKind, error);
 
-        const bool inPlace = stream && getStrDims(stream)->capacity >= prevLen + len + 1;
+        const bool inPlace = getStrDims(string)->capacity >= prevLen + len + 1;
         if (inPlace)
         {
-            getStrDims(stream)->len = prevLen + len;
+            getStrDims(string)->len = prevLen + len;
         }
         else
         {
-            char *newStream = doAllocStr(pages, prevLen + len, error);
-            if (stream)
-                memcpy(newStream, stream, prevLen);
-            newStream[prevLen] = 0;
+            char *newString = doAllocStr(pages, prevLen + len, error);
+            memcpy(newString, string, prevLen);
+            newString[prevLen] = 0;
 
             // Decrease old string ref count
-            Type strType = {.kind = TYPE_STR};
-            doChangeRefCntImpl(fiber, pages, stream, &strType, TOK_MINUSMINUS);
+            const Type strType = {.kind = TYPE_STR};
+            doChangeRefCntImpl(fiber, pages, string, &strType, TOK_MINUSMINUS);
 
-            stream = newStream;
+            string = newString;
         }
 
-        len = doPrintSlot(true, (char *)stream + prevLen, len + 1, curFormat, value, typeKind, error);
+        len = doPrintSlot(NULL, string + prevLen, len + 1, curFormat, value, typeKind, error);
     }
     else
-        len = doPrintSlot(false, stream, INT_MAX, curFormat, value, typeKind, error);
+    {
+        len = doPrintSlot(file, NULL, INT_MAX, curFormat, value, typeKind, error);
+    }
 
     fiber->top[STACK_OFFSET_FORMAT].ptrVal = (char *)fiber->top[STACK_OFFSET_FORMAT].ptrVal + formatLen;
     fiber->top[STACK_OFFSET_COUNT].intVal += len;
-    fiber->top[STACK_OFFSET_STREAM].ptrVal = stream;
+    if (isString)
+        fiber->top[STACK_OFFSET_STREAM].ptrVal = string;
 
     fiber->top++;   // Remove value
 
@@ -1880,20 +1901,36 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool co
 }
 
 
-static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool console, bool string, Error *error)
+static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool isConsole, bool isString, Error *error)
 {
-    void *stream       = console ? stdin : (void *)fiber->top[STACK_OFFSET_STREAM].ptrVal;
-    const char *format = (const char *)fiber->top[STACK_OFFSET_FORMAT].ptrVal;
-    Slot value         = fiber->top[STACK_OFFSET_VALUE];
+    FILE *file = NULL;
+    char *string = NULL;
+    if (isString)
+    {
+        string = fiber->top[STACK_OFFSET_STREAM].ptrVal;
+    }
+    else if (isConsole)
+    {
+        file = stdin;
+    }
+    else if (fiber->fileSystemEnabled)
+    {
+        const File *umkaFile = fiber->top[STACK_OFFSET_STREAM].ptrVal;
+        if (umkaFile)
+            file = umkaFile->stream;
+    }
 
-    const Type *type   = fiber->code[fiber->ip].type;
-    TypeKind typeKind  = type->kind;
-
-    if (UNLIKELY(!stream || (!fiber->fileSystemEnabled && !console && !string)))
+    if (UNLIKELY(!string && !file))
         error->runtimeHandler(error->context, ERR_RUNTIME, "scanf source is null");
-
+        
+    const char *format = fiber->top[STACK_OFFSET_FORMAT].ptrVal;
     if (!format)
         format = doGetEmptyStr();
+
+    Slot value = fiber->top[STACK_OFFSET_VALUE];        
+
+    const Type *type = fiber->code[fiber->ip].type;
+    TypeKind typeKind = type->kind;
 
     int formatLen = -1, typeLetterPos = -1;
     TypeKind expectedTypeKind = TYPE_NONE;
@@ -1920,7 +1957,9 @@ static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool con
     int len = 0, cnt = 0;
 
     if (typeKind == TYPE_VOID)
-        cnt = fsscanf(string, stream, curFormat, &len);
+    {
+        cnt = fsscanf(file, string, curFormat, &len);
+    }
     else
     {
         if (UNLIKELY(!value.ptrVal))
@@ -1929,7 +1968,7 @@ static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool con
         // Strings need special handling, as the required buffer size is unknown
         if (typeKind == TYPE_STR)
         {
-            char *src = fsscanfString(fiber->vm->storage, string, stream, &len);
+            char *src = fsscanfString(fiber->vm->storage, file, string, &len);
             char **dest = (char **)value.ptrVal;
 
             // Decrease old string ref count
@@ -1944,12 +1983,14 @@ static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool con
             cnt = (*dest)[0] ? 1 : 0;
         }
         else
-            cnt = fsscanf(string, stream, curFormat, (void *)value.ptrVal, &len);
+        {
+            cnt = fsscanf(file, string, curFormat, (void *)value.ptrVal, &len);
+        }
     }
 
     fiber->top[STACK_OFFSET_FORMAT].ptrVal = (char *)fiber->top[STACK_OFFSET_FORMAT].ptrVal + formatLen;
     fiber->top[STACK_OFFSET_COUNT].intVal += cnt;
-    if (string)
+    if (isString)
         fiber->top[STACK_OFFSET_STREAM].ptrVal = (char *)fiber->top[STACK_OFFSET_STREAM].ptrVal + len;
 
     fiber->top++;   // Remove value

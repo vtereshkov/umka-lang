@@ -8,8 +8,6 @@ fn readall(name: str): str {
     std::exitif(err)
     data, err := std::freadall(f)
     std::exitif(err)
-    std::fclose(f)
-
     return str(data)
 }
 

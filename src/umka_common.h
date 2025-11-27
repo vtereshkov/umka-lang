@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdarg.h>
 #include <setjmp.h>
 
@@ -59,6 +60,12 @@ typedef struct tagMapNode               // The C equivalent of the Umka map base
 
 
 typedef UmkaMap Map;                    // The C equivalent of the Umka map type. Must have 8 byte alignment
+
+
+typedef struct                          // The C equivalent of the Umka file type
+{
+    FILE *stream;
+} File;
 
 
 typedef struct

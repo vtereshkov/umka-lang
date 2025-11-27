@@ -4,7 +4,6 @@ fn write(name, s: str) {
 	f, err := std::fopen(name, "wb")
 	std::exitif(err)
 	std::fwrite(f, &[]char(s))
-	std::fclose(f)	
 } 
 
 fn read(name: str): str {
@@ -12,8 +11,6 @@ fn read(name: str): str {
 	std::exitif(err)
 	data, err := std::freadall(f)
 	std::exitif(err)
-	std::fclose(f)
-
 	return str(data)
 }
 
