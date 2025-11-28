@@ -1,7 +1,7 @@
 #ifndef UMKA_FFI_H_
 #define UMKA_FFI_H_
 
-#include <ffi.h>
+#include "ffi.h"
 
 #include "umka_common.h"
 #include "umka_types.h"

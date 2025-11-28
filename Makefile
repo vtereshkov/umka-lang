@@ -13,7 +13,7 @@ BINDIR ?= $(PREFIX)/bin
 
 # platform specific settings:
 ifeq ($(PLATFORM), Linux)
-	LDFLAGS               = -lm -ldl
+	LDFLAGS               = -lm -ldl $(LIBFFI_LD)
 	RANLIB                = ar -crs
 	LIBEXT                = so
 	DYNAMIC_CFLAGS_EXTRA  = -shared -fvisibility=hidden
@@ -29,9 +29,20 @@ else ifneq ($(findstring MINGW64_NT,$(PLATFORM)),)
 	DYNAMIC_CFLAGS_EXTRA  = -shared -fvisibility=hidden
 endif
 
-LIBS = -L../libffi/build/.libs \
-	-lffi
-INCLUDE = -I../libffi/build/include
+ifeq ($(UMKA_LIBFFI),)
+	LIBFFI_LIBS	=
+	LIBFFI_LIB	=
+	LIBFFI_LD	=
+	LIBFFI_STATIC  	=
+	LIBFFI_INCLUDE 	=	
+else
+	LIBFFI_LIBS	= ./libffi/build/.libs
+	LIBFFI_LIB	= libffi.a
+	LIBFFI_LD	= -L$(LIBFFI_LIBS) -l:$(LIBFFI_LIB)
+	LIBFFI_STATIC  	= $(LIBFFI_LIBS)/$(LIBFFI_LIB)
+	LIBFFI_INCLUDE 	= ./libffi/build/include
+	LIBFFI_CFLAGS 	= -I$(LIBFFI_INCLUDE) -DUMKA_FFI 
+endif
 
 # identical for all platforms:
 UMKA_LIB_STATIC  = $(BUILD_PATH)/libumka.a
@@ -39,7 +50,7 @@ UMKA_LIB_DYNAMIC = $(BUILD_PATH)/libumka.$(LIBEXT)
 UMKA_EXE = $(BUILD_PATH)/umka
 
 #CFLAGS = -s -fPIC -O3 -Wall -Wno-format-security -malign-double -fno-strict-aliasing -DUMKA_EXT_LIBS
-CFLAGS = -fPIC -ggdb -Wall -Wno-format-security -malign-double -fno-strict-aliasing -DUMKA_EXT_LIBS -DUMKA_FFI $(LIBS) $(INCLUDE)
+CFLAGS = -fPIC -ggdb -Wall -Wno-format-security -malign-double -fno-strict-aliasing -DUMKA_EXT_LIBS $(LIBFFI_CFLAGS)
 STATIC_CFLAGS  = $(CFLAGS) -DUMKA_STATIC
 DYNAMIC_CFLAGS = $(CFLAGS) -DUMKA_BUILD $(DYNAMIC_CFLAGS_EXTRA)
 
@@ -85,29 +96,48 @@ uninstall:
 	@rm -f -- $(DESTDIR)$(INCLUDEDIR)/umka_api.h
 	@echo "Uninstallation complete!"
 
-$(UMKA_LIB_STATIC): $(OBJS_STATIC)
+$(UMKA_LIB_STATIC): $(OBJS_STATIC) $(LIBFFI_STATIC)
 	@echo AR $@
 	@mkdir -p -- $(BUILD_PATH)/include/
 	@$(RANLIB) $(UMKA_LIB_STATIC) $^
 	@cp $(APIS) $(BUILD_PATH)/include/
 
-$(UMKA_LIB_DYNAMIC): $(OBJS_DYNAMIC)
+$(UMKA_LIB_DYNAMIC): $(OBJS_DYNAMIC) $(LIBFFI_STATIC)
 	@echo LD $@
 	@mkdir -p -- $(BUILD_PATH)/include/
 	@$(CC) $(DYNAMIC_CFLAGS) -o $(UMKA_LIB_DYNAMIC) $^ $(LDFLAGS)
 	@cp $(APIS) $(BUILD_PATH)/include/
 
-$(UMKA_EXE): $(OBJS_EXE) $(UMKA_LIB_STATIC)
+$(UMKA_EXE): $(OBJS_EXE) $(UMKA_LIB_STATIC) $(LIBFFI_STATIC)
 	@echo LD $@
 	@mkdir -p -- $(dir $@)
 	@$(CC) $(STATIC_CFLAGS) -o $(UMKA_EXE) $^ $(LDFLAGS)
 
-$(OBJ_PATH)/%_static.o: src/%.c
+$(OBJ_PATH)/%_static.o: src/%.c $(LIBFFI_INCLUDE)
 	@echo CC $@
 	@mkdir -p -- $(dir $@)
 	@$(CC) $(STATIC_CFLAGS) -o $@ -c $^
 
-$(OBJ_PATH)/%_dynamic.o: src/%.c
+$(OBJ_PATH)/%_dynamic.o: src/%.c $(LIBFFI_INCLUDE)
 	@echo CC $@
 	@mkdir -p -- $(dir $@)
 	@$(CC) $(DYNAMIC_CFLAGS) -o $@ -c $^
+
+.PHONY: libffi/clean
+libffi/clean:
+	rm -rf libffi/build
+
+libffi/build/.libs/libffi.a: libffi/build/Makefile
+	@cd libffi/build && make
+
+libffi/build/include: libffi/build/Makefile
+libffi/build/Makefile: libffi/configure
+	@mkdir -p -- libffi/build/
+	@cd libffi/build && CC=-fPIC ../configure --enable-pic
+
+libffi/configure: libffi/autogen.sh
+	@cd libffi && ./autogen.sh
+
+libffi/autogen.sh:
+	@git submodule init
+	@git submodule update

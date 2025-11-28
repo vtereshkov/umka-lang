@@ -1,8 +1,9 @@
+#ifdef UMKA_FFI
+
 #include "umka_ffi.h"
 #include "umka_common.h"
 #include "umka_compiler.h"
 #include "umka_types.h"
-#include <ffi.h>
 
 
 static FfiStructs ffiStructs = {0};
@@ -148,3 +149,5 @@ int assignFfiTypes(Umka *umka, ffi_type **types, const Signature *sig)
     }
     return numArgs;
 }    
+
+#endif // UMKA_FFI
