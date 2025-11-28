@@ -1,6 +1,8 @@
 #include "umka_ffi.h"
 #include "umka_common.h"
 #include "umka_compiler.h"
+#include "umka_types.h"
+#include <ffi.h>
 
 
 static FfiStructs ffiStructs = {0};
@@ -76,21 +78,28 @@ ffi_type *mapToFfiType(Umka *umka,const struct tagType *type) {
         return &ffi_type_uint32;
     case TYPE_UINT:
         return &ffi_type_uint64;
+    case TYPE_CHAR:
+        return &ffi_type_uchar;
+    case TYPE_BOOL:
+        switch (sizeof(bool)) {
+        case 1:
+            return &ffi_type_uint8;
+        case 2:
+            return &ffi_type_uint16;
+        case 4:
+            return &ffi_type_uint32;
+        case 8:
+            return &ffi_type_uint64;
+        }
 
         // ptr types
     case TYPE_STR:
     case TYPE_NULL:
     case TYPE_ARRAY:
     case TYPE_PTR:
-        return &ffi_type_uint64;
-    case TYPE_BOOL:
-        return &ffi_type_uint8;
-    case TYPE_CHAR:
-        return &ffi_type_uchar;
+        return &ffi_type_pointer;
 
     case TYPE_STRUCT:
-        // this approach creates a new struct, every time a parameter of a struct type appears
-        // probabbly should be only created once for each struct, then looked up here
         return mapToFfiStruct(umka, type->typeIdent->type);
 
         // float types
@@ -117,7 +126,10 @@ ffi_type *mapToFfiType(Umka *umka,const struct tagType *type) {
     case TYPE_CLOSURE:
     case TYPE_FIBER:
     case TYPE_FN:
-        umka->error.handler(umka->error.context, "Cannot convert type `%s` to ffi_type", type->typeIdent->name);
+      umka->error.handler(
+          umka->error.context,
+          "Type `%s` is unsupported in ffi function declarations",
+          typeKindSpelling(type->kind));
     }
     return NULL;
 }

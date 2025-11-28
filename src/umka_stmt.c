@@ -115,11 +115,11 @@ void doResolveExtern(Umka *umka)
                     int numArgs = assignFfiTypes(umka, types, &ident->type->sig);
 
                     if (retType == NULL)
-                        umka->error.handler(umka->error.context, "Unsupported return type for ffi function: %d", ident->type->sig.resultType->typeIdent->name);
+                        umka->error.handler(umka->error.context, "Unsupported return type %s for ffi function %s", typeKindSpelling(ident->type->kind), ident->name);
 
                     ffi_status status = ffi_prep_cif(&dynamicCall->cif, FFI_DEFAULT_ABI, numArgs, retType, types);
                     if (status != FFI_OK)
-                        umka->error.handler(umka->error.context, "Error creating ffi_cif: %d", status);
+                        umka->error.handler(umka->error.context, "Error creating ffi_cif for function %s: %d", ident->name, status);
 
                     genCallExternFfi(&umka->gen, dynamicCall);
                 } else {
