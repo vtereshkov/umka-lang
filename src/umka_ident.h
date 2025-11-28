@@ -12,7 +12,9 @@ typedef enum
     IDENT_VAR,
     IDENT_TYPE,
     IDENT_BUILTIN_FN,
-    IDENT_EXTERN_FN,
+#ifdef UMKA_FFI
+    IDENT_FFI_FN,
+#endif
     IDENT_MODULE
 } IdentKind;
 
@@ -24,7 +26,10 @@ typedef struct tagIdent
     unsigned int hash;
     const Type *type;
     int module, block;                  // Place of definition (global identifiers are in block 0)
-    bool exported, globallyAllocated, used, temporary, _extern;
+    bool exported, globallyAllocated, used, temporary;
+#ifdef UMKA_FFI
+    bool ffi;
+#endif
     int prototypeOffset;                // For function prototypes
     union
     {
@@ -65,8 +70,10 @@ Ident *identAddTempConst  (Idents *idents, const Modules *modules, const Blocks 
 Ident *identAddGlobalVar  (Idents *idents, const Modules *modules, const Blocks *blocks, const char *name, const Type *type, bool exported, void *ptr);
 Ident *identAddLocalVar   (Idents *idents, const Modules *modules, const Blocks *blocks, const char *name, const Type *type, bool exported, int offset);
 Ident *identAddType       (Idents *idents, const Modules *modules, const Blocks *blocks, const char *name, const Type *type, bool exported);
+#ifdef UMKA_FFI
+Ident *identAddExternFunc(Idents *idents, const Modules *modules, const Blocks *blocks, const char *name, const Type *type, bool exported, Const constant);
+#endif
 Ident *identAddBuiltinFunc(Idents *idents, const Modules *modules, const Blocks *blocks, const char *name, const Type *type, BuiltinFunc builtin);
-Ident *identAddExternFunc (Idents *idents, const Modules *modules, const Blocks *blocks, const char *name, const Type *type, bool exported, Const constant);
 Ident *identAddModule     (Idents *idents, const Modules *modules, const Blocks *blocks, const char *name, const Type *type, int moduleVal);
 
 int    identAllocStack    (Idents *idents, const Types *types, Blocks *blocks, const Type *type);

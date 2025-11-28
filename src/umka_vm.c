@@ -1,8 +1,3 @@
-#include "umka_api.h"
-#include "umka_compiler.h"
-#include "umka_gen.h"
-#include "umka_ident.h"
-#include "umka_types.h"
 #define __USE_MINGW_ANSI_STDIO 1
 
 //#define UMKA_VM_DEBUG
@@ -33,9 +28,11 @@
 #include <ctype.h>
 #include <inttypes.h>
 
-#include <ffi.h>
-
 #include "umka_vm.h"
+
+#ifdef UMKA_FFI
+#include "umka_ffi.h"
+#endif
 
 
 /*
@@ -811,7 +808,6 @@ static FORCE_INLINE void doDerefImpl(Slot *slot, TypeKind typeKind, Error *error
         case TYPE_CLOSURE:      break;  // Always represented by pointer, not dereferenced
         case TYPE_FIBER:        slot->ptrVal     = *(void *         *)slot->ptrVal; break;
         case TYPE_FN:           slot->intVal     = *(int64_t        *)slot->ptrVal; break;
-        case TYPE_EXTERNFN:     slot->intVal     = *(int64_t        *)slot->ptrVal; break;
 
         default:                error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal type"); return;
     }
@@ -863,7 +859,6 @@ static FORCE_INLINE void doAssignImpl(void *lhs, Slot rhs, TypeKind typeKind, in
         }
         case TYPE_FIBER:        *(void *        *)lhs = rhs.ptrVal;  break;
         case TYPE_FN:           *(int64_t       *)lhs = rhs.intVal;  break;
-        case TYPE_EXTERNFN:     *(int64_t       *)lhs = rhs.intVal;  break;
 
         default:                error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal type"); return;
     }
@@ -1703,7 +1698,6 @@ static int doFillReprBuf(const Slot *slot, const Type *type, char *buf, int maxL
 
         case TYPE_FIBER:    len += snprintf(buf + len, maxLen, "fiber @ %p", slot->ptrVal);                break;
         case TYPE_FN:       len += snprintf(buf + len, maxLen, "fn @ %lld", (long long int)slot->intVal);  break;
-        case TYPE_EXTERNFN: len += snprintf(buf + len, maxLen, "extern fn @ %lld", (long long int)slot->intVal);  break;
         default:            break;
     }
 
@@ -2709,7 +2703,6 @@ static FORCE_INLINE void doBuiltinValid(Fiber *fiber, Error *error)
             break;
         }
         case TYPE_FN:
-        case TYPE_EXTERNFN:
         {
             const int entryOffset = fiber->top->intVal;
             isValid = entryOffset > 0;
@@ -3556,19 +3549,7 @@ static FORCE_INLINE void doCallIndirect(Fiber *fiber, Error *error)
 }
 
 
-static FORCE_INLINE void doCallExtern(Fiber *fiber, Error *error)
-{
-    const UmkaExternFunc fn = (UmkaExternFunc)fiber->code[fiber->ip].operand.ptrVal;
-
-    fiber->reg[REG_RESULT].ptrVal = error->context;    // Upon entry, the result slot stores the Umka instance
-
-    const int ip = fiber->ip;
-    fn(&fiber->base[2].apiSlot, &fiber->reg[REG_RESULT].apiSlot);      // + 2 from base pointer for old base pointer and return address
-    fiber->ip = ip;
-
-    fiber->ip++;
-}
-
+#ifdef UMKA_FFI
 static FORCE_INLINE void ffiEntry(UmkaStackSlot *params, UmkaStackSlot *result, const DynamicCall *dynamicCall)
 {
     void* args[16] = {0};
@@ -3587,11 +3568,9 @@ static FORCE_INLINE void ffiEntry(UmkaStackSlot *params, UmkaStackSlot *result, 
     if (dynamicCall->cif.rtype->type == FFI_TYPE_FLOAT) {
         resultSlot->realVal = resultSlot->real32Val;
     }
-
 }
 
-
-static FORCE_INLINE void doCallExternDynamic(Fiber *fiber, Error *error)
+static FORCE_INLINE void doCallExternFfi(Fiber *fiber, Error *error)
 {
     const DynamicCall *dynamicCall = fiber->code[fiber->ip].operand.ptrVal;
 
@@ -3599,6 +3578,21 @@ static FORCE_INLINE void doCallExternDynamic(Fiber *fiber, Error *error)
 
     const int ip = fiber->ip;
     ffiEntry(&fiber->base[2].apiSlot, &fiber->reg[REG_RESULT].apiSlot, dynamicCall);
+    fiber->ip = ip;
+
+    fiber->ip++;
+}
+#endif // UMKA_FFI
+
+
+static FORCE_INLINE void doCallExtern(Fiber *fiber, Error *error)
+{
+    const UmkaExternFunc fn = (UmkaExternFunc)fiber->code[fiber->ip].operand.ptrVal;
+
+    fiber->reg[REG_RESULT].ptrVal = error->context;    // Upon entry, the result slot stores the Umka instance
+
+    const int ip = fiber->ip;
+    fn(&fiber->base[2].apiSlot, &fiber->reg[REG_RESULT].apiSlot);      // + 2 from base pointer for old base pointer and return address
     fiber->ip = ip;
 
     fiber->ip++;
@@ -3842,7 +3836,9 @@ static void vmLoop(VM *vm)
             case OP_CALL:                           doCall(fiber, error);                         break;
             case OP_CALL_INDIRECT:                  doCallIndirect(fiber, error);                 break;
             case OP_CALL_EXTERN:                    doCallExtern(fiber, error);                   break;
-            case OP_CALL_EXTERN_DYNAMIC:            doCallExternDynamic(fiber, error);            break;
+#ifdef UMKA_FFI
+            case OP_CALL_EXTERN_FFI:                doCallExternFfi(fiber, error);                break;
+#endif
             case OP_CALL_BUILTIN:
             {
                 Fiber *newFiber = NULL;

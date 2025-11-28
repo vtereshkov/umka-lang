@@ -29,8 +29,10 @@ typedef enum
     TOK_SWITCH,
     TOK_TYPE,
     TOK_VAR,
+#ifdef UMKA_FFI
+    TOK_FFI,
+#endif
     TOK_WEAK,
-    TOK_EXTERN,
 
     // Operators
     TOK_PLUS,

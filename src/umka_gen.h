@@ -1,11 +1,12 @@
 #ifndef UMKA_GEN_H_INCLUDED
 #define UMKA_GEN_H_INCLUDED
 
-#include <ffi.h>
-
 #include "umka_common.h"
 #include "umka_vm.h"
 
+#ifdef UMKA_FFI
+#include "umka_ffi.h"
+#endif
 
 typedef struct
 {
@@ -43,12 +44,6 @@ typedef struct
     GenNotification lastNotification;
     Error *error;
 } CodeGen;
-
-typedef struct
-{
-    void *entry;
-    ffi_cif cif;
-} DynamicCall;
 
 
 void genInit(CodeGen *gen, Storage *storage, DebugInfo *debug, Error *error);
@@ -107,8 +102,10 @@ void genGotoIfNot   (CodeGen *gen, int dest);
 
 void genCall                (CodeGen *gen, int entry);
 void genCallIndirect        (CodeGen *gen, int paramSlots);
+#ifdef UMKA_FFI
+void genCallExternFfi       (CodeGen *gen, DynamicCall *dynamicCall);
+#endif
 void genCallExtern          (CodeGen *gen, void *entry);
-void genCallExternDynamic   (CodeGen *gen, DynamicCall *dynamicCall);
 void genCallBuiltin         (CodeGen *gen, TypeKind typeKind, BuiltinFunc builtin);
 void genCallTypedBuiltin    (CodeGen *gen, const Type *type, BuiltinFunc builtin);
 void genReturn              (CodeGen *gen, int paramSlots);

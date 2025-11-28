@@ -8,7 +8,6 @@ void doGarbageCollectionDownToBlock(Umka *umka, int block);
 
 void doZeroVar(Umka *umka, const Ident *ident);
 void doResolveExtern(Umka *umka);
-void* externalLoadFfi(Umka *umka, const Ident* ident);
 
 void parseAssignmentStmt(Umka *umka, const Type *type, Const *varPtrConstList);
 void parseDeclAssignmentStmt(Umka *umka, IdentName *names, const bool *exported, int num, bool constExpr);

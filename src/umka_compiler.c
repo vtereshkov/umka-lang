@@ -384,7 +384,7 @@ bool compilerGetFunc(Umka *umka, const char *moduleName, const char *funcName, U
     }
 
     const Ident *fnIdent = identFind(&umka->idents, &umka->modules, &umka->blocks, module, funcName, NULL, false);
-    if (!fnIdent || fnIdent->kind != IDENT_CONST || fnIdent->type->kind != TYPE_FN || fnIdent->kind != IDENT_EXTERN_FN)
+    if (!fnIdent || fnIdent->kind != IDENT_CONST || fnIdent->type->kind != TYPE_FN)
         return false;
 
     identSetUsed(fnIdent);

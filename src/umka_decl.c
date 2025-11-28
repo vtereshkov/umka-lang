@@ -1,4 +1,3 @@
-#include "umka_lexer.h"
 #define __USE_MINGW_ANSI_STDIO 1
 
 #include <stdlib.h>
@@ -10,6 +9,9 @@
 #include "umka_stmt.h"
 #include "umka_decl.h"
 
+#ifdef UMKA_FFI
+#include "umka_ffi.h"
+#endif // UMKA_FFI
 
 static int parseModule(Umka *umka);
 
@@ -743,15 +745,16 @@ void parseShortVarDecl(Umka *umka)
 }
 
 
-// fnDecl = "fn" [rcvSignature] ident exportMark signature [block].
+#ifdef UMKA_FFI
+// fnDecl = "extern fn" [rcvSignature] ident exportMark signature.
 static void parseExternFnDecl(Umka *umka)
 {
     if (umka->blocks.top != 0)
         umka->error.handler(umka->error.context, "Extern functions can only be declared at top-level");
 
-    lexEat(&umka->lex, TOK_EXTERN);
+    lexEat(&umka->lex, TOK_FFI);
     lexEat(&umka->lex, TOK_FN);
-    Type *fnType = typeAdd(&umka->types, &umka->blocks, TYPE_EXTERNFN);
+    Type *fnType = typeAdd(&umka->types, &umka->blocks, TYPE_FN);
 
     if (umka->lex.tok.kind == TOK_LPAR)
         parseRcvSignature(umka, &fnType->sig);
@@ -773,6 +776,8 @@ static void parseExternFnDecl(Umka *umka)
     else
         parseFnPrototype(umka, fn);
 }
+#endif // UMKA_FFI
+
 
 // fnDecl = "fn" [rcvSignature] ident exportMark signature [block].
 static void parseFnDecl(Umka *umka)
@@ -823,168 +828,170 @@ void parseDecl(Umka *umka)
         case TOK_CONST:  parseConstDecl(umka);      break;
         case TOK_VAR:    parseFullVarDecl(umka);    break;
         case TOK_IDENT:  parseShortVarDecl(umka);   break;
-        case TOK_EXTERN: parseExternFnDecl(umka);   break;
+#ifdef UMKA_FFI
+        case TOK_FFI:    parseExternFnDecl(umka);   break;
+#endif // UMKA_FFI
         case TOK_FN:     parseFnDecl(umka);         break;
 
         case TOK_EOF:    if (umka->blocks.top == 0)
-                             break;
+                            break;
 
-        default: umka->error.handler(umka->error.context, "Declaration expected but %s found", lexSpelling(umka->lex.tok.kind)); break;
-    }
+    default: umka->error.handler(umka->error.context, "Declaration expected but %s found", lexSpelling(umka->lex.tok.kind)); break;
+}
 }
 
 
 // decls = decl {";" decl}.
 static void parseDecls(Umka *umka)
 {
-    while (1)
-    {
-        parseDecl(umka);
-        if (umka->lex.tok.kind == TOK_EOF)
-            break;
-        lexEat(&umka->lex, TOK_SEMICOLON);
-    }
+while (1)
+{
+    parseDecl(umka);
+    if (umka->lex.tok.kind == TOK_EOF)
+        break;
+    lexEat(&umka->lex, TOK_SEMICOLON);
+}
 }
 
 
 // importItem = [ident "="] stringLiteral.
 static void parseImportItem(Umka *umka)
 {
-    char *alias = NULL;
-    if (umka->lex.tok.kind == TOK_IDENT)
+char *alias = NULL;
+if (umka->lex.tok.kind == TOK_IDENT)
+{
+    alias = storageAdd(&umka->storage, DEFAULT_STR_LEN + 1);
+    strcpy(alias, umka->lex.tok.name);
+    lexNext(&umka->lex);
+    lexEat(&umka->lex, TOK_EQ);
+}
+
+lexCheck(&umka->lex, TOK_STRLITERAL);
+
+char path[DEFAULT_STR_LEN + 1] = "";
+
+// Module source strings, if any, have precedence over files
+const char *sourceString = NULL;
+bool sourceTrusted = false;
+
+if (moduleRegularizePath(&umka->modules, umka->lex.tok.strVal, umka->modules.curFolder, path, DEFAULT_STR_LEN + 1))
+{
+    const ModuleSource *sourceDesc = moduleFindSource(&umka->modules, path);
+    if (sourceDesc)
     {
-        alias = storageAdd(&umka->storage, DEFAULT_STR_LEN + 1);
-        strcpy(alias, umka->lex.tok.name);
-        lexNext(&umka->lex);
-        lexEat(&umka->lex, TOK_EQ);
+        sourceString = sourceDesc->source;
+        sourceTrusted = sourceDesc->trusted;
     }
+}
 
-    lexCheck(&umka->lex, TOK_STRLITERAL);
+if (!sourceString)
+    moduleAssertRegularizePath(&umka->modules, umka->lex.tok.strVal, umka->modules.module[umka->blocks.module]->folder, path, DEFAULT_STR_LEN + 1);
 
-    char path[DEFAULT_STR_LEN + 1] = "";
+char folder[DEFAULT_STR_LEN + 1] = "";
+char name  [DEFAULT_STR_LEN + 1] = "";
 
-    // Module source strings, if any, have precedence over files
-    const char *sourceString = NULL;
-    bool sourceTrusted = false;
+moduleNameFromPath(&umka->modules, path, folder, name, DEFAULT_STR_LEN + 1);
 
-    if (moduleRegularizePath(&umka->modules, umka->lex.tok.strVal, umka->modules.curFolder, path, DEFAULT_STR_LEN + 1))
-    {
-        const ModuleSource *sourceDesc = moduleFindSource(&umka->modules, path);
-        if (sourceDesc)
-        {
-            sourceString = sourceDesc->source;
-            sourceTrusted = sourceDesc->trusted;
-        }
-    }
+if (!alias)
+{
+    alias = storageAdd(&umka->storage, DEFAULT_STR_LEN + 1);
+    strcpy(alias, name);
+}
 
-    if (!sourceString)
-        moduleAssertRegularizePath(&umka->modules, umka->lex.tok.strVal, umka->modules.module[umka->blocks.module]->folder, path, DEFAULT_STR_LEN + 1);
+if (moduleFindImported(&umka->modules, &umka->blocks, alias) >= 0)
+    umka->modules.error->handler(umka->modules.error->context, "Duplicate imported module %s", alias);
 
-    char folder[DEFAULT_STR_LEN + 1] = "";
-    char name  [DEFAULT_STR_LEN + 1] = "";
-
-    moduleNameFromPath(&umka->modules, path, folder, name, DEFAULT_STR_LEN + 1);
-
-    if (!alias)
-    {
-        alias = storageAdd(&umka->storage, DEFAULT_STR_LEN + 1);
-        strcpy(alias, name);
-    }
-
-    if (moduleFindImported(&umka->modules, &umka->blocks, alias) >= 0)
-        umka->modules.error->handler(umka->modules.error->context, "Duplicate imported module %s", alias);
-
-    int importedModule = moduleFind(&umka->modules, path);
-    if (importedModule < 0)
-    {
-        // Save context
-        int currentModule       = umka->blocks.module;
-        DebugInfo currentDebug  = umka->debug;
-        Lexer currentLex        = umka->lex;
-        lexInit(&umka->lex, &umka->storage, &umka->debug, path, sourceString, sourceTrusted, &umka->error);
-
-        lexNext(&umka->lex);
-        importedModule = parseModule(umka);
-
-        // Restore context
-        lexFree(&umka->lex);
-        umka->lex               = currentLex;
-        umka->debug             = currentDebug;
-        umka->blocks.module     = currentModule;
-    }
-
-    // Imported module is registered but its body has not been compiled yet - this is only possible if it's imported in a cycle
-    if (!umka->modules.module[importedModule]->isCompiled)
-        umka->modules.error->handler(umka->modules.error->context, "Cyclic import of module %s", alias);
-
-    // Module is imported iff it has an import alias (which may coincide with the module name if not specified explicitly)
-    char **importAlias = &umka->modules.module[umka->blocks.module]->importAlias[importedModule];
-    if (*importAlias)
-         umka->modules.error->handler(umka->modules.error->context, "Duplicate imported module %s", path);
-    *importAlias = alias;
-
-    identAddModule(&umka->idents, &umka->modules, &umka->blocks, alias, umka->voidType, importedModule);
+int importedModule = moduleFind(&umka->modules, path);
+if (importedModule < 0)
+{
+    // Save context
+    int currentModule       = umka->blocks.module;
+    DebugInfo currentDebug  = umka->debug;
+    Lexer currentLex        = umka->lex;
+    lexInit(&umka->lex, &umka->storage, &umka->debug, path, sourceString, sourceTrusted, &umka->error);
 
     lexNext(&umka->lex);
+    importedModule = parseModule(umka);
+
+    // Restore context
+    lexFree(&umka->lex);
+    umka->lex               = currentLex;
+    umka->debug             = currentDebug;
+    umka->blocks.module     = currentModule;
+}
+
+// Imported module is registered but its body has not been compiled yet - this is only possible if it's imported in a cycle
+if (!umka->modules.module[importedModule]->isCompiled)
+    umka->modules.error->handler(umka->modules.error->context, "Cyclic import of module %s", alias);
+
+// Module is imported iff it has an import alias (which may coincide with the module name if not specified explicitly)
+char **importAlias = &umka->modules.module[umka->blocks.module]->importAlias[importedModule];
+if (*importAlias)
+        umka->modules.error->handler(umka->modules.error->context, "Duplicate imported module %s", path);
+*importAlias = alias;
+
+identAddModule(&umka->idents, &umka->modules, &umka->blocks, alias, umka->voidType, importedModule);
+
+lexNext(&umka->lex);
 }
 
 
 // import = "import" (importItem | "(" {importItem ";"} ")").
 static void parseImport(Umka *umka)
 {
-    lexEat(&umka->lex, TOK_IMPORT);
+lexEat(&umka->lex, TOK_IMPORT);
 
-    if (umka->lex.tok.kind == TOK_LPAR)
+if (umka->lex.tok.kind == TOK_LPAR)
+{
+    lexNext(&umka->lex);
+    while (umka->lex.tok.kind == TOK_STRLITERAL || umka->lex.tok.kind == TOK_IDENT)
     {
-        lexNext(&umka->lex);
-        while (umka->lex.tok.kind == TOK_STRLITERAL || umka->lex.tok.kind == TOK_IDENT)
-        {
-            parseImportItem(umka);
-            lexEat(&umka->lex, TOK_SEMICOLON);
-        }
-        lexEat(&umka->lex, TOK_RPAR);
-    }
-    else
         parseImportItem(umka);
+        lexEat(&umka->lex, TOK_SEMICOLON);
+    }
+    lexEat(&umka->lex, TOK_RPAR);
+}
+else
+    parseImportItem(umka);
 }
 
 
 // module = [import ";"] decls.
 static int parseModule(Umka *umka)
 {
-    umka->blocks.module = moduleAdd(&umka->modules, umka->lex.fileName);
+umka->blocks.module = moduleAdd(&umka->modules, umka->lex.fileName);
 
-    if (umka->lex.tok.kind == TOK_IMPORT)
-    {
-        parseImport(umka);
-        lexEat(&umka->lex, TOK_SEMICOLON);
-    }
-    parseDecls(umka);
-    doResolveExtern(umka);
+if (umka->lex.tok.kind == TOK_IMPORT)
+{
+    parseImport(umka);
+    lexEat(&umka->lex, TOK_SEMICOLON);
+}
+parseDecls(umka);
+doResolveExtern(umka);
 
-    umka->modules.module[umka->blocks.module]->isCompiled = true;
-    return umka->blocks.module;
+umka->modules.module[umka->blocks.module]->isCompiled = true;
+return umka->blocks.module;
 }
 
 
 // program = module.
 void parseProgram(Umka *umka)
 {
-    genNop(&umka->gen);                                 // Cleanup code jump stub
+genNop(&umka->gen);                                 // Cleanup code jump stub
 
-    lexNext(&umka->lex);
-    const int mainModule = parseModule(umka);
+lexNext(&umka->lex);
+const int mainModule = parseModule(umka);
 
-    const Ident *mainIdent = identFind(&umka->idents, &umka->modules, &umka->blocks, mainModule, "main", NULL, false);
-    if (mainIdent)
-    {
-        if (!identIsMain(mainIdent))
-            umka->error.handler(umka->error.context, "Identifier main must be fn main()");
+const Ident *mainIdent = identFind(&umka->idents, &umka->modules, &umka->blocks, mainModule, "main", NULL, false);
+if (mainIdent)
+{
+    if (!identIsMain(mainIdent))
+        umka->error.handler(umka->error.context, "Identifier main must be fn main()");
 
-        compilerMakeFuncContext(umka, mainIdent->type, mainIdent->offset, &umka->mainFn);
-    }
+    compilerMakeFuncContext(umka, mainIdent->type, mainIdent->offset, &umka->mainFn);
+}
 
-    genEntryPoint(&umka->gen, JUMP_TO_CLEANUP);         // Cleanup code jump
-    doGarbageCollection(umka);
-    genHalt(&umka->gen);
+genEntryPoint(&umka->gen, JUMP_TO_CLEANUP);         // Cleanup code jump
+doGarbageCollection(umka);
+genHalt(&umka->gen);
 }

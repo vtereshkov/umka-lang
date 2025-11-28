@@ -165,7 +165,6 @@ static int typeSizeRecompute(const Type *type)
         }
         case TYPE_FIBER:    return sizeof(void *);
         case TYPE_FN:       return sizeof(int64_t);
-        case TYPE_EXTERNFN: return sizeof(int64_t);
         default:            return -1;
     }
 }
@@ -220,7 +219,6 @@ static int typeAlignmentRecompute(const Type *type)
         }
         case TYPE_FIBER:    return typeSizeRecompute(type);
         case TYPE_FN:       return sizeof(int64_t);
-        case TYPE_EXTERNFN: return sizeof(int64_t);
         default:            return 0;
     }
 }

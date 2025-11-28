@@ -1,18 +1,14 @@
-#include "umka_common.h"
-#include "umka_gen.h"
-#include "umka_lexer.h"
-#include "umka_types.h"
 #define __USE_MINGW_ANSI_STDIO 1
 
-#include <stdio.h>
 #include <string.h>
-#include <stdlib.h>
-#include <dlfcn.h>
 
 #include "umka_stmt.h"
 #include "umka_expr.h"
 #include "umka_decl.h"
-#include <ffi.h>
+
+#ifdef UMKA_FFI
+#include "umka_ffi.h"
+#endif
 
 
 static void parseStmtList(Umka *umka);
@@ -72,113 +68,6 @@ void doZeroVar(Umka *umka, const Ident *ident)
     }
 }
 
-ffi_type *mapToFfiType(Umka *umka,const struct tagType *type);
-
-ffi_type *mapToFfiStruct(Umka *umka, const Type *type) {
-    const int MAX_STRUCT_FIELDS = 64;
-
-    // todo: free?
-    ffi_type *ffi_t = malloc(sizeof(ffi_type));
-    ffi_t->type = FFI_TYPE_STRUCT;
-    ffi_t->alignment = type->alignment;
-    ffi_t->size = type->size;
-
-    if (type->numItems > MAX_STRUCT_FIELDS) {
-        umka->error.handler(umka->error.context, "Struct passed to dynamic fn cannot have more than %d items", type->numItems);
-    }
-
-    size_t fieldsSize = sizeof(ffi_type)*(type->numItems+1);
-    ffi_type **structFields = malloc(fieldsSize);
-    memset(structFields, 0, fieldsSize);
-    ffi_t->elements = structFields;
-
-    for (int i = 0; i < type->numItems && i < MAX_STRUCT_FIELDS; i++) {
-        structFields[i] = mapToFfiType(umka, type->field[i]->type);
-    }
-
-    return ffi_t;
-}
-
-ffi_type *mapToFfiType(Umka *umka,const struct tagType *type) {
-    switch (type->kind) {
-        // int types
-    case TYPE_INT8:
-        return &ffi_type_sint8;
-    case TYPE_INT16:
-        return &ffi_type_sint16;
-    case TYPE_INT32:
-        return &ffi_type_sint32;
-    case TYPE_INT:
-        return &ffi_type_sint64;
-    case TYPE_UINT8:
-        return &ffi_type_uint8;
-    case TYPE_UINT16:
-        return &ffi_type_uint16;
-    case TYPE_UINT32:
-        return &ffi_type_uint32;
-    case TYPE_UINT:
-        return &ffi_type_uint64;
-
-        // ptr types
-    case TYPE_STR:
-    case TYPE_NULL:
-    case TYPE_ARRAY:
-    case TYPE_PTR:
-        return &ffi_type_uint64;
-    case TYPE_BOOL:
-        return &ffi_type_uint8;
-    case TYPE_CHAR:
-        return &ffi_type_uchar;
-
-    case TYPE_STRUCT:
-        // this approach creates a new struct, every time a parameter of a struct type appears
-        // probabbly should be only created once for each struct, then looked up here
-        return mapToFfiStruct(umka, type->typeIdent->type);
-
-        // float types
-    case TYPE_REAL32:
-        return &ffi_type_float;
-        break;
-    case TYPE_REAL:
-        return &ffi_type_double;
-        break;
-
-        // skip
-    case TYPE_INTERFACE:
-        return NULL;
-
-    case TYPE_VOID:
-        return &ffi_type_void;
-
-        // not supported
-    case TYPE_WEAKPTR:
-    case TYPE_DYNARRAY:
-    case TYPE_MAP:
-    case TYPE_NONE:
-    case TYPE_FORWARD:
-    case TYPE_CLOSURE:
-    case TYPE_FIBER:
-    case TYPE_FN:
-    case TYPE_EXTERNFN:
-        umka->error.handler(umka->error.context, "Cannot convert type `%s` to ffi_type", type->typeIdent->name);
-    }
-    return NULL;
-}
-
-int assignFfiTypes(Umka *umka, ffi_type **types, const Signature *sig)
-{
-    int numArgs = 0;
-    for(int i = 0; i < sig->numParams && i < 16; i++) {
-        const Param *param = sig->param[i];
-        ffi_type *type = mapToFfiType(umka, param->type);
-
-        if (strcmp(param->name, "#upvalues") == 0) continue;
-        if (strcmp(param->name, "#result") == 0) continue;
-
-        types[numArgs++] = type;
-    }
-    return numArgs;
-}    
 
 void doResolveExtern(Umka *umka)
 {
@@ -216,13 +105,12 @@ void doResolveExtern(Umka *umka)
                 for (int i = 0; i < ident->type->sig.numParams; i++)
                     identAllocParam(&umka->idents, &umka->types, &umka->modules, &umka->blocks, &ident->type->sig, i);
 
-                if (ident->_extern) {
-                    // todo: free?
-                    DynamicCall *dynamicCall = malloc(sizeof(DynamicCall));
+#ifdef UMKA_FFI
+                if (ident->ffi) {
+                    DynamicCall *dynamicCall = storageAdd(&umka->storage, sizeof(DynamicCall));
                     dynamicCall->entry = fn;
 
-                    // todo: free?
-                    ffi_type **types = malloc(sizeof(ffi_type)*16);
+                    ffi_type **types = storageAdd(&umka->storage, sizeof(ffi_type)*16);
                     ffi_type *retType = mapToFfiType(umka, ident->type->sig.resultType);
                     int numArgs = assignFfiTypes(umka, types, &ident->type->sig);
 
@@ -233,10 +121,13 @@ void doResolveExtern(Umka *umka)
                     if (status != FFI_OK)
                         umka->error.handler(umka->error.context, "Error creating ffi_cif: %d", status);
 
-                    genCallExternDynamic(&umka->gen, dynamicCall);
+                    genCallExternFfi(&umka->gen, dynamicCall);
                 } else {
                     genCallExtern(&umka->gen, fn);
                 }
+#else
+                genCallExtern(&umka->gen, fn);
+#endif // UMKA_FFI
 
                 doGarbageCollection(umka);
                 identWarnIfUnusedAll(&umka->idents, blocksCurrent(&umka->blocks));

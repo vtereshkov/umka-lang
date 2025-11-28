@@ -39,7 +39,7 @@ UMKA_LIB_DYNAMIC = $(BUILD_PATH)/libumka.$(LIBEXT)
 UMKA_EXE = $(BUILD_PATH)/umka
 
 #CFLAGS = -s -fPIC -O3 -Wall -Wno-format-security -malign-double -fno-strict-aliasing -DUMKA_EXT_LIBS
-CFLAGS = -fPIC -ggdb -Wall -Wno-format-security -malign-double -fno-strict-aliasing -DUMKA_EXT_LIBS $(LIBS) $(INCLUDE)
+CFLAGS = -fPIC -ggdb -Wall -Wno-format-security -malign-double -fno-strict-aliasing -DUMKA_EXT_LIBS -DUMKA_FFI $(LIBS) $(INCLUDE)
 STATIC_CFLAGS  = $(CFLAGS) -DUMKA_STATIC
 DYNAMIC_CFLAGS = $(CFLAGS) -DUMKA_BUILD $(DYNAMIC_CFLAGS_EXTRA)
 
