@@ -154,6 +154,8 @@ static const char *moduleImplLibSuffix()
         return "_windows";
     #elif defined __EMSCRIPTEN__
         return "_wasm";
+    #elif defined __APPLE__
+        return "_darwin";
     #else
         return "_linux";
     #endif
