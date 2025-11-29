@@ -98,6 +98,10 @@ _400 x 400 matrix multiplication (AMD A4-3300M @ 1.9 GHz, Windows 7)_
 
 ![](resources/kilocat.png)
 
+* [limeka](https://github.com/kryffon/limeka): A port of the [lite](https://github.com/rxi/lite) text editor
+
+![](resources/limeka.png)
+
 * [VDrift/Umka](https://github.com/vtereshkov/vdrift): A racing simulator that lets you design, tune and test your own car autopilot
 
 ![](resources/vdrift.png)
