@@ -41,7 +41,7 @@ typedef union
     uint64_t uintVal;
     void *ptrVal;
     double realVal;
-    float real32Val;
+    float real32Val;   // Not used in result slots
 } UmkaStackSlot;
 
 

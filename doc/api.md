@@ -238,11 +238,25 @@ Parameters:
 * `params`: Parameter stack slots
 * `result`: Returned value stack slots
 
-Returned value: Pointer to the stack slot allocated for storing the returned value. Special rules apply to a returned value of a structured type or to multiple returned values (treated as a single implicit structure):
+Returned value: Pointer to the stack slot allocated for storing the returned value. 
 
-* Inside a C function called from Umka, this stack slot already contains the pointer to the memory area sufficiently large to store the actual returned value. The user must fill this memory area, but not rewrite the pointer
+Notes:
 
-* Before calling an Umka function from C, the user must allocate a memory area needed for storing the actual returned value and put the area pointer to the stack slot returned by `umkaGetResult`
+* Returned values of all ordinal types except `uint` are stored in the `intVal` field of the returned value slot
+
+* Returned values of type `uint` are stored in the `uintVal` field of the returned value slot
+
+* Returned values of types `real` and `real32` are stored in the `realVal` field of the returned value slot
+
+* Returned values of type `str` are stored in the `ptrVal` field of the returned value slot, treated as being of type `const unsigned char *`
+
+* Returned values of all structured types `T` are assumed to be allocated by the caller. The pointer to allocated memory is stored in the `ptrVal` field of the returned value slot, treated as being of type `T *`. In particular:
+
+  * Inside a C function called from Umka, the returned value is allocated by the Umka interpreter. The C function must put the returned value to allocated memory, but must not overwrite the pointer
+
+  * Before calling an Umka function from C, the C program must allocate memory needed for storing the returned value and put the pointer into the `ptrVal` field of the returned value slot
+
+* Multiple returned values of types `(T0, T1 /*...*/)`are treated as a single structure `struct {item0: T0; item1: T1 /*...*/}` and follow the rules for structured types
 
 ```
 static inline Umka *umkaGetInstance(UmkaStackSlot *result);
