@@ -972,10 +972,36 @@ Fibonacci number 10 = 55
 s2 = 
 "" "" "" "Hello "
 []
-len = 0, 6
+len = 0, 6  cap = 0, 7
 Hello 
 true false true
 false true false
+"" "" "Hello " "Hello "
+true false true
+true false true
+"!!!" "" "Hello ???" "Hello "
+false true false
+false true false
+  1   4 x
+  2   4 xx
+  3   4 xxx
+  4  10 xxxx
+  5  10 xxxxx
+  6  10 xxxxxx
+  7  10 xxxxxxx
+  8  10 xxxxxxxx
+  9  10 xxxxxxxxx
+ 10  22 xxxxxxxxxx
+ 11  22 xxxxxxxxxxx
+ 12  22 xxxxxxxxxxxx
+ 13  22 xxxxxxxxxxxxx
+ 14  22 xxxxxxxxxxxxxx
+ 15  22 xxxxxxxxxxxxxxx
+ 16  22 xxxxxxxxxxxxxxxx
+ 17  22 xxxxxxxxxxxxxxxxx
+ 18  22 xxxxxxxxxxxxxxxxxx
+ 19  22 xxxxxxxxxxxxxxxxxxx
+ 20  22 xxxxxxxxxxxxxxxxxxxx
 
 []
 len = 0  cap = 0

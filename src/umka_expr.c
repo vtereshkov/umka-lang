@@ -1020,6 +1020,7 @@ static void parseBuiltinMakeCall(Umka *umka, const Type **type, Const *constant)
 }
 
 
+// fn copy(s: str): str
 // fn copy(array: [] type): [] type
 // fn copy(m: map [keyType] type): map [keyType] type
 static void parseBuiltinCopyCall(Umka *umka, const Type **type, Const *constant)
@@ -1027,14 +1028,16 @@ static void parseBuiltinCopyCall(Umka *umka, const Type **type, Const *constant)
     if (constant)
         umka->error.handler(umka->error.context, "Function is not allowed in constant expressions");
 
-    // Dynamic array
     *type = NULL;
     parseExpr(umka, type, NULL);
-    typeAssertCompatibleBuiltin(&umka->types, *type, BUILTIN_COPY, (*type)->kind == TYPE_DYNARRAY || (*type)->kind == TYPE_MAP);
+    typeAssertCompatibleBuiltin(&umka->types, *type, BUILTIN_COPY, (*type)->kind == TYPE_STR || (*type)->kind == TYPE_DYNARRAY || (*type)->kind == TYPE_MAP);
 
-    // Pointer to result (hidden parameter)
-    const int resultOffset = identAllocStack(&umka->idents, &umka->types, &umka->blocks, *type);
-    genPushLocalPtr(&umka->gen, resultOffset);
+    if (typeStructured(*type))
+    {
+        // Pointer to result (hidden parameter)
+        const int resultOffset = identAllocStack(&umka->idents, &umka->types, &umka->blocks, *type);
+        genPushLocalPtr(&umka->gen, resultOffset);        
+    }
 
     genCallTypedBuiltin(&umka->gen, *type, BUILTIN_COPY);
 }
@@ -1337,14 +1340,34 @@ static void parseBuiltinLenCall(Umka *umka, const Type **type, Const *constant)
 
 static void parseBuiltinCapCall(Umka *umka, const Type **type, Const *constant)
 {
-    if (constant)
-        umka->error.handler(umka->error.context, "Function is not allowed in constant expressions");
-
     *type = NULL;
-    parseExpr(umka, type, NULL);
-    typeAssertCompatibleBuiltin(&umka->types, *type, BUILTIN_CAP, (*type)->kind == TYPE_DYNARRAY);
+    parseExpr(umka, type, constant);
 
-    genCallBuiltin(&umka->gen, TYPE_DYNARRAY, BUILTIN_CAP);
+    switch ((*type)->kind)
+    {
+        case TYPE_DYNARRAY:
+        {
+            if (constant)
+                umka->error.handler(umka->error.context, "Function is not allowed in constant expressions");
+
+            genCallBuiltin(&umka->gen, TYPE_DYNARRAY, BUILTIN_CAP);
+            break;
+        }
+        case TYPE_STR:
+        {
+            if (constant)
+                constCallBuiltin(&umka->consts, constant, NULL, TYPE_STR, BUILTIN_CAP);
+            else
+                genCallBuiltin(&umka->gen, TYPE_STR, BUILTIN_CAP);
+            break;
+        }
+        default:
+        {
+            typeAssertCompatibleBuiltin(&umka->types, *type, BUILTIN_CAP, false);
+            return;
+        }
+    }
+
     *type = umka->intType;
 }
 

@@ -466,7 +466,8 @@ void constCallBuiltin(const Consts *consts, Const *arg, const Const *arg2, TypeK
             arg->realVal = log(arg->realVal);
             break;
         }
-        case BUILTIN_LEN:       arg->intVal  = strlen((char *)arg->ptrVal); break;
+        case BUILTIN_LEN:       arg->intVal = arg->ptrVal ? getStrDims((char *)arg->ptrVal)->len      : 0; break;
+        case BUILTIN_CAP:       arg->intVal = arg->ptrVal ? getStrDims((char *)arg->ptrVal)->capacity : 0; break;
 
         default: consts->error->handler(consts->error->context, "Illegal function");
     }

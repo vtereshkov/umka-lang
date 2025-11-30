@@ -1,3 +1,22 @@
+import "std.um"
+
+fn tail(s, t: str) {
+    s += t
+}
+
+fn testRealloc() {
+    sref := "asd" + "fgh"
+
+    t := ""
+    for i := 0; i < 20; i++ {
+        s := copy(sref)
+        altered := len(s) + len(t) < cap(s)
+        tail(s, t)
+        std::assert((altered && s == sref + t) || (!altered && s == sref))
+        t += "x"
+    }
+}
+
 fn testStr() {
 	var s1, s2, s3: str
 	s4 := "Hello "
@@ -11,13 +30,37 @@ fn testStr() {
 	chars := []char(s2)
 	printf("%v\n", chars)
 
-	printf("len = %d, %d\n", len(s2), len(s4))
+	printf("len = %d, %d  cap = %d, %d\n", len(s2), len(s4), cap(s2), cap(s4))
 
 	s5 := s1 + s2 + s4 + s3
 	printf(s5 + '\n')
 
 	printf("%v %v %v\n", s1 == s2, s1 < s2, s1 >= s2)
 	printf("%v %v %v\n", s1 == s4, s1 < s4, s1 >= s4)
+
+	s6 := copy(s1)
+	s7 := copy(s5)
+
+	printf("%v %v %v %v\n", s1, s6, s5, s7)
+
+	printf("%v %v %v\n", s6 == s1, s6 < s1, s6 >= s1)
+	printf("%v %v %v\n", s7 == s5, s7 < s5, s7 >= s5)
+
+	s1 += "!!!"
+	s5 += "???"
+
+	printf("%v %v %v %v\n", s1, s6, s5, s7)
+
+	printf("%v %v %v\n", s6 == s1, s6 < s1, s6 >= s1)
+	printf("%v %v %v\n", s7 == s5, s7 < s5, s7 >= s5)
+	
+	var s8: str 
+	for i := 0; i < 20; i++ {
+		s8 += "x"
+		printf("%3d %3d %s\n", len(s8), cap(s8), s8)
+	}
+
+	testRealloc()
 }
 
 fn checkArr(a: []str) {

@@ -2157,6 +2157,23 @@ static FORCE_INLINE void doBuiltinMaketostr(Fiber *fiber, HeapPages *pages, Erro
 }
 
 
+// fn copy(s: str): str
+static FORCE_INLINE void doBuiltinCopyStr(Fiber *fiber, HeapPages *pages, Error *error)
+{
+    const char *str = (fiber->top++)->ptrVal;
+    char *result = NULL;
+
+    if (str)
+    {
+        doCheckStr(str, error);
+        result = doAllocStr(pages, getStrDims(str)->len, error);
+        strcpy(result, str);
+    }
+
+    (--fiber->top)->ptrVal = result;
+}
+
+
 // fn copy(array: [] type): [] type
 static FORCE_INLINE void doBuiltinCopyDynArray(Fiber *fiber, HeapPages *pages, Error *error)
 {
@@ -2205,8 +2222,11 @@ static FORCE_INLINE void doBuiltinCopyMap(Fiber *fiber, HeapPages *pages, Error 
 
 static FORCE_INLINE void doBuiltinCopy(Fiber *fiber, HeapPages *pages, Error *error)
 {
-    const Type *type  = fiber->code[fiber->ip].type;
-    if (type->kind == TYPE_DYNARRAY)
+    const Type *type = fiber->code[fiber->ip].type;
+    
+    if (type->kind == TYPE_STR)
+        doBuiltinCopyStr(fiber, pages, error);
+    else if (type->kind == TYPE_DYNARRAY)
         doBuiltinCopyDynArray(fiber, pages, error);
     else
         doBuiltinCopyMap(fiber, pages, error);
@@ -2653,11 +2673,27 @@ static FORCE_INLINE void doBuiltinLen(Fiber *fiber, Error *error)
 
 static FORCE_INLINE void doBuiltinCap(Fiber *fiber, Error *error)
 {
-    const DynArray *array = fiber->top->ptrVal;
-    if (UNLIKELY(!array))
-        error->runtimeHandler(error->context, ERR_RUNTIME, "Dynamic array is null");
+    switch (fiber->code[fiber->ip].typeKind)
+    {
+        case TYPE_DYNARRAY:
+        {
+            const DynArray *array = fiber->top->ptrVal;
+            if (UNLIKELY(!array))
+                error->runtimeHandler(error->context, ERR_RUNTIME, "Dynamic array is null");
 
-    fiber->top->intVal = array->data ? getDims(array)->capacity : 0;
+            fiber->top->intVal = array->data ? getDims(array)->capacity : 0; 
+            break;           
+        }
+        case TYPE_STR:
+        {
+            const char *str = fiber->top->ptrVal;
+            doCheckStr(str, error);
+            fiber->top->intVal = str ? getStrDims(str)->capacity : 0;
+            break;
+        }
+        default:
+            error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal type"); return;        
+    }
 }
 
 
