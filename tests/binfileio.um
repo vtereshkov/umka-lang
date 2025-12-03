@@ -14,11 +14,21 @@ fn read(name: str): str {
 	return str(data)
 }
 
-fn test*() {
+fn test1() {
 	name := "fio.txt"
 	write(name, "Hello World")
 	printf(read(name) + '\n')
-	std::remove(name)
+	std::remove(name)	
+}
+
+fn test2() {
+	f, err := std::fopen("galjkgaklgjkajg", "jgksjgksjgksjg")
+	std::assert(f == null)
+}
+
+fn test*() {
+	test1()
+	test2()
 }
 
 fn main() {

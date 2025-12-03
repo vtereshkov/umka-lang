@@ -127,11 +127,23 @@ fn stderr*(): File {
     return rtlstderr()
 }
 
+fopenModes := [15]str{
+    "r", "w", "a", 
+    "rb", "wb", "ab", 
+    "r+", "w+", "a+", 
+    "r+b", "rb+", "w+b", "wb+", "a+b", "ab+"
+}
+
 fn rtlfopen(name: str, mode: str): File
 
 fn fopen*(name: str, mode: str): (File, Err) {
-    f := rtlfopen(name, mode)
-    return f, f != null ? stderror(.ok) : stderror(.nullf)
+    for _, fopenMode in fopenModes {
+        if mode == fopenMode {
+            f := rtlfopen(name, mode)
+            return f, f != null ? stderror(.ok) : stderror(.nullf)
+        }
+    }
+    return null, stderror(.nullf)
 }
 
 fn rtlfclose(f: File): int
