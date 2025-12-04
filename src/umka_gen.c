@@ -6,6 +6,10 @@
 #include "umka_gen.h"
 #include "umka_const.h"
 
+#ifdef UMKA_FFI
+#include "umka_ffi.h"
+#endif // UMKA_FFI
+
 
 // Common functions
 
@@ -798,6 +802,15 @@ void genCallIndirect(CodeGen *gen, int paramSlots)
     const Instruction instr = {.opcode = OP_CALL_INDIRECT, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = paramSlots};
     genAddInstr(gen, &instr);
 }
+
+
+#ifdef UMKA_FFI
+void genCallExternFfi(CodeGen *gen, DynamicCall *dynamicCall)
+{
+    const Instruction instr = {.opcode = OP_CALL_EXTERN_FFI, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.ptrVal = dynamicCall};
+    genAddInstr(gen, &instr);
+}
+#endif // UMKA_FFI
 
 
 void genCallExtern(CodeGen *gen, void *entry)

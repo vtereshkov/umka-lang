@@ -85,6 +85,9 @@ typedef enum
     OP_CALL,
     OP_CALL_INDIRECT,
     OP_CALL_EXTERN,
+#ifdef UMKA_FFI
+    OP_CALL_EXTERN_FFI,
+#endif
     OP_CALL_BUILTIN,
     OP_RETURN,
     OP_ENTER_FRAME,

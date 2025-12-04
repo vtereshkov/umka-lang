@@ -30,6 +30,10 @@
 
 #include "umka_vm.h"
 
+#ifdef UMKA_FFI
+#include "umka_ffi.h"
+#endif
+
 
 /*
 Virtual machine stack layout (64-bit slots):
@@ -3622,6 +3626,42 @@ static FORCE_INLINE void doCallIndirect(Fiber *fiber, Error *error)
 }
 
 
+#ifdef UMKA_FFI
+static FORCE_INLINE void ffiEntry(UmkaStackSlot *params, UmkaStackSlot *result, const DynamicCall *dynamicCall)
+{
+    void* args[16] = {0};
+    for (unsigned int i = 0; i < dynamicCall->cif.nargs; i++) {
+        args[i] = &umkaGetParam(params, i)->ptrVal;
+    }
+
+    UmkaStackSlot *resultSlot = umkaGetResult(params, result);
+    void* retPtr = resultSlot;
+    if (dynamicCall->cif.rtype->type == FFI_TYPE_STRUCT) {
+        retPtr = resultSlot->ptrVal;
+    }
+
+    ffi_call((ffi_cif *)&dynamicCall->cif, dynamicCall->entry, retPtr, args);
+    // workaround for real32 -> cast float to double
+    if (dynamicCall->cif.rtype->type == FFI_TYPE_FLOAT) {
+        resultSlot->realVal = resultSlot->real32Val;
+    }
+}
+
+static FORCE_INLINE void doCallExternFfi(Fiber *fiber, Error *error)
+{
+    const DynamicCall *dynamicCall = fiber->code[fiber->ip].operand.ptrVal;
+
+    fiber->reg[REG_RESULT].ptrVal = error->context;    // Upon entry, the result slot stores the Umka instance
+
+    const int ip = fiber->ip;
+    ffiEntry(&fiber->base[2].apiSlot, &fiber->reg[REG_RESULT].apiSlot, dynamicCall);
+    fiber->ip = ip;
+
+    fiber->ip++;
+}
+#endif // UMKA_FFI
+
+
 static FORCE_INLINE void doCallExtern(Fiber *fiber, Error *error)
 {
     const UmkaExternFunc fn = (UmkaExternFunc)fiber->code[fiber->ip].operand.ptrVal;
@@ -3873,6 +3913,9 @@ static void vmLoop(VM *vm)
             case OP_CALL:                           doCall(fiber, error);                         break;
             case OP_CALL_INDIRECT:                  doCallIndirect(fiber, error);                 break;
             case OP_CALL_EXTERN:                    doCallExtern(fiber, error);                   break;
+#ifdef UMKA_FFI
+            case OP_CALL_EXTERN_FFI:                doCallExternFfi(fiber, error);                break;
+#endif
             case OP_CALL_BUILTIN:
             {
                 Fiber *newFiber = NULL;
