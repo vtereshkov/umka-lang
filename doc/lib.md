@@ -112,14 +112,25 @@ Return file handles for standard input, output, and error output devices.
 fn fopen*(name: str, mode: str): (File, Err)
 ```
 
-Opens the file specified by the `name` in the given `mode` (identical to C): 
+Opens the file specified by the `name` in the given `mode`, which may be one of the following strings:
 
 ```
-"r"   read from a text file
-"rb"  read from a binary file
-"w"   write to a text file
-"wb"  write to a binary file
+"r", "w", "a", 
+"rb", "wb", "ab", 
+"r+", "w+", "a+", 
+"r+b", "rb+", "w+b", "wb+", "a+b", "ab+"
+``` 
+
+The characters in `mode` have the following meaning:
+
 ```
+'r'   read
+'w'   write
+'a'   append
+'+'   update (read/write)
+'b'   binary (not text)
+```
+
 Returns the file handle. If unsuccessful, returns `null` as a file handle and `StdErr.nullf` in `Err`.
 
 ```
