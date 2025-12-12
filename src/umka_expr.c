@@ -1837,6 +1837,9 @@ static void parsePrimary(Umka *umka, const Ident *ident, const Type **type, Cons
     switch (ident->kind)
     {
         case IDENT_CONST:
+#ifdef UMKA_FFI
+        case IDENT_FFI_FN:
+#endif
         {
             if (constant)
                 *constant = ident->constant;
@@ -2571,7 +2574,7 @@ static void parseCallSelector(Umka *umka, const Type **type, bool *isVar, bool *
     // Implicit dereferencing: f^(x) == f(x)
     doTryImplicitDeref(umka, type);
 
-    if ((*type)->kind == TYPE_PTR && ((*type)->base->kind == TYPE_FN || (*type)->base->kind == TYPE_CLOSURE))
+    if ((*type)->kind == TYPE_PTR && ((*type)->base->kind == TYPE_FN ||(*type)->base->kind == TYPE_CLOSURE))
     {
         genDeref(&umka->gen, (*type)->base->kind);
         *type = (*type)->base;
