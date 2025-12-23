@@ -215,39 +215,22 @@ static void parseSignature(Umka *umka, Signature *sig)
 
 static const Type *parseTypeOrForwardType(Umka *umka)
 {
-    const Type *type = NULL;
-
     // Forward declaration?
-    bool forward = false;
     if (umka->types.forwardTypesEnabled && umka->lex.tok.kind == TOK_IDENT)
     {
-        const Ident *ident = NULL;
-
         Lexer lookaheadLex = umka->lex;
         lexNext(&lookaheadLex);
-        if (lookaheadLex.tok.kind == TOK_COLONCOLON)
-            ident = identFindModule(&umka->idents, &umka->modules, &umka->blocks, umka->blocks.module, umka->lex.tok.name, true);
-        else
-            ident = identFind(&umka->idents, &umka->modules, &umka->blocks, umka->blocks.module, umka->lex.tok.name, NULL, true);
-
-        if (!ident)
+        if (lookaheadLex.tok.kind != TOK_COLONCOLON && !identFind(&umka->idents, &umka->modules, &umka->blocks, umka->blocks.module, umka->lex.tok.name, NULL, true))
         {
             Type *forwardType = typeAdd(&umka->types, &umka->blocks, TYPE_FORWARD);
             forwardType->typeIdent = identAddType(&umka->idents, &umka->modules, &umka->blocks, umka->lex.tok.name, forwardType, false);
             identSetUsed(forwardType->typeIdent);
-
             lexNext(&umka->lex);
-
-            type = forwardType;
-            forward = true;
+            return forwardType;
         }
     }
 
-    // Conventional declaration
-    if (!forward)
-        type = parseType(umka, NULL);
-
-    return type;
+    return parseType(umka, NULL);
 }
 
 
