@@ -266,20 +266,22 @@ static void lexSingleLineComment(Lexer *lex)
 static void lexMultiLineComment(Lexer *lex)
 {
     unsigned char ch = lexChar(lex);
-    bool asteriskFound = false;
 
-    while (ch && !(ch == '/' && asteriskFound))
+    while (ch)
     {
-        asteriskFound = false;
-
-        while (ch && ch != '*')
+        if (ch == '*')
+        {
             ch = lexChar(lex);
-
-        if (ch == '*') asteriskFound = true;
+            if (ch == '/')
+                break;
+        }
         ch = lexChar(lex);
     }
 
-    ch = lexChar(lex);
+    if (!ch)
+        lex->error->handler(lex->error->context, "Unterminated comment");
+
+    lexChar(lex);
 }
 
 
