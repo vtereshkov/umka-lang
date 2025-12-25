@@ -36,6 +36,9 @@ static const char *spelling [] =
     "switch",
     "type",
     "var",
+#ifdef UMKA_FFI
+    "ffi",
+#endif
     "weak",
 
     // Operators

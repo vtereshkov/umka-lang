@@ -1,11 +1,14 @@
 #define __USE_MINGW_ANSI_STDIO 1
 
-#include <stdio.h>
 #include <string.h>
 
 #include "umka_stmt.h"
 #include "umka_expr.h"
 #include "umka_decl.h"
+
+#ifdef UMKA_FFI
+#include "umka_ffi.h"
+#endif
 
 
 static void parseStmtList(Umka *umka);
@@ -87,9 +90,9 @@ void doResolveExtern(Umka *umka)
 
                     fn = external->entry;
                     external->resolved = true;
-                }
-                else
+                } else {
                     fn = moduleGetImplLibFunc(umka->modules.module[umka->blocks.module], ident->name);
+                }
 
                 if (!fn)
                     umka->error.handler(umka->error.context, "Unresolved prototype of %s", ident->name);
@@ -102,7 +105,29 @@ void doResolveExtern(Umka *umka)
                 for (int i = 0; i < ident->type->sig.numParams; i++)
                     identAllocParam(&umka->idents, &umka->types, &umka->modules, &umka->blocks, &ident->type->sig, i);
 
+#ifdef UMKA_FFI
+                if (ident->ffi) {
+                    DynamicCall *dynamicCall = storageAdd(&umka->storage, sizeof(DynamicCall));
+                    dynamicCall->entry = fn;
+
+                    ffi_type **types = storageAdd(&umka->storage, sizeof(ffi_type)*16);
+                    ffi_type *retType = mapToFfiType(umka, ident->type->sig.resultType);
+                    int numArgs = assignFfiTypes(umka, types, &ident->type->sig);
+
+                    if (retType == NULL)
+                        umka->error.handler(umka->error.context, "Unsupported return type %s for ffi function %s", typeKindSpelling(ident->type->kind), ident->name);
+
+                    ffi_status status = ffi_prep_cif(&dynamicCall->cif, FFI_DEFAULT_ABI, numArgs, retType, types);
+                    if (status != FFI_OK)
+                        umka->error.handler(umka->error.context, "Error creating ffi_cif for function %s: %d", ident->name, status);
+
+                    genCallExternFfi(&umka->gen, dynamicCall);
+                } else {
+                    genCallExtern(&umka->gen, fn);
+                }
+#else
                 genCallExtern(&umka->gen, fn);
+#endif // UMKA_FFI
 
                 doGarbageCollection(umka);
                 identWarnIfUnusedAll(&umka->idents, blocksCurrent(&umka->blocks));
@@ -119,7 +144,6 @@ void doResolveExtern(Umka *umka)
             identWarnIfUnused(&umka->idents, ident);
         }
 }
-
 
 static bool doShortVarDeclLookahead(Umka *umka)
 {

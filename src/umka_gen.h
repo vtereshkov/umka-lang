@@ -4,6 +4,9 @@
 #include "umka_common.h"
 #include "umka_vm.h"
 
+#ifdef UMKA_FFI
+#include "umka_ffi.h"
+#endif
 
 typedef struct
 {
@@ -99,6 +102,9 @@ void genGotoIfNot   (CodeGen *gen, int dest);
 
 void genCall                (CodeGen *gen, int entry);
 void genCallIndirect        (CodeGen *gen, int paramSlots);
+#ifdef UMKA_FFI
+void genCallExternFfi       (CodeGen *gen, DynamicCall *dynamicCall);
+#endif
 void genCallExtern          (CodeGen *gen, void *entry);
 void genCallBuiltin         (CodeGen *gen, TypeKind typeKind, BuiltinFunc builtin);
 void genCallTypedBuiltin    (CodeGen *gen, const Type *type, BuiltinFunc builtin);
