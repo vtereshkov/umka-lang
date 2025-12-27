@@ -253,6 +253,12 @@ static inline int64_t nonneg(int64_t size)
 }
 
 
+static inline char *nonnull(char *buf, int64_t offset)
+{
+    return buf ? buf + offset : NULL;
+}
+
+
 static inline int64_t align(int64_t size, int64_t alignment)
 {
     return ((size + (alignment - 1)) / alignment) * alignment;

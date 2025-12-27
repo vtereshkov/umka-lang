@@ -8,7 +8,7 @@
 #include "umka_compiler.h"
 #include "umka_api.h"
 
-#define UMKA_VERSION    "1.5.5"
+#define UMKA_VERSION    "1.5.6"
 
 
 static void compileWarning(Umka *umka, const DebugInfo *debug, const char *format, ...)

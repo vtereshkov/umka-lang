@@ -1459,9 +1459,9 @@ static FORCE_INLINE int doPrintIndented(char *buf, int maxLen, int depth, bool p
         case '[':
         case '{':
         {
-            len += snprintf(buf + len, maxLen, "%c", ch);
+            len += snprintf(nonnull(buf, len), maxLen, "%c", ch);
             if (pretty)
-                len += snprintf(buf + len, maxLen, "\n%*c", INDENT_WIDTH * (depth + 1), ' ');
+                len += snprintf(nonnull(buf, len), maxLen, "\n%*c", INDENT_WIDTH * (depth + 1), ' ');
             break;
         }
 
@@ -1472,20 +1472,20 @@ static FORCE_INLINE int doPrintIndented(char *buf, int maxLen, int depth, bool p
             if (pretty)
             {
                 if (depth > 0)
-                    len += snprintf(buf + len, maxLen, "\n%*c", INDENT_WIDTH * depth, ' ');
+                    len += snprintf(nonnull(buf, len), maxLen, "\n%*c", INDENT_WIDTH * depth, ' ');
                 else
-                    len += snprintf(buf + len, maxLen, "\n");
+                    len += snprintf(nonnull(buf, len), maxLen, "\n");
             }
-            len += snprintf(buf + len, maxLen, "%c", ch);
+            len += snprintf(nonnull(buf, len), maxLen, "%c", ch);
             break;
         }
 
         case ' ':
         {
             if (pretty)
-                len += snprintf(buf + len, maxLen, "\n%*c", INDENT_WIDTH * (depth + 1), ' ');
+                len += snprintf(nonnull(buf, len), maxLen, "\n%*c", INDENT_WIDTH * (depth + 1), ' ');
             else
-                len += snprintf(buf + len, maxLen, " ");
+                len += snprintf(nonnull(buf, len), maxLen, " ");
             break;
         }
 
@@ -1504,56 +1504,56 @@ static int doFillReprBuf(const Slot *slot, const Type *type, char *buf, int maxL
 
     if (depth == MAX_DEPTH)
     {
-        len += snprintf(buf + len, maxLen, "...");
+        len += snprintf(nonnull(buf, len), maxLen, "...");
         return len;
     }
 
     switch (type->kind)
     {
-        case TYPE_VOID:     len += snprintf(buf + len, maxLen, "void");                                                             break;
+        case TYPE_VOID:     len += snprintf(nonnull(buf, len), maxLen, "void");                                                             break;
         case TYPE_INT8:
         case TYPE_INT16:
         case TYPE_INT32:
         case TYPE_INT:
         case TYPE_UINT8:
         case TYPE_UINT16:
-        case TYPE_UINT32:   len += snprintf(buf + len, maxLen, "%lld", (long long int)slot->intVal);                                break;
-        case TYPE_UINT:     len += snprintf(buf + len, maxLen, "%llu", (unsigned long long int)slot->uintVal);                      break;
-        case TYPE_BOOL:     len += snprintf(buf + len, maxLen, slot->intVal ? "true" : "false");                                    break;
+        case TYPE_UINT32:   len += snprintf(nonnull(buf, len), maxLen, "%lld", (long long int)slot->intVal);                                break;
+        case TYPE_UINT:     len += snprintf(nonnull(buf, len), maxLen, "%llu", (unsigned long long int)slot->uintVal);                      break;
+        case TYPE_BOOL:     len += snprintf(nonnull(buf, len), maxLen, slot->intVal ? "true" : "false");                                    break;
         case TYPE_CHAR:
         {
             const char *format = (unsigned char)slot->intVal >= ' ' ? "'%c'" : "0x%02X";
-            len += snprintf(buf + len, maxLen, format, (unsigned char)slot->intVal);
+            len += snprintf(nonnull(buf, len), maxLen, format, (unsigned char)slot->intVal);
             break;
         }
         case TYPE_REAL32:
-        case TYPE_REAL:     len += snprintf(buf + len, maxLen, "%lg", slot->realVal);                                               break;
+        case TYPE_REAL:     len += snprintf(nonnull(buf, len), maxLen, "%lg", slot->realVal);                                               break;
         case TYPE_PTR:
         {
-            len += snprintf(buf + len, maxLen, "%p", slot->ptrVal);
+            len += snprintf(nonnull(buf, len), maxLen, "%p", slot->ptrVal);
 
             if (dereferenced && slot->ptrVal && type->base->kind != TYPE_VOID)
             {
                 Slot dataSlot = {.ptrVal = slot->ptrVal};
                 doDerefImpl(&dataSlot, type->base->kind, error);
 
-                len += snprintf(buf + len, maxLen, " -> ");
-                len += doPrintIndented(buf + len, maxLen, depth, pretty, '(');
-                len += doFillReprBuf(&dataSlot, type->base, buf + len, maxLen, depth + 1, pretty, dereferenced, storage, error);
-                len += doPrintIndented(buf + len, maxLen, depth, pretty, ')');
+                len += snprintf(nonnull(buf, len), maxLen, " -> ");
+                len += doPrintIndented(nonnull(buf, len), maxLen, depth, pretty, '(');
+                len += doFillReprBuf(&dataSlot, type->base, nonnull(buf, len), maxLen, depth + 1, pretty, dereferenced, storage, error);
+                len += doPrintIndented(nonnull(buf, len), maxLen, depth, pretty, ')');
             }
             break;
         }
-        case TYPE_WEAKPTR:  len += snprintf(buf + len, maxLen, "%llx", (unsigned long long int)slot->weakPtrVal);                   break;
+        case TYPE_WEAKPTR:  len += snprintf(nonnull(buf, len), maxLen, "%llx", (unsigned long long int)slot->weakPtrVal);                   break;
         case TYPE_STR:
         {
             doCheckStr((char *)slot->ptrVal, error);
-            len += snprintf(buf + len, maxLen, "\"%s\"", slot->ptrVal ? (char *)slot->ptrVal : "");
+            len += snprintf(nonnull(buf, len), maxLen, "\"%s\"", slot->ptrVal ? (char *)slot->ptrVal : "");
             break;
         }
         case TYPE_ARRAY:
         {
-            len += doPrintIndented(buf + len, maxLen, depth, pretty, '[');
+            len += doPrintIndented(nonnull(buf, len), maxLen, depth, pretty, '[');
 
             char *itemPtr = slot->ptrVal;
             const int itemSize = type->base->size;
@@ -1562,21 +1562,21 @@ static int doFillReprBuf(const Slot *slot, const Type *type, char *buf, int maxL
             {
                 Slot itemSlot = {.ptrVal = itemPtr};
                 doDerefImpl(&itemSlot, type->base->kind, error);
-                len += doFillReprBuf(&itemSlot, type->base, buf + len, maxLen, depth + 1, pretty, dereferenced, storage, error);
+                len += doFillReprBuf(&itemSlot, type->base, nonnull(buf, len), maxLen, depth + 1, pretty, dereferenced, storage, error);
 
                 if (i < type->numItems - 1)
-                    len += doPrintIndented(buf + len, maxLen, depth, pretty, ' ');
+                    len += doPrintIndented(nonnull(buf, len), maxLen, depth, pretty, ' ');
 
                 itemPtr += itemSize;
             }
 
-            len += doPrintIndented(buf + len, maxLen, depth, pretty, ']');
+            len += doPrintIndented(nonnull(buf, len), maxLen, depth, pretty, ']');
             break;
         }
 
         case TYPE_DYNARRAY:
         {
-            len += doPrintIndented(buf + len, maxLen, depth, pretty, '[');
+            len += doPrintIndented(nonnull(buf, len), maxLen, depth, pretty, '[');
 
             const DynArray *array = slot->ptrVal;
             if (array && array->data)
@@ -1586,22 +1586,22 @@ static int doFillReprBuf(const Slot *slot, const Type *type, char *buf, int maxL
                 {
                     Slot itemSlot = {.ptrVal = itemPtr};
                     doDerefImpl(&itemSlot, type->base->kind, error);
-                    len += doFillReprBuf(&itemSlot, type->base, buf + len, maxLen, depth + 1, pretty, dereferenced, storage, error);
+                    len += doFillReprBuf(&itemSlot, type->base, nonnull(buf, len), maxLen, depth + 1, pretty, dereferenced, storage, error);
 
                     if (i < getDims(array)->len - 1)
-                        len += doPrintIndented(buf + len, maxLen, depth, pretty, ' ');
+                        len += doPrintIndented(nonnull(buf, len), maxLen, depth, pretty, ' ');
 
                     itemPtr += array->itemSize;
                 }
             }
 
-            len += doPrintIndented(buf + len, maxLen, depth, pretty, ']');
+            len += doPrintIndented(nonnull(buf, len), maxLen, depth, pretty, ']');
             break;
         }
 
         case TYPE_MAP:
         {
-            len += doPrintIndented(buf + len, maxLen, depth, pretty, '{');
+            len += doPrintIndented(nonnull(buf, len), maxLen, depth, pretty, '{');
 
             Map *map = slot->ptrVal;
             if (map && map->root)
@@ -1618,9 +1618,9 @@ static int doFillReprBuf(const Slot *slot, const Type *type, char *buf, int maxL
                 {
                     Slot keySlot = {.ptrVal = keyPtr};
                     doDerefImpl(&keySlot, keyType->kind, error);
-                    len += doFillReprBuf(&keySlot, keyType, buf + len, maxLen, depth + 1, pretty, dereferenced, storage, error);
+                    len += doFillReprBuf(&keySlot, keyType, nonnull(buf, len), maxLen, depth + 1, pretty, dereferenced, storage, error);
 
-                    len += snprintf(buf + len, maxLen, ": ");
+                    len += snprintf(nonnull(buf, len), maxLen, ": ");
 
                     const MapNode *node = *doGetMapNode(map, keySlot, false, NULL, error);
                     if (UNLIKELY(!node))
@@ -1628,10 +1628,10 @@ static int doFillReprBuf(const Slot *slot, const Type *type, char *buf, int maxL
 
                     Slot itemSlot = {.ptrVal = node->data};
                     doDerefImpl(&itemSlot, itemType->kind, error);
-                    len += doFillReprBuf(&itemSlot, itemType, buf + len, maxLen, depth + 1, pretty, dereferenced, storage, error);
+                    len += doFillReprBuf(&itemSlot, itemType, nonnull(buf, len), maxLen, depth + 1, pretty, dereferenced, storage, error);
 
                     if (i < map->root->len - 1)
-                        len += doPrintIndented(buf + len, maxLen, depth, pretty, ' ');
+                        len += doPrintIndented(nonnull(buf, len), maxLen, depth, pretty, ' ');
 
                     keyPtr += keyType->size;
                 }
@@ -1639,7 +1639,7 @@ static int doFillReprBuf(const Slot *slot, const Type *type, char *buf, int maxL
                 storageRemove(storage, keys);
             }
 
-            len += doPrintIndented(buf + len, maxLen, depth, pretty, '}');
+            len += doPrintIndented(nonnull(buf, len), maxLen, depth, pretty, '}');
             break;
         }
 
@@ -1647,7 +1647,7 @@ static int doFillReprBuf(const Slot *slot, const Type *type, char *buf, int maxL
         case TYPE_STRUCT:
         case TYPE_CLOSURE:
         {
-            len += doPrintIndented(buf + len, maxLen, depth, pretty, '{');
+            len += doPrintIndented(nonnull(buf, len), maxLen, depth, pretty, '{');
 
             bool skipNames = typeExprListStruct(type);
 
@@ -1656,14 +1656,14 @@ static int doFillReprBuf(const Slot *slot, const Type *type, char *buf, int maxL
                 Slot fieldSlot = {.ptrVal = (char *)slot->ptrVal + type->field[i]->offset};
                 doDerefImpl(&fieldSlot, type->field[i]->type->kind, error);
                 if (!skipNames)
-                    len += snprintf(buf + len, maxLen, "%s: ", type->field[i]->name);
-                len += doFillReprBuf(&fieldSlot, type->field[i]->type, buf + len, maxLen, depth + 1, pretty, dereferenced, storage, error);
+                    len += snprintf(nonnull(buf, len), maxLen, "%s: ", type->field[i]->name);
+                len += doFillReprBuf(&fieldSlot, type->field[i]->type, nonnull(buf, len), maxLen, depth + 1, pretty, dereferenced, storage, error);
 
                 if (i < type->numItems - 1)
-                    len += doPrintIndented(buf + len, maxLen, depth, pretty, ' ');
+                    len += doPrintIndented(nonnull(buf, len), maxLen, depth, pretty, ' ');
             }
 
-            len += doPrintIndented(buf + len, maxLen, depth, pretty, '}');
+            len += doPrintIndented(nonnull(buf, len), maxLen, depth, pretty, '}');
             break;
         }
 
@@ -1678,22 +1678,22 @@ static int doFillReprBuf(const Slot *slot, const Type *type, char *buf, int maxL
                 if (pretty)
                 {
                     char selfTypeBuf[DEFAULT_STR_LEN + 1];
-                    len += snprintf(buf + len, maxLen, "%s", typeSpelling(interface->selfType->base, selfTypeBuf));
-                    len += doPrintIndented(buf + len, maxLen, depth, pretty, '(');
+                    len += snprintf(nonnull(buf, len), maxLen, "%s", typeSpelling(interface->selfType->base, selfTypeBuf));
+                    len += doPrintIndented(nonnull(buf, len), maxLen, depth, pretty, '(');
                 }
 
-                len += doFillReprBuf(&selfSlot, interface->selfType->base, buf + len, maxLen, depth + 1, pretty, dereferenced, storage, error);
+                len += doFillReprBuf(&selfSlot, interface->selfType->base, nonnull(buf, len), maxLen, depth + 1, pretty, dereferenced, storage, error);
 
                 if (pretty)
-                    len += doPrintIndented(buf + len, maxLen, depth, pretty, ')');
+                    len += doPrintIndented(nonnull(buf, len), maxLen, depth, pretty, ')');
             }
             else
-                len += snprintf(buf + len, maxLen, "null");
+                len += snprintf(nonnull(buf, len), maxLen, "null");
             break;
         }
 
-        case TYPE_FIBER:    len += snprintf(buf + len, maxLen, "fiber @ %p", slot->ptrVal);                break;
-        case TYPE_FN:       len += snprintf(buf + len, maxLen, "fn @ %lld", (long long int)slot->intVal);  break;
+        case TYPE_FIBER:    len += snprintf(nonnull(buf, len), maxLen, "fiber @ %p", slot->ptrVal);                break;
+        case TYPE_FN:       len += snprintf(nonnull(buf, len), maxLen, "fn @ %lld", (long long int)slot->intVal);  break;
         default:            break;
     }
 
