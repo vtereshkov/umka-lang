@@ -12,9 +12,6 @@
 #include "umka_stmt.h"
 
 
-static void parseDynArrayLiteral(Umka *umka, const Type **type, Const *constant);
-
-
 void doPushConst(Umka *umka, const Type *type, const Const *constant)
 {
     if (type->kind == TYPE_UINT)
@@ -1685,15 +1682,59 @@ static void parseBuiltinCall(Umka *umka, const Type **type, Const *constant, Bui
 }
 
 
+static void parseVariadicParamList(Umka *umka, const Type **type)
+{
+    // Dynamic array is first parsed as a static array of unknown length, then converted to a dynamic array
+    Type *staticArrayType = typeAdd(&umka->types, &umka->blocks, TYPE_ARRAY);
+    staticArrayType->base = (*type)->base;
+    const int itemSize = typeSize(&umka->types, staticArrayType->base);
+
+    // Parse array
+    while (1)
+    {
+        const Type *itemType = staticArrayType->base;
+
+        parseExpr(umka, &itemType, NULL);
+
+        // Special case: variadic parameter list's first item is already a dynamic array compatible with the variadic parameter list
+        if (typeCompatible(*type, itemType) && staticArrayType->numItems == 0)
+            return;
+
+        doAssertImplicitTypeConv(umka, staticArrayType->base, &itemType, NULL);
+
+        typeResizeArray(staticArrayType, staticArrayType->numItems + 1);
+
+        if (umka->lex.tok.kind != TOK_COMMA)
+            break;
+        lexNext(&umka->lex);
+    }
+
+    // Allocate array
+    const int staticArrayOffset = identAllocStack(&umka->idents, &umka->types, &umka->blocks, staticArrayType);
+
+    // Assign items
+    for (int i = staticArrayType->numItems - 1; i >= 0; i--)
+    {
+        genPushLocalPtr(&umka->gen, staticArrayOffset + i * itemSize);
+        genSwapAssign(&umka->gen, staticArrayType->base->kind, staticArrayType->base->size);
+    }
+
+    genPushLocalPtr(&umka->gen, staticArrayOffset);
+
+    // Convert to dynamic array
+    doAssertImplicitTypeConv(umka, *type, (const Type **)&staticArrayType, NULL);
+}
+
+
 // actualParams = "(" [expr {"," expr}] ")".
-static void parseCall(Umka *umka, const Type **type)
+static void parseActualParamsAndCall(Umka *umka, const Type **type)
 {
     lexEat(&umka->lex, TOK_LPAR);
 
     // Decide whether a (default) indirect call can be replaced with a direct call
-    int immediateEntryPoint = (*type)->kind == TYPE_FN ? genTryRemoveImmediateEntryPoint(&umka->gen) : -1;
+    const int immediateEntryPoint = (*type)->kind == TYPE_FN ? genTryRemoveImmediateEntryPoint(&umka->gen) : -1;
 
-    // Actual parameters: [#self,] param1, param2 ...[#result]
+    // Actual parameters: (#self | #upvalues), param1, param2 ...[#result]
     int numExplicitParams = 0, numPreHiddenParams = 0, numPostHiddenParams = 0;
     int i = 0;
 
@@ -1749,7 +1790,7 @@ static void parseCall(Umka *umka, const Type **type)
             if (formalParamType->isVariadicParamList)
             {
                 // Variadic parameter list
-                parseDynArrayLiteral(umka, &formalParamType, NULL);
+                parseVariadicParamList(umka, &formalParamType);
                 actualParamType = formalParamType;
             }
             else
@@ -1792,12 +1833,14 @@ static void parseCall(Umka *umka, const Type **type)
     while (i + numPostHiddenParams < (*type)->sig.numParams)
     {
         const Type *formalParamType = (*type)->sig.param[i]->type;
-
+        
+        Const paramVal = {0};
         if ((*type)->sig.numDefaultParams > 0)
-            doPushConst(umka, formalParamType, &((*type)->sig.param[i]->defaultVal));   // Default parameter
+            paramVal = (*type)->sig.param[i]->defaultVal;                                 // Default parameter
         else
-            parseDynArrayLiteral(umka, &formalParamType, NULL);                         // Variadic parameter (empty dynamic array)
+            paramVal.ptrVal = storageAddDynArray(&umka->storage, formalParamType, 0);     // Variadic parameter (empty dynamic array)
 
+        doPushConst(umka, formalParamType, &paramVal);
         doPassParam(umka, formalParamType);
         i++;
     }
@@ -2035,8 +2078,7 @@ static void parseArrayOrStructLiteral(Umka *umka, const Type **type, Const *cons
 // dynArrayLiteral = arrayLiteral.
 static void parseDynArrayLiteral(Umka *umka, const Type **type, Const *constant)
 {
-    if (!(*type)->isVariadicParamList)
-        lexEat(&umka->lex, TOK_LBRACE);
+    lexEat(&umka->lex, TOK_LBRACE);
 
     ConstArray constItems;
     if (constant)
@@ -2048,44 +2090,32 @@ static void parseDynArrayLiteral(Umka *umka, const Type **type, Const *constant)
     const int itemSize = typeSize(&umka->types, staticArrayType->base);
 
     // Parse array
-    const TokenKind rightEndTok = (*type)->isVariadicParamList ? TOK_RPAR : TOK_RBRACE;
-    if (umka->lex.tok.kind != rightEndTok)
+    while (umka->lex.tok.kind != TOK_RBRACE)
     {
-        while ((*type)->isVariadicParamList || umka->lex.tok.kind != TOK_RBRACE)
+        const Type *itemType = staticArrayType->base;
+
+        Const *constItem = NULL;
+        if (constant)
         {
-            const Type *itemType = staticArrayType->base;
-
-            Const *constItem = NULL;
-            if (constant)
-            {
-                constArrayAppend(&constItems, (Const){0});
-                constItem = &constItems.data[staticArrayType->numItems];
-            }
-
-            parseExpr(umka, &itemType, constItem);
-
-            // Special case: variadic parameter list's first item is already a dynamic array compatible with the variadic parameter list
-            if ((*type)->isVariadicParamList && typeCompatible(*type, itemType) && staticArrayType->numItems == 0)
-                return;
-
-            doAssertImplicitTypeConv(umka, staticArrayType->base, &itemType, constItem);
-
-            typeResizeArray(staticArrayType, staticArrayType->numItems + 1);
-
-            if (umka->lex.tok.kind != TOK_COMMA)
-                break;
-            lexNext(&umka->lex);
+            constArrayAppend(&constItems, (Const){0});
+            constItem = &constItems.data[staticArrayType->numItems];
         }
+
+        parseExpr(umka, &itemType, constItem);
+        doAssertImplicitTypeConv(umka, staticArrayType->base, &itemType, constItem);
+
+        typeResizeArray(staticArrayType, staticArrayType->numItems + 1);
+
+        if (umka->lex.tok.kind != TOK_COMMA)
+            break;
+        lexNext(&umka->lex);
     }
 
-    if (!(*type)->isVariadicParamList)
-    {
-        // Allow closing brace on a new line
-        if (umka->lex.tok.kind == TOK_IMPLICIT_SEMICOLON)
-            lexNext(&umka->lex);
+    // Allow closing brace on a new line
+    if (umka->lex.tok.kind == TOK_IMPLICIT_SEMICOLON)
+        lexNext(&umka->lex);
 
-        lexEat(&umka->lex, TOK_RBRACE);
-    }
+    lexEat(&umka->lex, TOK_RBRACE);
 
     if (constant)
     {
@@ -2580,7 +2610,7 @@ static void parseCallSelector(Umka *umka, const Type **type, bool *isVar, bool *
     if ((*type)->kind != TYPE_FN && (*type)->kind != TYPE_CLOSURE)
         umka->error.handler(umka->error.context, "Function or closure expected");
 
-    parseCall(umka, type);
+    parseActualParamsAndCall(umka, type);
 
     // Push result
     if ((*type)->kind != TYPE_VOID)

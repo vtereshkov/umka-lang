@@ -158,7 +158,7 @@ typedef struct tagType
     const struct tagType *base;                 // For pointers, arrays, maps and fibers (for maps, denotes the tree node type; for fibers, denotes the fiber closure type)
     int numItems;                               // For arrays, structures and interfaces
     bool isExprList;                            // For structures that represent expression lists
-    bool isVariadicParamList;                   // For dynamic arrays of interfaces that represent variadic parameter lists
+    bool isVariadicParamList;                   // For dynamic arrays that represent variadic parameter lists
     bool isEnum;                                // For enumerations
     const struct tagIdent *typeIdent;           // For types that have identifiers
     const struct tagType *sameAs;               // For types declared as type T = ...
