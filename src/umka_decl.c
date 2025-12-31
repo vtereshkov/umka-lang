@@ -461,12 +461,12 @@ static const Type *parseInterfaceType(Umka *umka)
 
             Type *methodType = typeAdd(&umka->types, &umka->blocks, TYPE_FN);
             methodType->sig.isMethod = true;
+            methodType->sig.isInterfaceMethod = true;
 
             typeAddParam(&umka->types, &methodType->sig, umka->ptrVoidType, "#self", (Const){0});
             parseSignature(umka, &methodType->sig);
 
-            const Field *method = typeAddField(&umka->types, type, methodType, methodName);
-            methodType->sig.offsetFromSelf = method->offset;
+            typeAddField(&umka->types, type, methodType, methodName);
         }
         else
         {
@@ -481,9 +481,7 @@ static const Type *parseInterfaceType(Umka *umka)
                 Type *methodType = typeAdd(&umka->types, &umka->blocks, TYPE_FN);
                 typeDeepCopy(&umka->storage, methodType, embeddedType->field[i]->type);
 
-                const Field *method = typeAddField(&umka->types, type, methodType, embeddedType->field[i]->name);
-                methodType->sig.isMethod = true;
-                methodType->sig.offsetFromSelf = method->offset;
+                typeAddField(&umka->types, type, methodType, embeddedType->field[i]->name);
             }
         }
 

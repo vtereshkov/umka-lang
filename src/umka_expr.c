@@ -2573,16 +2573,15 @@ static void parseFieldSelector(Umka *umka, const Type **type, bool *isVar, bool 
         const Field *field = typeAssertFindField(&umka->types, *type, umka->lex.tok.name, NULL);
         lexNext(&umka->lex);
 
-        genGetFieldPtr(&umka->gen, field->offset);
-
-        // Save interface method's receiver to dedicated register and push method's entry point
-        if (field->type->kind == TYPE_FN && field->type->sig.isMethod && field->type->sig.offsetFromSelf != 0)
+        // Save interface method's receiver to dedicated register
+        if (field->type->kind == TYPE_FN && field->type->sig.isInterfaceMethod)
         {
             genDup(&umka->gen);
-            genGetFieldPtr(&umka->gen, -field->type->sig.offsetFromSelf);
             genDeref(&umka->gen, TYPE_PTR);
             genPopReg(&umka->gen, REG_SELF);
-        }
+        }        
+
+        genGetFieldPtr(&umka->gen, field->offset);
 
         if (typeStructured(field->type))
             *type = field->type;

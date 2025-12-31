@@ -383,10 +383,13 @@ static bool typeEquivalentRecursive(const Type *left, const Type *right, Visited
             if (left->sig.isMethod != right->sig.isMethod)
                 return false;
 
-            // Parameters (skip interface method receiver)
-            const int iStart = left->sig.offsetFromSelf == 0 ? 0 : 1;
-            for (int i = iStart; i < left->sig.numParams; i++)
+            // Parameters
+            for (int i = 0; i < left->sig.numParams; i++)
             {
+                // Skip interface method receiver
+                if (i == 0 && left->sig.isInterfaceMethod)
+                    continue;
+                
                 // Type
                 if (!typeEquivalentRecursive(left->sig.param[i]->type, right->sig.param[i]->type, &newPair))
                     return false;

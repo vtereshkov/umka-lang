@@ -145,7 +145,7 @@ typedef struct
 {
     int numParams, numDefaultParams;
     bool isMethod;
-    int offsetFromSelf;                     // For interface methods
+    bool isInterfaceMethod;
     const Param *param[MAX_PARAMS];
     const struct tagType *resultType;
 } Signature;
@@ -155,7 +155,6 @@ typedef struct tagType
 {
     TypeKind kind;
     int block;
-    const struct tagType *base;                 // For pointers, arrays, maps and fibers (for maps, denotes the tree node type; for fibers, denotes the fiber closure type)
     int numItems;                               // For arrays, structures and interfaces
     bool isExprList;                            // For structures that represent expression lists
     bool isVariadicParamList;                   // For dynamic arrays that represent variadic parameter lists
@@ -164,6 +163,7 @@ typedef struct tagType
     const struct tagType *sameAs;               // For types declared as type T = ...
     union
     {
+        const struct tagType *base;             // For pointers (value type), arrays (item type), maps (node type) and fibers (closure type)
         const Field **field;                    // For structures, interfaces and closures
         const EnumConst **enumConst;            // For enumerations
         Signature sig;                          // For functions, including methods
