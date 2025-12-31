@@ -3984,31 +3984,31 @@ int vmAsm(int ip, const Instruction *code, const DebugInfo *debugPerInstr, char 
     int chars = snprintf(buf, size, "%09d %6d %28s", ip, debug->line, opcodeBuf);
 
     if (instr->tokKind != TOK_NONE)
-        chars += snprintf(buf + chars, nonneg(size - chars), " %s", lexSpelling(instr->tokKind));
+        chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %s", lexSpelling(instr->tokKind));
 
     if (instr->type)
     {
         char typeBuf[DEFAULT_STR_LEN + 1];
-        chars += snprintf(buf + chars, nonneg(size - chars), " %s", typeSpelling(instr->type, typeBuf));
+        chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %s", typeSpelling(instr->type, typeBuf));
     }
 
     if (instr->typeKind != TYPE_NONE && (!instr->type || instr->opcode == OP_ASSERT_RANGE))
-        chars += snprintf(buf + chars, nonneg(size - chars), " %s", typeKindSpelling(instr->typeKind));
+        chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %s", typeKindSpelling(instr->typeKind));
 
     switch (instr->opcode)
     {
         case OP_PUSH:
         {
             if (instr->typeKind == TYPE_PTR || instr->inlineOpcode == OP_DEREF)
-                chars += snprintf(buf + chars, nonneg(size - chars), " %p", instr->operand.ptrVal);
+                chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %p", instr->operand.ptrVal);
             else if (instr->typeKind == TYPE_REAL)
-                chars += snprintf(buf + chars, nonneg(size - chars), " %lg", instr->operand.realVal);
+                chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %lg", instr->operand.realVal);
             else
-                chars += snprintf(buf + chars, nonneg(size - chars), " %lld", (long long int)instr->operand.intVal);
+                chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %lld", (long long int)instr->operand.intVal);
             break;
         }
         case OP_PUSH_REG:
-        case OP_POP_REG:                chars += snprintf(buf + chars, nonneg(size - chars), " %s",  regSpelling[instr->operand.intVal]); break;
+        case OP_POP_REG:                chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %s",  regSpelling[instr->operand.intVal]); break;
         case OP_PUSH_ZERO:
         case OP_PUSH_LOCAL_PTR:
         case OP_PUSH_LOCAL:
@@ -4022,25 +4022,25 @@ int vmAsm(int ip, const Instruction *code, const DebugInfo *debugPerInstr, char 
         case OP_GOTO_IF:
         case OP_GOTO_IF_NOT:
         case OP_CALL_INDIRECT:
-        case OP_RETURN:                 chars += snprintf(buf + chars, nonneg(size - chars), " %lld",  (long long int)instr->operand.intVal); break;
+        case OP_RETURN:                 chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %lld",  (long long int)instr->operand.intVal); break;
         case OP_CALL:
         {
             const char *fnName = debugPerInstr[instr->operand.intVal].fnName;
-            chars += snprintf(buf + chars, nonneg(size - chars), " %s (%lld)", fnName, (long long int)instr->operand.intVal);
+            chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %s (%lld)", fnName, (long long int)instr->operand.intVal);
             break;
         }
         case OP_PUSH_LOCAL_PTR_ZERO:
-        case OP_GET_ARRAY_PTR:          chars += snprintf(buf + chars, nonneg(size - chars), " %d %d", (int)instr->operand.int32Val[0], (int)instr->operand.int32Val[1]); break;
+        case OP_GET_ARRAY_PTR:          chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %d %d", (int)instr->operand.int32Val[0], (int)instr->operand.int32Val[1]); break;
         case OP_CHANGE_REF_CNT_GLOBAL:
         case OP_ENTER_FRAME:
-        case OP_CALL_EXTERN:            chars += snprintf(buf + chars, nonneg(size - chars), " %p",    instr->operand.ptrVal); break;
-        case OP_CALL_BUILTIN:           chars += snprintf(buf + chars, nonneg(size - chars), " %s",    builtinSpelling[instr->operand.builtinVal]); break;
+        case OP_CALL_EXTERN:            chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %p",    instr->operand.ptrVal); break;
+        case OP_CALL_BUILTIN:           chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %s",    builtinSpelling[instr->operand.builtinVal]); break;
 
         default: break;
     }
 
     if (instr->inlineOpcode == OP_DEREF)
-        chars += snprintf(buf + chars, nonneg(size - chars), "; DEREF");
+        chars += snprintf(nonnull(buf, chars), nonneg(size - chars), "; DEREF");
 
     return chars;
 }
