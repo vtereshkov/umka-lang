@@ -224,6 +224,14 @@ static bool optimizeDeref(CodeGen *gen, TypeKind typeKind)
         return true;
     }
 
+    // Optimization: GET_FIELD_PTR 0 + DEREF -> DEREF
+    if (prev && prev->opcode == OP_GET_FIELD_PTR && prev->inlineOpcode == OP_NOP && prev->operand.intVal == 0)
+    {
+        genRemoveInstr(gen);
+        genDeref(gen, typeKind);
+        return true;
+    }
+
     // Optimization: (PUSH | ...) + DEREF -> (PUSH | ...); DEREF
     if (prev && ((prev->opcode == OP_PUSH && prev->typeKind == TYPE_PTR) ||
                   prev->opcode == OP_GET_ARRAY_PTR                       ||
@@ -273,6 +281,14 @@ static bool optimizeGetFieldPtr(CodeGen *gen, int fieldOffset)
         genUnnotify(gen);
         return true;
     }
+
+    // Optimization: GET_FIELD_PTR (m) + GET_FIELD_PTR (n) -> GET_FIELD_PTR (m + n)
+    if (prev && prev->opcode == OP_GET_FIELD_PTR && prev->inlineOpcode == OP_NOP)
+    {
+        prev->operand.intVal += fieldOffset;
+        genUnnotify(gen);
+        return true;
+    }   
 
     return false;
 }
