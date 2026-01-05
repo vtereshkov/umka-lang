@@ -1153,7 +1153,7 @@ int genTryRemoveCopyResultToTempVar(CodeGen *gen)
 
 // Assembly output
 
-int genAsm(CodeGen *gen, char *buf, int size)
+int genAsm(CodeGen *gen, const Idents *idents, char *buf, int size)
 {
     bool *jumpFrom = storageAdd(gen->storage, gen->capacity + 1);
     bool *jumpTo = storageAdd(gen->storage, gen->capacity + 1);
@@ -1178,7 +1178,7 @@ int genAsm(CodeGen *gen, char *buf, int size)
         if (gen->code[ip].opcode == OP_ENTER_FRAME)
             chars += snprintf(nonnull(buf, chars), nonneg(size - chars), "\nFunction: %s\n\n", gen->debugPerInstr[ip].fnName);
 
-        chars += vmAsm(ip, gen->code, gen->debugPerInstr, nonnull(buf, chars), nonneg(size - chars));
+        chars += vmAsm(ip, gen->code, gen->debugPerInstr, idents, nonnull(buf, chars), nonneg(size - chars));
         chars += snprintf(nonnull(buf, chars), nonneg(size - chars), "\n");
 
         if (gen->code[ip].opcode == OP_RETURN || jumpFrom[ip] || jumpTo[ip + 1])

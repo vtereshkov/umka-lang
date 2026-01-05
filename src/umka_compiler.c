@@ -339,12 +339,12 @@ void compilerCall(Umka *umka, UmkaFuncContext *fn)
 
 char *compilerAsm(Umka *umka)
 {
-    const int chars = genAsm(&umka->gen, NULL, 0);
+    const int chars = genAsm(&umka->gen, &umka->idents, NULL, 0);
     if (chars < 0)
         return NULL;
 
     char *buf = storageAdd(&umka->storage, chars + 1);
-    genAsm(&umka->gen, buf, chars);
+    genAsm(&umka->gen, &umka->idents, buf, chars);
     buf[chars] = 0;
     return buf;
 }

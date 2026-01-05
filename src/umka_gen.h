@@ -151,6 +151,6 @@ void genGotosEpilog (CodeGen *gen, Gotos *gotos);
 void genCopyResultToTempVar(CodeGen *gen, const Type *type, int offset);
 int  genTryRemoveCopyResultToTempVar(CodeGen *gen);
 
-int genAsm(CodeGen *gen, char *buf, int size);
+int genAsm(CodeGen *gen, const Idents *idents, char *buf, int size);
 
 #endif // UMKA_GEN_H_INCLUDED

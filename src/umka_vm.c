@@ -29,6 +29,7 @@
 #include <inttypes.h>
 
 #include "umka_vm.h"
+#include "umka_ident.h"
 
 
 /*
@@ -3974,7 +3975,7 @@ void vmKill(VM *vm)
 }
 
 
-int vmAsm(int ip, const Instruction *code, const DebugInfo *debugPerInstr, char *buf, int size)
+int vmAsm(int ip, const Instruction *code, const DebugInfo *debugPerInstr, const Idents *idents, char *buf, int size)
 {
     const Instruction *instr = &code[ip];
     const DebugInfo *debug = &debugPerInstr[ip];
@@ -3995,12 +3996,14 @@ int vmAsm(int ip, const Instruction *code, const DebugInfo *debugPerInstr, char 
     if (instr->typeKind != TYPE_NONE && (!instr->type || instr->opcode == OP_ASSERT_RANGE))
         chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %s", typeKindSpelling(instr->typeKind));
 
+    char varBuf[DEFAULT_STR_LEN + 1];
+    
     switch (instr->opcode)
     {
         case OP_PUSH:
         {
             if (instr->typeKind == TYPE_PTR || instr->inlineOpcode == OP_DEREF)
-                chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %p", instr->operand.ptrVal);
+                chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %s", identPtrSpelling(idents, instr->operand.ptrVal, varBuf));
             else if (instr->typeKind == TYPE_REAL)
                 chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %lg", instr->operand.realVal);
             else
@@ -4031,7 +4034,7 @@ int vmAsm(int ip, const Instruction *code, const DebugInfo *debugPerInstr, char 
         }
         case OP_PUSH_LOCAL_PTR_ZERO:
         case OP_GET_ARRAY_PTR:          chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %d %d", (int)instr->operand.int32Val[0], (int)instr->operand.int32Val[1]); break;
-        case OP_CHANGE_REF_CNT_GLOBAL:
+        case OP_CHANGE_REF_CNT_GLOBAL:  chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %s",    identPtrSpelling(idents, instr->operand.ptrVal, varBuf)); break;
         case OP_ENTER_FRAME:
         case OP_CALL_EXTERN:            chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %p",    instr->operand.ptrVal); break;
         case OP_CALL_BUILTIN:           chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %s",    builtinSpelling[instr->operand.builtinVal]); break;

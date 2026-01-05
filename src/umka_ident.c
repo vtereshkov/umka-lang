@@ -375,3 +375,18 @@ bool identIsMain(const Ident *ident)
     return strcmp(ident->name, "main") == 0 && ident->kind == IDENT_CONST &&
            ident->type->kind == TYPE_FN && !ident->type->sig.isMethod && ident->type->sig.numParams == 1 && ident->type->sig.resultType->kind == TYPE_VOID;  // A dummy #upvalues is the only parameter
 }
+
+
+const char *identPtrSpelling(const Idents *idents, const void *ptr, char *buf)
+{
+    for (const Ident *ident = idents->first; ident; ident = ident->next)
+    {
+        if (ident->globallyAllocated && ptr == ident->ptr)
+        {
+            snprintf(buf, DEFAULT_STR_LEN + 1, "%s", ident->name);
+            return buf;
+        }
+    }
+    snprintf(buf, DEFAULT_STR_LEN + 1, "%p", ptr);
+    return buf;
+}

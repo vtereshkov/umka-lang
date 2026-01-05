@@ -198,6 +198,9 @@ typedef struct tagVM
 } VM;
 
 
+typedef struct tagIdents Idents;
+
+
 void vmInit                     (VM *vm, Storage *storage, int stackSize, bool fileSystemEnabled, Error *error);
 void vmFree                     (VM *vm);
 void vmReset                    (VM *vm, const Instruction *code, const DebugInfo *debugPerInstr);
@@ -205,7 +208,7 @@ void vmCall                     (VM *vm, UmkaFuncContext *fn);
 void vmCleanup                  (VM *vm);
 bool vmAlive                    (VM *vm);
 void vmKill                     (VM *vm);
-int vmAsm                       (int ip, const Instruction *code, const DebugInfo *debugPerInstr, char *buf, int size);
+int vmAsm                       (int ip, const Instruction *code, const DebugInfo *debugPerInstr, const Idents *idents, char *buf, int size);
 bool vmUnwindCallStack          (VM *vm, Slot **base, int *ip);
 void vmSetHook                  (VM *vm, UmkaHookEvent event, UmkaHookFunc hook);
 void *vmAllocData               (VM *vm, int size, UmkaExternFunc onFree);

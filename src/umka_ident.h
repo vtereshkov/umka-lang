@@ -37,7 +37,7 @@ typedef struct tagIdent
 } Ident;
 
 
-typedef struct
+typedef struct tagIdents
 {
     Ident *first;
     Ident *lastTempVarForResult;
@@ -92,5 +92,7 @@ static inline void identSetUsed(const Ident *ident)
 {
     ((Ident *)ident)->used = true;
 }
+
+const char *identPtrSpelling(const Idents *idents, const void *ptr, char *buf);
 
 #endif // UMKA_IDENT_H_INCLUDED
