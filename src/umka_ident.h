@@ -22,7 +22,7 @@ typedef struct tagIdent
     IdentName name;
     const Type *type;
     int module, block;                  // Place of definition (global identifiers are in block 0)
-    bool exported, globallyAllocated, used, temporary;
+    bool exported, globallyAllocated, used, temporary, garbageCollected;
     int prototypeOffset;                // For function prototypes
     union
     {
@@ -76,6 +76,7 @@ Ident *identAllocParam    (Idents *idents, const Types *types, const Modules *mo
 const char *identMethodNameWithRcv(const Idents *idents, const Ident *method);
 
 void identWarnIfUnused    (const Idents *idents, const Ident *ident);
+
 bool identIsMain          (const Ident *ident);
 
 static inline bool identIsHidden(const char *name)

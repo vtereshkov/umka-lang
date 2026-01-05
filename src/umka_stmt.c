@@ -12,45 +12,40 @@ static void parseStmtList(Umka *umka);
 static void parseBlock(Umka *umka);
 
 
-static void doGarbageCollectionAt(Umka *umka, int blockStackPos)
+static void doGarbageCollectionAt(Umka *umka, int block)
 {
+    bool blockFound = false;
+
     for (const Ident *ident = umka->idents.first; ident; ident = ident->next)
-        if (ident->kind == IDENT_VAR && typeGarbageCollected(ident->type) && ident->block == umka->blocks.item[blockStackPos].block && !(ident->temporary && !ident->used) && strcmp(ident->name, "#result") != 0)
+    {
+        if (ident->block == block)
+            blockFound = true;
+        else if (blockFound)
+            break;
+
+        if (blockFound && ident->garbageCollected && (!ident->temporary || ident->used))
         {
-            // Skip unused upvalues
-            if (strcmp(ident->name, "#upvalues") == 0)
-            {
-                if (!umka->blocks.item[blockStackPos].fn)
-                    umka->error.handler(umka->error.context, "Upvalues can only be declared in the function scope");
-
-                if (!umka->blocks.item[blockStackPos].hasUpvalues)
-                    continue;
-            }
-
             if (ident->block == 0)
                 genChangeRefCntGlobal(&umka->gen, TOK_MINUSMINUS, ident->ptr, ident->type);
             else
                 genChangeRefCntLocal(&umka->gen, TOK_MINUSMINUS, ident->offset, ident->type);
         }
+    }
 }
 
 
 void doGarbageCollection(Umka *umka)
 {
     // Collect garbage in the current scope
-    doGarbageCollectionAt(umka, umka->blocks.top);
+    doGarbageCollectionAt(umka, blocksCurrent(&umka->blocks));
 }
 
 
 void doGarbageCollectionDownToBlock(Umka *umka, int block)
 {
     // Collect garbage over all scopes down to the specified block (not inclusive)
-    for (int i = umka->blocks.top; i >= 1; i--)
-    {
-        if (umka->blocks.item[i].block == block)
-            break;
-        doGarbageCollectionAt(umka, i);
-    }
+    for (int i = umka->blocks.top; i >= 1 && umka->blocks.item[i].block != block; i--)
+        doGarbageCollectionAt(umka, umka->blocks.item[i].block);
 }
 
 

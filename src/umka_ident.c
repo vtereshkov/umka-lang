@@ -7,6 +7,9 @@
 #include "umka_ident.h"
 
 
+static bool identIsGarbageCollected(const Blocks *blocks, const Ident *ident);
+
+
 static void identTempName(Idents *idents, char *buf)
 {
     snprintf(buf, DEFAULT_STR_LEN + 1, "#temp%d", idents->tempVarNameSuffix++);
@@ -218,6 +221,7 @@ static Ident *identAdd(Idents *idents, const Modules *modules, const Blocks *blo
     ident->globallyAllocated = false;
     ident->temporary         = false;
     ident->used              = exported || ident->module == 0 || identIsHidden(ident->name) || identIsPlaceholder(ident->name) || identIsMain(ident);  // Exported, predefined, hidden, placeholder identifiers and main() are always treated as used
+    ident->garbageCollected  = identIsGarbageCollected(blocks, ident);
     ident->prototypeOffset   = -1;
     ident->debug             = *(idents->debug);
 
@@ -372,8 +376,21 @@ void identWarnIfUnused(const Idents *idents, const Ident *ident)
 
 bool identIsMain(const Ident *ident)
 {
-    return strcmp(ident->name, "main") == 0 && ident->kind == IDENT_CONST &&
-           ident->type->kind == TYPE_FN && !ident->type->sig.isMethod && ident->type->sig.numParams == 1 && ident->type->sig.resultType->kind == TYPE_VOID;  // A dummy #upvalues is the only parameter
+    return  ident->kind == IDENT_CONST &&
+            ident->type->kind == TYPE_FN && 
+            !ident->type->sig.isMethod && 
+            ident->type->sig.numParams == 1 &&                          // A dummy #upvalues is the only parameter 
+            ident->type->sig.resultType->kind == TYPE_VOID &&
+            strcmp(ident->name, "main") == 0;
+}
+
+
+static bool identIsGarbageCollected(const Blocks *blocks, const Ident *ident)
+{
+    return  ident->kind == IDENT_VAR && 
+            typeGarbageCollected(ident->type) && 
+            strcmp(ident->name, "#result") != 0 && 
+            (strcmp(ident->name, "#upvalues") != 0 || blocks->item[blocks->top].hasUpvalues);     // Collect #upvalues only if used
 }
 
 
