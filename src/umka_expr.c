@@ -321,7 +321,7 @@ static void doDynArrayToDynArrayConv(Umka *umka, const Type *dest, const Type **
 
     // Additional scope embracing temporary variables declaration
     doGarbageCollection(umka);
-    identWarnIfUnusedAll(&umka->idents, blocksCurrent(&umka->blocks));
+    identFree(&umka->idents, blocksCurrent(&umka->blocks));
     blocksLeave(&umka->blocks);
 
     genWhileEpilog(&umka->gen);
@@ -2962,7 +2962,7 @@ static void parseLogicalTerm(Umka *umka, const Type **type, Const *constant)
             doApplyOperator(umka, type, &rightType, NULL, NULL, op, false, true);
 
             doGarbageCollection(umka);
-            identWarnIfUnusedAll(&umka->idents, blocksCurrent(&umka->blocks));
+            identFree(&umka->idents, blocksCurrent(&umka->blocks));
             blocksLeave(&umka->blocks);
 
             genShortCircuitEpilog(&umka->gen, op);
@@ -3006,7 +3006,7 @@ static void parseLogicalExpr(Umka *umka, const Type **type, Const *constant)
             doApplyOperator(umka, type, &rightType, NULL, NULL, op, false, true);
 
             doGarbageCollection(umka);
-            identWarnIfUnusedAll(&umka->idents, blocksCurrent(&umka->blocks));
+            identFree(&umka->idents, blocksCurrent(&umka->blocks));
             blocksLeave(&umka->blocks);
 
             genShortCircuitEpilog(&umka->gen, op);
@@ -3047,28 +3047,31 @@ void parseExpr(Umka *umka, const Type **type, Const *constant)
         {
             genIfCondEpilog(&umka->gen);
 
+            const Ident *ternaryResultSuccessor = umka->idents.first;
+
             // Left-hand side expression
             blocksEnter(&umka->blocks);
 
             parseExpr(umka, &leftType, NULL);
 
-            const Ident *result = NULL;
+            const Ident *ternaryResult = NULL;
             if (typeGarbageCollected(leftType))
             {
                 // Create a temporary result variable in the outer block, so that it could outlive both left- and right-hand side expression blocks
                 blocksLeave(&umka->blocks);
-                result = identAllocTempVar(&umka->idents, &umka->types, &umka->modules, &umka->blocks, leftType, false);
+                ternaryResult = identAllocTempVar(&umka->idents, &umka->types, &umka->modules, &umka->blocks, leftType, false);
+                identMoveBefore(&umka->idents, ternaryResultSuccessor);
                 blocksReenter(&umka->blocks);
 
                 // Copy result to temporary variable
                 genDup(&umka->gen);
                 genChangeRefCnt(&umka->gen, TOK_PLUSPLUS, leftType);
-                doPushVarPtr(umka, result);
-                genSwapAssign(&umka->gen, result->type->kind, typeSize(&umka->types, result->type));
+                doPushVarPtr(umka, ternaryResult);
+                genSwapAssign(&umka->gen, ternaryResult->type->kind, typeSize(&umka->types, ternaryResult->type));
             }
 
             doGarbageCollection(umka);
-            identWarnIfUnusedAll(&umka->idents, blocksCurrent(&umka->blocks));
+            identFree(&umka->idents, blocksCurrent(&umka->blocks));
             blocksLeave(&umka->blocks);
 
             // ":"
@@ -3087,12 +3090,12 @@ void parseExpr(Umka *umka, const Type **type, Const *constant)
                 // Copy result to temporary variable
                 genDup(&umka->gen);
                 genChangeRefCnt(&umka->gen, TOK_PLUSPLUS, leftType);
-                doPushVarPtr(umka, result);
-                genSwapAssign(&umka->gen, result->type->kind, typeSize(&umka->types, result->type));
+                doPushVarPtr(umka, ternaryResult);
+                genSwapAssign(&umka->gen, ternaryResult->type->kind, typeSize(&umka->types, ternaryResult->type));
             }
 
             doGarbageCollection(umka);
-            identWarnIfUnusedAll(&umka->idents, blocksCurrent(&umka->blocks));
+            identFree(&umka->idents, blocksCurrent(&umka->blocks));
             blocksLeave(&umka->blocks);
 
             genIfElseEpilog(&umka->gen);

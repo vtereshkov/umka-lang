@@ -101,11 +101,7 @@ typedef struct
     TokenKind kind;
     union
     {
-        struct
-        {
-            IdentName name;
-            unsigned int hash;
-        };
+        IdentName name;
         int64_t intVal;
         uint64_t uintVal;
         double realVal;

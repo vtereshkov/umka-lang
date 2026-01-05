@@ -358,7 +358,7 @@ static bool typeEquivalentRecursive(const Type *left, const Type *right, Visited
             for (int i = 0; i < left->numItems; i++)
             {
                 // Name
-                if (left->field[i]->hash != right->field[i]->hash || strcmp(left->field[i]->name, right->field[i]->name) != 0)
+                if (strcmp(left->field[i]->name, right->field[i]->name) != 0)
                     return false;
 
                 // Type
@@ -562,9 +562,8 @@ const Field *typeFindField(const Type *structType, const char *name, int *index)
 {
     if (structType->kind == TYPE_STRUCT || structType->kind == TYPE_INTERFACE || structType->kind == TYPE_CLOSURE)
     {
-        unsigned int nameHash = hash(name);
         for (int i = 0; i < structType->numItems; i++)
-            if (structType->field[i]->hash == nameHash && strcmp(structType->field[i]->name, name) == 0)
+            if (strcmp(structType->field[i]->name, name) == 0)
             {
                 if (index)
                     *index = i;
@@ -622,7 +621,6 @@ const Field *typeAddField(const Types *types, Type *structType, const Type *fiel
     strncpy(field->name, name, MAX_IDENT_LEN);
     field->name[MAX_IDENT_LEN] = 0;
 
-    field->hash = hash(name);
     field->type = fieldType;
     field->offset = align(minNextFieldOffset, typeAlignment(types, fieldType));
 
@@ -647,9 +645,8 @@ const EnumConst *typeFindEnumConst(const Type *enumType, const char *name)
 {
     if (typeEnum(enumType))
     {
-        unsigned int nameHash = hash(name);
         for (int i = 0; i < enumType->numItems; i++)
-            if (enumType->enumConst[i]->hash == nameHash && strcmp(enumType->enumConst[i]->name, name) == 0)
+            if (strcmp(enumType->enumConst[i]->name, name) == 0)
                 return enumType->enumConst[i];
     }
     return NULL;
@@ -690,7 +687,6 @@ const EnumConst *typeAddEnumConst(const Types *types, Type *enumType, const char
     strncpy(enumConst->name, name, MAX_IDENT_LEN);
     enumConst->name[MAX_IDENT_LEN] = 0;
 
-    enumConst->hash = hash(name);
     enumConst->val = val;
 
     if (enumType->numItems > 0)
@@ -707,9 +703,8 @@ const EnumConst *typeAddEnumConst(const Types *types, Type *enumType, const char
 
 const Param *typeFindParam(const Signature *sig, const char *name)
 {
-    const unsigned int nameHash = hash(name);
     for (int i = 0; i < sig->numParams; i++)
-        if (sig->param[i]->hash == nameHash && strcmp(sig->param[i]->name, name) == 0)
+        if (strcmp(sig->param[i]->name, name) == 0)
             return sig->param[i];
 
     return NULL;
@@ -729,7 +724,6 @@ const Param *typeAddParam(const Types *types, Signature *sig, const Type *type, 
     strncpy(param->name, name, MAX_IDENT_LEN);
     param->name[MAX_IDENT_LEN] = 0;
 
-    param->hash = hash(name);
     param->type = type;
     param->defaultVal = defaultVal;
 

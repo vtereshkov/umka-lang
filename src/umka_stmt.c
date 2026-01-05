@@ -105,14 +105,13 @@ void doResolveExtern(Umka *umka)
                 genCallExtern(&umka->gen, fn);
 
                 doGarbageCollection(umka);
-                identWarnIfUnusedAll(&umka->idents, blocksCurrent(&umka->blocks));
-                identFree(&umka->idents, blocksCurrent(&umka->blocks));
 
                 const ParamLayout *paramLayout = typeMakeParamLayout(&umka->types, &ident->type->sig);
 
                 genLeaveFrameFixup(&umka->gen, typeMakeParamAndLocalVarLayout(&umka->types, paramLayout, 0));
                 genReturn(&umka->gen, paramLayout->numParamSlots);
 
+                identFree(&umka->idents, blocksCurrent(&umka->blocks));
                 blocksLeave(&umka->blocks);
             }
 
@@ -535,7 +534,7 @@ static void parseIfStmt(Umka *umka)
 
     // Additional scope embracing shortVarDecl and statement body
     doGarbageCollection(umka);
-    identWarnIfUnusedAll(&umka->idents, blocksCurrent(&umka->blocks));
+    identFree(&umka->idents, blocksCurrent(&umka->blocks));
     blocksLeave(&umka->blocks);
 }
 
@@ -582,7 +581,7 @@ static void parseExprCase(Umka *umka, const Type *selectorType, ConstArray *exis
 
     // Additional scope embracing stmtList
     doGarbageCollection(umka);
-    identWarnIfUnusedAll(&umka->idents, blocksCurrent(&umka->blocks));
+    identFree(&umka->idents, blocksCurrent(&umka->blocks));
     blocksLeave(&umka->blocks);
 
     genCaseBlockEpilog(&umka->gen);
@@ -638,7 +637,7 @@ static void parseTypeCase(Umka *umka, const char *concreteVarName, ConstArray *e
 
     // Additional scope embracing stmtList
     doGarbageCollection(umka);
-    identWarnIfUnusedAll(&umka->idents, blocksCurrent(&umka->blocks));
+    identFree(&umka->idents, blocksCurrent(&umka->blocks));
     blocksLeave(&umka->blocks);
 
     genElseProlog(&umka->gen);
@@ -660,7 +659,7 @@ static void parseDefault(Umka *umka)
 
     // Additional scope embracing stmtList
     doGarbageCollection(umka);
-    identWarnIfUnusedAll(&umka->idents, blocksCurrent(&umka->blocks));
+    identFree(&umka->idents, blocksCurrent(&umka->blocks));
     blocksLeave(&umka->blocks);
 }
 
@@ -713,7 +712,7 @@ static void parseExprSwitchStmt(Umka *umka)
 
     // Additional scope embracing shortVarDecl and statement body
     doGarbageCollection(umka);
-    identWarnIfUnusedAll(&umka->idents, blocksCurrent(&umka->blocks));
+    identFree(&umka->idents, blocksCurrent(&umka->blocks));
     blocksLeave(&umka->blocks);
 }
 
@@ -773,7 +772,7 @@ static void parseTypeSwitchStmt(Umka *umka)
 
     // Additional scope embracing ident and statement body
     doGarbageCollection(umka);
-    identWarnIfUnusedAll(&umka->idents, blocksCurrent(&umka->blocks));
+    identFree(&umka->idents, blocksCurrent(&umka->blocks));
     blocksLeave(&umka->blocks);
 }
 
@@ -818,7 +817,7 @@ static void parseForHeader(Umka *umka, ForPostStmt *postStmt)
 
     // Additional scope embracing expr
     doGarbageCollection(umka);
-    identWarnIfUnusedAll(&umka->idents, blocksCurrent(&umka->blocks));
+    identFree(&umka->idents, blocksCurrent(&umka->blocks));
     blocksLeave(&umka->blocks);
 
     // [";" simpleStmt]
@@ -859,7 +858,7 @@ static void parseForHeader(Umka *umka, ForPostStmt *postStmt)
 
             // Additional scope embracing simpleStmt
             doGarbageCollection(umka);
-            identWarnIfUnusedAll(&umka->idents, blocksCurrent(&umka->blocks));
+            identFree(&umka->idents, blocksCurrent(&umka->blocks));
             blocksLeave(&umka->blocks);
 
             genForPostStmtEpilog(&umka->gen);
@@ -1137,7 +1136,7 @@ static void parseForStmt(Umka *umka)
 
     // Additional scope embracing shortVarDecl in forHeader/forInHeader and statement body
     doGarbageCollection(umka);
-    identWarnIfUnusedAll(&umka->idents, blocksCurrent(&umka->blocks));
+    identFree(&umka->idents, blocksCurrent(&umka->blocks));
     blocksLeave(&umka->blocks);
 }
 
@@ -1285,10 +1284,9 @@ static void parseBlock(Umka *umka)
     parseStmtList(umka);
 
     doGarbageCollection(umka);
-    identWarnIfUnusedAll(&umka->idents, blocksCurrent(&umka->blocks));
     identFree(&umka->idents, blocksCurrent(&umka->blocks));
-
     blocksLeave(&umka->blocks);
+
     lexEat(&umka->lex, TOK_RBRACE);
 }
 
@@ -1374,7 +1372,7 @@ void parseFnBlock(Umka *umka, Ident *fn, const Type *upvaluesStructType)
 
     // Additional scope embracing StmtList
     doGarbageCollection(umka);
-    identWarnIfUnusedAll(&umka->idents, blocksCurrent(&umka->blocks));
+    identFree(&umka->idents, blocksCurrent(&umka->blocks));
     blocksLeave(&umka->blocks);
 
     // 'return'/'continue'/'break' epilogs
@@ -1384,7 +1382,6 @@ void parseFnBlock(Umka *umka, Ident *fn, const Type *upvaluesStructType)
     umka->gen.breaks = outerBreaks;
 
     doGarbageCollection(umka);
-    identWarnIfUnusedAll(&umka->idents, blocksCurrent(&umka->blocks));
     identFree(&umka->idents, blocksCurrent(&umka->blocks));
 
     const int localVarSlots = align(umka->blocks.item[umka->blocks.top].localVarSize, sizeof(Slot)) / sizeof(Slot);

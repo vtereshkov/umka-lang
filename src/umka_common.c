@@ -257,9 +257,8 @@ void moduleNameFromPath(const Modules *modules, const char *path, char *folder, 
 
 int moduleFind(const Modules *modules, const char *path)
 {
-    const unsigned int pathHash = hash(path);
     for (int i = 0; i < modules->numModules; i++)
-        if (modules->module[i]->pathHash == pathHash && strcmp(modules->module[i]->path, path) == 0)
+        if (strcmp(modules->module[i]->path, path) == 0)
             return i;
     return -1;
 }
@@ -306,8 +305,6 @@ int moduleAdd(Modules *modules, const char *path)
     strncpy(module->name, name, DEFAULT_STR_LEN);
     module->name[DEFAULT_STR_LEN] = 0;
 
-    module->pathHash = hash(path);
-
     if (modules->implLibsEnabled)
     {
         char libPath[2 + 2 * DEFAULT_STR_LEN + 8 + 4 + 1];
@@ -339,9 +336,8 @@ int moduleAdd(Modules *modules, const char *path)
 
 const ModuleSource *moduleFindSource(const Modules *modules, const char *path)
 {
-    const unsigned int pathHash = hash(path);
     for (int i = 0; i < modules->numModuleSources; i++)
-        if (modules->moduleSource[i]->pathHash == pathHash && strcmp(modules->moduleSource[i]->path, path) == 0)
+        if (strcmp(modules->moduleSource[i]->path, path) == 0)
             return modules->moduleSource[i];
     return NULL;
 }
@@ -368,11 +364,10 @@ void moduleAddSource(Modules *modules, const char *path, const char *source, boo
     strncpy(moduleSource->name, name, DEFAULT_STR_LEN);
     moduleSource->name[DEFAULT_STR_LEN] = 0;
 
-    int sourceLen = strlen(source);
+    const int sourceLen = strlen(source);
     moduleSource->source = storageAdd(modules->storage, sourceLen + 1);
     strcpy(moduleSource->source, source);
 
-    moduleSource->pathHash = hash(path);
     moduleSource->trusted = trusted;
 
     modules->moduleSource[modules->numModuleSources++] = moduleSource;
@@ -579,10 +574,8 @@ void externalInit(Externals *externals, Storage *storage)
 
 External *externalFind(const Externals *externals, const char *name)
 {
-    const unsigned int nameHash = hash(name);
-
     for (External *external = externals->first; external; external = external->next)
-        if (external->hash == nameHash && strcmp(external->name, name) == 0)
+        if (strcmp(external->name, name) == 0)
             return external;
 
     return NULL;
@@ -599,8 +592,6 @@ External *externalAdd(Externals *externals, const char *name, void *entry, bool 
 
     strncpy(external->name, name, DEFAULT_STR_LEN);
     external->name[DEFAULT_STR_LEN] = 0;
-
-    external->hash = hash(name);
 
     external->next = externals->first;
     externals->first = external;

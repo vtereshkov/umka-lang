@@ -28,6 +28,8 @@ void identFree(Idents *idents, int block)
 {
     while (idents->first && idents->first->block == block)
     {
+        identWarnIfUnused(idents, idents->first);
+        
         Ident *next = idents->first->next;
 
         if (idents->first->globallyAllocated)
@@ -39,34 +41,51 @@ void identFree(Idents *idents, int block)
 }
 
 
+void identMoveBefore(Idents *idents, const Ident *next)
+{
+    for (Ident *ident = idents->first; ident; ident = ident->next)
+    {
+        if (ident->next == next)
+        {
+            Ident *moved = idents->first;
+            if (moved != ident)
+            {
+                idents->first = moved->next;
+                moved->next = ident->next;
+                ident->next = moved;                
+            }
+            return;
+        }
+    }
+}
+
+
 static const Ident *identFindEx(const Idents *idents, const Modules *modules, const Blocks *blocks, int module, const char *name, const Type *rcvType, bool markAsUsed, bool isModule)
 {
-    const unsigned int nameHash = hash(name);
-
-    for (int i = blocks->top; i >= 0; i--)
+    // Identifiers are always sorted by block scope, deepest (current) block first
+    for (const Ident *ident = idents->first; ident; ident = ident->next)
     {
-        for (const Ident *ident = idents->first; ident; ident = ident->next)
-            if (ident->hash == nameHash && strcmp(ident->name, name) == 0 && ident->block == blocks->item[i].block && (ident->kind == IDENT_MODULE) == isModule)
+        if ((ident->kind == IDENT_MODULE) == isModule && strcmp(ident->name, name) == 0)
+        {
+            // What we found has correct name and block scope, check module scope
+            const bool identModuleValid = (ident->module == 0 && blocks->module == module) ||                                                // Universe module
+                                          (ident->module == module && (blocks->module == module ||                                           // Current module
+                                          (ident->exported && (rcvType || modules->module[blocks->module]->importAlias[ident->module]))));   // Imported module
+
+            if (identModuleValid)
             {
-                // What we found has correct name and block scope, check module scope
-                const bool identModuleValid = (ident->module == 0 && blocks->module == module) ||                                                // Universe module
-                                              (ident->module == module && (blocks->module == module ||                                           // Current module
-                                              (ident->exported && (rcvType || modules->module[blocks->module]->importAlias[ident->module]))));   // Imported module
+                // Method names need not be unique in the given scope - check the receiver type to see if we found the right name
+                const bool methodFound = ident->type->kind == TYPE_FN && ident->type->sig.isMethod;
 
-                if (identModuleValid)
+                const bool found = (!rcvType && !methodFound) || (rcvType && methodFound && typeCompatibleRcv(ident->type->sig.param[0]->type, rcvType));
+                if (found)
                 {
-                    // Method names need not be unique in the given scope - check the receiver type to see if we found the right name
-                    const bool methodFound = ident->type->kind == TYPE_FN && ident->type->sig.isMethod;
-
-                    const bool found = (!rcvType && !methodFound) || (rcvType && methodFound && typeCompatibleRcv(ident->type->sig.param[0]->type, rcvType));
-                    if (found)
-                    {
-                        if (markAsUsed)
-                            identSetUsed(ident);
-                        return ident;
-                    }
+                    if (markAsUsed)
+                        identSetUsed(ident);
+                    return ident;
                 }
             }
+        }
     }
 
     return NULL;
@@ -191,8 +210,6 @@ static Ident *identAdd(Idents *idents, const Modules *modules, const Blocks *blo
 
     strncpy(ident->name, name, MAX_IDENT_LEN);
     ident->name[MAX_IDENT_LEN] = 0;
-
-    ident->hash = hash(name);
 
     ident->type              = type;
     ident->module            = blocks->module;
@@ -350,14 +367,6 @@ void identWarnIfUnused(const Idents *idents, const Ident *ident)
         idents->error->warningHandler(idents->error->context, &ident->debug, "%s %s is not used", (ident->kind == IDENT_MODULE ? "Module" : "Identifier"), ident->name);
         identSetUsed(ident);
     }
-}
-
-
-void identWarnIfUnusedAll(const Idents *idents, int block)
-{
-    for (const Ident *ident = idents->first; ident; ident = ident->next)
-        if (ident->block == block)
-            identWarnIfUnused(idents, ident);
 }
 
 

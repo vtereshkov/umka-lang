@@ -118,7 +118,6 @@ typedef union
 typedef struct
 {
     IdentName name;
-    unsigned int hash;
     const struct tagType *type;
     int offset;
 } Field;
@@ -127,7 +126,6 @@ typedef struct
 typedef struct
 {
     IdentName name;
-    unsigned int hash;
     Const val;
 } EnumConst;
 
@@ -135,7 +133,6 @@ typedef struct
 typedef struct
 {
     IdentName name;
-    unsigned int hash;
     const struct tagType *type;
     Const defaultVal;
 } Param;

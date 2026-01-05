@@ -308,7 +308,7 @@ void compilerFree(Umka *umka)
 {
     if (vmAlive(&umka->vm))
         vmCleanup(&umka->vm);
-    
+
     vmFree      (&umka->vm);
     moduleFree  (&umka->modules);
     storageFree (&umka->storage);

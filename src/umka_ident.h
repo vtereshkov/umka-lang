@@ -20,7 +20,6 @@ typedef struct tagIdent
 {
     IdentKind kind;
     IdentName name;
-    unsigned int hash;
     const Type *type;
     int module, block;                  // Place of definition (global identifiers are in block 0)
     bool exported, globallyAllocated, used, temporary;
@@ -52,6 +51,8 @@ typedef struct
 void identInit(Idents *idents, Storage *storage, DebugInfo *debug, Error *error);
 void identFree(Idents *idents, int block);
 
+void identMoveBefore(Idents *idents, const Ident *next);
+
 const Ident *identFind            (const Idents *idents, const Modules *modules, const Blocks *blocks, int module, const char *name, const Type *rcvType, bool markAsUsed);
 const Ident *identAssertFind      (const Idents *idents, const Modules *modules, const Blocks *blocks, int module, const char *name, const Type *rcvType);
 const Ident *identFindModule      (const Idents *idents, const Modules *modules, const Blocks *blocks, int module, const char *name, bool markAsUsed);
@@ -74,9 +75,8 @@ Ident *identAllocParam    (Idents *idents, const Types *types, const Modules *mo
 
 const char *identMethodNameWithRcv(const Idents *idents, const Ident *method);
 
-void identWarnIfUnused        (const Idents *idents, const Ident *ident);
-void identWarnIfUnusedAll     (const Idents *idents, int block);
-bool identIsMain              (const Ident *ident);
+void identWarnIfUnused    (const Idents *idents, const Ident *ident);
+bool identIsMain          (const Ident *ident);
 
 static inline bool identIsHidden(const char *name)
 {
