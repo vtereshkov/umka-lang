@@ -510,7 +510,8 @@ static FORCE_INLINE int chunkChangeRefCnt(HeapPages *pages, HeapPage *page, void
     page->refCnt += delta;
 
     // Additional ref counts for a user-defined address interval (used for stack frames to detect escaping refs)
-    stackChangeFrameRefCnt(pages->fiber, pages, ptr, delta);
+    for (Fiber *fiber = pages->fiber; fiber; fiber = fiber->parent)
+        stackChangeFrameRefCnt(fiber, pages, ptr, delta);
 
 #ifdef UMKA_REF_CNT_DEBUG
     fprintf(stderr, "%p: delta: %+d  chunk: %d  page: %d\n", ptr, delta, chunk->refCnt, page->refCnt);

@@ -7,6 +7,7 @@ import (
     "dynarrays3.um"
     "strings.um"
     "fibers.um"
+    "fibers2.um"
     "fnctools.um"
     "gc.um"
     "gc2.um"
@@ -62,6 +63,7 @@ fn main() {
     printf("\n\n>>> Dynamic arrays - 3\n\n");       dynarrays3::test()
     printf("\n\n>>> Strings\n\n");                  strings::test()
     printf("\n\n>>> Fibers\n\n");                   fibers::test()
+    printf("\n\n>>> Fibers - 2\n\n");               fibers2::test()
     printf("\n\n>>> Functional tools\n\n");         fnctools::test()
     printf("\n\n>>> Garbage collection - 1\n\n");   gc::test()
     printf("\n\n>>> Garbage collection - 2\n\n");   gc2::test()

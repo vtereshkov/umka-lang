@@ -1,0 +1,18 @@
+fn mkfunc(pr: ^int): fiber {
+    return make(fiber, |pr| {
+        pr^ = 42
+    })
+}
+
+fn test*() {
+    r := 0
+
+    func := mkfunc(&r)
+    resume(func)
+
+    printf("%d\n", r)
+}
+
+fn main() {
+    test()
+}

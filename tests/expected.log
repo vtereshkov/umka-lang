@@ -287,6 +287,11 @@ Parent: i=8 b=12
 Parent: i=9 b=12
 
 
+>>> Fibers - 2
+
+42
+
+
 >>> Functional tools
 
 Array = [3 7 1 -4 2 5]
@@ -699,7 +704,7 @@ Error: Empty string (code -2) from "foo":
     foo: (5)
     fooTest: (11)
     test: (25)
-    main: (76)
+    main: (78)
 9
 
 
