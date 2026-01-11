@@ -66,7 +66,7 @@ static const char *runtimeModuleSources[] = {
 "fn exitif*(err: Err) {\n"
 "    if err.code != 0 {\n"
 "        msg := sprintf(\"%s (code %d) in %v\\n\", err.msg, err.code, err.sender)\n"
-"        msg += sprintf(\"Stack trace:\\n\")\n"
+"        msg += sprintf(\"Occurred at:\\n\")\n"
 "        for _, pos in err.trace {\n"
 "            msg += sprintf(\"    %s: %s (%d)\\n\", pos.func, pos.file, pos.line)\n"
 "        }\n"

@@ -55,7 +55,7 @@ fn stderror(code: StdErr): Err {
 fn exitif*(err: Err) {
     if err.code != 0 {
         msg := sprintf("%s (code %d) in %v\n", err.msg, err.code, err.sender)
-        msg += sprintf("Stack trace:\n")
+        msg += sprintf("Occurred at:\n")
         for _, pos in err.trace {
             msg += sprintf("    %s: %s (%d)\n", pos.func, pos.file, pos.line)
         }

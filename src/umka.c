@@ -83,7 +83,7 @@ void printRuntimeError(Umka *umka)
     if (error->msg[0])
     {
         fprintf(stderr, "\nRuntime error %s (%d): %s\n", error->fileName, error->line, error->msg);
-        fprintf(stderr, "Stack trace:\n");
+        fprintf(stderr, "Terminated at:\n");
 
         for (int depth = 0; depth < MAX_CALL_STACK_DEPTH; depth++)
         {
