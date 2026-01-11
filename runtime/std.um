@@ -238,6 +238,9 @@ fn freadall*(f: File): ([]char, Err) {
     if err.code != 0 {
         return {}, err
     }
+    if size > 0x7FFFFF00 {
+        return {}, stderror(.eof)
+    }
     err = fseek(f, 0, .begin)
     if err.code != 0 {
         return {}, err
