@@ -14,8 +14,27 @@ fn test1() {
   }
 }
 
+fn test2() {
+  leaksan(2)
+  
+  var p, tail: ^list
+
+  for i := 0; i < 10; i++ {
+    n := new(list)
+    n.value = i
+    n.next = p
+    p = n
+    if tail == null {
+      tail = p
+    }
+  }
+
+  tail.next = p  // cycle
+}
+
 fn test*() {
   test1()
+  test2()
   printf("Ok")
 }
 

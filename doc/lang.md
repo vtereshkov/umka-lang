@@ -878,6 +878,18 @@ fn memusage(): int
 Returns the allocated heap memory size in bytes.
 
 ```
+fn leaksan(level: int)
+```
+
+Sets memory leak sanitizer warnings level:
+
+* 0: No warnings
+* 1: Short warnings (default)
+* 2: Detailed warnings. Each leaked allocation is reported along with the exact source code location
+
+Warnings are output to `stderr` after program termination. All leaked memory is freed regardless of the warnings level.
+
+```
 fn exit(code: int, msg: str = "")
 ```
 

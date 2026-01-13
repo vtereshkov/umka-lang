@@ -3,7 +3,6 @@
 //#define UMKA_VM_DEBUG
 //#define UMKA_STR_DEBUG
 //#define UMKA_REF_CNT_DEBUG
-//#define UMKA_DETAILED_LEAK_INFO
 
 #ifdef UMKA_VM_DEBUG
     #define FORCE_INLINE
@@ -157,6 +156,7 @@ static const char *builtinSpelling [] =
     "keys",
     "resume",
     "memusage",
+    "leaksan",
     "exit"
 };
 
@@ -212,6 +212,57 @@ static FORCE_INLINE UmkaStackSlot *doGetOnFreeResult(HeapPages *pages)
 }
 
 
+static void pageLeakSan(HeapPages *pages, const HeapPage *page, Storage *storage)
+{
+    typedef struct tagLeakLocation
+    {
+        const Type *type;
+        const DebugInfo *debug;
+        const struct tagLeakLocation *next;
+    } LeakLocation;
+    
+    if (pages->leakSanLevel > 0 && pages->fiber && pages->fiber->vm->terminatedNormally)
+    {
+        fprintf(stderr, "LeakSan: Memory leak on page %p (%d refs)\n", page->data, page->refCnt);
+
+        if (pages->leakSanLevel > 1)
+        {
+            // Report each leak location only once
+            const LeakLocation *firstLoc = NULL;
+
+            for (int i = 0; i < page->numOccupiedChunks; i++)
+            {
+                const HeapChunk *chunk = (const HeapChunk *)(page->data + i * page->chunkSize);
+                if (chunk->refCnt == 0)
+                    continue;
+
+                const DebugInfo *debug = &pages->fiber->debugPerInstr[chunk->ip];
+
+                bool reported = false;
+                for (const LeakLocation *loc = firstLoc; loc; loc = loc->next)
+                {
+                    if (chunk->type == loc->type && debug->fileName == loc->debug->fileName && debug->fnName == loc->debug->fnName && debug->line == loc->debug->line)
+                    {
+                        reported = true;
+                        break;
+                    }
+                }
+
+                if (reported)
+                    continue;
+
+                LeakLocation *newLoc = storageAdd(storage, sizeof(LeakLocation));
+                *newLoc = (LeakLocation){.type = chunk->type, .debug = debug, .next = firstLoc};
+                firstLoc = newLoc;
+
+                char typeBuf[DEFAULT_STR_LEN + 1];
+                fprintf(stderr, "LeakSan:    %s in %s: %s (%d)\n", chunk->type ? typeSpelling(chunk->type, typeBuf) : "?", debug->fnName, debug->fileName, debug->line);
+            }                
+        }
+    }
+}
+
+
 static void pageInit(HeapPages *pages, Fiber *fiber, Error *error)
 {
     pages->first = NULL;
@@ -220,11 +271,12 @@ static void pageInit(HeapPages *pages, Fiber *fiber, Error *error)
     pages->freeId = 1;
     pages->totalSize = 0;
     pages->fiber = fiber;
+    pages->leakSanLevel = 1;
     pages->error = error;
 }
 
 
-static void pageFree(HeapPages *pages, bool warnLeak)
+static void pageFree(HeapPages *pages, Storage *storage)
 {
     HeapPage *page = pages->first;
     while (page)
@@ -232,22 +284,7 @@ static void pageFree(HeapPages *pages, bool warnLeak)
         HeapPage *next = page->next;
 
         // Report memory leaks
-        if (warnLeak)
-        {
-            fprintf(stderr, "Warning: Memory leak at %p (%d refs)\n", page->data, page->refCnt);
-
-#ifdef UMKA_DETAILED_LEAK_INFO
-            for (int i = 0; i < page->numOccupiedChunks; i++)
-            {
-                const HeapChunk *chunk = (const HeapChunk *)(page->data + i * page->chunkSize);
-                if (chunk->refCnt == 0)
-                    continue;
-
-                const DebugInfo *debug = &pages->fiber->debugPerInstr[chunk->ip];
-                fprintf(stderr, "    Chunk allocated in %s: %s (%d)\n", debug->fnName, debug->fileName, debug->line);
-            }
-#endif
-        }
+        pageLeakSan(pages, page, storage);
 
         // Call custom deallocators, if any
         for (int i = 0; i < page->numOccupiedChunks && page->numChunksWithOnFree > 0; i++)
@@ -719,7 +756,7 @@ void vmFree(VM *vm)
        vm->error->runtimeHandler(vm->error->context, ERR_RUNTIME, "No fiber stack");
 
     chunkChangeRefCnt(&vm->pages, page, vm->mainFiber->stack, -1);
-    pageFree(&vm->pages, vm->terminatedNormally);
+    pageFree(&vm->pages, vm->storage);
 }
 
 
@@ -2870,6 +2907,13 @@ static FORCE_INLINE void doBuiltinMemusage(Fiber *fiber, HeapPages *pages, Error
 }
 
 
+// fn leaksan(level: int)
+static FORCE_INLINE void doBuiltinLeaksan(Fiber *fiber, HeapPages *pages, Error *error)
+{
+    pages->leakSanLevel = (fiber->top++)->intVal;
+}
+
+
 // fn exit(code: int, msg: str = "")
 static FORCE_INLINE void doBuiltinExit(Fiber *fiber, Error *error)
 {
@@ -3740,6 +3784,7 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
 
         // Misc
         case BUILTIN_MEMUSAGE:      doBuiltinMemusage(fiber, pages, error); break;
+        case BUILTIN_LEAKSAN:       doBuiltinLeaksan(fiber, pages, error); break;
         case BUILTIN_EXIT:          doBuiltinExit(fiber, error); return;
     }
 

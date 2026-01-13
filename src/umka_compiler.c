@@ -191,6 +191,7 @@ static void compilerDeclareBuiltinIdents(Umka *umka)
 
     // Misc
     identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "memusage",   umka->intType,     BUILTIN_MEMUSAGE);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "leaksan",    umka->voidType,    BUILTIN_LEAKSAN);
     identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "exit",       umka->voidType,    BUILTIN_EXIT);
 }
 

@@ -136,6 +136,7 @@ typedef struct
     int freeId;
     int64_t totalSize;
     struct tagFiber *fiber;
+    int64_t leakSanLevel;
     Error *error;
 } HeapPages;
 
