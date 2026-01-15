@@ -2846,9 +2846,11 @@ static void parseFactor(Umka *umka, const Type **type, Const *constant)
             if (isCompLit)
                 doEscapeToHeap(umka, typeAddPtrTo(&umka->types, &umka->blocks, *type));
 
-            // A value type is already a pointer, a structured type needs to have it added
             if (typeStructured(*type))
+            {
                 *type = typeAddPtrTo(&umka->types, &umka->blocks, *type);
+                genResetOptimizer(&umka->gen);      // No instructions emitted, but the type has changed - a barrier for optimizations
+            }
 
             break;
         }

@@ -9,7 +9,13 @@ var z: [][]real = {
     {7, 8.5}
 }
 
+w := []int{}
+
 var chars: []char = "Hahaha"
+
+fn get(): []int {
+    return w
+}
 
 fn foo(name: str, words: []str = {"Hello", "World"})
 
@@ -55,6 +61,8 @@ fn test*() {
 
     foo("Vasiliy")
     foo("Umka", {"Meow", "Purr", "Meow"})
+
+    dummy := &get()
 }
 
 fn foo(name: str, words: []str = {"Hello", "World"}) {

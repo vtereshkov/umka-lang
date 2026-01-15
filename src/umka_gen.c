@@ -51,6 +51,12 @@ void genInit(CodeGen *gen, Storage *storage, DebugInfo *debug, Error *error)
 }
 
 
+void genResetOptimizer(CodeGen *gen)
+{
+    genUnnotify(gen);
+}
+
+
 static void genRealloc(CodeGen *gen)
 {
     gen->capacity *= 2;
