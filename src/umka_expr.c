@@ -48,7 +48,7 @@ static void doPassParam(Umka *umka, const Type *formalParamType)
     else
     {
         // General case: increase parameter's reference count
-        genChangeRefCnt(&umka->gen, TOK_PLUSPLUS, formalParamType);
+        genRefCnt(&umka->gen, TOK_PLUSPLUS, formalParamType);
     }
 
     // Non-trivial assignment to parameters
@@ -106,7 +106,7 @@ static void doEscapeToHeap(Umka *umka, const Type *ptrType)
     // Copy to heap and use heap pointer
     genDup(&umka->gen);
     genPopReg(&umka->gen, REG_HEAP_COPY);
-    genSwapChangeRefCntAssign(&umka->gen, ptrType->base);
+    genSwapRefCntAssign(&umka->gen, ptrType->base);
     genPushReg(&umka->gen, REG_HEAP_COPY);
 
     doCopyResultToTempVar(umka, ptrType);
@@ -314,7 +314,7 @@ static void doDynArrayToDynArrayConv(Umka *umka, const Type *dest, const Type **
     genDeref(&umka->gen, dest->kind);
     genPushLocal(&umka->gen, TYPE_INT, indexOffset);
     genGetDynArrayPtr(&umka->gen);
-    genSwapChangeRefCntAssign(&umka->gen, dest->base);
+    genSwapRefCntAssign(&umka->gen, dest->base);
 
     genPushLocalPtr(&umka->gen, indexOffset);
     genUnary(&umka->gen, TOK_MINUSMINUS, umka->intType);
@@ -549,7 +549,7 @@ static void doExprListToExprListConv(Umka *umka, const Type *dest, const Type **
         doAssertImplicitTypeConv(umka, dest->field[i]->type, &srcFieldType, constant);
 
         genPushLocalPtr(&umka->gen, destList->offset + dest->field[i]->offset); // Push dest.item pointer
-        genSwapChangeRefCntAssign(&umka->gen, dest->field[i]->type);            // Assign to dest.item
+        genSwapRefCntAssign(&umka->gen, dest->field[i]->type);            // Assign to dest.item
     }
 
     genPop(&umka->gen);                                                         // Remove src pointer
@@ -964,7 +964,7 @@ static void parseBuiltinNewCall(Umka *umka, const Type **type, Const *constant)
         parseExpr(umka, &exprType, NULL);
         doAssertImplicitTypeConv(umka, *type, &exprType, NULL);
 
-        genChangeRefCntAssign(&umka->gen, *type);
+        genRefCntAssign(&umka->gen, *type);
     }
 
     *type = typeAddPtrTo(&umka->types, &umka->blocks, *type);
@@ -1772,7 +1772,7 @@ static void parseActualParamsAndCall(Umka *umka, const Type **type)
         genPushReg(&umka->gen, REG_SELF);
 
         // Increase receiver's reference count
-        genChangeRefCnt(&umka->gen, TOK_PLUSPLUS, (*type)->sig.param[0]->type);
+        genRefCnt(&umka->gen, TOK_PLUSPLUS, (*type)->sig.param[0]->type);
 
         numPreHiddenParams++;
         i++;
@@ -2064,7 +2064,7 @@ static void parseArrayOrStructLiteral(Umka *umka, const Type **type, Const *cons
             else
             {
                 // General case: update reference counts for both sides
-                genChangeRefCntAssign(&umka->gen, expectedItemType);
+                genRefCntAssign(&umka->gen, expectedItemType);
             }
         }
 
@@ -2206,12 +2206,12 @@ static void parseMapLiteral(Umka *umka, const Type **type, Const *constant)
         {
             // Optimization: if the right-hand side is a function call, assume its reference count to be already increased before return
             // The left-hand side will hold this additional reference, so we can remove the temporary "reference holder" variable
-            genChangeLeftRefCntAssign(&umka->gen, typeMapItem(*type));
+            genLeftRefCntAssign(&umka->gen, typeMapItem(*type));
         }
         else
         {
             // General case: update reference counts for both sides
-            genChangeRefCntAssign(&umka->gen, typeMapItem(*type));
+            genRefCntAssign(&umka->gen, typeMapItem(*type));
         }
 
         if (umka->lex.tok.kind != TOK_COMMA)
@@ -2312,7 +2312,7 @@ static void parseClosureLiteral(Umka *umka, const Type **type, Const *constant)
                 doPushVarPtr(umka, capturedIdent);
                 genDeref(&umka->gen, capturedIdent->type->kind);
 
-                genChangeRefCntAssign(&umka->gen, upvalue->type);
+                genRefCntAssign(&umka->gen, upvalue->type);
             }
 
             // Assign closure upvalues
@@ -2326,7 +2326,7 @@ static void parseClosureLiteral(Umka *umka, const Type **type, Const *constant)
             genDeref(&umka->gen, upvaluesStructIdent->type->kind);
             doAssertImplicitTypeConv(umka, upvalues->type, &upvaluesType, NULL);
 
-            genChangeRefCntAssign(&umka->gen, upvalues->type);
+            genRefCntAssign(&umka->gen, upvalues->type);
         }
 
         // fnBlock
@@ -2348,7 +2348,7 @@ static void parseClosureLiteral(Umka *umka, const Type **type, Const *constant)
 
         doPushConst(umka, fn->type, &fnConstant);
 
-        genChangeRefCntAssign(&umka->gen, fn->type);
+        genRefCntAssign(&umka->gen, fn->type);
 
         doPushVarPtr(umka, closureIdent);
     }
@@ -3083,7 +3083,7 @@ void parseExpr(Umka *umka, const Type **type, Const *constant)
 
                 // Copy result to temporary variable
                 genDup(&umka->gen);
-                genChangeRefCnt(&umka->gen, TOK_PLUSPLUS, leftType);
+                genRefCnt(&umka->gen, TOK_PLUSPLUS, leftType);
                 doPushVarPtr(umka, ternaryResult);
                 genSwapAssign(&umka->gen, ternaryResult->type->kind, typeSize(&umka->types, ternaryResult->type));
             }
@@ -3107,7 +3107,7 @@ void parseExpr(Umka *umka, const Type **type, Const *constant)
             {
                 // Copy result to temporary variable
                 genDup(&umka->gen);
-                genChangeRefCnt(&umka->gen, TOK_PLUSPLUS, leftType);
+                genRefCnt(&umka->gen, TOK_PLUSPLUS, leftType);
                 doPushVarPtr(umka, ternaryResult);
                 genSwapAssign(&umka->gen, ternaryResult->type->kind, typeSize(&umka->types, ternaryResult->type));
             }
@@ -3208,7 +3208,7 @@ void parseExprList(Umka *umka, const Type **type, Const *constant)
             else
             {
                 genPushLocalPtr(&umka->gen, exprList->offset + field->offset);
-                genSwapChangeRefCntAssign(&umka->gen, field->type);
+                genSwapRefCntAssign(&umka->gen, field->type);
             }
         }
 

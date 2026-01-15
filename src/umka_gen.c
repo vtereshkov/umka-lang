@@ -202,11 +202,11 @@ static bool optimizeSwapAssign(CodeGen *gen, TypeKind typeKind, int structSize)
 }
 
 
-static bool optimizeChangeRefCnt(CodeGen *gen, const Type *type)
+static bool optimizeRefCnt(CodeGen *gen, const Type *type)
 {
     Instruction *prev = getPrevInstr(gen, 1);
 
-    // Optimization: PUSH ^ + CHANGE_REF_CNT -> PUSH ^
+    // Optimization: PUSH ^ + REF_CNT -> PUSH ^
     if (prev && prev->opcode == OP_PUSH && prev->inlineOpcode == OP_NOP && prev->typeKind == TYPE_PTR && (type->kind == TYPE_PTR || type->kind == TYPE_STR))
     {
         genUnnotify(gen);
@@ -630,41 +630,41 @@ void genAssignParam(CodeGen *gen, TypeKind typeKind, int structSize)
 }
 
 
-void genChangeRefCnt(CodeGen *gen, TokenKind tokKind, const Type *type)
+void genRefCnt(CodeGen *gen, TokenKind tokKind, const Type *type)
 {
-    if (typeGarbageCollected(type) && !optimizeChangeRefCnt(gen, type))
+    if (typeGarbageCollected(type) && !optimizeRefCnt(gen, type))
     {
-        const Instruction instr = {.opcode = OP_CHANGE_REF_CNT, .tokKind = tokKind, .type = type};
+        const Instruction instr = {.opcode = OP_REF_CNT, .tokKind = tokKind, .type = type};
         genAddInstr(gen, &instr);
     }
 }
 
 
-void genChangeRefCntGlobal(CodeGen *gen, TokenKind tokKind, void *ptrVal, const Type *type)
+void genRefCntGlobal(CodeGen *gen, TokenKind tokKind, void *ptrVal, const Type *type)
 {
     if (typeGarbageCollected(type))
     {
-        const Instruction instr = {.opcode = OP_CHANGE_REF_CNT_GLOBAL, .tokKind = tokKind, .operand.ptrVal = ptrVal, .type = type};
+        const Instruction instr = {.opcode = OP_REF_CNT_GLOBAL, .tokKind = tokKind, .operand.ptrVal = ptrVal, .type = type};
         genAddInstr(gen, &instr);
     }
 }
 
 
-void genChangeRefCntLocal(CodeGen *gen, TokenKind tokKind, int offset, const Type *type)
+void genRefCntLocal(CodeGen *gen, TokenKind tokKind, int offset, const Type *type)
 {
     if (typeGarbageCollected(type))
     {
-        const Instruction instr = {.opcode = OP_CHANGE_REF_CNT_LOCAL, .tokKind = tokKind, .operand.intVal = offset, .type = type};
+        const Instruction instr = {.opcode = OP_REF_CNT_LOCAL, .tokKind = tokKind, .operand.intVal = offset, .type = type};
         genAddInstr(gen, &instr);
     }
 }
 
 
-void genChangeRefCntAssign(CodeGen *gen, const Type *type)
+void genRefCntAssign(CodeGen *gen, const Type *type)
 {
     if (typeGarbageCollected(type))
     {
-        const Instruction instr = {.opcode = OP_CHANGE_REF_CNT_ASSIGN, .tokKind = TOK_NONE, .type = type};
+        const Instruction instr = {.opcode = OP_REF_CNT_ASSIGN, .tokKind = TOK_NONE, .type = type};
         genAddInstr(gen, &instr);
     }
     else
@@ -672,11 +672,11 @@ void genChangeRefCntAssign(CodeGen *gen, const Type *type)
 }
 
 
-void genSwapChangeRefCntAssign(CodeGen *gen, const Type *type)
+void genSwapRefCntAssign(CodeGen *gen, const Type *type)
 {
     if (typeGarbageCollected(type))
     {
-        const Instruction instr = {.opcode = OP_CHANGE_REF_CNT_ASSIGN, .inlineOpcode = OP_SWAP, .tokKind = TOK_NONE, .type = type};
+        const Instruction instr = {.opcode = OP_REF_CNT_ASSIGN, .inlineOpcode = OP_SWAP, .tokKind = TOK_NONE, .type = type};
         genAddInstr(gen, &instr);
     }
     else
@@ -684,11 +684,11 @@ void genSwapChangeRefCntAssign(CodeGen *gen, const Type *type)
 }
 
 
-void genChangeLeftRefCntAssign(CodeGen *gen, const Type *type)
+void genLeftRefCntAssign(CodeGen *gen, const Type *type)
 {
     if (typeGarbageCollected(type))
     {
-        const Instruction instr = {.opcode = OP_CHANGE_REF_CNT_ASSIGN, .tokKind = TOK_MINUSMINUS, .type = type};
+        const Instruction instr = {.opcode = OP_REF_CNT_ASSIGN, .tokKind = TOK_MINUSMINUS, .type = type};
         genAddInstr(gen, &instr);
     }
     else

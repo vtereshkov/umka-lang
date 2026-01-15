@@ -26,9 +26,9 @@ static void doGarbageCollectionAt(Umka *umka, int block)
         if (blockFound && ident->garbageCollected && (!ident->temporary || ident->used))
         {
             if (ident->block == 0)
-                genChangeRefCntGlobal(&umka->gen, TOK_MINUSMINUS, ident->ptr, ident->type);
+                genRefCntGlobal(&umka->gen, TOK_MINUSMINUS, ident->ptr, ident->type);
             else
-                genChangeRefCntLocal(&umka->gen, TOK_MINUSMINUS, ident->offset, ident->type);
+                genRefCntLocal(&umka->gen, TOK_MINUSMINUS, ident->offset, ident->type);
         }
     }
 }
@@ -200,13 +200,13 @@ static void parseSingleAssignmentStmt(Umka *umka, const Type *type, Const *varPt
         {
             // Optimization: if the right-hand side is a function call, assume its reference count to be already increased before return
             // The left-hand side will hold this additional reference, so we can remove the temporary "reference holder" variable
-            genChangeLeftRefCntAssign(&umka->gen, type);
+            genLeftRefCntAssign(&umka->gen, type);
 
         }
         else
         {
             // General case: update reference counts for both sides
-            genChangeRefCntAssign(&umka->gen, type);
+            genRefCntAssign(&umka->gen, type);
         }
     }
 }
@@ -261,7 +261,7 @@ static void parseListAssignmentStmt(Umka *umka, const Type *type, Const *varPtrC
 
             doAssertImplicitTypeConv(umka, leftType, &rightType, NULL);
 
-            genChangeRefCntAssign(&umka->gen, leftType);                    // Assign expression to variable
+            genRefCntAssign(&umka->gen, leftType);                    // Assign expression to variable
             genPushReg(&umka->gen, REG_EXPR_LIST);                          // Restore expression list pointer
         }
     }
@@ -303,7 +303,7 @@ static void parseShortAssignmentStmt(Umka *umka, const Type *type, TokenKind op)
     const TokenKind shortOp = (leftType->kind == TYPE_STR && op == TOK_PLUSEQ) ? op : lexShortAssignment(op);
 
     doApplyOperator(umka, &leftType, &rightType, NULL, NULL, shortOp, true, false);
-    genChangeRefCntAssign(&umka->gen, type);
+    genRefCntAssign(&umka->gen, type);
 }
 
 
@@ -331,7 +331,7 @@ static void parseSingleDeclAssignmentStmt(Umka *umka, IdentName name, bool expor
         else
         {
             // General case: increase right-hand side reference count
-            genChangeRefCnt(&umka->gen, TOK_PLUSPLUS, rightType);
+            genRefCnt(&umka->gen, TOK_PLUSPLUS, rightType);
         }
 
         doPushVarPtr(umka, ident);
@@ -393,11 +393,11 @@ static void parseListDeclAssignmentStmt(Umka *umka, IdentName *names, const bool
                 doAssertImplicitTypeConv(umka, ident->type, &rightType, NULL);
 
                 doPushVarPtr(umka, ident);
-                genSwapChangeRefCntAssign(&umka->gen, ident->type);                                 // Assign expression to variable - both left-hand and right-hand side reference counts modified
+                genSwapRefCntAssign(&umka->gen, ident->type);                                 // Assign expression to variable - both left-hand and right-hand side reference counts modified
             }
             else
             {
-                genChangeRefCnt(&umka->gen, TOK_PLUSPLUS, rightType);                               // Increase right-hand side reference count
+                genRefCnt(&umka->gen, TOK_PLUSPLUS, rightType);                               // Increase right-hand side reference count
                 doPushVarPtr(umka, ident);
                 genSwapAssign(&umka->gen, ident->type->kind, typeSize(&umka->types, ident->type));  // Assign expression to variable
             }
@@ -626,7 +626,7 @@ static void parseTypeCase(Umka *umka, const char *concreteVarName, ConstArray *e
         genDeref(&umka->gen, concreteType->kind);
 
     doPushVarPtr(umka, concreteIdent);
-    genSwapChangeRefCntAssign(&umka->gen, concreteType);
+    genSwapRefCntAssign(&umka->gen, concreteType);
 
     parseStmtList(umka);
 
@@ -950,7 +950,7 @@ static void parseForInHeader(Umka *umka, ForPostStmt *postStmt)
         collectionIdent = identAllocVar(&umka->idents, &umka->types, &umka->modules, &umka->blocks, "#collection", collectionIdentType, false);
         doZeroVar(umka, collectionIdent);
         doPushVarPtr(umka, collectionIdent);
-        genSwapChangeRefCntAssign(&umka->gen, collectionIdent->type);
+        genSwapRefCntAssign(&umka->gen, collectionIdent->type);
     }
     else
     {
@@ -1034,7 +1034,7 @@ static void parseForInHeader(Umka *umka, ForPostStmt *postStmt)
         genDeref(&umka->gen, keyIdent->type->kind);
 
         doPushVarPtr(umka, keyIdent);
-        genSwapChangeRefCntAssign(&umka->gen, keyIdent->type);
+        genSwapRefCntAssign(&umka->gen, keyIdent->type);
     }
 
     // Assign collection item
@@ -1071,7 +1071,7 @@ static void parseForInHeader(Umka *umka, ForPostStmt *postStmt)
 
         // Assign collection item to iteration variable
         doPushVarPtr(umka, itemIdent);
-        genSwapChangeRefCntAssign(&umka->gen, itemIdent->type);
+        genSwapRefCntAssign(&umka->gen, itemIdent->type);
     }
 }
 
@@ -1217,7 +1217,7 @@ static void parseReturnStmt(Umka *umka)
         else
         {
             // General case: increase result reference count
-            genChangeRefCnt(&umka->gen, TOK_PLUSPLUS, sig->resultType);
+            genRefCnt(&umka->gen, TOK_PLUSPLUS, sig->resultType);
         }
         genPopReg(&umka->gen, REG_RESULT);
     }
@@ -1340,7 +1340,7 @@ void parseFnBlock(Umka *umka, Ident *fn, const Type *upvaluesStructType)
             doZeroVar(umka, upvalueIdent);
             doPushVarPtr(umka, upvalueIdent);
 
-            genSwapChangeRefCntAssign(&umka->gen, upvalue->type);
+            genSwapRefCntAssign(&umka->gen, upvalue->type);
         }
 
         genPop(&umka->gen);

@@ -65,10 +65,10 @@ typedef enum
     OP_DEREF,
     OP_ASSIGN,
     OP_ASSIGN_PARAM,
-    OP_CHANGE_REF_CNT,
-    OP_CHANGE_REF_CNT_GLOBAL,
-    OP_CHANGE_REF_CNT_LOCAL,
-    OP_CHANGE_REF_CNT_ASSIGN,
+    OP_REF_CNT,
+    OP_REF_CNT_GLOBAL,
+    OP_REF_CNT_LOCAL,
+    OP_REF_CNT_ASSIGN,
     OP_UNARY,
     OP_BINARY,
     OP_GET_ARRAY_PTR,
@@ -159,15 +159,15 @@ typedef struct
     void *ptr;
     const Type *type;
     HeapPage *pageForDeferred;   // Mandatory for deferred ref count updates, NULL otherwise
-} RefCntChangeCandidate;
+} RefCntCandidate;
 
 
 typedef struct
 {
-    RefCntChangeCandidate *stack;
+    RefCntCandidate *stack;
     int top, capacity;
     Storage *storage;
-} RefCntChangeCandidates;
+} RefCntCandidates;
 
 
 typedef struct tagFiber
@@ -180,7 +180,7 @@ typedef struct tagFiber
     Slot reg[NUM_REGS];
     struct tagFiber *parent;
     const DebugInfo *debugPerInstr;
-    RefCntChangeCandidates *refCntChangeCandidates;
+    RefCntCandidates *refCntCandidates;
     struct tagVM *vm;
     bool alive;
     bool fileSystemEnabled;
@@ -191,7 +191,7 @@ typedef struct tagVM
 {
     Fiber *fiber, *mainFiber;
     HeapPages pages;
-    RefCntChangeCandidates refCntChangeCandidates;
+    RefCntCandidates refCntCandidates;
     UmkaHookFunc hooks[UMKA_NUM_HOOKS];
     bool terminatedNormally;
     Storage *storage;
