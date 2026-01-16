@@ -1049,7 +1049,7 @@ static FORCE_INLINE void doAddStructFieldsRefCntCandidates(RefCntCandidates *can
 }
 
 
-static FORCE_INLINE void doRefCntImpl(Fiber *fiber, HeapPages *pages, void *ptr, const Type *type, TokenKind tokKind)
+static void doRefCntImpl(Fiber *fiber, HeapPages *pages, void *ptr, const Type *type, TokenKind tokKind)
 {
     // Update ref counts for pointers (including static/dynamic array items and structure/interface fields) if allocated dynamically
     // All garbage collected composite types are represented by pointers by default
