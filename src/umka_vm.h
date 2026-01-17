@@ -51,6 +51,7 @@ typedef enum
 {
     OP_NOP,
     OP_PUSH,
+    OP_PUSH_GLOBAL,
     OP_PUSH_ZERO,
     OP_PUSH_LOCAL_PTR,
     OP_PUSH_LOCAL_PTR_ZERO,
@@ -64,17 +65,23 @@ typedef enum
     OP_ZERO,
     OP_DEREF,
     OP_ASSIGN,
+    OP_SWAP_ASSIGN,
     OP_ASSIGN_PARAM,
     OP_REF_CNT,
     OP_REF_CNT_GLOBAL,
     OP_REF_CNT_LOCAL,
     OP_REF_CNT_ASSIGN,
+    OP_SWAP_REF_CNT_ASSIGN,
     OP_UNARY,
     OP_BINARY,
     OP_GET_ARRAY_PTR,
+    OP_GET_ARRAY,
     OP_GET_DYNARRAY_PTR,
+    OP_GET_DYNARRAY,
     OP_GET_MAP_PTR,
+    OP_GET_MAP,
     OP_GET_FIELD_PTR,
+    OP_GET_FIELD,
     OP_ASSERT_TYPE,
     OP_ASSERT_RANGE,
     OP_WEAKEN_PTR,
@@ -109,8 +116,7 @@ typedef union               // Extended version of UmkaStackSlot
 typedef struct
 {
     Opcode opcode;
-    Opcode inlineOpcode;         // Inlined instruction (DEREF, SWAP): PUSH + DEREF, SWAP + ASSIGN etc.
-    TokenKind tokKind;           // Unary/binary operation token
+    TokenKind tokKind;
     TypeKind typeKind;
     const Type *type;
     Slot operand;

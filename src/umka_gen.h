@@ -54,6 +54,7 @@ void genPushIntConst    (CodeGen *gen, int64_t intVal);
 void genPushUIntConst   (CodeGen *gen, uint64_t uintVal);
 void genPushRealConst   (CodeGen *gen, double realVal);
 void genPushGlobalPtr   (CodeGen *gen, void *ptrVal);
+void genPushGlobal      (CodeGen *gen, TypeKind typeKind, void *ptrVal);
 void genPushLocalPtr    (CodeGen *gen, int offset);
 void genPushLocalPtrZero(CodeGen *gen, int offset, int size);
 void genPushLocal       (CodeGen *gen, TypeKind typeKind, int offset);

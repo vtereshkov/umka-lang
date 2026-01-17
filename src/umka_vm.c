@@ -65,6 +65,7 @@ static const char *opcodeSpelling [] =
 {
     "NOP",
     "PUSH",
+    "PUSH_GLOBAL",
     "PUSH_ZERO",
     "PUSH_LOCAL_PTR",
     "PUSH_LOCAL_PTR_ZERO",
@@ -78,17 +79,23 @@ static const char *opcodeSpelling [] =
     "ZERO",
     "DEREF",
     "ASSIGN",
+    "SWAP_ASSIGN",
     "ASSIGN_PARAM",
     "REF_CNT",
     "REF_CNT_GLOBAL",
     "REF_CNT_LOCAL",
     "REF_CNT_ASSIGN",
+    "SWAP_REF_CNT_ASSIGN",
     "UNARY",
     "BINARY",
     "GET_ARRAY_PTR",
+    "GET_ARRAY",
     "GET_DYNARRAY_PTR",
+    "GET_DYNARRAY",
     "GET_MAP_PTR",
+    "GET_MAP",
     "GET_FIELD_PTR",
+    "GET_FIELD",
     "ASSERT_TYPE",
     "ASSERT_RANGE",
     "WEAKEN_PTR",
@@ -2927,10 +2934,14 @@ static FORCE_INLINE void doBuiltinExit(Fiber *fiber, Error *error)
 static FORCE_INLINE void doPush(Fiber *fiber, Error *error)
 {
     (--fiber->top)->intVal = fiber->code[fiber->ip].operand.intVal;
+    fiber->ip++;
+}
 
-    if (fiber->code[fiber->ip].inlineOpcode == OP_DEREF)
-        doDerefImpl(fiber->top, fiber->code[fiber->ip].typeKind, error);
 
+static FORCE_INLINE void doPushGlobal(Fiber *fiber, Error *error)
+{
+    (--fiber->top)->ptrVal = fiber->code[fiber->ip].operand.ptrVal;
+    doDerefImpl(fiber->top, fiber->code[fiber->ip].typeKind, error);
     fiber->ip++;
 }
 
@@ -3036,13 +3047,21 @@ static FORCE_INLINE void doDeref(Fiber *fiber, Error *error)
 }
 
 
-static FORCE_INLINE void doAssign(Fiber *fiber, Error *error)
+static FORCE_INLINE void doAssign(Fiber *fiber, bool swap, Error *error)
 {
-    if (fiber->code[fiber->ip].inlineOpcode == OP_SWAP)
-        doSwapImpl(fiber->top);
-
-    const Slot rhs = *fiber->top++;
-    void *lhs = (fiber->top++)->ptrVal;
+    Slot rhs;
+    void *lhs;
+    
+    if (swap)
+    {
+        lhs = (fiber->top++)->ptrVal;
+        rhs = *fiber->top++; 
+    }
+    else
+    {
+        rhs = *fiber->top++;
+        lhs = (fiber->top++)->ptrVal;        
+    }
 
     doAssignImpl(lhs, rhs, fiber->code[fiber->ip].typeKind, fiber->code[fiber->ip].operand.intVal, error);
     fiber->ip++;
@@ -3110,13 +3129,22 @@ static FORCE_INLINE void doRefCntLocal(Fiber *fiber, HeapPages *pages, Error *er
 }
 
 
-static FORCE_INLINE void doRefCntAssign(Fiber *fiber, HeapPages *pages, Error *error)
+static FORCE_INLINE void doRefCntAssign(Fiber *fiber, HeapPages *pages, bool swap, Error *error)
 {
-    if (fiber->code[fiber->ip].inlineOpcode == OP_SWAP)
-        doSwapImpl(fiber->top);
+    Slot rhs;
+    void *lhs;
 
-    const Slot rhs = *fiber->top++;
-    void *lhs = (fiber->top++)->ptrVal;
+    if (swap)
+    {
+        lhs = (fiber->top++)->ptrVal;
+        rhs = *fiber->top++; 
+    }
+    else
+    {
+        rhs = *fiber->top++;
+        lhs = (fiber->top++)->ptrVal;        
+    }
+
     const Type *type = fiber->code[fiber->ip].type;
 
     // Increase right-hand side ref count
@@ -3424,7 +3452,7 @@ static FORCE_INLINE void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
 }
 
 
-static FORCE_INLINE void doGetArrayPtr(Fiber *fiber, Error *error)
+static FORCE_INLINE void doGetArrayPtr(Fiber *fiber, bool dereference, Error *error)
 {
     const int64_t itemSize = fiber->code[fiber->ip].operand.int32Val[0];
     int64_t len = fiber->code[fiber->ip].operand.int32Val[1];
@@ -3450,14 +3478,14 @@ static FORCE_INLINE void doGetArrayPtr(Fiber *fiber, Error *error)
 
     fiber->top->ptrVal = data + itemSize * index;
 
-    if (fiber->code[fiber->ip].inlineOpcode == OP_DEREF)
+    if (dereference)
         doDerefImpl(fiber->top, fiber->code[fiber->ip].typeKind, error);
 
     fiber->ip++;
 }
 
 
-static FORCE_INLINE void doGetDynArrayPtr(Fiber *fiber, Error *error)
+static FORCE_INLINE void doGetDynArrayPtr(Fiber *fiber, bool dereference, Error *error)
 {
     const int64_t index = (fiber->top++)->intVal;
     const DynArray *array = (fiber->top++)->ptrVal;
@@ -3473,14 +3501,14 @@ static FORCE_INLINE void doGetDynArrayPtr(Fiber *fiber, Error *error)
 
     (--fiber->top)->ptrVal = (char *)array->data + itemSize * index;
 
-    if (fiber->code[fiber->ip].inlineOpcode == OP_DEREF)
+    if (dereference)
         doDerefImpl(fiber->top, fiber->code[fiber->ip].typeKind, error);
 
     fiber->ip++;
 }
 
 
-static FORCE_INLINE void doGetMapPtr(Fiber *fiber, HeapPages *pages, Error *error)
+static FORCE_INLINE void doGetMapPtr(Fiber *fiber, HeapPages *pages, bool dereference, Error *error)
 {
     const Slot key = *fiber->top++;
     Map *map = (fiber->top++)->ptrVal;
@@ -3512,12 +3540,16 @@ static FORCE_INLINE void doGetMapPtr(Fiber *fiber, HeapPages *pages, Error *erro
         map->root->len++;
     }
 
-    (--fiber->top)->ptrVal = node->data;
+    (--fiber->top)->ptrVal = node->data;    
+
+    if (dereference)
+        doDerefImpl(fiber->top, fiber->code[fiber->ip].typeKind, error);    
+
     fiber->ip++;
 }
 
 
-static FORCE_INLINE void doGetFieldPtr(Fiber *fiber, Error *error)
+static FORCE_INLINE void doGetFieldPtr(Fiber *fiber, bool dereference, Error *error)
 {
     const int64_t fieldOffset = fiber->code[fiber->ip].operand.intVal;
 
@@ -3526,7 +3558,7 @@ static FORCE_INLINE void doGetFieldPtr(Fiber *fiber, Error *error)
 
     fiber->top->ptrVal = (char *)fiber->top->ptrVal + fieldOffset;
 
-    if (fiber->code[fiber->ip].inlineOpcode == OP_DEREF)
+    if (dereference)
         doDerefImpl(fiber->top, fiber->code[fiber->ip].typeKind, error);
 
     fiber->ip++;
@@ -3886,6 +3918,7 @@ static void vmLoop(VM *vm)
         switch (fiber->code[fiber->ip].opcode)
         {
             case OP_PUSH:                           doPush(fiber, error);                         break;
+            case OP_PUSH_GLOBAL:                    doPushGlobal(fiber, error);                   break;
             case OP_PUSH_ZERO:                      doPushZero(fiber, error);                     break;
             case OP_PUSH_LOCAL_PTR:                 doPushLocalPtr(fiber);                        break;
             case OP_PUSH_LOCAL_PTR_ZERO:            doPushLocalPtrZero(fiber);                    break;
@@ -3898,18 +3931,24 @@ static void vmLoop(VM *vm)
             case OP_SWAP:                           doSwap(fiber);                                break;
             case OP_ZERO:                           doZero(fiber);                                break;
             case OP_DEREF:                          doDeref(fiber, error);                        break;
-            case OP_ASSIGN:                         doAssign(fiber, error);                       break;
+            case OP_ASSIGN:                         doAssign(fiber, false, error);                break;
+            case OP_SWAP_ASSIGN:                    doAssign(fiber, true, error);                 break;
             case OP_ASSIGN_PARAM:                   doAssignParam(fiber, error);                  break;
-            case OP_REF_CNT:                        doRefCnt(fiber, pages);                 break;
-            case OP_REF_CNT_GLOBAL:                 doRefCntGlobal(fiber, pages, error);    break;
-            case OP_REF_CNT_LOCAL:                  doRefCntLocal(fiber, pages, error);     break;
-            case OP_REF_CNT_ASSIGN:                 doRefCntAssign(fiber, pages, error);    break;
+            case OP_REF_CNT:                        doRefCnt(fiber, pages);                       break;
+            case OP_REF_CNT_GLOBAL:                 doRefCntGlobal(fiber, pages, error);          break;
+            case OP_REF_CNT_LOCAL:                  doRefCntLocal(fiber, pages, error);           break;
+            case OP_REF_CNT_ASSIGN:                 doRefCntAssign(fiber, pages, false, error);   break;
+            case OP_SWAP_REF_CNT_ASSIGN:            doRefCntAssign(fiber, pages, true, error);    break;
             case OP_UNARY:                          doUnary(fiber, error);                        break;
             case OP_BINARY:                         doBinary(fiber, pages, error);                break;
-            case OP_GET_ARRAY_PTR:                  doGetArrayPtr(fiber, error);                  break;
-            case OP_GET_DYNARRAY_PTR:               doGetDynArrayPtr(fiber, error);               break;
-            case OP_GET_MAP_PTR:                    doGetMapPtr(fiber, pages, error);             break;
-            case OP_GET_FIELD_PTR:                  doGetFieldPtr(fiber, error);                  break;
+            case OP_GET_ARRAY_PTR:                  doGetArrayPtr(fiber, false, error);           break;
+            case OP_GET_ARRAY:                      doGetArrayPtr(fiber, true, error);            break;
+            case OP_GET_DYNARRAY_PTR:               doGetDynArrayPtr(fiber, false, error);        break;
+            case OP_GET_DYNARRAY:                   doGetDynArrayPtr(fiber, true, error);         break;
+            case OP_GET_MAP_PTR:                    doGetMapPtr(fiber, pages, false, error);      break;
+            case OP_GET_MAP:                        doGetMapPtr(fiber, pages, true, error);       break;
+            case OP_GET_FIELD_PTR:                  doGetFieldPtr(fiber, false, error);           break;
+            case OP_GET_FIELD:                      doGetFieldPtr(fiber, true, error);            break;
             case OP_ASSERT_TYPE:                    doAssertType(fiber);                          break;
             case OP_ASSERT_RANGE:                   doAssertRange(fiber, error);                  break;
             case OP_WEAKEN_PTR:                     doWeakenPtr(fiber, pages);                    break;
@@ -4027,7 +4066,7 @@ int vmAsm(int ip, const Instruction *code, const DebugInfo *debugPerInstr, const
     const DebugInfo *debug = &debugPerInstr[ip];
 
     char opcodeBuf[DEFAULT_STR_LEN + 1];
-    snprintf(opcodeBuf, DEFAULT_STR_LEN + 1, "%s%s", instr->inlineOpcode == OP_SWAP ? "SWAP; " : "", opcodeSpelling[instr->opcode]);
+    snprintf(opcodeBuf, DEFAULT_STR_LEN + 1, "%s", opcodeSpelling[instr->opcode]);
     int chars = snprintf(buf, size, "%09d %6d %28s", ip, debug->line, opcodeBuf);
 
     if (instr->tokKind != TOK_NONE)
@@ -4039,7 +4078,7 @@ int vmAsm(int ip, const Instruction *code, const DebugInfo *debugPerInstr, const
         chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %s", typeSpelling(instr->type, typeBuf));
     }
 
-    if (instr->typeKind != TYPE_NONE && (!instr->type || instr->opcode == OP_ASSERT_RANGE))
+    if (instr->typeKind != TYPE_NONE && (!instr->type || instr->opcode == OP_ASSERT_RANGE || instr->opcode == OP_GET_MAP))
         chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %s", typeKindSpelling(instr->typeKind));
 
     char varBuf[DEFAULT_STR_LEN + 1];
@@ -4048,8 +4087,8 @@ int vmAsm(int ip, const Instruction *code, const DebugInfo *debugPerInstr, const
     {
         case OP_PUSH:
         {
-            if (instr->typeKind == TYPE_PTR || instr->inlineOpcode == OP_DEREF)
-                chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %s", identPtrSpelling(idents, instr->operand.ptrVal, varBuf));
+            if (instr->typeKind == TYPE_PTR)
+                chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %s", identSpellingByPtr(idents, instr->operand.ptrVal, varBuf));
             else if (instr->typeKind == TYPE_REAL)
                 chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %lg", instr->operand.realVal);
             else
@@ -4057,21 +4096,31 @@ int vmAsm(int ip, const Instruction *code, const DebugInfo *debugPerInstr, const
             break;
         }
         case OP_PUSH_REG:
-        case OP_POP_REG:                chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %s",  regSpelling[instr->operand.intVal]); break;
+        case OP_POP_REG:
+        {
+            chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %s", regSpelling[instr->operand.intVal]); 
+            break;
+        }
         case OP_PUSH_ZERO:
         case OP_PUSH_LOCAL_PTR:
         case OP_PUSH_LOCAL:
         case OP_POP:
         case OP_ZERO:
         case OP_ASSIGN:
+        case OP_SWAP_ASSIGN:
         case OP_ASSIGN_PARAM:
         case OP_REF_CNT_LOCAL:
         case OP_GET_FIELD_PTR:
+        case OP_GET_FIELD:
         case OP_GOTO:
         case OP_GOTO_IF:
         case OP_GOTO_IF_NOT:
         case OP_CALL_INDIRECT:
-        case OP_RETURN:                 chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %lld",  (long long int)instr->operand.intVal); break;
+        case OP_RETURN:                 
+        {
+            chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %lld", (long long int)instr->operand.intVal); 
+            break;
+        }
         case OP_CALL:
         {
             const char *fnName = debugPerInstr[instr->operand.intVal].fnName;
@@ -4079,17 +4128,32 @@ int vmAsm(int ip, const Instruction *code, const DebugInfo *debugPerInstr, const
             break;
         }
         case OP_PUSH_LOCAL_PTR_ZERO:
-        case OP_GET_ARRAY_PTR:          chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %d %d", (int)instr->operand.int32Val[0], (int)instr->operand.int32Val[1]); break;
-        case OP_REF_CNT_GLOBAL:  chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %s",    identPtrSpelling(idents, instr->operand.ptrVal, varBuf)); break;
+        case OP_GET_ARRAY_PTR:
+        case OP_GET_ARRAY:              
+        {
+            chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %d %d", (int)instr->operand.int32Val[0], (int)instr->operand.int32Val[1]); 
+            break;
+        }
+        case OP_PUSH_GLOBAL:       
+        case OP_REF_CNT_GLOBAL:
+        {
+            chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %s", identSpellingByPtr(idents, instr->operand.ptrVal, varBuf)); 
+            break;
+        }
         case OP_ENTER_FRAME:
-        case OP_CALL_EXTERN:            chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %p",    instr->operand.ptrVal); break;
-        case OP_CALL_BUILTIN:           chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %s",    builtinSpelling[instr->operand.builtinVal]); break;
-
-        default: break;
+        case OP_CALL_EXTERN:            
+        {
+            chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %p",instr->operand.ptrVal); 
+            break;
+        }
+        case OP_CALL_BUILTIN:
+        {
+            chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %s", builtinSpelling[instr->operand.builtinVal]); 
+            break;
+        }
+        default: 
+            break;
     }
-
-    if (instr->inlineOpcode == OP_DEREF)
-        chars += snprintf(nonnull(buf, chars), nonneg(size - chars), "; DEREF");
 
     return chars;
 }

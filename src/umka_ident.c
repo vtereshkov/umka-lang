@@ -394,7 +394,7 @@ static bool identIsGarbageCollected(const Blocks *blocks, const Ident *ident)
 }
 
 
-const char *identPtrSpelling(const Idents *idents, const void *ptr, char *buf)
+const char *identSpellingByPtr(const Idents *idents, const void *ptr, char *buf)
 {
     for (const Ident *ident = idents->first; ident; ident = ident->next)
     {
