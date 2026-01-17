@@ -213,6 +213,13 @@ static bool optimizeRefCnt(CodeGen *gen, const Type *type)
         return true;
     }
 
+    // Optimization: PUSH_LOCAL_PTR_ZERO + REF_CNT (structured type) -> PUSH_LOCAL_PTR_ZERO
+    if (prev && prev->opcode == OP_PUSH_LOCAL_PTR_ZERO && typeStructured(type))
+    {
+        genUnnotify(gen);
+        return true;
+    }    
+
     return false;
 }
 

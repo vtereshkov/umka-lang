@@ -1725,20 +1725,31 @@ static void parseVariadicParamList(Umka *umka, const Type **type)
         lexNext(&umka->lex);
     }
 
-    // Allocate array
-    const int staticArrayOffset = identAllocStack(&umka->idents, &umka->types, &umka->blocks, staticArrayType);
-
-    // Assign items
-    for (int i = staticArrayType->numItems - 1; i >= 0; i--)
+    if (staticArrayType->numItems > 0)
     {
-        genPushLocalPtr(&umka->gen, staticArrayOffset + i * itemSize);
-        genSwapAssign(&umka->gen, staticArrayType->base->kind, staticArrayType->base->size);
+        // Allocate array
+        const int staticArrayOffset = identAllocStack(&umka->idents, &umka->types, &umka->blocks, staticArrayType);
+
+        // Assign items
+        for (int i = staticArrayType->numItems - 1; i >= 0; i--)
+        {
+            genPushLocalPtr(&umka->gen, staticArrayOffset + i * itemSize);
+            genSwapAssign(&umka->gen, staticArrayType->base->kind, staticArrayType->base->size);
+        }
+
+        genPushLocalPtr(&umka->gen, staticArrayOffset);
+
+        // Convert to dynamic array
+        doAssertImplicitTypeConv(umka, *type, (const Type **)&staticArrayType, NULL);        
     }
-
-    genPushLocalPtr(&umka->gen, staticArrayOffset);
-
-    // Convert to dynamic array
-    doAssertImplicitTypeConv(umka, *type, (const Type **)&staticArrayType, NULL);
+    else
+    {
+        const int resultOffset = identAllocStack(&umka->idents, &umka->types, &umka->blocks, *type);
+        
+        genPushLocalPtr(&umka->gen, resultOffset);
+        genZero(&umka->gen, typeSize(&umka->types, *type));
+        genPushLocalPtr(&umka->gen, resultOffset);
+    }
 }
 
 
@@ -2133,36 +2144,54 @@ static void parseDynArrayLiteral(Umka *umka, const Type **type, Const *constant)
 
     lexEat(&umka->lex, TOK_RBRACE);
 
-    if (constant)
+    if (staticArrayType->numItems > 0)
     {
-        // Allocate array
-        Const constStaticArray = {.ptrVal = storageAdd(&umka->storage, staticArrayType->numItems * itemSize)};
+        if (constant)
+        {
+            // Allocate array
+            Const constStaticArray = {.ptrVal = storageAdd(&umka->storage, staticArrayType->numItems * itemSize)};
 
-        // Assign items
-        for (int i = staticArrayType->numItems - 1; i >= 0; i--)
-            constAssign(&umka->consts, (char *)constStaticArray.ptrVal + i * itemSize, &constItems.data[i], staticArrayType->base->kind, itemSize);
+            // Assign items
+            for (int i = staticArrayType->numItems - 1; i >= 0; i--)
+                constAssign(&umka->consts, (char *)constStaticArray.ptrVal + i * itemSize, &constItems.data[i], staticArrayType->base->kind, itemSize);
 
-        constArrayFree(&constItems);
+            constArrayFree(&constItems);
 
-        *constant = constStaticArray;
+            *constant = constStaticArray;
+        }
+        else
+        {
+            // Allocate array
+            const int staticArrayOffset = identAllocStack(&umka->idents, &umka->types, &umka->blocks, staticArrayType);
+
+            // Assign items
+            for (int i = staticArrayType->numItems - 1; i >= 0; i--)
+            {
+                genPushLocalPtr(&umka->gen, staticArrayOffset + i * itemSize);
+                genSwapAssign(&umka->gen, staticArrayType->base->kind, staticArrayType->base->size);
+            }
+
+            genPushLocalPtr(&umka->gen, staticArrayOffset);
+        }
+
+        // Convert to dynamic array
+        doAssertImplicitTypeConv(umka, *type, (const Type **)&staticArrayType, constant);
     }
     else
     {
-        // Allocate array
-        const int staticArrayOffset = identAllocStack(&umka->idents, &umka->types, &umka->blocks, staticArrayType);
-
-        // Assign items
-        for (int i = staticArrayType->numItems - 1; i >= 0; i--)
+        if (constant)
         {
-            genPushLocalPtr(&umka->gen, staticArrayOffset + i * itemSize);
-            genSwapAssign(&umka->gen, staticArrayType->base->kind, staticArrayType->base->size);
+            constant->ptrVal = storageAddDynArray(&umka->storage, *type, 0);
         }
-
-        genPushLocalPtr(&umka->gen, staticArrayOffset);
+        else
+        {
+            const int resultOffset = identAllocStack(&umka->idents, &umka->types, &umka->blocks, *type);
+            
+            genPushLocalPtr(&umka->gen, resultOffset);
+            genZero(&umka->gen, typeSize(&umka->types, *type));
+            genPushLocalPtr(&umka->gen, resultOffset);
+        }
     }
-
-    // Convert to dynamic array
-    doAssertImplicitTypeConv(umka, *type, (const Type **)&staticArrayType, constant);
 }
 
 
