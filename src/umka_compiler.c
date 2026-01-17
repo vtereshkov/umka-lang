@@ -58,58 +58,6 @@ static void compilerSetAPI(Umka *umka)
 }
 
 
-static void compilerDeclareBuiltinTypes(Umka *umka)
-{
-    umka->voidType    = typeAdd(&umka->types, &umka->blocks, TYPE_VOID);
-    umka->nullType    = typeAdd(&umka->types, &umka->blocks, TYPE_NULL);
-    umka->int8Type    = typeAdd(&umka->types, &umka->blocks, TYPE_INT8);
-    umka->int16Type   = typeAdd(&umka->types, &umka->blocks, TYPE_INT16);
-    umka->int32Type   = typeAdd(&umka->types, &umka->blocks, TYPE_INT32);
-    umka->intType     = typeAdd(&umka->types, &umka->blocks, TYPE_INT);
-    umka->uint8Type   = typeAdd(&umka->types, &umka->blocks, TYPE_UINT8);
-    umka->uint16Type  = typeAdd(&umka->types, &umka->blocks, TYPE_UINT16);
-    umka->uint32Type  = typeAdd(&umka->types, &umka->blocks, TYPE_UINT32);
-    umka->uintType    = typeAdd(&umka->types, &umka->blocks, TYPE_UINT);
-    umka->boolType    = typeAdd(&umka->types, &umka->blocks, TYPE_BOOL);
-    umka->charType    = typeAdd(&umka->types, &umka->blocks, TYPE_CHAR);
-    umka->real32Type  = typeAdd(&umka->types, &umka->blocks, TYPE_REAL32);
-    umka->realType    = typeAdd(&umka->types, &umka->blocks, TYPE_REAL);
-    umka->strType     = typeAdd(&umka->types, &umka->blocks, TYPE_STR);
-
-    umka->ptrVoidType = typeAddPtrTo(&umka->types, &umka->blocks, umka->voidType);
-    umka->ptrNullType = typeAddPtrTo(&umka->types, &umka->blocks, umka->nullType);
-
-    // any
-    Type *anyType = typeAdd(&umka->types, &umka->blocks, TYPE_INTERFACE);
-
-    typeAddField(&umka->types, anyType, umka->ptrVoidType, "#self");
-    typeAddField(&umka->types, anyType, umka->ptrVoidType, "#selftype");
-
-    umka->anyType = anyType;
-
-    // fiber
-    Type *fiberType = typeAdd(&umka->types, &umka->blocks, TYPE_FIBER);
-
-    Type *fnType = typeAdd(&umka->types, &umka->blocks, TYPE_FN);
-    typeAddParam(&umka->types, &fnType->sig, umka->anyType, "#upvalues", (Const){0});
-
-    fnType->sig.resultType = umka->voidType;
-
-    Type *fiberClosureType = typeAdd(&umka->types, &umka->blocks, TYPE_CLOSURE);
-    typeAddField(&umka->types, fiberClosureType, fnType, "#fn");
-    typeAddField(&umka->types, fiberClosureType, umka->anyType, "#upvalues");
-    fiberType->base = fiberClosureType;
-
-    umka->fiberType = fiberType;
-
-    // __file
-    Type *fileDataType = typeAdd(&umka->types, &umka->blocks, TYPE_STRUCT);
-    typeAddField(&umka->types, fileDataType, umka->ptrVoidType, "#stream");
-
-    umka->fileType = typeAddPtrTo(&umka->types, &umka->blocks, fileDataType);
-}
-
-
 static void compilerDeclareBuiltinIdents(Umka *umka)
 {
     // Constants
@@ -117,82 +65,82 @@ static void compilerDeclareBuiltinIdents(Umka *umka)
     Const falseConst = {.intVal = false};
     Const nullConst  = {.ptrVal = 0};
 
-    identAddConst(&umka->idents, &umka->modules, &umka->blocks, "true",  umka->boolType,    true, trueConst);
-    identAddConst(&umka->idents, &umka->modules, &umka->blocks, "false", umka->boolType,    true, falseConst);
-    identAddConst(&umka->idents, &umka->modules, &umka->blocks, "null",  umka->ptrNullType, true, nullConst);
+    identAddConst(&umka->idents, &umka->modules, &umka->blocks, "true",  umka->types.predecl.boolType,    true, trueConst);
+    identAddConst(&umka->idents, &umka->modules, &umka->blocks, "false", umka->types.predecl.boolType,    true, falseConst);
+    identAddConst(&umka->idents, &umka->modules, &umka->blocks, "null",  umka->types.predecl.ptrNullType, true, nullConst);
 
     // Types
-    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "void",     umka->voidType,    true);
-    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "int8",     umka->int8Type,    true);
-    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "int16",    umka->int16Type,   true);
-    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "int32",    umka->int32Type,   true);
-    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "int",      umka->intType,     true);
-    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "uint8",    umka->uint8Type,   true);
-    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "uint16",   umka->uint16Type,  true);
-    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "uint32",   umka->uint32Type,  true);
-    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "uint",     umka->uintType,    true);
-    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "bool",     umka->boolType,    true);
-    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "char",     umka->charType,    true);
-    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "real32",   umka->real32Type,  true);
-    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "real",     umka->realType,    true);
-    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "fiber",    umka->fiberType,   true);
-    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "any",      umka->anyType,     true);
-    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "__file",   umka->fileType,    true);
+    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "void",     umka->types.predecl.voidType,    true);
+    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "int8",     umka->types.predecl.int8Type,    true);
+    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "int16",    umka->types.predecl.int16Type,   true);
+    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "int32",    umka->types.predecl.int32Type,   true);
+    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "int",      umka->types.predecl.intType,     true);
+    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "uint8",    umka->types.predecl.uint8Type,   true);
+    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "uint16",   umka->types.predecl.uint16Type,  true);
+    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "uint32",   umka->types.predecl.uint32Type,  true);
+    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "uint",     umka->types.predecl.uintType,    true);
+    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "bool",     umka->types.predecl.boolType,    true);
+    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "char",     umka->types.predecl.charType,    true);
+    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "real32",   umka->types.predecl.real32Type,  true);
+    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "real",     umka->types.predecl.realType,    true);
+    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "fiber",    umka->types.predecl.fiberType,   true);
+    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "any",      umka->types.predecl.anyType,     true);
+    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "__file",   umka->types.predecl.fileType,    true);
 
     // Built-in functions
     // I/O
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "printf",     umka->intType,     BUILTIN_PRINTF);
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "fprintf",    umka->intType,     BUILTIN_FPRINTF);
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "sprintf",    umka->strType,     BUILTIN_SPRINTF);
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "scanf",      umka->intType,     BUILTIN_SCANF);
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "fscanf",     umka->intType,     BUILTIN_FSCANF);
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "sscanf",     umka->intType,     BUILTIN_SSCANF);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "printf",     umka->types.predecl.intType,     BUILTIN_PRINTF);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "fprintf",    umka->types.predecl.intType,     BUILTIN_FPRINTF);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "sprintf",    umka->types.predecl.strType,     BUILTIN_SPRINTF);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "scanf",      umka->types.predecl.intType,     BUILTIN_SCANF);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "fscanf",     umka->types.predecl.intType,     BUILTIN_FSCANF);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "sscanf",     umka->types.predecl.intType,     BUILTIN_SSCANF);
 
     // Math
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "round",      umka->intType,     BUILTIN_ROUND);
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "trunc",      umka->intType,     BUILTIN_TRUNC);
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "ceil",       umka->intType,     BUILTIN_CEIL);
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "floor",      umka->intType,     BUILTIN_FLOOR);
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "abs",        umka->intType,     BUILTIN_ABS);
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "fabs",       umka->realType,    BUILTIN_FABS);
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "sqrt",       umka->realType,    BUILTIN_SQRT);
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "sin",        umka->realType,    BUILTIN_SIN);
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "cos",        umka->realType,    BUILTIN_COS);
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "atan",       umka->realType,    BUILTIN_ATAN);
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "atan2",      umka->realType,    BUILTIN_ATAN2);
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "exp",        umka->realType,    BUILTIN_EXP);
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "log",        umka->realType,    BUILTIN_LOG);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "round",      umka->types.predecl.intType,     BUILTIN_ROUND);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "trunc",      umka->types.predecl.intType,     BUILTIN_TRUNC);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "ceil",       umka->types.predecl.intType,     BUILTIN_CEIL);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "floor",      umka->types.predecl.intType,     BUILTIN_FLOOR);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "abs",        umka->types.predecl.intType,     BUILTIN_ABS);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "fabs",       umka->types.predecl.realType,    BUILTIN_FABS);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "sqrt",       umka->types.predecl.realType,    BUILTIN_SQRT);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "sin",        umka->types.predecl.realType,    BUILTIN_SIN);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "cos",        umka->types.predecl.realType,    BUILTIN_COS);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "atan",       umka->types.predecl.realType,    BUILTIN_ATAN);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "atan2",      umka->types.predecl.realType,    BUILTIN_ATAN2);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "exp",        umka->types.predecl.realType,    BUILTIN_EXP);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "log",        umka->types.predecl.realType,    BUILTIN_LOG);
 
     // Memory
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "new",        umka->ptrVoidType, BUILTIN_NEW);
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "make",       umka->ptrVoidType, BUILTIN_MAKE);
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "copy",       umka->ptrVoidType, BUILTIN_COPY);
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "append",     umka->ptrVoidType, BUILTIN_APPEND);
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "insert",     umka->ptrVoidType, BUILTIN_INSERT);
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "delete",     umka->ptrVoidType, BUILTIN_DELETE);
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "slice",      umka->ptrVoidType, BUILTIN_SLICE);
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "sort",       umka->voidType,    BUILTIN_SORT);
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "len",        umka->intType,     BUILTIN_LEN);
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "cap",        umka->intType,     BUILTIN_CAP);
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "sizeof",     umka->intType,     BUILTIN_SIZEOF);
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "sizeofself", umka->intType,     BUILTIN_SIZEOFSELF);
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "selfptr",    umka->ptrVoidType, BUILTIN_SELFPTR);
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "selfhasptr", umka->boolType,    BUILTIN_SELFHASPTR);
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "selftypeeq", umka->boolType,    BUILTIN_SELFTYPEEQ);
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "typeptr",    umka->ptrVoidType, BUILTIN_TYPEPTR);        // Deprecated
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "valid",      umka->boolType,    BUILTIN_VALID);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "new",        umka->types.predecl.ptrVoidType, BUILTIN_NEW);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "make",       umka->types.predecl.ptrVoidType, BUILTIN_MAKE);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "copy",       umka->types.predecl.ptrVoidType, BUILTIN_COPY);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "append",     umka->types.predecl.ptrVoidType, BUILTIN_APPEND);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "insert",     umka->types.predecl.ptrVoidType, BUILTIN_INSERT);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "delete",     umka->types.predecl.ptrVoidType, BUILTIN_DELETE);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "slice",      umka->types.predecl.ptrVoidType, BUILTIN_SLICE);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "sort",       umka->types.predecl.voidType,    BUILTIN_SORT);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "len",        umka->types.predecl.intType,     BUILTIN_LEN);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "cap",        umka->types.predecl.intType,     BUILTIN_CAP);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "sizeof",     umka->types.predecl.intType,     BUILTIN_SIZEOF);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "sizeofself", umka->types.predecl.intType,     BUILTIN_SIZEOFSELF);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "selfptr",    umka->types.predecl.ptrVoidType, BUILTIN_SELFPTR);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "selfhasptr", umka->types.predecl.boolType,    BUILTIN_SELFHASPTR);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "selftypeeq", umka->types.predecl.boolType,    BUILTIN_SELFTYPEEQ);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "typeptr",    umka->types.predecl.ptrVoidType, BUILTIN_TYPEPTR);        // Deprecated
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "valid",      umka->types.predecl.boolType,    BUILTIN_VALID);
 
     // Maps
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "validkey",   umka->boolType,    BUILTIN_VALIDKEY);
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "keys",       umka->ptrVoidType, BUILTIN_KEYS);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "validkey",   umka->types.predecl.boolType,    BUILTIN_VALIDKEY);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "keys",       umka->types.predecl.ptrVoidType, BUILTIN_KEYS);
 
     // Fibers
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "resume",     umka->voidType,    BUILTIN_RESUME);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "resume",     umka->types.predecl.voidType,    BUILTIN_RESUME);
 
     // Misc
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "memusage",   umka->intType,     BUILTIN_MEMUSAGE);
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "leaksan",    umka->voidType,    BUILTIN_LEAKSAN);
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "exit",       umka->voidType,    BUILTIN_EXIT);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "memusage",   umka->types.predecl.intType,     BUILTIN_MEMUSAGE);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "leaksan",    umka->types.predecl.voidType,    BUILTIN_LEAKSAN);
+    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "exit",       umka->types.predecl.voidType,    BUILTIN_EXIT);
 }
 
 
@@ -252,7 +200,7 @@ void compilerInit(Umka *umka, const char *fileName, const char *sourceString, in
     moduleInit   (&umka->modules, &umka->storage, implLibsEnabled, &umka->error);
     blocksInit   (&umka->blocks, &umka->error);
     externalInit (&umka->externals, &umka->storage);
-    typeInit     (&umka->types, &umka->storage, &umka->error);
+    typeInit     (&umka->types, &umka->blocks, &umka->storage, &umka->error);
     identInit    (&umka->idents, &umka->storage, &umka->debug, &umka->error);
     constInit    (&umka->consts, &umka->error);
     genInit      (&umka->gen, &umka->storage, &umka->debug, &umka->error);
@@ -274,16 +222,15 @@ void compilerInit(Umka *umka, const char *fileName, const char *sourceString, in
 
     umka->blocks.module = moduleAdd(&umka->modules, "#universe");
 
-    compilerDeclareBuiltinTypes (umka);
     compilerDeclareBuiltinIdents(umka);
     compilerDeclareExternalFuncs(umka, fileSystemEnabled);
 
     // Command-line-arguments
     Type *argvType = typeAdd(&umka->types, &umka->blocks, TYPE_ARRAY);
-    argvType->base = umka->strType;
+    argvType->base = umka->types.predecl.strType;
     typeResizeArray(argvType, argc);
 
-    Ident *rtlargv = identAllocVar(&umka->idents, &umka->types, &umka->modules, &umka->blocks, "rtlargv", argvType, true);
+    const Ident *rtlargv = identAllocVar(&umka->idents, &umka->types, &umka->modules, &umka->blocks, "rtlargv", argvType, true);
     char **argArray = (char **)rtlargv->ptr;
 
     for (int i = 0; i < argc; i++)

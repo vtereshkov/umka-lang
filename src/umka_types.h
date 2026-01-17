@@ -181,7 +181,26 @@ typedef struct tagVisitedTypePair
 
 typedef struct
 {
+    const Type
+        *voidType,
+        *nullType,
+        *int8Type,  *int16Type,  *int32Type,  *intType,
+        *uint8Type, *uint16Type, *uint32Type, *uintType,
+        *boolType,
+        *charType,
+        *real32Type, *realType,
+        *strType,
+        *fiberType,
+        *ptrVoidType, *ptrNullType,
+        *anyType,
+        *fileType;
+} PredeclaredTypes;
+
+
+typedef struct
+{
     const Type *first;
+    PredeclaredTypes predecl;
     bool forwardTypesEnabled;
     Storage *storage;
     Error *error;
@@ -198,7 +217,7 @@ typedef enum
 } FormatStringTypeSize;
 
 
-void typeInit(Types *types, Storage *storage, Error *error);
+void typeInit(Types *types, const Blocks *blocks, Storage *storage, Error *error);
 
 Type *typeAdd       (Types *types, const Blocks *blocks, TypeKind kind);
 void typeDeepCopy   (Storage *storage, Type *dest, const Type *src);
@@ -446,7 +465,6 @@ const char *typeKindSpelling(TypeKind kind);
 const char *typeSpelling    (const Type *type, char *buf);
 
 bool typeFormatStringValid(const char *format, int *formatLen, int *typeLetterPos, TypeKind *typeKind, FormatStringTypeSize *size);
-
 
 static inline const Type *typeMapKey(const Type *mapType)
 {

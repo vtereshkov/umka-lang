@@ -107,7 +107,7 @@ static void parseSignature(Umka *umka, Signature *sig)
 {
     // Dummy hidden parameter that allows any function to be converted to a closure
     if (!sig->isMethod)
-        typeAddParam(&umka->types, sig, umka->anyType, "#upvalues", (Const){0});
+        typeAddParam(&umka->types, sig, umka->types.predecl.anyType, "#upvalues", (Const){0});
 
     // Formal parameter list
     lexEat(&umka->lex, TOK_LPAR);
@@ -139,7 +139,7 @@ static void parseSignature(Umka *umka, Signature *sig)
                 if (paramType->isVariadicParamList)
                     umka->error.handler(umka->error.context, "Variadic parameter list cannot have default value");
 
-                if (!typeComparable(paramType) && !typeEquivalent(paramType, umka->anyType))
+                if (!typeComparable(paramType) && !typeEquivalent(paramType, umka->types.predecl.anyType))
                     umka->error.handler(umka->error.context, "Parameter must be of comparable or 'any' type to have default value");
                 
                 lexNext(&umka->lex);
@@ -205,7 +205,7 @@ static void parseSignature(Umka *umka, Signature *sig)
             sig->resultType = parseType(umka, NULL);
     }
     else
-        sig->resultType = umka->voidType;
+        sig->resultType = umka->types.predecl.voidType;
 
     // Structured result parameter
     if (typeStructured(sig->resultType))
@@ -276,7 +276,7 @@ static const Type *parseArrayType(Umka *umka)
         typeKind = TYPE_ARRAY;
         const Type *indexType = NULL;
         parseExpr(umka, &indexType, &len);
-        typeAssertCompatible(&umka->types, umka->intType, indexType);
+        typeAssertCompatible(&umka->types, umka->types.predecl.intType, indexType);
         if (len.intVal < 0 || len.intVal > INT_MAX)
             umka->error.handler(umka->error.context, "Illegal array length");
     }
@@ -301,7 +301,7 @@ static const Type *parseArrayType(Umka *umka)
 static const Type *parseStrType(Umka *umka)
 {
     lexEat(&umka->lex, TOK_STR);
-    return umka->strType;
+    return umka->types.predecl.strType;
 }
 
 
@@ -321,7 +321,7 @@ static void parseEnumItem(Umka *umka, Type *type, Const *constant)
         lexEat(&umka->lex, TOK_EQ);
         const Type *rightType = NULL;
         parseExpr(umka, &rightType, constant);
-        typeAssertCompatible(&umka->types, umka->intType, rightType);
+        typeAssertCompatible(&umka->types, umka->types.predecl.intType, rightType);
     }
 
     if (typeOverflow(type->kind, *constant))
@@ -336,12 +336,12 @@ static const Type *parseEnumType(Umka *umka)
 {
     lexEat(&umka->lex, TOK_ENUM);
 
-    const Type *baseType = umka->intType;
+    const Type *baseType = umka->types.predecl.intType;
     if (umka->lex.tok.kind == TOK_LPAR)
     {
         lexNext(&umka->lex);
         baseType = parseType(umka, NULL);
-        typeAssertCompatible(&umka->types, umka->intType, baseType);
+        typeAssertCompatible(&umka->types, umka->types.predecl.intType, baseType);
         lexEat(&umka->lex, TOK_RPAR);
     }
 
@@ -392,8 +392,8 @@ static const Type *parseMapType(Umka *umka)
     Type *nodeType = typeAdd(&umka->types, &umka->blocks, TYPE_STRUCT);
     const Type *ptrNodeType = typeAddPtrTo(&umka->types, &umka->blocks, nodeType);
 
-    typeAddField(&umka->types, nodeType, umka->intType, "#len");
-    typeAddField(&umka->types, nodeType, umka->intType, "#priority");
+    typeAddField(&umka->types, nodeType, umka->types.predecl.intType, "#len");
+    typeAddField(&umka->types, nodeType, umka->types.predecl.intType, "#priority");
     typeAddField(&umka->types, nodeType, ptrKeyType,    "#key");
     typeAddField(&umka->types, nodeType, ptrItemType,   "#data");
     typeAddField(&umka->types, nodeType, ptrNodeType,   "#left");
@@ -443,8 +443,8 @@ static const Type *parseInterfaceType(Umka *umka)
     Type *type = typeAdd(&umka->types, &umka->blocks, TYPE_INTERFACE);
 
     // The interface type is the Umka equivalent of Interface + methods
-    typeAddField(&umka->types, type, umka->ptrVoidType, "#self");
-    typeAddField(&umka->types, type, umka->ptrVoidType, "#selftype");
+    typeAddField(&umka->types, type, umka->types.predecl.ptrVoidType, "#self");
+    typeAddField(&umka->types, type, umka->types.predecl.ptrVoidType, "#selftype");
 
     // Method names and signatures, or embedded interfaces
     while (umka->lex.tok.kind == TOK_IDENT)
@@ -463,7 +463,7 @@ static const Type *parseInterfaceType(Umka *umka)
             methodType->sig.isMethod = true;
             methodType->sig.isInterfaceMethod = true;
 
-            typeAddParam(&umka->types, &methodType->sig, umka->ptrVoidType, "#self", (Const){0});
+            typeAddParam(&umka->types, &methodType->sig, umka->types.predecl.ptrVoidType, "#self", (Const){0});
             parseSignature(umka, &methodType->sig);
 
             typeAddField(&umka->types, type, methodType, methodName);
@@ -505,7 +505,7 @@ static const Type *parseClosureType(Umka *umka)
     typeAddField(&umka->types, type, fnType, "#fn");
 
     // Upvalues field
-    typeAddField(&umka->types, type, umka->anyType, "#upvalues");
+    typeAddField(&umka->types, type, umka->types.predecl.anyType, "#upvalues");
 
     return type;
 }
@@ -871,7 +871,7 @@ static void parseImportItem(Umka *umka)
          umka->modules.error->handler(umka->modules.error->context, "Duplicate imported module %s", path);
     *importAlias = alias;
 
-    identAddModule(&umka->idents, &umka->modules, &umka->blocks, alias, umka->voidType, importedModule);
+    identAddModule(&umka->idents, &umka->modules, &umka->blocks, alias, umka->types.predecl.voidType, importedModule);
 
     lexNext(&umka->lex);
 }

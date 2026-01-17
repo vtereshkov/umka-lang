@@ -258,7 +258,7 @@ static void doDynArrayToDynArrayConv(Umka *umka, const Type *dest, const Type **
         umka->error.handler(umka->error.context, "Conversion from dynamic array is not allowed in constant expressions");
 
     // Get source array length: length = len(srcArray)
-    const int lenOffset = identAllocStack(&umka->idents, &umka->types, &umka->blocks, umka->intType);
+    const int lenOffset = identAllocStack(&umka->idents, &umka->types, &umka->blocks, umka->types.predecl.intType);
 
     genDup(&umka->gen);
     genCallBuiltin(&umka->gen, (*src)->kind, BUILTIN_LEN);
@@ -275,11 +275,11 @@ static void doDynArrayToDynArrayConv(Umka *umka, const Type *dest, const Type **
     genPop(&umka->gen);
 
     // Loop initialization: index = length - 1
-    const int indexOffset = identAllocStack(&umka->idents, &umka->types, &umka->blocks, umka->intType);
+    const int indexOffset = identAllocStack(&umka->idents, &umka->types, &umka->blocks, umka->types.predecl.intType);
 
     genPushLocal(&umka->gen, TYPE_INT, lenOffset);
     genPushIntConst(&umka->gen, 1);
-    genBinary(&umka->gen, TOK_MINUS, umka->intType);
+    genBinary(&umka->gen, TOK_MINUS, umka->types.predecl.intType);
     genPushLocalPtr(&umka->gen, indexOffset);
     genSwapAssign(&umka->gen, TYPE_INT, 0);
 
@@ -288,7 +288,7 @@ static void doDynArrayToDynArrayConv(Umka *umka, const Type *dest, const Type **
 
     genPushLocal(&umka->gen, TYPE_INT, indexOffset);
     genPushIntConst(&umka->gen, 0);
-    genBinary(&umka->gen, TOK_GREATEREQ, umka->intType);
+    genBinary(&umka->gen, TOK_GREATEREQ, umka->types.predecl.intType);
 
     genWhileCondEpilog(&umka->gen);
 
@@ -317,7 +317,7 @@ static void doDynArrayToDynArrayConv(Umka *umka, const Type *dest, const Type **
     genSwapRefCntAssign(&umka->gen, dest->base);
 
     genPushLocalPtr(&umka->gen, indexOffset);
-    genUnary(&umka->gen, TOK_MINUSMINUS, umka->intType);
+    genUnary(&umka->gen, TOK_MINUSMINUS, umka->types.predecl.intType);
 
     // Additional scope embracing temporary variables declaration
     doGarbageCollection(umka);
@@ -340,7 +340,7 @@ static void doPtrToInterfaceConv(Umka *umka, const Type *dest, const Type **src,
     if (constant)
     {
         // Special case: any(null) is allowed in constant expressions
-        if (typeEquivalent(dest, umka->anyType) && typeEquivalent(*src, umka->ptrNullType))
+        if (typeEquivalent(dest, umka->types.predecl.anyType) && typeEquivalent(*src, umka->types.predecl.ptrNullType))
             constant->ptrVal = storageAdd(&umka->storage, typeSize(&umka->types, dest));
         else
             umka->error.handler(umka->error.context, "Conversion to interface is not allowed in constant expressions");
@@ -742,12 +742,12 @@ static void doApplyStrCat(Umka *umka, Const *constant, const Const *rightConstan
         strcpy(buf, (char *)constant->ptrVal);
 
         constant->ptrVal = buf;
-        constBinary(&umka->consts, constant, rightConstant, TOK_PLUS, umka->strType);   // "+" only
+        constBinary(&umka->consts, constant, rightConstant, TOK_PLUS, umka->types.predecl.strType);   // "+" only
     }
     else
     {
-        genBinary(&umka->gen, op, umka->strType);                                       // "+" or "+=" only
-        doCopyResultToTempVar(umka, umka->strType);
+        genBinary(&umka->gen, op, umka->types.predecl.strType);                                       // "+" or "+=" only
+        doCopyResultToTempVar(umka, umka->types.predecl.strType);
     }
 }
 
@@ -821,7 +821,7 @@ static void parseBuiltinIOCall(Umka *umka, const Type **type, Const *constant, B
     // Stream (file/string pointer)
     if (builtin == BUILTIN_FPRINTF || builtin == BUILTIN_FSCANF  || builtin == BUILTIN_SSCANF)
     {
-        const Type *expectedType = (builtin == BUILTIN_FPRINTF || builtin == BUILTIN_FSCANF) ? umka->fileType : umka->strType;
+        const Type *expectedType = (builtin == BUILTIN_FPRINTF || builtin == BUILTIN_FSCANF) ? umka->types.predecl.fileType : umka->types.predecl.strType;
         *type = expectedType;
         parseExpr(umka, type, constant);
         doAssertImplicitTypeConv(umka, expectedType, type, constant);
@@ -840,9 +840,9 @@ static void parseBuiltinIOCall(Umka *umka, const Type **type, Const *constant, B
             formatLiteral = umka->lex.tok.strVal;
     }
 
-    *type = umka->strType;
+    *type = umka->types.predecl.strType;
     parseExpr(umka, type, constant);
-    typeAssertCompatible(&umka->types, umka->strType, *type);
+    typeAssertCompatible(&umka->types, umka->types.predecl.strType, *type);
 
     // Values, if any
     int formatLen = -1, typeLetterPos = -1;
@@ -881,12 +881,12 @@ static void parseBuiltinIOCall(Umka *umka, const Type **type, Const *constant, B
     }
 
     if (builtin == BUILTIN_SCANF || builtin == BUILTIN_FSCANF || builtin == BUILTIN_SSCANF)
-        *type = umka->ptrVoidType;
+        *type = umka->types.predecl.ptrVoidType;
     else
-        *type = umka->voidType;
+        *type = umka->types.predecl.voidType;
 
     typeAssertCompatibleIOBuiltin(&umka->types, expectedTypeKind, *type, builtin, true);
-    genCallTypedBuiltin(&umka->gen, umka->voidType, builtin);
+    genCallTypedBuiltin(&umka->gen, umka->types.predecl.voidType, builtin);
 
     genPop(&umka->gen);                         // Remove format string
 
@@ -895,19 +895,19 @@ static void parseBuiltinIOCall(Umka *umka, const Type **type, Const *constant, B
     {
         genSwap(&umka->gen);                    // Swap stream and count
         genPop(&umka->gen);                     // Remove count, keep stream
-        *type = umka->strType;
+        *type = umka->types.predecl.strType;
     }
     else
     {
         genPop(&umka->gen);                     // Remove stream, keep count
-        *type = umka->intType;
+        *type = umka->types.predecl.intType;
     }
 }
 
 
 static void parseBuiltinMathCall(Umka *umka, const Type **type, Const *constant, BuiltinFunc builtin)
 {
-    const Type *argType = (builtin == BUILTIN_ABS) ? umka->intType : umka->realType;
+    const Type *argType = (builtin == BUILTIN_ABS) ? umka->types.predecl.intType : umka->types.predecl.realType;
 
     *type = argType;
     parseExpr(umka, type, constant);
@@ -921,12 +921,12 @@ static void parseBuiltinMathCall(Umka *umka, const Type **type, Const *constant,
     {
         lexEat(&umka->lex, TOK_COMMA);
 
-        const Type *type2 = umka->realType;
+        const Type *type2 = umka->types.predecl.realType;
         if (constant)
             constant2 = &constant2Val;
 
         parseExpr(umka, &type2, constant2);
-        doAssertImplicitTypeConv(umka, umka->realType, &type2, constant2);
+        doAssertImplicitTypeConv(umka, umka->types.predecl.realType, &type2, constant2);
     }
 
     if (constant)
@@ -935,9 +935,9 @@ static void parseBuiltinMathCall(Umka *umka, const Type **type, Const *constant,
         genCallBuiltin(&umka->gen, argType->kind, builtin);
 
     if (builtin == BUILTIN_ROUND || builtin == BUILTIN_TRUNC || builtin == BUILTIN_CEIL || builtin == BUILTIN_FLOOR || builtin == BUILTIN_ABS)
-        *type = umka->intType;
+        *type = umka->types.predecl.intType;
     else
-        *type = umka->realType;
+        *type = umka->types.predecl.realType;
 }
 
 
@@ -987,9 +987,9 @@ static void parseBuiltinMakeCall(Umka *umka, const Type **type, Const *constant)
         lexEat(&umka->lex, TOK_COMMA);
 
         // Dynamic array length
-        const Type *lenType = umka->intType;
+        const Type *lenType = umka->types.predecl.intType;
         parseExpr(umka, &lenType, NULL);
-        typeAssertCompatible(&umka->types, umka->intType, lenType);
+        typeAssertCompatible(&umka->types, umka->types.predecl.intType, lenType);
 
         // Pointer to result (hidden parameter)
         const int resultOffset = identAllocStack(&umka->idents, &umka->types, &umka->blocks, *type);
@@ -1006,9 +1006,9 @@ static void parseBuiltinMakeCall(Umka *umka, const Type **type, Const *constant)
         lexEat(&umka->lex, TOK_COMMA);
 
         // Child fiber closure
-        const Type *fiberClosureType = umka->fiberType->base;
+        const Type *fiberClosureType = umka->types.predecl.fiberType->base;
         parseExpr(umka, &fiberClosureType, constant);
-        doAssertImplicitTypeConv(umka, umka->fiberType->base, &fiberClosureType, NULL);
+        doAssertImplicitTypeConv(umka, umka->types.predecl.fiberType->base, &fiberClosureType, NULL);
     }
     else
         umka->error.handler(umka->error.context, "Illegal type");
@@ -1106,9 +1106,9 @@ static void parseBuiltinInsertCall(Umka *umka, const Type **type, Const *constan
     // New item index
     lexEat(&umka->lex, TOK_COMMA);
 
-    const Type *indexType = umka->intType;
+    const Type *indexType = umka->types.predecl.intType;
     parseExpr(umka, &indexType, NULL);
-    doAssertImplicitTypeConv(umka, umka->intType, &indexType, NULL);
+    doAssertImplicitTypeConv(umka, umka->types.predecl.intType, &indexType, NULL);
 
     // New item (must always be a pointer, even for value types)
     lexEat(&umka->lex, TOK_COMMA);
@@ -1150,7 +1150,7 @@ static void parseBuiltinDeleteCall(Umka *umka, const Type **type, Const *constan
     // Item index or map key
     lexEat(&umka->lex, TOK_COMMA);
 
-    const Type *expectedIndexType = ((*type)->kind == TYPE_DYNARRAY) ? umka->intType : typeMapKey(*type);
+    const Type *expectedIndexType = ((*type)->kind == TYPE_DYNARRAY) ? umka->types.predecl.intType : typeMapKey(*type);
     const Type *indexType = expectedIndexType;
 
     parseExpr(umka, &indexType, NULL);
@@ -1177,18 +1177,18 @@ static void parseBuiltinSliceCall(Umka *umka, const Type **type, Const *constant
 
     lexEat(&umka->lex, TOK_COMMA);
 
-    const Type *indexType = umka->intType;
+    const Type *indexType = umka->types.predecl.intType;
 
     // Start index
     parseExpr(umka, &indexType, NULL);
-    doAssertImplicitTypeConv(umka, umka->intType, &indexType, NULL);
+    doAssertImplicitTypeConv(umka, umka->types.predecl.intType, &indexType, NULL);
 
     if (umka->lex.tok.kind == TOK_COMMA)
     {
         // Optional end index
         lexNext(&umka->lex);
         parseExpr(umka, &indexType, NULL);
-        doAssertImplicitTypeConv(umka, umka->intType, &indexType, NULL);
+        doAssertImplicitTypeConv(umka, umka->types.predecl.intType, &indexType, NULL);
     }
     else
         genPushIntConst(&umka->gen, INT_MIN);
@@ -1224,20 +1224,20 @@ static void parseBuiltinSortCall(Umka *umka, const Type **type, Const *constant)
     Type *fnType = typeAdd(&umka->types, &umka->blocks, TYPE_FN);
     const Type *paramType = typeAddPtrTo(&umka->types, &umka->blocks, (*type)->base);
 
-    typeAddParam(&umka->types, &fnType->sig, umka->anyType, "#upvalues", (Const){0});
+    typeAddParam(&umka->types, &fnType->sig, umka->types.predecl.anyType, "#upvalues", (Const){0});
     typeAddParam(&umka->types, &fnType->sig, paramType, "a", (Const){0});
     typeAddParam(&umka->types, &fnType->sig, paramType, "b", (Const){0});
 
-    fnType->sig.resultType = umka->intType;
+    fnType->sig.resultType = umka->types.predecl.intType;
 
     Type *expectedCompareType = typeAdd(&umka->types, &umka->blocks, TYPE_CLOSURE);
     typeAddField(&umka->types, expectedCompareType, fnType, "#fn");
-    typeAddField(&umka->types, expectedCompareType, umka->anyType, "#upvalues");
+    typeAddField(&umka->types, expectedCompareType, umka->types.predecl.anyType, "#upvalues");
 
     const Type *compareOrFlagType = expectedCompareType;
     parseExpr(umka, &compareOrFlagType, NULL);
 
-    if (typeEquivalent(compareOrFlagType, umka->boolType))
+    if (typeEquivalent(compareOrFlagType, umka->types.predecl.boolType))
     {
         // "Fast" form
 
@@ -1278,7 +1278,7 @@ static void parseBuiltinSortCall(Umka *umka, const Type **type, Const *constant)
         genCallTypedBuiltin(&umka->gen, (*type)->base, BUILTIN_SORT);
     }
 
-    *type = umka->voidType;
+    *type = umka->types.predecl.voidType;
 }
 
 
@@ -1331,7 +1331,7 @@ static void parseBuiltinLenCall(Umka *umka, const Type **type, Const *constant)
         }
     }
 
-    *type = umka->intType;
+    *type = umka->types.predecl.intType;
 }
 
 
@@ -1365,7 +1365,7 @@ static void parseBuiltinCapCall(Umka *umka, const Type **type, Const *constant)
         }
     }
 
-    *type = umka->intType;
+    *type = umka->types.predecl.intType;
 }
 
 
@@ -1407,7 +1407,7 @@ static void parseBuiltinSizeofCall(Umka *umka, const Type **type, Const *constan
     else
         genPushIntConst(&umka->gen, size);
 
-    *type = umka->intType;
+    *type = umka->types.predecl.intType;
 }
 
 
@@ -1421,7 +1421,7 @@ static void parseBuiltinSizeofselfCall(Umka *umka, const Type **type, Const *con
     typeAssertCompatibleBuiltin(&umka->types, *type, BUILTIN_SIZEOFSELF, (*type)->kind == TYPE_INTERFACE);
 
     genCallBuiltin(&umka->gen, TYPE_INTERFACE, BUILTIN_SIZEOFSELF);
-    *type = umka->intType;
+    *type = umka->types.predecl.intType;
 }
 
 
@@ -1435,7 +1435,7 @@ static void parseBuiltinSelfptrCall(Umka *umka, const Type **type, Const *consta
     typeAssertCompatibleBuiltin(&umka->types, *type, BUILTIN_SELFPTR, (*type)->kind == TYPE_INTERFACE);
 
     genCallBuiltin(&umka->gen, TYPE_INTERFACE, BUILTIN_SELFPTR);
-    *type = umka->ptrVoidType;
+    *type = umka->types.predecl.ptrVoidType;
 }
 
 
@@ -1449,7 +1449,7 @@ static void parseBuiltinSelfhasptrCall(Umka *umka, const Type **type, Const *con
     typeAssertCompatibleBuiltin(&umka->types, *type, BUILTIN_SELFHASPTR, (*type)->kind == TYPE_INTERFACE);
 
     genCallBuiltin(&umka->gen, TYPE_INTERFACE, BUILTIN_SELFHASPTR);
-    *type = umka->boolType;
+    *type = umka->types.predecl.boolType;
 }
 
 
@@ -1471,7 +1471,7 @@ static void parseBuiltinSelftypeeqCall(Umka *umka, const Type **type, Const *con
     typeAssertCompatibleBuiltin(&umka->types, *type, BUILTIN_SELFTYPEEQ, (*type)->kind == TYPE_INTERFACE);
 
     genCallBuiltin(&umka->gen, TYPE_INTERFACE, BUILTIN_SELFTYPEEQ);
-    *type = umka->boolType;
+    *type = umka->types.predecl.boolType;
 }
 
 
@@ -1486,7 +1486,7 @@ static void parseBuiltinTypeptrCall(Umka *umka, const Type **type, Const *consta
     else
         genPushGlobalPtr(&umka->gen, (Type *)(*type));
 
-    *type = umka->ptrVoidType;
+    *type = umka->types.predecl.ptrVoidType;
 }
 
 
@@ -1500,7 +1500,7 @@ static void parseBuiltinValidCall(Umka *umka, const Type **type, Const *constant
     typeAssertCompatibleBuiltin(&umka->types, *type, BUILTIN_VALID, (*type)->kind == TYPE_DYNARRAY || (*type)->kind == TYPE_MAP || (*type)->kind == TYPE_INTERFACE || (*type)->kind == TYPE_FN || (*type)->kind == TYPE_CLOSURE || (*type)->kind == TYPE_FIBER);
 
     genCallBuiltin(&umka->gen, (*type)->kind, BUILTIN_VALID);
-    *type = umka->boolType;
+    *type = umka->types.predecl.boolType;
 }
 
 
@@ -1523,7 +1523,7 @@ static void parseBuiltinValidkeyCall(Umka *umka, const Type **type, Const *const
     doAssertImplicitTypeConv(umka, typeMapKey(*type), &keyType, NULL);
 
     genCallBuiltin(&umka->gen, (*type)->kind, BUILTIN_VALIDKEY);
-    *type = umka->boolType;
+    *type = umka->types.predecl.boolType;
 }
 
 
@@ -1560,7 +1560,7 @@ static void parseBuiltinResumeCall(Umka *umka, const Type **type, Const *constan
     {
         // Child fiber
         parseExpr(umka, type, constant);
-        doAssertImplicitTypeConv(umka, umka->fiberType, type, constant);
+        doAssertImplicitTypeConv(umka, umka->types.predecl.fiberType, type, constant);
     }
     else
     {
@@ -1569,7 +1569,7 @@ static void parseBuiltinResumeCall(Umka *umka, const Type **type, Const *constan
     }
 
     genCallBuiltin(&umka->gen, TYPE_NONE, BUILTIN_RESUME);
-    *type = umka->voidType;
+    *type = umka->types.predecl.voidType;
 }
 
 
@@ -1580,7 +1580,7 @@ static void parseBuiltinMemusageCall(Umka *umka, const Type **type, Const *const
         umka->error.handler(umka->error.context, "Function is not allowed in constant expressions");
 
     genCallBuiltin(&umka->gen, TYPE_INT, BUILTIN_MEMUSAGE);
-    *type = umka->intType;
+    *type = umka->types.predecl.intType;
 }
 
 
@@ -1590,12 +1590,12 @@ static void parseBuiltinLeaksanCall(Umka *umka, const Type **type, Const *consta
     if (constant)
         umka->error.handler(umka->error.context, "Function is not allowed in constant expressions");
 
-    *type = umka->intType;
+    *type = umka->types.predecl.intType;
     parseExpr(umka, type, constant);
-    doAssertImplicitTypeConv(umka, umka->intType, type, constant);        
+    doAssertImplicitTypeConv(umka, umka->types.predecl.intType, type, constant);        
 
     genCallBuiltin(&umka->gen, TYPE_VOID, BUILTIN_LEAKSAN);
-    *type = umka->voidType;
+    *type = umka->types.predecl.voidType;
 }
 
 
@@ -1605,9 +1605,9 @@ static void parseBuiltinExitCall(Umka *umka, const Type **type, Const *constant)
     if (constant)
         umka->error.handler(umka->error.context, "Function is not allowed in constant expressions");
 
-    *type = umka->intType;
+    *type = umka->types.predecl.intType;
     parseExpr(umka, type, constant);
-    doAssertImplicitTypeConv(umka, umka->intType, type, constant);
+    doAssertImplicitTypeConv(umka, umka->types.predecl.intType, type, constant);
 
     if (umka->lex.tok.kind == TOK_RPAR)
     {
@@ -1618,11 +1618,11 @@ static void parseBuiltinExitCall(Umka *umka, const Type **type, Const *constant)
         lexEat(&umka->lex, TOK_COMMA);
 
         parseExpr(umka, type, constant);
-        doAssertImplicitTypeConv(umka, umka->strType, type, constant);
+        doAssertImplicitTypeConv(umka, umka->types.predecl.strType, type, constant);
     }
 
     genCallBuiltin(&umka->gen, TYPE_VOID, BUILTIN_EXIT);
-    *type = umka->voidType;
+    *type = umka->types.predecl.voidType;
 }
 
 
@@ -2515,9 +2515,9 @@ static void parseIndexSelector(Umka *umka, const Type **type, bool *isVar, bool 
     }
     else
     {
-        const Type *indexType = umka->intType;
+        const Type *indexType = umka->types.predecl.intType;
         parseExpr(umka, &indexType, NULL);
-        typeAssertCompatible(&umka->types, umka->intType, indexType);
+        typeAssertCompatible(&umka->types, umka->types.predecl.intType, indexType);
     }
 
     lexEat(&umka->lex, TOK_RBRACKET);
@@ -2539,9 +2539,9 @@ static void parseIndexSelector(Umka *umka, const Type **type, bool *isVar, bool 
         }
         case TYPE_STR:
         {
-            genGetArrayPtr(&umka->gen, typeSize(&umka->types, umka->charType), -1);                 // Use actual length for range checking
+            genGetArrayPtr(&umka->gen, typeSize(&umka->types, umka->types.predecl.charType), -1);                 // Use actual length for range checking
             genDeref(&umka->gen, TYPE_CHAR);
-            itemType = umka->charType;
+            itemType = umka->types.predecl.charType;
             break;
         }
         case TYPE_MAP:
@@ -2793,7 +2793,7 @@ static void parseFactor(Umka *umka, const Type **type, Const *constant)
                     constant->uintVal = umka->lex.tok.uintVal;
                 else
                     genPushUIntConst(&umka->gen, umka->lex.tok.uintVal);
-                *type = umka->uintType;
+                *type = umka->types.predecl.uintType;
             }
             else
             {
@@ -2801,7 +2801,7 @@ static void parseFactor(Umka *umka, const Type **type, Const *constant)
                     constant->intVal = umka->lex.tok.intVal;
                 else
                     genPushIntConst(&umka->gen, umka->lex.tok.intVal);
-                *type = umka->intType;
+                *type = umka->types.predecl.intType;
             }
             lexNext(&umka->lex);
             break;
@@ -2814,7 +2814,7 @@ static void parseFactor(Umka *umka, const Type **type, Const *constant)
             else
                 genPushRealConst(&umka->gen, umka->lex.tok.realVal);
             lexNext(&umka->lex);
-            *type = umka->realType;
+            *type = umka->types.predecl.realType;
             break;
         }
 
@@ -2825,7 +2825,7 @@ static void parseFactor(Umka *umka, const Type **type, Const *constant)
             else
                 genPushIntConst(&umka->gen, umka->lex.tok.intVal);
             lexNext(&umka->lex);
-            *type = umka->charType;
+            *type = umka->types.predecl.charType;
             break;
         }
 
@@ -2969,7 +2969,7 @@ static void parseRelation(Umka *umka, const Type **type, Const *constant)
         parseRelationTerm(umka, &rightType, rightConstant);
         doApplyOperator(umka, type, &rightType, constant, rightConstant, op, true, true);
 
-        *type = umka->boolType;
+        *type = umka->types.predecl.boolType;
     }
 }
 
@@ -3070,7 +3070,7 @@ void parseExpr(Umka *umka, const Type **type, Const *constant)
     // "?"
     if (umka->lex.tok.kind == TOK_QUESTION)
     {
-        typeAssertCompatible(&umka->types, umka->boolType, *type);
+        typeAssertCompatible(&umka->types, umka->types.predecl.boolType, *type);
         lexNext(&umka->lex);
 
         const Type *leftType = *type, *rightType = *type;

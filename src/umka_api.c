@@ -214,13 +214,13 @@ UMKA_API void *umkaAllocData(Umka *umka, int size, UmkaExternFunc onFree)
 
 UMKA_API void umkaIncRef(Umka *umka, void *ptr)
 {
-    vmIncRef(&umka->vm, ptr, umka->ptrVoidType);    // We have no actual type info provided by the user, so we can only rely on the type info from the heap chunk header, if any
+    vmIncRef(&umka->vm, ptr, umka->types.predecl.ptrVoidType);    // We have no actual type info provided by the user, so we can only rely on the type info from the heap chunk header, if any
 }
 
 
 UMKA_API void umkaDecRef(Umka *umka, void *ptr)
 {
-    vmDecRef(&umka->vm, ptr, umka->ptrVoidType);    // We have no actual type info provided by the user, so we can only rely on the type info from the heap chunk header, if any
+    vmDecRef(&umka->vm, ptr, umka->types.predecl.ptrVoidType);    // We have no actual type info provided by the user, so we can only rely on the type info from the heap chunk header, if any
 }
 
 

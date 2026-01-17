@@ -31,21 +31,6 @@ typedef struct tagUmka
     DebugInfo   debug;
     Error       error;
 
-    // Pointers to built-in types
-    const Type
-         *voidType,
-         *nullType,
-         *int8Type,  *int16Type,  *int32Type,  *intType,
-         *uint8Type, *uint16Type, *uint32Type, *uintType,
-         *boolType,
-         *charType,
-         *real32Type, *realType,
-         *strType,
-         *fiberType,
-         *ptrVoidType, *ptrNullType,
-         *anyType,
-         *fileType;
-
     // main() context
     UmkaFuncContext mainFn;
     
@@ -54,7 +39,6 @@ typedef struct tagUmka
 
     // Original codepages (Windows only)
     unsigned int originalInputCodepage, originalOutputCodepage;
-
 } Umka;
 
 

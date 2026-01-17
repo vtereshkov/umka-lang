@@ -47,12 +47,66 @@ static int typeSizeRecompute(const Type *type);
 static int typeAlignmentRecompute(const Type *type);
 
 
-void typeInit(Types *types, Storage *storage, Error *error)
+static void typeInitPredeclared(Types *types, const Blocks *blocks)
+{
+    types->predecl.voidType    = typeAdd(types, blocks, TYPE_VOID);
+    types->predecl.nullType    = typeAdd(types, blocks, TYPE_NULL);
+    types->predecl.int8Type    = typeAdd(types, blocks, TYPE_INT8);
+    types->predecl.int16Type   = typeAdd(types, blocks, TYPE_INT16);
+    types->predecl.int32Type   = typeAdd(types, blocks, TYPE_INT32);
+    types->predecl.intType     = typeAdd(types, blocks, TYPE_INT);
+    types->predecl.uint8Type   = typeAdd(types, blocks, TYPE_UINT8);
+    types->predecl.uint16Type  = typeAdd(types, blocks, TYPE_UINT16);
+    types->predecl.uint32Type  = typeAdd(types, blocks, TYPE_UINT32);
+    types->predecl.uintType    = typeAdd(types, blocks, TYPE_UINT);
+    types->predecl.boolType    = typeAdd(types, blocks, TYPE_BOOL);
+    types->predecl.charType    = typeAdd(types, blocks, TYPE_CHAR);
+    types->predecl.real32Type  = typeAdd(types, blocks, TYPE_REAL32);
+    types->predecl.realType    = typeAdd(types, blocks, TYPE_REAL);
+    types->predecl.strType     = typeAdd(types, blocks, TYPE_STR);
+
+    types->predecl.ptrVoidType = typeAddPtrTo(types, blocks, types->predecl.voidType);
+    types->predecl.ptrNullType = typeAddPtrTo(types, blocks, types->predecl.nullType);
+
+    // any
+    Type *anyType = typeAdd(types, blocks, TYPE_INTERFACE);
+
+    typeAddField(types, anyType, types->predecl.ptrVoidType, "#self");
+    typeAddField(types, anyType, types->predecl.ptrVoidType, "#selftype");
+
+    types->predecl.anyType = anyType;
+
+    // fiber
+    Type *fiberType = typeAdd(types, blocks, TYPE_FIBER);
+
+    Type *fnType = typeAdd(types, blocks, TYPE_FN);
+    typeAddParam(types, &fnType->sig, types->predecl.anyType, "#upvalues", (Const){0});
+
+    fnType->sig.resultType = types->predecl.voidType;
+
+    Type *fiberClosureType = typeAdd(types, blocks, TYPE_CLOSURE);
+    typeAddField(types, fiberClosureType, fnType, "#fn");
+    typeAddField(types, fiberClosureType, types->predecl.anyType, "#upvalues");
+    fiberType->base = fiberClosureType;
+
+    types->predecl.fiberType = fiberType;
+
+    // __file
+    Type *fileDataType = typeAdd(types, blocks, TYPE_STRUCT);
+    typeAddField(types, fileDataType, types->predecl.ptrVoidType, "#stream");
+
+    types->predecl.fileType = typeAddPtrTo(types, blocks, fileDataType);
+}
+
+
+void typeInit(Types *types, const Blocks *blocks, Storage *storage, Error *error)
 {
     types->first = NULL;
     types->forwardTypesEnabled = false;
     types->storage = storage;
     types->error = error;
+
+    typeInitPredeclared(types, blocks);
 }
 
 

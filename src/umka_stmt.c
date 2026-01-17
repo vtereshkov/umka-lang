@@ -432,7 +432,7 @@ static void parseIncDecStmt(Umka *umka, const Type *type, TokenKind op)
         type = type->base;
     }
 
-    typeAssertCompatible(&umka->types, umka->intType, type);
+    typeAssertCompatible(&umka->types, umka->types.predecl.intType, type);
     genUnary(&umka->gen, op, type);
     lexNext(&umka->lex);
 }
@@ -500,9 +500,9 @@ static void parseIfStmt(Umka *umka)
     }
 
     // expr
-    const Type *type = umka->boolType;
+    const Type *type = umka->types.predecl.boolType;
     parseExpr(umka, &type, NULL);
-    typeAssertCompatible(&umka->types, umka->boolType, type);
+    typeAssertCompatible(&umka->types, umka->types.predecl.boolType, type);
 
     genIfCondEpilog(&umka->gen);
 
@@ -745,7 +745,7 @@ static void parseTypeSwitchStmt(Umka *umka)
 
     int numCases = 0;
     ConstArray existingConcreteTypes;
-    constArrayAlloc(&existingConcreteTypes, &umka->storage, umka->ptrVoidType);
+    constArrayAlloc(&existingConcreteTypes, &umka->storage, umka->types.predecl.ptrVoidType);
 
     while (umka->lex.tok.kind == TOK_CASE)
     {
@@ -806,9 +806,9 @@ static void parseForHeader(Umka *umka, ForPostStmt *postStmt)
     blocksEnter(&umka->blocks);
 
     // expr
-    const Type *type = umka->boolType;
+    const Type *type = umka->types.predecl.boolType;
     parseExpr(umka, &type, NULL);
-    typeAssertCompatible(&umka->types, umka->boolType, type);
+    typeAssertCompatible(&umka->types, umka->types.predecl.boolType, type);
 
     // Additional scope embracing expr
     doGarbageCollection(umka);
@@ -833,7 +833,7 @@ static void parseForHeader(Umka *umka, ForPostStmt *postStmt)
             if (identIsOuterLocalVar(&umka->blocks, postStmt->indexIdent))
                 umka->error.handler(umka->error.context, "%s is not specified as a captured variable", postStmt->indexIdent->name);
 
-            typeAssertCompatible(&umka->types, umka->intType, postStmt->indexIdent->type);
+            typeAssertCompatible(&umka->types, umka->types.predecl.intType, postStmt->indexIdent->type);
 
             lexNext(&umka->lex);
             postStmt->op = umka->lex.tok.kind;
@@ -935,7 +935,7 @@ static void parseForInHeader(Umka *umka, ForPostStmt *postStmt)
         genCallBuiltin(&umka->gen, collectionType->kind, BUILTIN_LEN);
     }
 
-    const Ident *lenIdent = identAllocVar(&umka->idents, &umka->types, &umka->modules, &umka->blocks, "#len", umka->intType, false);
+    const Ident *lenIdent = identAllocVar(&umka->idents, &umka->types, &umka->modules, &umka->blocks, "#len", umka->types.predecl.intType, false);
     doPushVarPtr(umka, lenIdent);
     genSwapAssign(&umka->gen, lenIdent->type->kind, typeSize(&umka->types, lenIdent->type));
 
@@ -961,7 +961,7 @@ static void parseForInHeader(Umka *umka, ForPostStmt *postStmt)
     // Declare variable for the collection index (for maps, it will be used for indexing keys())
     const char *indexName = (collectionType->kind == TYPE_MAP) ? "#index" : indexOrKeyName;
     
-    postStmt->indexIdent = identAllocVar(&umka->idents, &umka->types, &umka->modules, &umka->blocks, indexName, umka->intType, false);
+    postStmt->indexIdent = identAllocVar(&umka->idents, &umka->types, &umka->modules, &umka->blocks, indexName, umka->types.predecl.intType, false);
     postStmt->op = TOK_PLUSPLUS;
     postStmt->isDeferred = true;
 
@@ -1002,7 +1002,7 @@ static void parseForInHeader(Umka *umka, ForPostStmt *postStmt)
         if (collectionType->kind == TYPE_MAP)
             itemType = typeMapItem(collectionType);
         else if (collectionType->kind == TYPE_STR)
-            itemType = umka->charType;
+            itemType = umka->types.predecl.charType;
         else
             itemType = collectionType->base;
 
@@ -1020,7 +1020,7 @@ static void parseForInHeader(Umka *umka, ForPostStmt *postStmt)
     genDeref(&umka->gen, TYPE_INT);
     doPushVarPtr(umka, lenIdent);
     genDeref(&umka->gen, TYPE_INT);
-    genBinary(&umka->gen, TOK_LESS, umka->intType);
+    genBinary(&umka->gen, TOK_LESS, umka->types.predecl.intType);
 
     genWhileCondEpilog(&umka->gen);
 
@@ -1060,7 +1060,7 @@ static void parseForInHeader(Umka *umka, ForPostStmt *postStmt)
         {
             case TYPE_ARRAY:     genGetArrayPtr(&umka->gen, typeSize(&umka->types, collectionType->base), collectionType->numItems); break;
             case TYPE_DYNARRAY:  genGetDynArrayPtr(&umka->gen);                                                                      break;
-            case TYPE_STR:       genGetArrayPtr(&umka->gen, typeSize(&umka->types, umka->charType), INT_MAX);                        break; // No range checking
+            case TYPE_STR:       genGetArrayPtr(&umka->gen, typeSize(&umka->types, umka->types.predecl.charType), INT_MAX);                        break; // No range checking
             case TYPE_MAP:       genGetMapPtr(&umka->gen, collectionType);                                                           break;
             default:             break;
         }
@@ -1184,7 +1184,7 @@ static void parseReturnStmt(Umka *umka)
     if (umka->lex.tok.kind != TOK_SEMICOLON && umka->lex.tok.kind != TOK_IMPLICIT_SEMICOLON && umka->lex.tok.kind != TOK_RBRACE)
         parseExprList(umka, &type, NULL);
     else
-        type = umka->voidType;
+        type = umka->types.predecl.voidType;
 
     doAssertImplicitTypeConv(umka, sig->resultType, &type, NULL);
 
