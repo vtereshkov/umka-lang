@@ -115,7 +115,7 @@ typedef struct
 
 typedef struct
 {
-    char path[DEFAULT_STR_LEN + 1], folder[DEFAULT_STR_LEN + 1], name[DEFAULT_STR_LEN + 1];
+    char path[DEFAULT_STR_LEN + 1];
     char *source;
     bool trusted;
 } ModuleSource;

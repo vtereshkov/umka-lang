@@ -358,12 +358,6 @@ void moduleAddSource(Modules *modules, const char *path, const char *source, boo
     strncpy(moduleSource->path, path, DEFAULT_STR_LEN);
     moduleSource->path[DEFAULT_STR_LEN] = 0;
 
-    strncpy(moduleSource->folder, folder, DEFAULT_STR_LEN);
-    moduleSource->folder[DEFAULT_STR_LEN] = 0;
-
-    strncpy(moduleSource->name, name, DEFAULT_STR_LEN);
-    moduleSource->name[DEFAULT_STR_LEN] = 0;
-
     const int sourceLen = strlen(source);
     moduleSource->source = storageAdd(modules->storage, sourceLen + 1);
     strcpy(moduleSource->source, source);
