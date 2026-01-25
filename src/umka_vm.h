@@ -123,6 +123,22 @@ typedef struct
 } Instruction;
 
 
+typedef struct
+{
+    void *ptr;
+    const Type *type;
+    struct tagHeapPage *pageForDeferred;   // Mandatory for deferred ref count updates, NULL otherwise
+} RefCntCandidate;
+
+
+typedef struct
+{
+    RefCntCandidate *stack;
+    int top, capacity;
+    Storage *storage;
+} RefCntCandidates;
+
+
 typedef struct tagHeapPage
 {
     int id;
@@ -143,6 +159,7 @@ typedef struct
     int64_t totalSize;
     struct tagFiber *fiber;
     int64_t leakSanLevel;
+    RefCntCandidates refCntCandidates;
     Error *error;
 } HeapPages;
 
@@ -160,22 +177,6 @@ typedef struct
 } HeapChunk;
 
 
-typedef struct
-{
-    void *ptr;
-    const Type *type;
-    HeapPage *pageForDeferred;   // Mandatory for deferred ref count updates, NULL otherwise
-} RefCntCandidate;
-
-
-typedef struct
-{
-    RefCntCandidate *stack;
-    int top, capacity;
-    Storage *storage;
-} RefCntCandidates;
-
-
 typedef struct tagFiber
 {
     // Must have 8 byte alignment
@@ -186,7 +187,6 @@ typedef struct tagFiber
     Slot reg[NUM_REGS];
     struct tagFiber *parent;
     const DebugInfo *debugPerInstr;
-    RefCntCandidates *refCntCandidates;
     struct tagVM *vm;
     bool alive;
     bool fileSystemEnabled;
@@ -197,7 +197,6 @@ typedef struct tagVM
 {
     Fiber *fiber, *mainFiber;
     HeapPages pages;
-    RefCntCandidates refCntCandidates;
     UmkaHookFunc hooks[UMKA_NUM_HOOKS];
     bool terminatedNormally;
     Storage *storage;
