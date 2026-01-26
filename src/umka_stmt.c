@@ -23,7 +23,7 @@ static void doGarbageCollectionAt(Umka *umka, int block)
         else if (blockFound)
             break;
 
-        if (blockFound && ident->garbageCollected && (!ident->temporary || ident->used))
+        if (blockFound && ident->isGarbageCollected && (!ident->isTemporary || ident->isUsed))
         {
             if (ident->block == 0)
                 genRefCntGlobal(&umka->gen, TOK_MINUSMINUS, ident->ptr, ident->type);
@@ -978,7 +978,8 @@ static void parseForInHeader(Umka *umka, ForPostStmt *postStmt)
 
         // Declare variable for the map keys
         Type *keysType = typeAdd(&umka->types, &umka->blocks, TYPE_DYNARRAY);
-        keysType->base = typeMapKey(collectionType);
+        typeSetBase(keysType, typeMapKey(collectionType));
+
         keysIdent = identAllocVar(&umka->idents, &umka->types, &umka->modules, &umka->blocks, "#keys", keysType, false);
         doZeroVar(umka, keysIdent);
 

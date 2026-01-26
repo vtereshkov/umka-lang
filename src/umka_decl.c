@@ -65,7 +65,7 @@ static void parseTypedIdentList(Umka *umka, IdentName *names, bool *exported, in
             umka->error.handler(umka->error.context, "Variadic parameters cannot be void");
 
         Type *variadicListType = typeAdd(&umka->types, &umka->blocks, TYPE_DYNARRAY);
-        variadicListType->base = itemType;
+        typeSetBase(variadicListType, itemType);
         variadicListType->isVariadicParamList = true;
         *type = variadicListType;
     }
@@ -291,7 +291,7 @@ static const Type *parseArrayType(Umka *umka)
         umka->error.handler(umka->error.context, "Array is too large");
 
     Type *type = typeAdd(&umka->types, &umka->blocks, typeKind);
-    type->base = baseType;
+    typeSetBase(type, baseType);
     typeResizeArray(type, len.intVal);
     return type;
 }
@@ -394,12 +394,12 @@ static const Type *parseMapType(Umka *umka)
 
     typeAddField(&umka->types, nodeType, umka->types.predecl.intType, "#len");
     typeAddField(&umka->types, nodeType, umka->types.predecl.intType, "#priority");
-    typeAddField(&umka->types, nodeType, ptrKeyType,    "#key");
-    typeAddField(&umka->types, nodeType, ptrItemType,   "#data");
-    typeAddField(&umka->types, nodeType, ptrNodeType,   "#left");
-    typeAddField(&umka->types, nodeType, ptrNodeType,   "#right");
+    typeAddField(&umka->types, nodeType, ptrKeyType,                  "#key");
+    typeAddField(&umka->types, nodeType, ptrItemType,                 "#data");
+    typeAddField(&umka->types, nodeType, ptrNodeType,                 "#left");
+    typeAddField(&umka->types, nodeType, ptrNodeType,                 "#right");
 
-    type->base = nodeType;
+    typeSetBase(type, nodeType);
     return type;
 }
 

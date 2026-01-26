@@ -35,7 +35,7 @@ void identFree(Idents *idents, int block)
         
         Ident *next = idents->first->next;
 
-        if (idents->first->globallyAllocated)
+        if (idents->first->isGloballyAllocated)
             storageRemove(idents->storage, idents->first->ptr);
 
         storageRemove(idents->storage, idents->first);
@@ -73,7 +73,7 @@ static const Ident *identFindEx(const Idents *idents, const Modules *modules, co
             // What we found has correct name and block scope, check module scope
             const bool identModuleValid = (ident->module == 0 && blocks->module == module) ||                                                // Universe module
                                           (ident->module == module && (blocks->module == module ||                                           // Current module
-                                          (ident->exported && (rcvType || modules->module[blocks->module]->importAlias[ident->module]))));   // Imported module
+                                          (ident->isExported && (rcvType || modules->module[blocks->module]->importAlias[ident->module]))));   // Imported module
 
             if (identModuleValid)
             {
@@ -167,7 +167,7 @@ static Ident *identAdd(Idents *idents, const Modules *modules, const Blocks *blo
 
                 modifiableType->typeIdent = existingIdent;
                 typeDeepCopy(idents->storage, modifiableIdentType, type);
-                modifiableIdent->exported = exported;
+                modifiableIdent->isExported = exported;
 
                 return modifiableIdent;
             }
@@ -175,7 +175,7 @@ static Ident *identAdd(Idents *idents, const Modules *modules, const Blocks *blo
             // Function prototype resolution
             if (existingIdent->kind == IDENT_CONST && existingIdent->type->kind == TYPE_FN &&
                 kind == IDENT_CONST && type->kind == TYPE_FN &&
-                existingIdent->exported == exported &&
+                existingIdent->isExported == exported &&
                 strcmp(existingIdent->name, name) == 0 &&
                 typeCompatible(existingIdent->type, type) &&
                 existingIdent->prototypeOffset >= 0)
@@ -217,11 +217,11 @@ static Ident *identAdd(Idents *idents, const Modules *modules, const Blocks *blo
     ident->type              = type;
     ident->module            = blocks->module;
     ident->block             = blocks->item[blocks->top].block;
-    ident->exported          = exported;
-    ident->globallyAllocated = false;
-    ident->temporary         = false;
-    ident->used              = exported || ident->module == 0 || identIsHidden(ident->name) || identIsPlaceholder(ident->name) || identIsMain(ident);  // Exported, predefined, hidden, placeholder identifiers and main() are always treated as used
-    ident->garbageCollected  = identIsGarbageCollected(blocks, ident);
+    ident->isExported          = exported;
+    ident->isGloballyAllocated = false;
+    ident->isTemporary         = false;
+    ident->isUsed              = exported || ident->module == 0 || identIsHidden(ident->name) || identIsPlaceholder(ident->name) || identIsMain(ident);  // Exported, predefined, hidden, placeholder identifiers and main() are always treated as used
+    ident->isGarbageCollected  = identIsGarbageCollected(blocks, ident);
     ident->prototypeOffset   = -1;
     ident->debug             = *(idents->debug);
 
@@ -246,7 +246,7 @@ Ident *identAddTempConst(Idents *idents, const Modules *modules, const Blocks *b
     identTempName(idents, tempName);
 
     Ident *ident = identAddConst(idents, modules, blocks, tempName, type, false, constant);
-    ident->temporary = true;
+    ident->isTemporary = true;
     return ident;
 }
 
@@ -255,7 +255,7 @@ Ident *identAddGlobalVar(Idents *idents, const Modules *modules, const Blocks *b
 {
     Ident *ident = identAdd(idents, modules, blocks, IDENT_VAR, name, type, exported);
     ident->ptr = ptr;
-    ident->globallyAllocated = true;
+    ident->isGloballyAllocated = true;
     return ident;
 }
 
@@ -330,7 +330,7 @@ Ident *identAllocTempVar(Idents *idents, const Types *types, const Modules *modu
     identTempName(idents, tempName);
 
     Ident *ident = identAllocVar(idents, types, modules, blocks, tempName, type, false);
-    ident->temporary = true;
+    ident->isTemporary = true;
 
     if (isFuncResult)
     {
@@ -366,7 +366,7 @@ const char *identMethodNameWithRcv(const Idents *idents, const Ident *method)
 
 void identWarnIfUnused(const Idents *idents, const Ident *ident)
 {
-    if (!ident->temporary && !ident->used)
+    if (!ident->isTemporary && !ident->isUsed)
     {
         idents->error->warningHandler(idents->error->context, &ident->debug, "%s %s is not used", (ident->kind == IDENT_MODULE ? "Module" : "Identifier"), ident->name);
         identSetUsed(ident);
@@ -388,7 +388,7 @@ bool identIsMain(const Ident *ident)
 static bool identIsGarbageCollected(const Blocks *blocks, const Ident *ident)
 {
     return  ident->kind == IDENT_VAR && 
-            typeGarbageCollected(ident->type) && 
+            ident->type->isGarbageCollected && 
             strcmp(ident->name, "#result") != 0 && 
             (strcmp(ident->name, "#upvalues") != 0 || blocks->item[blocks->top].hasUpvalues);     // Collect #upvalues only if used
 }
@@ -398,7 +398,7 @@ const char *identSpellingByPtr(const Idents *idents, const void *ptr, char *buf)
 {
     for (const Ident *ident = idents->first; ident; ident = ident->next)
     {
-        if (ident->globallyAllocated && ptr == ident->ptr)
+        if (ident->isGloballyAllocated && ptr == ident->ptr)
         {
             snprintf(buf, DEFAULT_STR_LEN + 1, "%s", ident->name);
             return buf;

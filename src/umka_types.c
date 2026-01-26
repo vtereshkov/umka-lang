@@ -87,7 +87,8 @@ static void typeInitPredeclared(Types *types, const Blocks *blocks)
     Type *fiberClosureType = typeAdd(types, blocks, TYPE_CLOSURE);
     typeAddField(types, fiberClosureType, fnType, "#fn");
     typeAddField(types, fiberClosureType, types->predecl.anyType, "#upvalues");
-    fiberType->base = fiberClosureType;
+    
+    typeSetBase(fiberType, fiberClosureType);
 
     types->predecl.fiberType = fiberType;
 
@@ -116,6 +117,7 @@ Type *typeAdd(Types *types, const Blocks *blocks, TypeKind kind)
 
     type->kind  = kind;
     type->block = blocks->item[blocks->top].block;
+    type->isGarbageCollected = typeHasPtr(type, false);
     type->sameAs = type;
     type->size = typeSizeRecompute(type);
     type->alignment = typeAlignmentRecompute(type);
@@ -168,7 +170,7 @@ void typeDeepCopy(Storage *storage, Type *dest, const Type *src)
 const Type *typeAddPtrTo(Types *types, const Blocks *blocks, const Type *type)
 {
     Type *ptrType = typeAdd(types, blocks, TYPE_PTR);
-    ptrType->base = type;
+    typeSetBase(ptrType, type);
     return ptrType;
 }
 
@@ -176,7 +178,7 @@ const Type *typeAddPtrTo(Types *types, const Blocks *blocks, const Type *type)
 const Type *typeAddWeakPtrTo(Types *types, const Blocks *blocks, const Type *type)
 {
     Type *weakPtrType = typeAdd(types, blocks, TYPE_WEAKPTR);
-    weakPtrType->base = type;
+    typeSetBase(weakPtrType, type);
     return weakPtrType;
 }
 
@@ -690,6 +692,9 @@ const Field *typeAddField(const Types *types, Type *structType, const Type *fiel
         structType->alignment = fieldType->alignment;
 
     structType->size = align(field->offset + fieldType->size, structType->alignment);
+
+    if (fieldType->isGarbageCollected)
+        structType->isGarbageCollected = true;
 
     return field;
 }

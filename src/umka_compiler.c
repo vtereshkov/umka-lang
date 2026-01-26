@@ -227,7 +227,7 @@ void compilerInit(Umka *umka, const char *fileName, const char *sourceString, in
 
     // Command-line-arguments
     Type *argvType = typeAdd(&umka->types, &umka->blocks, TYPE_ARRAY);
-    argvType->base = umka->types.predecl.strType;
+    typeSetBase(argvType, umka->types.predecl.strType);
     typeResizeArray(argvType, argc);
 
     const Ident *rtlargv = identAllocVar(&umka->idents, &umka->types, &umka->modules, &umka->blocks, "rtlargv", argvType, true);

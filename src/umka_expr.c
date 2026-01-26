@@ -76,7 +76,7 @@ bool doTryRemoveCopyResultToTempVar(Umka *umka)
     if (resultCopyOffset != umka->idents.lastTempVarForResult->offset)
         umka->error.handler(umka->error.context, "Result copy optimization failed");
 
-    umka->idents.lastTempVarForResult->used = false;
+    umka->idents.lastTempVarForResult->isUsed = false;
     return true;
 }
 
@@ -1539,7 +1539,7 @@ static void parseBuiltinKeysCall(Umka *umka, const Type **type, Const *constant)
 
     // Result type (hidden parameter)
     Type *keysType = typeAdd(&umka->types, &umka->blocks, TYPE_DYNARRAY);
-    keysType->base = typeMapKey(*type);
+    typeSetBase(keysType, typeMapKey(*type));
 
     // Pointer to result (hidden parameter)
     const int resultOffset = identAllocStack(&umka->idents, &umka->types, &umka->blocks, keysType);
@@ -1702,7 +1702,7 @@ static void parseVariadicParamList(Umka *umka, const Type **type)
 {
     // Dynamic array is first parsed as a static array of unknown length, then converted to a dynamic array
     Type *staticArrayType = typeAdd(&umka->types, &umka->blocks, TYPE_ARRAY);
-    staticArrayType->base = (*type)->base;
+    typeSetBase(staticArrayType, (*type)->base);
     const int itemSize = typeSize(&umka->types, staticArrayType->base);
 
     // Parse array
@@ -1944,7 +1944,7 @@ static void parsePrimary(Umka *umka, const Ident *ident, const Type **type, Cons
             parseBuiltinCall(umka, type, constant, ident->builtin);
 
             // Copy result to a temporary local variable to collect it as garbage when leaving the block
-            if (typeGarbageCollected(*type) && ident->builtin != BUILTIN_SELFPTR && ident->builtin != BUILTIN_TYPEPTR)
+            if ((*type)->isGarbageCollected && ident->builtin != BUILTIN_SELFPTR && ident->builtin != BUILTIN_TYPEPTR)
                 doCopyResultToTempVar(umka, *type);
 
             *isVar = false;
@@ -2113,7 +2113,7 @@ static void parseDynArrayLiteral(Umka *umka, const Type **type, Const *constant)
 
     // Dynamic array is first parsed as a static array of unknown length, then converted to a dynamic array
     Type *staticArrayType = typeAdd(&umka->types, &umka->blocks, TYPE_ARRAY);
-    staticArrayType->base = (*type)->base;
+    typeSetBase(staticArrayType, (*type)->base);
     const int itemSize = typeSize(&umka->types, staticArrayType->base);
 
     // Parse array
@@ -2661,7 +2661,7 @@ static void parseCallSelector(Umka *umka, const Type **type, bool *isVar, bool *
         genPushReg(&umka->gen, REG_RESULT);
 
     // Copy result to a temporary local variable to collect it as garbage when leaving the block
-    if (typeGarbageCollected(*type))
+    if ((*type)->isGarbageCollected)
         doCopyResultToTempVar(umka, *type);
 
     *isVar = typeStructured(*type);
@@ -3102,7 +3102,7 @@ void parseExpr(Umka *umka, const Type **type, Const *constant)
             parseExpr(umka, &leftType, NULL);
 
             const Ident *ternaryResult = NULL;
-            if (typeGarbageCollected(leftType))
+            if (leftType->isGarbageCollected)
             {
                 // Create a temporary result variable in the outer block, so that it could outlive both left- and right-hand side expression blocks
                 blocksLeave(&umka->blocks);
@@ -3132,7 +3132,7 @@ void parseExpr(Umka *umka, const Type **type, Const *constant)
             parseExpr(umka, &rightType, NULL);
             doAssertImplicitTypeConv(umka, leftType, &rightType, NULL);
 
-            if (typeGarbageCollected(leftType))
+            if (leftType->isGarbageCollected)
             {
                 // Copy result to temporary variable
                 genDup(&umka->gen);

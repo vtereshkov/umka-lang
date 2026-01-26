@@ -676,7 +676,7 @@ void genAssignParam(CodeGen *gen, TypeKind typeKind, int structSize)
 
 void genRefCnt(CodeGen *gen, TokenKind tokKind, const Type *type)
 {
-    if (typeGarbageCollected(type) && !optimizeRefCnt(gen, type))
+    if (type->isGarbageCollected && !optimizeRefCnt(gen, type))
     {
         const Instruction instr = {.opcode = OP_REF_CNT, .tokKind = tokKind, .type = type};
         genAddInstr(gen, &instr);
@@ -686,7 +686,7 @@ void genRefCnt(CodeGen *gen, TokenKind tokKind, const Type *type)
 
 void genRefCntGlobal(CodeGen *gen, TokenKind tokKind, void *ptrVal, const Type *type)
 {
-    if (typeGarbageCollected(type))
+    if (type->isGarbageCollected)
     {
         const Instruction instr = {.opcode = OP_REF_CNT_GLOBAL, .tokKind = tokKind, .operand.ptrVal = ptrVal, .type = type};
         genAddInstr(gen, &instr);
@@ -696,7 +696,7 @@ void genRefCntGlobal(CodeGen *gen, TokenKind tokKind, void *ptrVal, const Type *
 
 void genRefCntLocal(CodeGen *gen, TokenKind tokKind, int offset, const Type *type)
 {
-    if (typeGarbageCollected(type))
+    if (type->isGarbageCollected)
     {
         const Instruction instr = {.opcode = OP_REF_CNT_LOCAL, .tokKind = tokKind, .operand.intVal = offset, .type = type};
         genAddInstr(gen, &instr);
@@ -706,7 +706,7 @@ void genRefCntLocal(CodeGen *gen, TokenKind tokKind, int offset, const Type *typ
 
 void genRefCntAssign(CodeGen *gen, const Type *type)
 {
-    if (typeGarbageCollected(type))
+    if (type->isGarbageCollected)
     {
         const Instruction instr = {.opcode = OP_REF_CNT_ASSIGN, .tokKind = TOK_NONE, .type = type};
         genAddInstr(gen, &instr);
@@ -718,7 +718,7 @@ void genRefCntAssign(CodeGen *gen, const Type *type)
 
 void genSwapRefCntAssign(CodeGen *gen, const Type *type)
 {
-    if (typeGarbageCollected(type))
+    if (type->isGarbageCollected)
     {
         const Instruction instr = {.opcode = OP_SWAP_REF_CNT_ASSIGN, .tokKind = TOK_NONE, .type = type};
         genAddInstr(gen, &instr);
@@ -730,7 +730,7 @@ void genSwapRefCntAssign(CodeGen *gen, const Type *type)
 
 void genLeftRefCntAssign(CodeGen *gen, const Type *type)
 {
-    if (typeGarbageCollected(type))
+    if (type->isGarbageCollected)
     {
         const Instruction instr = {.opcode = OP_REF_CNT_ASSIGN, .tokKind = TOK_MINUSMINUS, .type = type};
         genAddInstr(gen, &instr);

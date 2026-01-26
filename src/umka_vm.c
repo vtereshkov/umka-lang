@@ -1007,7 +1007,7 @@ static int64_t doCompare(Slot lhs, Slot rhs, const Type *type, Error *error)
 
 static FORCE_INLINE void doAddPtrBaseRefCntCandidate(RefCntCandidates *candidates, void *ptr, const Type *type)
 {
-    if (typeKindGarbageCollected(type->base->kind))
+    if (type->base->isGarbageCollected)
     {
         void *data = ptr;
         if (type->base->kind == TYPE_PTR || type->base->kind == TYPE_STR || type->base->kind == TYPE_FIBER)
@@ -1020,7 +1020,7 @@ static FORCE_INLINE void doAddPtrBaseRefCntCandidate(RefCntCandidates *candidate
 
 static FORCE_INLINE void doAddArrayItemsRefCntCandidates(RefCntCandidates *candidates, void *ptr, const Type *type, int len)
 {
-    if (typeKindGarbageCollected(type->base->kind))
+    if (type->base->isGarbageCollected)
     {
         char *itemPtr = ptr;
         const int itemSize = type->base->size;
@@ -1042,7 +1042,7 @@ static FORCE_INLINE void doAddStructFieldsRefCntCandidates(RefCntCandidates *can
 {
     for (int i = 0; i < type->numItems; i++)
     {
-        if (typeKindGarbageCollected(type->field[i]->type->kind))
+        if (type->field[i]->type->isGarbageCollected)
         {
             void *field = (char *)ptr + type->field[i]->offset;
             if (type->field[i]->type->kind == TYPE_PTR || type->field[i]->type->kind == TYPE_STR || type->field[i]->type->kind == TYPE_FIBER)
@@ -1397,7 +1397,7 @@ static MapNode *doCopyMapNode(Map *map, MapNode *node, Fiber *fiber, HeapPages *
         // When allocating dynamic arrays, we mark with type the data chunk, not the header chunk
         result->key = chunkAlloc(pages, keyType->size, keyType->kind == TYPE_DYNARRAY ? NULL : keyType, NULL, false, error);
 
-        if (typeGarbageCollected(keyType))
+        if (keyType->isGarbageCollected)
             doRefCntImpl(pages, srcKey.ptrVal, keyType, TOK_PLUSPLUS);
 
         doAssignImpl(result->key, srcKey, keyType->kind, keyType->size, error);
@@ -1413,7 +1413,7 @@ static MapNode *doCopyMapNode(Map *map, MapNode *node, Fiber *fiber, HeapPages *
         // When allocating dynamic arrays, we mark with type the data chunk, not the header chunk
         result->data = chunkAlloc(pages, itemType->size, itemType->kind == TYPE_DYNARRAY ? NULL : itemType, NULL, false, error);
 
-        if (typeGarbageCollected(itemType))
+        if (itemType->isGarbageCollected)
             doRefCntImpl(pages, srcItem.ptrVal, itemType, TOK_PLUSPLUS);
 
         doAssignImpl(result->data, srcItem, itemType->kind, itemType->size, error);
@@ -3531,7 +3531,7 @@ static FORCE_INLINE void doGetMapPtr(Fiber *fiber, HeapPages *pages, bool derefe
         node->data = chunkAlloc(pages, itemType->size, itemType->kind == TYPE_DYNARRAY ? NULL : itemType, NULL, false, error);
 
         // Increase key ref count
-        if (typeGarbageCollected(keyType))
+        if (keyType->isGarbageCollected)
             doRefCntImpl(pages, key.ptrVal, keyType, TOK_PLUSPLUS);
 
         doAssignImpl(node->key, key, keyType->kind, keyType->size, error);

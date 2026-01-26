@@ -22,7 +22,7 @@ typedef struct tagIdent
     IdentName name;
     const Type *type;
     int module, block;                  // Place of definition (global identifiers are in block 0)
-    bool exported, globallyAllocated, used, temporary, garbageCollected;
+    bool isExported, isGloballyAllocated, isUsed, isTemporary, isGarbageCollected;
     int prototypeOffset;                // For function prototypes
     union
     {
@@ -91,7 +91,7 @@ static inline bool identIsPlaceholder(const char *name)
 
 static inline void identSetUsed(const Ident *ident)
 {
-    ((Ident *)ident)->used = true;
+    ((Ident *)ident)->isUsed = true;
 }
 
 const char *identSpellingByPtr(const Idents *idents, const void *ptr, char *buf);

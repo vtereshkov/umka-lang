@@ -157,6 +157,7 @@ typedef struct tagType
     bool isExprList;                            // For structures that represent expression lists
     bool isVariadicParamList;                   // For dynamic arrays that represent variadic parameter lists
     bool isEnum;                                // For enumerations
+    bool isGarbageCollected;
     const struct tagIdent *typeIdent;           // For types that have identifiers
     const struct tagType *sameAs;               // For types declared as type T = ...
     union
@@ -295,21 +296,7 @@ static inline bool typeStructured(const Type *type)
 }
 
 
-static inline bool typeKindGarbageCollected(TypeKind typeKind)
-{
-    return typeKind == TYPE_PTR    ||
-           typeKind == TYPE_STR    || typeKind == TYPE_ARRAY     || typeKind == TYPE_DYNARRAY || typeKind == TYPE_MAP ||
-           typeKind == TYPE_STRUCT || typeKind == TYPE_INTERFACE || typeKind == TYPE_CLOSURE  || typeKind == TYPE_FIBER;
-}
-
-
 bool typeHasPtr(const Type *type, bool alsoWeakPtr);
-
-
-static inline bool typeGarbageCollected(const Type *type)
-{
-    return typeHasPtr(type, false);
-}
 
 
 static inline bool typeExprListStruct(const Type *type)
@@ -423,6 +410,17 @@ static inline bool typeOverflow(TypeKind typeKind, Const val)
 }
 
 
+static inline void typeSetBase(Type *type, const Type *base)
+{
+    if (type->kind == TYPE_PTR || type->kind == TYPE_WEAKPTR || type->kind == TYPE_ARRAY || type->kind == TYPE_DYNARRAY || type->kind == TYPE_MAP || type->kind == TYPE_FIBER)
+    {
+        type->base = base;
+        if (type->kind == TYPE_ARRAY && base->isGarbageCollected)
+            type->isGarbageCollected = true;
+    }
+}
+
+
 static inline void typeResizeArray(Type *type, int numItems)
 {
     if (type->kind == TYPE_ARRAY)
@@ -436,7 +434,8 @@ static inline void typeResizeArray(Type *type, int numItems)
 
 static inline Type typeMakeDetachedArray(const Type *base, int numItems)
 {
-    Type type = {.kind = TYPE_ARRAY, .base = base};
+    Type type = {.kind = TYPE_ARRAY};
+    typeSetBase(&type, base);
     typeResizeArray(&type, numItems);
     return type;
 }
