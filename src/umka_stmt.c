@@ -195,20 +195,7 @@ static void parseSingleAssignmentStmt(Umka *umka, const Type *type, Const *varPt
     if (varPtrConst)                                // Initialize global variable
         constAssign(&umka->consts, varPtrConst->ptrVal, rightConstant, type->kind, typeSize(&umka->types, type));
     else                                            // Assign to variable
-    {
-        if (doTryRemoveCopyResultToTempVar(umka))
-        {
-            // Optimization: if the right-hand side is a function call, assume its reference count to be already increased before return
-            // The left-hand side will hold this additional reference, so we can remove the temporary "reference holder" variable
-            genLeftRefCntAssign(&umka->gen, type);
-
-        }
-        else
-        {
-            // General case: update reference counts for both sides
-            genRefCntAssign(&umka->gen, type);
-        }
-    }
+        doTryOptimizeRefCntAssign(umka, type, true);
 }
 
 
@@ -323,17 +310,7 @@ static void parseSingleDeclAssignmentStmt(Umka *umka, IdentName name, bool expor
         constAssign(&umka->consts, ident->ptr, rightConstant, rightType->kind, typeSize(&umka->types, rightType));
     else                        // Assign to variable
     {
-        if (doTryRemoveCopyResultToTempVar(umka))
-        {
-            // Optimization: if the right-hand side is a function call, assume its reference count to be already increased before return
-            // The left-hand side will hold this additional reference, so we can remove the temporary "reference holder" variable
-        }
-        else
-        {
-            // General case: increase right-hand side reference count
-            genRefCnt(&umka->gen, TOK_PLUSPLUS, rightType);
-        }
-
+        doTryOptimizeIncRefCnt(umka, rightType);
         doPushVarPtr(umka, ident);
         genSwapAssign(&umka->gen, rightType->kind, typeSize(&umka->types, rightType));
     }
@@ -1210,16 +1187,7 @@ static void parseReturnStmt(Umka *umka)
 
     if (sig->resultType->kind != TYPE_VOID)
     {
-        if (doTryRemoveCopyResultToTempVar(umka))
-        {
-            // Optimization: if the result expression is a function call, assume its reference count to be already increased before the inner return
-            // The outer caller will hold this additional reference, so we can remove the temporary "reference holder" variable
-        }
-        else
-        {
-            // General case: increase result reference count
-            genRefCnt(&umka->gen, TOK_PLUSPLUS, sig->resultType);
-        }
+        doTryOptimizeIncRefCnt(umka, sig->resultType);
         genPopReg(&umka->gen, REG_RESULT);
     }
 

@@ -7,7 +7,8 @@
 void doPushConst                    (Umka *umka, const Type *type, const Const *constant);
 void doPushVarPtr                   (Umka *umka, const Ident *ident);
 void doCopyResultToTempVar          (Umka *umka, const Type *type);
-bool doTryRemoveCopyResultToTempVar (Umka *umka);
+void doTryOptimizeIncRefCnt         (Umka *umka, const Type *type);
+void doTryOptimizeRefCntAssign      (Umka *umka, const Type *type, bool isOldLhsValid);
 void doImplicitTypeConv             (Umka *umka, const Type *dest, const Type **src, Const *constant);
 void doAssertImplicitTypeConv       (Umka *umka, const Type *dest, const Type **src, Const *constant);
 void doExplicitTypeConv             (Umka *umka, const Type *dest, const Type **src, Const *constant);

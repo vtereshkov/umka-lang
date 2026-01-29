@@ -38,25 +38,6 @@ void doPushVarPtr(Umka *umka, const Ident *ident)
 }
 
 
-static void doPassParam(Umka *umka, const Type *formalParamType)
-{
-    if (doTryRemoveCopyResultToTempVar(umka))
-    {
-        // Optimization: if the actual parameter is a function call, assume its reference count to be already increased before return
-        // The formal parameter variable will hold this additional reference, so we can remove the temporary "reference holder" variable
-    }
-    else
-    {
-        // General case: increase parameter's reference count
-        genRefCnt(&umka->gen, TOK_PLUSPLUS, formalParamType);
-    }
-
-    // Non-trivial assignment to parameters
-    if (typeNarrow(formalParamType) || typeStructured(formalParamType))
-        genAssignParam(&umka->gen, formalParamType->kind, typeSize(&umka->types, formalParamType));
-}
-
-
 void doCopyResultToTempVar(Umka *umka, const Type *type)
 {
     const Ident *resultCopy = identAllocTempVar(&umka->idents, &umka->types, &umka->modules, &umka->blocks, type, true);
@@ -64,8 +45,11 @@ void doCopyResultToTempVar(Umka *umka, const Type *type)
 }
 
 
-bool doTryRemoveCopyResultToTempVar(Umka *umka)
+static bool doTryRemoveCopyResultToTempVar(Umka *umka)
 {
+    // Optimization: If the right-hand side is a function call, assume its reference count has been already incremented before return
+    // The left-hand side will hold this additional reference, so we can remove the temporary "reference holder" variable
+    
     if (!umka->idents.lastTempVarForResult)
         return false;
 
@@ -78,6 +62,31 @@ bool doTryRemoveCopyResultToTempVar(Umka *umka)
 
     umka->idents.lastTempVarForResult->isUsed = false;
     return true;
+}
+
+
+void doTryOptimizeIncRefCnt(Umka *umka, const Type *type)
+{
+    if (doTryRemoveCopyResultToTempVar(umka))
+    {
+        // Nothing to do
+    }
+    else
+        genRefCnt(&umka->gen, TOK_PLUSPLUS, type);
+}
+
+
+void doTryOptimizeRefCntAssign(Umka *umka, const Type *type, bool isOldLhsValid)
+{
+    if (doTryRemoveCopyResultToTempVar(umka))
+    {    
+        if (isOldLhsValid)
+            genLeftRefCntAssign(&umka->gen, type);
+        else
+            genAssign(&umka->gen, type->kind, typeSize(&umka->types, type));
+    }
+    else
+        genRefCntAssign(&umka->gen, type);
 }
 
 
@@ -97,6 +106,16 @@ static void doTryImplicitDeref(Umka *umka, const Type **type)
 }
 
 
+static void doPassParam(Umka *umka, const Type *formalParamType)
+{
+    doTryOptimizeIncRefCnt(umka, formalParamType);
+
+    // Non-trivial assignment to parameters
+    if (typeNarrow(formalParamType) || typeStructured(formalParamType))
+        genAssignParam(&umka->gen, formalParamType->kind, typeSize(&umka->types, formalParamType));
+}
+
+
 static void doEscapeToHeap(Umka *umka, const Type *ptrType)
 {
     // Allocate heap
@@ -108,8 +127,6 @@ static void doEscapeToHeap(Umka *umka, const Type *ptrType)
     genPopReg(&umka->gen, REG_HEAP_COPY);
     genSwapRefCntAssign(&umka->gen, ptrType->base);
     genPushReg(&umka->gen, REG_HEAP_COPY);
-
-    doCopyResultToTempVar(umka, ptrType);
 }
 
 
@@ -459,6 +476,7 @@ static void doValueToInterfaceConv(Umka *umka, const Type *dest, const Type **sr
     *src = typeAddPtrTo(&umka->types, &umka->blocks, *src);
     doEscapeToHeap(umka, *src);
     doPtrToInterfaceConv(umka, dest, src, constant);
+    doCopyResultToTempVar(umka, *src);
 }
 
 
@@ -2065,19 +2083,7 @@ static void parseArrayOrStructLiteral(Umka *umka, const Type **type, Const *cons
         if (constant)
             constAssign(&umka->consts, (char *)constant->ptrVal + itemOffset, itemConstant, expectedItemType->kind, itemSize);
         else
-        {
-            if (doTryRemoveCopyResultToTempVar(umka))
-            {
-                // Optimization: if the right-hand side is a function call, assume its reference count to be already increased before return
-                // The left-hand side will hold this additional reference, so we can remove the temporary "reference holder" variable
-                genAssign(&umka->gen, expectedItemType->kind, itemSize);
-            }
-            else
-            {
-                // General case: update reference counts for both sides
-                genRefCntAssign(&umka->gen, expectedItemType);
-            }
-        }
+            doTryOptimizeRefCntAssign(umka, expectedItemType, false);
 
         numItems++;
         if ((*type)->kind == TYPE_ARRAY)
@@ -2231,17 +2237,7 @@ static void parseMapLiteral(Umka *umka, const Type **type, Const *constant)
         doAssertImplicitTypeConv(umka, typeMapItem(*type), &itemType, NULL);
 
         // Assign to map item
-        if (doTryRemoveCopyResultToTempVar(umka))
-        {
-            // Optimization: if the right-hand side is a function call, assume its reference count to be already increased before return
-            // The left-hand side will hold this additional reference, so we can remove the temporary "reference holder" variable
-            genLeftRefCntAssign(&umka->gen, typeMapItem(*type));
-        }
-        else
-        {
-            // General case: update reference counts for both sides
-            genRefCntAssign(&umka->gen, typeMapItem(*type));
-        }
+        doTryOptimizeRefCntAssign(umka, typeMapItem(*type), true);
 
         if (umka->lex.tok.kind != TOK_COMMA)
             break;
@@ -2355,7 +2351,7 @@ static void parseClosureLiteral(Umka *umka, const Type **type, Const *constant)
             genDeref(&umka->gen, upvaluesStructIdent->type->kind);
             doAssertImplicitTypeConv(umka, upvalues->type, &upvaluesType, NULL);
 
-            genRefCntAssign(&umka->gen, upvalues->type);
+            doTryOptimizeRefCntAssign(umka, upvalues->type, false);
         }
 
         // fnBlock
@@ -2872,12 +2868,16 @@ static void parseFactor(Umka *umka, const Type **type, Const *constant)
             if (!isVar)
                 umka->error.handler(umka->error.context, "Cannot take address");
 
-            if (isCompLit)
-                doEscapeToHeap(umka, typeAddPtrTo(&umka->types, &umka->blocks, *type));
-
             if (typeStructured(*type))
             {
                 *type = typeAddPtrTo(&umka->types, &umka->blocks, *type);
+
+                if (isCompLit)
+                {
+                    doEscapeToHeap(umka, *type);
+                    doCopyResultToTempVar(umka, *type);
+                }
+                
                 genResetOptimizer(&umka->gen);      // No instructions emitted, but the type has changed - a barrier for optimizations
             }
 
