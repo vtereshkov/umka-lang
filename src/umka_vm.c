@@ -2044,19 +2044,13 @@ static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool isC
 }
 
 
-// fn new(type: Type, size: int [, expr: type]): ^type
+// fn new(type: Type [, expr: type]): ^type
 static FORCE_INLINE void doBuiltinNew(Fiber *fiber, HeapPages *pages, Error *error)
 {
-    const int size = (fiber->top++)->intVal;
     const Type *type = fiber->code[fiber->ip].type;
 
     // For dynamic arrays, we mark with type the data chunk, not the header chunk
-    if (type && type->kind == TYPE_DYNARRAY)
-        type = NULL;
-
-    void *result = chunkAlloc(pages, size, type, NULL, false, error);
-
-    (--fiber->top)->ptrVal = result;
+    (--fiber->top)->ptrVal = chunkAlloc(pages, type->size, (type->kind == TYPE_DYNARRAY ? NULL : type), NULL, false, error); 
 }
 
 

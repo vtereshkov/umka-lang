@@ -119,7 +119,6 @@ static void doPassParam(Umka *umka, const Type *formalParamType)
 static void doEscapeToHeap(Umka *umka, const Type *ptrType)
 {
     // Allocate heap
-    genPushIntConst(&umka->gen, typeSize(&umka->types, ptrType->base));
     genCallTypedBuiltin(&umka->gen, ptrType->base, BUILTIN_NEW);
 
     // Copy to heap and use heap pointer
@@ -959,7 +958,7 @@ static void parseBuiltinMathCall(Umka *umka, const Type **type, Const *constant,
 }
 
 
-// fn new(type: Type, size: int [, expr: type]): ^type
+// fn new(type: Type [, expr: type]): ^type
 static void parseBuiltinNewCall(Umka *umka, const Type **type, Const *constant)
 {
     if (constant)
@@ -969,7 +968,6 @@ static void parseBuiltinNewCall(Umka *umka, const Type **type, Const *constant)
     *type = parseType(umka, NULL);
     typeAssertCompatibleBuiltin(&umka->types, *type, BUILTIN_NEW, (*type)->kind != TYPE_VOID && (*type)->kind != TYPE_NULL);
 
-    genPushIntConst(&umka->gen, typeSize(&umka->types, *type));
     genCallTypedBuiltin(&umka->gen, *type, BUILTIN_NEW);
 
     // Initializer expression
