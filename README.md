@@ -71,9 +71,12 @@ _400 x 400 matrix multiplication (AMD A4-3300M @ 1.9 GHz, Windows 7)_
 ## Projects in Umka
 
 * [tophat](https://tophat2d.dev/): A 2D game framework focused on minimalism
-* [SaveScum](https://skejeton.itch.io/savescum): A tophat-based puzzle platformer game 
 
 ![](resources/tophat.png)
+
+* [SaveScum](https://skejeton.itch.io/savescum): A tophat-based puzzle platformer game 
+
+![](resources/savescum.png)
 
 * [Money, please!](https://skejeton.itch.io/moneyplease): A visual novel/puzzle game. Designed and developed in 96 hours for GMTK Game Jam 2024
 
