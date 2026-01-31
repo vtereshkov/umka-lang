@@ -318,8 +318,7 @@ static void pageLeakSan(HeapPages *pages, const HeapPage *page, Storage *storage
 
 static void pageInit(HeapPages *pages, Fiber *fiber, Storage *storage, Error *error)
 {
-    pages->first = NULL;
-    pages->lastAccessed = NULL;
+    pages->first = pages->firstRecycled = pages->lastAccessed = NULL;
     pages->lowest = pages->highest = NULL;
     pages->freeId = 1;
     pages->totalSize = 0;
@@ -332,8 +331,8 @@ static void pageInit(HeapPages *pages, Fiber *fiber, Storage *storage, Error *er
 
 static void pageFree(HeapPages *pages, Storage *storage)
 {
-    HeapPage *page = pages->first;
-    while (page)
+    // Remove remaining reference-counted pages
+    for (HeapPage *page = pages->first; page;)
     {
         HeapPage *next = page->next;
 
@@ -354,16 +353,57 @@ static void pageFree(HeapPages *pages, Storage *storage)
         free(page);
         page = next;
     }
+
+    // Remove remaining recycled pages
+    for (HeapPage *page = pages->firstRecycled; page;)
+    {
+        HeapPage *next = page->next;
+        free(page);
+        page = next;
+    }
 }
 
+
+static FORCE_INLINE void pageAddRecycled(HeapPages *pages, HeapPage *page)
+{
+    page->next = pages->firstRecycled;
+    pages->firstRecycled = page;
+}
+
+
+static FORCE_INLINE HeapPage *pageFindRecycled(HeapPages *pages, int size)
+{
+    while (pages->firstRecycled)
+    {
+        HeapPage *page = pages->firstRecycled;
+        pages->firstRecycled = pages->firstRecycled->next;
+        
+        const int recycledSize = page->numChunks * page->chunkSize;
+        if (recycledSize >= size)
+            return page;
+
+        free(page);
+
+        pages->totalSize -= recycledSize;
+    }
+
+    return NULL;   
+}
 
 static FORCE_INLINE HeapPage *pageAdd(HeapPages *pages, int numChunks, int chunkSize)
 {
     const int size = numChunks * chunkSize;
+    
+    // Try finding a recycled page
+    HeapPage *page = pageFindRecycled(pages, size);
+    if (!page)
+    {
+        page = malloc(sizeof(HeapPage) + size);
+        if (UNLIKELY(!page))
+            pages->error->runtimeHandler(pages->error->context, ERR_RUNTIME, "Out of memory");
 
-    HeapPage *page = malloc(sizeof(HeapPage) + size);
-    if (UNLIKELY(!page))
-        pages->error->runtimeHandler(pages->error->context, ERR_RUNTIME, "Out of memory");
+        pages->totalSize += size;
+    }
 
     page->id = pages->freeId++;
     page->refCnt = 0;
@@ -374,8 +414,6 @@ static FORCE_INLINE HeapPage *pageAdd(HeapPages *pages, int numChunks, int chunk
     page->prev = NULL;
     page->next = pages->first;
     page->end = page->data + size;
-
-    pages->totalSize += size;
 
     if (pages->first)
         pages->first->prev = page;
@@ -403,8 +441,6 @@ static FORCE_INLINE void pageRemove(HeapPages *pages, HeapPage *page)
     fprintf(stderr, "Remove page at %p\n", page->data);
 #endif
 
-    pages->totalSize -= page->numChunks * page->chunkSize;
-
     if (page == pages->first)
         pages->first = page->next;
 
@@ -415,9 +451,9 @@ static FORCE_INLINE void pageRemove(HeapPages *pages, HeapPage *page)
         page->next->prev = page->prev;
 
     if (page == pages->lastAccessed)
-        pages->lastAccessed = pages->first;        
-
-    free(page);
+        pages->lastAccessed = pages->first; 
+        
+    pageAddRecycled(pages, page);
 }
 
 

@@ -21,10 +21,10 @@ typedef enum
 
 enum    // Memory manager settings
 {
-    MEM_MIN_FREE_STACK = 1024,                   // Slots
-    MEM_MIN_FREE_HEAP  = 1024,                   // Bytes
-    MEM_MIN_HEAP_CHUNK = 64,                     // Bytes
-    MEM_MIN_HEAP_PAGE  = 1024 * 1024,            // Bytes
+    MEM_MIN_FREE_STACK    = 1024,                   // Slots
+    MEM_MIN_FREE_HEAP     = 1024,                   // Bytes
+    MEM_MIN_HEAP_CHUNK    = 64,                     // Bytes
+    MEM_MIN_HEAP_PAGE     = 1024 * 1024,            // Bytes
 };
 
 
@@ -152,8 +152,7 @@ typedef struct tagHeapPage
 
 typedef struct
 {
-    HeapPage *first;
-    HeapPage *lastAccessed;
+    HeapPage *first, *firstRecycled, *lastAccessed;
     char *lowest, *highest;
     int freeId;
     int64_t totalSize;
