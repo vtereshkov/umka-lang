@@ -78,9 +78,9 @@ static const Ident *identFindEx(const Idents *idents, const Modules *modules, co
             if (identModuleValid)
             {
                 // Method names need not be unique in the given scope - check the receiver type to see if we found the right name
-                const bool methodFound = ident->type->kind == TYPE_FN && ident->type->sig.isMethod;
+                const bool methodFound = ident->type->kind == TYPE_FN && ident->type->sig->isMethod;
 
-                const bool found = (!rcvType && !methodFound) || (rcvType && methodFound && typeCompatibleRcv(ident->type->sig.param[0]->type, rcvType));
+                const bool found = (!rcvType && !methodFound) || (rcvType && methodFound && typeCompatibleRcv(ident->type->sig->param[0]->type, rcvType));
                 if (found)
                 {
                     if (markAsUsed)
@@ -147,8 +147,8 @@ bool identIsOuterLocalVar(const Blocks *blocks, const Ident *ident)
 static Ident *identAdd(Idents *idents, const Modules *modules, const Blocks *blocks, IdentKind kind, const char *name, const Type *type, bool exported)
 {
     const Type *rcvType = NULL;
-    if (type->kind == TYPE_FN && type->sig.isMethod)
-        rcvType = type->sig.param[0]->type;
+    if (type->kind == TYPE_FN && type->sig->isMethod)
+        rcvType = type->sig->param[0]->type;
 
     const Ident *existingIdent = identFindEx(idents, modules, blocks, blocks->module, name, rcvType, false, kind == IDENT_MODULE);
 
@@ -355,7 +355,7 @@ Ident *identAllocParam(Idents *idents, const Types *types, const Modules *module
 const char *identMethodNameWithRcv(const Idents *idents, const Ident *method)
 {
     char typeBuf[DEFAULT_STR_LEN + 1];
-    typeSpelling(method->type->sig.param[0]->type, typeBuf);
+    typeSpelling(method->type->sig->param[0]->type, typeBuf);
 
     char *buf = storageAdd(idents->storage, 2 * DEFAULT_STR_LEN + 2 + 1);
     snprintf(buf, 2 * DEFAULT_STR_LEN + 2 + 1, "(%s)%s", typeBuf, method->name);
@@ -378,9 +378,9 @@ bool identIsMain(const Ident *ident)
 {
     return  ident->kind == IDENT_CONST &&
             ident->type->kind == TYPE_FN && 
-            !ident->type->sig.isMethod && 
-            ident->type->sig.numParams == 1 &&                          // A dummy #upvalues is the only parameter 
-            ident->type->sig.resultType->kind == TYPE_VOID &&
+            !ident->type->sig->isMethod && 
+            ident->type->sig->numParams == 1 &&                          // A dummy #upvalues is the only parameter 
+            ident->type->sig->resultType->kind == TYPE_VOID &&
             strcmp(ident->name, "main") == 0;
 }
 

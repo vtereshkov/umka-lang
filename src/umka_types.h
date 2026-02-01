@@ -52,8 +52,8 @@ typedef enum
     BUILTIN_SSCANF,
 
     // Math
-    BUILTIN_REAL,           // Integer to real at stack top (right operand)
-    BUILTIN_REAL_LHS,       // Integer to real at stack top + 1 (left operand) - implicit calls only
+    BUILTIN_MAKEREAL,           // Integer to real at stack top (right operand)
+    BUILTIN_MAKEREALLEFT,       // Integer to real at stack top + 1 (left operand) - implicit calls only
     BUILTIN_ROUND,
     BUILTIN_TRUNC,
     BUILTIN_CEIL,
@@ -73,8 +73,8 @@ typedef enum
     BUILTIN_MAKE,
     BUILTIN_MAKEFROMARR,    // Array to dynamic array - implicit calls only
     BUILTIN_MAKEFROMSTR,    // String to dynamic array - implicit calls only
-    BUILTIN_MAKETOARR,      // Dynamic array to array - implicit calls only
-    BUILTIN_MAKETOSTR,      // Character or dynamic array to string - implicit calls only
+    BUILTIN_MAKEARR,        // Dynamic array to array - implicit calls only
+    BUILTIN_MAKESTR,        // Character or dynamic array to string - implicit calls only
     BUILTIN_COPY,
     BUILTIN_APPEND,
     BUILTIN_INSERT,
@@ -165,7 +165,7 @@ typedef struct tagType
         const struct tagType *base;             // For pointers (value type), arrays (item type), maps (node type) and fibers (closure type)
         const Field **field;                    // For structures, interfaces and closures
         const EnumConst **enumConst;            // For enumerations
-        Signature sig;                          // For functions, including methods
+        Signature *sig;                         // For functions, including methods
     };
     int size;
     int alignment;

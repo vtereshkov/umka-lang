@@ -64,6 +64,7 @@ void doZeroVar(Umka *umka, const Ident *ident)
 void doResolveExtern(Umka *umka)
 {
     for (const Ident *ident = umka->idents.first; ident; ident = ident->next)
+    {
         if (ident->module == umka->blocks.module)
         {
             if (ident->prototypeOffset >= 0)
@@ -94,14 +95,14 @@ void doResolveExtern(Umka *umka)
                 genEnterFrameStub(&umka->gen);
 
                 // All parameters must be declared since they may require garbage collection
-                for (int i = 0; i < ident->type->sig.numParams; i++)
-                    identAllocParam(&umka->idents, &umka->types, &umka->modules, &umka->blocks, &ident->type->sig, i);
+                for (int i = 0; i < ident->type->sig->numParams; i++)
+                    identAllocParam(&umka->idents, &umka->types, &umka->modules, &umka->blocks, ident->type->sig, i);
 
                 genCallExtern(&umka->gen, fn);
 
                 doGarbageCollection(umka);
 
-                const ParamLayout *paramLayout = typeMakeParamLayout(&umka->types, &ident->type->sig);
+                const ParamLayout *paramLayout = typeMakeParamLayout(&umka->types, ident->type->sig);
 
                 genLeaveFrameFixup(&umka->gen, typeMakeParamAndLocalVarLayout(&umka->types, paramLayout, 0));
                 genReturn(&umka->gen, paramLayout->numParamSlots);
@@ -112,6 +113,7 @@ void doResolveExtern(Umka *umka)
 
             identWarnIfUnused(&umka->idents, ident);
         }
+    }
 }
 
 
@@ -1151,7 +1153,7 @@ static void parseReturnStmt(Umka *umka)
     for (int i = umka->blocks.top; i >= 1; i--)
         if (umka->blocks.item[i].fn)
         {
-            sig = &umka->blocks.item[i].fn->type->sig;
+            sig = umka->blocks.item[i].fn->type->sig;
             break;
         }
 
@@ -1265,7 +1267,7 @@ void parseFnBlock(Umka *umka, Ident *fn, const Type *upvaluesStructType)
 
     if (fn->kind == IDENT_CONST && fn->type->kind == TYPE_FN && fn->block == 0)
     {
-        if (fn->type->sig.isMethod)
+        if (fn->type->sig->isMethod)
             umka->lex.debug->fnName = identMethodNameWithRcv(&umka->idents, fn);
         else
             umka->lex.debug->fnName = fn->name;
@@ -1282,8 +1284,8 @@ void parseFnBlock(Umka *umka, Ident *fn, const Type *upvaluesStructType)
     genEnterFrameStub(&umka->gen);
 
     // Formal parameters
-    for (int i = 0; i < fn->type->sig.numParams; i++)
-        identAllocParam(&umka->idents, &umka->types, &umka->modules, &umka->blocks, &fn->type->sig, i);
+    for (int i = 0; i < fn->type->sig->numParams; i++)
+        identAllocParam(&umka->idents, &umka->types, &umka->modules, &umka->blocks, fn->type->sig, i);
 
     // Upvalues
     if (upvaluesStructType)
@@ -1350,7 +1352,7 @@ void parseFnBlock(Umka *umka, Ident *fn, const Type *upvaluesStructType)
 
     const int localVarSlots = align(umka->blocks.item[umka->blocks.top].localVarSize, sizeof(Slot)) / sizeof(Slot);
 
-    const ParamLayout *paramLayout = typeMakeParamLayout(&umka->types, &fn->type->sig);
+    const ParamLayout *paramLayout = typeMakeParamLayout(&umka->types, fn->type->sig);
 
     genLeaveFrameFixup(&umka->gen, typeMakeParamAndLocalVarLayout(&umka->types, paramLayout, localVarSlots));
     genReturn(&umka->gen, paramLayout->numParamSlots);
@@ -1360,7 +1362,7 @@ void parseFnBlock(Umka *umka, Ident *fn, const Type *upvaluesStructType)
     blocksLeave(&umka->blocks);
     lexEat(&umka->lex, TOK_RBRACE);
 
-    if (!hasReturn && fn->type->sig.resultType->kind != TYPE_VOID)
+    if (!hasReturn && fn->type->sig->resultType->kind != TYPE_VOID)
         umka->error.handler(umka->error.context, "Function must return a value");
 }
 

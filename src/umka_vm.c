@@ -122,8 +122,8 @@ static const char *builtinSpelling [] =
     "scanf",
     "fscanf",
     "sscanf",
-    "real",
-    "real_lhs",
+    "makereal",
+    "makerealleft",
     "round",
     "trunc",
     "ceil",
@@ -141,8 +141,8 @@ static const char *builtinSpelling [] =
     "make",
     "makefromarr",
     "makefromstr",
-    "maketoarr",
-    "maketostr",
+    "makearr",
+    "makestr",
     "copy",
     "append",
     "insert",
@@ -1510,7 +1510,7 @@ static FORCE_INLINE Fiber *doAllocFiber(Fiber *parent, const Closure *childClosu
 
     child->parent = parent;
 
-    const Signature *childClosureSig = &childClosureType->field[0]->type->sig;
+    const Signature *childClosureSig = childClosureType->field[0]->type->sig;
 
     // Push upvalues
     child->top -= sizeof(Interface) / sizeof(Slot);
@@ -2125,7 +2125,7 @@ static FORCE_INLINE void doBuiltinMake(Fiber *fiber, HeapPages *pages, Error *er
 
 
 // fn makefromarr(src: [...]ItemType, len: int): []ItemType
-static FORCE_INLINE void doBuiltinMakefromarr(Fiber *fiber, HeapPages *pages, Error *error)
+static FORCE_INLINE void doBuiltinMakeFromArr(Fiber *fiber, HeapPages *pages, Error *error)
 {
     DynArray *dest = (fiber->top++)->ptrVal;
     const int64_t len = (fiber->top++)->intVal;
@@ -2145,7 +2145,7 @@ static FORCE_INLINE void doBuiltinMakefromarr(Fiber *fiber, HeapPages *pages, Er
 
 
 // fn makefromstr(src: str): []char | []uint8
-static FORCE_INLINE void doBuiltinMakefromstr(Fiber *fiber, HeapPages *pages, Error *error)
+static FORCE_INLINE void doBuiltinMakeFromStr(Fiber *fiber, HeapPages *pages, Error *error)
 {
     DynArray *dest  = (fiber->top++)->ptrVal;
     const char *src = (fiber->top++)->ptrVal;
@@ -2162,8 +2162,8 @@ static FORCE_INLINE void doBuiltinMakefromstr(Fiber *fiber, HeapPages *pages, Er
 }
 
 
-// fn maketoarr(src: []ItemType): [...]ItemType
-static FORCE_INLINE void doBuiltinMaketoarr(Fiber *fiber, HeapPages *pages, Error *error)
+// fn makearr(src: []ItemType): [...]ItemType
+static FORCE_INLINE void doBuiltinMakeArr(Fiber *fiber, HeapPages *pages, Error *error)
 {
     void *dest = (fiber->top++)->ptrVal;
     const DynArray *src = (fiber->top++)->ptrVal;
@@ -2190,8 +2190,8 @@ static FORCE_INLINE void doBuiltinMaketoarr(Fiber *fiber, HeapPages *pages, Erro
 }
 
 
-// fn maketostr(src: char | []char | []uint8): str
-static FORCE_INLINE void doBuiltinMaketostr(Fiber *fiber, HeapPages *pages, Error *error)
+// fn makestr(src: char | []char | []uint8): str
+static FORCE_INLINE void doBuiltinMakeStr(Fiber *fiber, HeapPages *pages, Error *error)
 {
     char *dest = doGetEmptyStr();
 
@@ -2603,7 +2603,7 @@ static int qsortCompare(const void *a, const void *b, void *context)
     const Closure *compare  = ((CompareContext *)context)->compare;
     const Type *compareType = ((CompareContext *)context)->compareType;
 
-    const Signature *compareSig = &compareType->field[0]->type->sig;
+    const Signature *compareSig = compareType->field[0]->type->sig;
 
     // Push upvalues
     fiber->top -= sizeof(Interface) / sizeof(Slot);
@@ -2685,7 +2685,7 @@ static int qsortFastCompare(const void *a, const void *b, void *context)
 }
 
 
-static FORCE_INLINE void doBuiltinSortfast(Fiber *fiber, Error *error)
+static FORCE_INLINE void doBuiltinSortFast(Fiber *fiber, Error *error)
 {
     const int64_t offset = (fiber->top++)->intVal;
     const bool ascending = (bool)(fiber->top++)->intVal;
@@ -2771,7 +2771,7 @@ static FORCE_INLINE void doBuiltinCap(Fiber *fiber, Error *error)
 }
 
 
-static FORCE_INLINE void doBuiltinSizeofself(Fiber *fiber, Error *error)
+static FORCE_INLINE void doBuiltinSizeOfSelf(Fiber *fiber, Error *error)
 {
     const Interface *interface = fiber->top->ptrVal;
     if (UNLIKELY(!interface))
@@ -2785,7 +2785,7 @@ static FORCE_INLINE void doBuiltinSizeofself(Fiber *fiber, Error *error)
 }
 
 
-static FORCE_INLINE void doBuiltinSelfptr(Fiber *fiber, Error *error)
+static FORCE_INLINE void doBuiltinSelfPtr(Fiber *fiber, Error *error)
 {
     Interface *interface = fiber->top->ptrVal;
     if (UNLIKELY(!interface))
@@ -2795,7 +2795,7 @@ static FORCE_INLINE void doBuiltinSelfptr(Fiber *fiber, Error *error)
 }
 
 
-static FORCE_INLINE void doBuiltinSelfhasptr(Fiber *fiber, Error *error)
+static FORCE_INLINE void doBuiltinSelfHasPtr(Fiber *fiber, Error *error)
 {
     const Interface *interface = fiber->top->ptrVal;
     if (UNLIKELY(!interface))
@@ -2809,7 +2809,7 @@ static FORCE_INLINE void doBuiltinSelfhasptr(Fiber *fiber, Error *error)
 }
 
 
-static FORCE_INLINE void doBuiltinSelftypeeq(Fiber *fiber, Error *error)
+static FORCE_INLINE void doBuiltinSelfTypeEq(Fiber *fiber, Error *error)
 {
     const Interface *right = (fiber->top++)->ptrVal;
     const Interface *left  = (fiber->top++)->ptrVal;
@@ -2876,7 +2876,7 @@ static FORCE_INLINE void doBuiltinValid(Fiber *fiber, Error *error)
 
 
 // fn validkey(m: map [keyType] type, key: keyType): bool
-static FORCE_INLINE void doBuiltinValidkey(Fiber *fiber, HeapPages *pages, Error *error)
+static FORCE_INLINE void doBuiltinValidKey(Fiber *fiber, HeapPages *pages, Error *error)
 {
     Slot key  = *fiber->top++;
     Map *map  = (fiber->top++)->ptrVal;
@@ -2936,14 +2936,14 @@ static FORCE_INLINE void doBuiltinResume(Fiber *fiber, Fiber **newFiber, Error *
 
 
 // fn memusage(): int
-static FORCE_INLINE void doBuiltinMemusage(Fiber *fiber, HeapPages *pages, Error *error)
+static FORCE_INLINE void doBuiltinMemUsage(Fiber *fiber, HeapPages *pages, Error *error)
 {
     (--fiber->top)->intVal = pages->totalSize;
 }
 
 
 // fn leaksan(level: int)
-static FORCE_INLINE void doBuiltinLeaksan(Fiber *fiber, HeapPages *pages, Error *error)
+static FORCE_INLINE void doBuiltinLeakSan(Fiber *fiber, HeapPages *pages, Error *error)
 {
     pages->leakSanLevel = (fiber->top++)->intVal;
 }
@@ -3761,10 +3761,10 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         case BUILTIN_SSCANF:        doBuiltinScanf (fiber, pages, false, true,  error); break;
 
         // Math
-        case BUILTIN_REAL:
-        case BUILTIN_REAL_LHS:
+        case BUILTIN_MAKEREAL:
+        case BUILTIN_MAKEREALLEFT:
         {
-            const int depth = (builtin == BUILTIN_REAL_LHS) ? 1 : 0;
+            const int depth = (builtin == BUILTIN_MAKEREALLEFT) ? 1 : 0;
             if (typeKind == TYPE_UINT)
                 (fiber->top + depth)->realVal = (fiber->top + depth)->uintVal;
             else
@@ -3814,37 +3814,37 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         // Memory
         case BUILTIN_NEW:           doBuiltinNew(fiber, pages, error); break;
         case BUILTIN_MAKE:          doBuiltinMake(fiber, pages, error); break;
-        case BUILTIN_MAKEFROMARR:   doBuiltinMakefromarr(fiber, pages, error); break;
-        case BUILTIN_MAKEFROMSTR:   doBuiltinMakefromstr(fiber, pages, error); break;
-        case BUILTIN_MAKETOARR:     doBuiltinMaketoarr(fiber, pages, error); break;
-        case BUILTIN_MAKETOSTR:     doBuiltinMaketostr(fiber, pages, error); break;
+        case BUILTIN_MAKEFROMARR:   doBuiltinMakeFromArr(fiber, pages, error); break;
+        case BUILTIN_MAKEFROMSTR:   doBuiltinMakeFromStr(fiber, pages, error); break;
+        case BUILTIN_MAKEARR:       doBuiltinMakeArr(fiber, pages, error); break;
+        case BUILTIN_MAKESTR:       doBuiltinMakeStr(fiber, pages, error); break;
         case BUILTIN_COPY:          doBuiltinCopy(fiber, pages, error); break;
         case BUILTIN_APPEND:        doBuiltinAppend(fiber, pages, error); break;
         case BUILTIN_INSERT:        doBuiltinInsert(fiber, pages, error); break;
         case BUILTIN_DELETE:        doBuiltinDelete(fiber, pages, error); break;
         case BUILTIN_SLICE:         doBuiltinSlice(fiber, pages, error); break;
         case BUILTIN_SORT:          doBuiltinSort(fiber, error); break;
-        case BUILTIN_SORTFAST:      doBuiltinSortfast(fiber, error); break;
+        case BUILTIN_SORTFAST:      doBuiltinSortFast(fiber, error); break;
         case BUILTIN_LEN:           doBuiltinLen(fiber, error); break;
         case BUILTIN_CAP:           doBuiltinCap(fiber, error); break;
         case BUILTIN_SIZEOF:        error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal instruction"); return;       // Done at compile time
-        case BUILTIN_SIZEOFSELF:    doBuiltinSizeofself(fiber, error); break;
-        case BUILTIN_SELFPTR:       doBuiltinSelfptr(fiber, error); break;
-        case BUILTIN_SELFHASPTR:    doBuiltinSelfhasptr(fiber, error); break;
-        case BUILTIN_SELFTYPEEQ:    doBuiltinSelftypeeq(fiber, error); break;
+        case BUILTIN_SIZEOFSELF:    doBuiltinSizeOfSelf(fiber, error); break;
+        case BUILTIN_SELFPTR:       doBuiltinSelfPtr(fiber, error); break;
+        case BUILTIN_SELFHASPTR:    doBuiltinSelfHasPtr(fiber, error); break;
+        case BUILTIN_SELFTYPEEQ:    doBuiltinSelfTypeEq(fiber, error); break;
         case BUILTIN_TYPEPTR:       error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal instruction"); return;       // Done at compile time
         case BUILTIN_VALID:         doBuiltinValid(fiber, error); break;
 
         // Maps
-        case BUILTIN_VALIDKEY:      doBuiltinValidkey(fiber, pages, error); break;
+        case BUILTIN_VALIDKEY:      doBuiltinValidKey(fiber, pages, error); break;
         case BUILTIN_KEYS:          doBuiltinKeys(fiber, pages, error); break;
 
         // Fibers
         case BUILTIN_RESUME:        doBuiltinResume(fiber, newFiber, error); break;
 
         // Misc
-        case BUILTIN_MEMUSAGE:      doBuiltinMemusage(fiber, pages, error); break;
-        case BUILTIN_LEAKSAN:       doBuiltinLeaksan(fiber, pages, error); break;
+        case BUILTIN_MEMUSAGE:      doBuiltinMemUsage(fiber, pages, error); break;
+        case BUILTIN_LEAKSAN:       doBuiltinLeakSan(fiber, pages, error); break;
         case BUILTIN_EXIT:          doBuiltinExit(fiber, error); return;
     }
 

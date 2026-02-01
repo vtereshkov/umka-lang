@@ -80,9 +80,9 @@ static void typeInitPredeclared(Types *types, const Blocks *blocks)
     Type *fiberType = typeAdd(types, blocks, TYPE_FIBER);
 
     Type *fnType = typeAdd(types, blocks, TYPE_FN);
-    typeAddParam(types, &fnType->sig, types->predecl.anyType, "#upvalues", (Const){0});
+    typeAddParam(types, fnType->sig, types->predecl.anyType, "#upvalues", (Const){0});
 
-    fnType->sig.resultType = types->predecl.voidType;
+    fnType->sig->resultType = types->predecl.voidType;
 
     Type *fiberClosureType = typeAdd(types, blocks, TYPE_CLOSURE);
     typeAddField(types, fiberClosureType, fnType, "#fn");
@@ -119,6 +119,10 @@ Type *typeAdd(Types *types, const Blocks *blocks, TypeKind kind)
     type->block = blocks->item[blocks->top].block;
     type->isGarbageCollected = typeHasPtr(type, false);
     type->sameAs = type;
+
+    if (type->kind == TYPE_FN)
+        type->sig = storageAdd(types->storage, sizeof(Signature));
+
     type->size = typeSizeRecompute(type);
     type->alignment = typeAlignmentRecompute(type);
 
@@ -155,13 +159,13 @@ void typeDeepCopy(Storage *storage, Type *dest, const Type *src)
             dest->enumConst[i] = enumConst;
         }
     }
-    else if (dest->kind == TYPE_FN && dest->sig.numParams > 0)
+    else if (dest->kind == TYPE_FN && dest->sig->numParams > 0)
     {
-        for (int i = 0; i < dest->sig.numParams; i++)
+        for (int i = 0; i < dest->sig->numParams; i++)
         {
             Param *param = storageAdd(storage, sizeof(Param));
-            *param = *(src->sig.param[i]);
-            dest->sig.param[i] = param;
+            *param = *(src->sig->param[i]);
+            dest->sig->param[i] = param;
         }
     }
 }
@@ -428,36 +432,36 @@ static bool typeEquivalentRecursive(const Type *left, const Type *right, Visited
         else if (left->kind == TYPE_FN)
         {
             // Number of parameters
-            if (left->sig.numParams != right->sig.numParams)
+            if (left->sig->numParams != right->sig->numParams)
                 return false;
 
             // Number of default parameters
-            if (left->sig.numDefaultParams != right->sig.numDefaultParams)
+            if (left->sig->numDefaultParams != right->sig->numDefaultParams)
                 return false;
 
             // Method flag
-            if (left->sig.isMethod != right->sig.isMethod)
+            if (left->sig->isMethod != right->sig->isMethod)
                 return false;
 
             // Parameters
-            for (int i = 0; i < left->sig.numParams; i++)
+            for (int i = 0; i < left->sig->numParams; i++)
             {
                 // Skip interface method receiver
-                if (i == 0 && left->sig.isInterfaceMethod)
+                if (i == 0 && left->sig->isInterfaceMethod)
                     continue;
                 
                 // Type
-                if (!typeEquivalentRecursive(left->sig.param[i]->type, right->sig.param[i]->type, &newPair))
+                if (!typeEquivalentRecursive(left->sig->param[i]->type, right->sig->param[i]->type, &newPair))
                     return false;
 
                 // Default value
-                if (i >= left->sig.numParams - left->sig.numDefaultParams)
-                    if (!typeDefaultParamEqual(&left->sig.param[i]->defaultVal, &right->sig.param[i]->defaultVal, left->sig.param[i]->type))
+                if (i >= left->sig->numParams - left->sig->numDefaultParams)
+                    if (!typeDefaultParamEqual(&left->sig->param[i]->defaultVal, &right->sig->param[i]->defaultVal, left->sig->param[i]->type))
                         return false;
             }
 
             // Result type
-            if (!typeEquivalentRecursive(left->sig.resultType, right->sig.resultType, &newPair))
+            if (!typeEquivalentRecursive(left->sig->resultType, right->sig->resultType, &newPair))
                 return false;
 
             return true;
@@ -891,30 +895,30 @@ static char *typeSpellingRecursive(const Type *type, char *buf, int size, int de
 
             len += snprintf(buf + len, nonneg(size - len), "fn (");
 
-            if (type->sig.isMethod)
+            if (type->sig->isMethod)
             {
                 char paramBuf[DEFAULT_STR_LEN + 1];
-                len += snprintf(buf + len, nonneg(size - len), "%s) (", typeSpellingRecursive(type->sig.param[0]->type, paramBuf, DEFAULT_STR_LEN + 1, depth - 1));
+                len += snprintf(buf + len, nonneg(size - len), "%s) (", typeSpellingRecursive(type->sig->param[0]->type, paramBuf, DEFAULT_STR_LEN + 1, depth - 1));
             }
 
             const int numPreHiddenParams = 1;                                                 // #self or #upvalues
-            const int numPostHiddenParams = typeStructured(type->sig.resultType) ? 1 : 0;     // #result
+            const int numPostHiddenParams = typeStructured(type->sig->resultType) ? 1 : 0;     // #result
 
-            for (int i = numPreHiddenParams; i < type->sig.numParams - numPostHiddenParams; i++)
+            for (int i = numPreHiddenParams; i < type->sig->numParams - numPostHiddenParams; i++)
             {
                 if (i > numPreHiddenParams)
                     len += snprintf(buf + len, nonneg(size - len), ", ");
 
                 char paramBuf[DEFAULT_STR_LEN + 1];
-                len += snprintf(buf + len, nonneg(size - len), "%s", typeSpellingRecursive(type->sig.param[i]->type, paramBuf, DEFAULT_STR_LEN + 1, depth - 1));
+                len += snprintf(buf + len, nonneg(size - len), "%s", typeSpellingRecursive(type->sig->param[i]->type, paramBuf, DEFAULT_STR_LEN + 1, depth - 1));
             }
 
             len += snprintf(buf + len, nonneg(size - len), ")");
 
-            if (type->sig.resultType->kind != TYPE_VOID)
+            if (type->sig->resultType->kind != TYPE_VOID)
             {
                 char resultBuf[DEFAULT_STR_LEN + 1];
-                len += snprintf(buf + len, nonneg(size - len), ": %s", typeSpellingRecursive(type->sig.resultType, resultBuf, DEFAULT_STR_LEN + 1, depth - 1));
+                len += snprintf(buf + len, nonneg(size - len), ": %s", typeSpellingRecursive(type->sig->resultType, resultBuf, DEFAULT_STR_LEN + 1, depth - 1));
             }
 
             if (isClosure)

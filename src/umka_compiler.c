@@ -345,10 +345,10 @@ void compilerMakeFuncContext(Umka *umka, const Type *fnType, int entryOffset, Um
 {
     fn->entryOffset = entryOffset;
 
-    const int paramSlots = typeParamSizeTotal(&umka->types, &fnType->sig) / sizeof(Slot);
+    const int paramSlots = typeParamSizeTotal(&umka->types, fnType->sig) / sizeof(Slot);
     fn->params = (UmkaStackSlot *)storageAdd(&umka->storage, (paramSlots + 4) * sizeof(Slot)) + 4;          // + 4 slots for compatibility with umkaGetParam()
 
-    const ParamLayout *paramLayout = typeMakeParamLayout(&umka->types, &fnType->sig);
+    const ParamLayout *paramLayout = typeMakeParamLayout(&umka->types, fnType->sig);
     *vmGetParamLayout(fn->params) = paramLayout;
 
     fn->result = storageAdd(&umka->storage, sizeof(Slot));

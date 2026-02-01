@@ -429,13 +429,13 @@ static bool optimizeCallBuiltin(CodeGen *gen, TypeKind typeKind, BuiltinFunc bui
 
         switch (builtin)
         {
-            case BUILTIN_REAL:
+            case BUILTIN_MAKEREAL:
             {
                 arg.intVal = prev->operand.intVal;
                 resultTypeKind = TYPE_REAL;
                 break;
             }
-            case BUILTIN_REAL_LHS:
+            case BUILTIN_MAKEREALLEFT:
             {
                 if (prev2 && prev2->opcode == OP_PUSH)
                 {

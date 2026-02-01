@@ -145,7 +145,7 @@ static void doOrdinalToOrdinalOrRealToRealConv(Umka *umka, const Type *dest, con
 
 static void doIntToRealConv(Umka *umka, const Type *dest, const Type **src, Const *constant, bool lhs)
 {
-    BuiltinFunc builtin = lhs ? BUILTIN_REAL_LHS : BUILTIN_REAL;
+    BuiltinFunc builtin = lhs ? BUILTIN_MAKEREALLEFT : BUILTIN_MAKEREAL;
     if (constant)
         constCallBuiltin(&umka->consts, constant, NULL, (*src)->kind, builtin);
     else
@@ -176,7 +176,7 @@ static void doCharToStrConv(Umka *umka, const Type *dest, const Type **src, Cons
         if (lhs)
             genSwap(&umka->gen);
 
-        genCallTypedBuiltin(&umka->gen, *src, BUILTIN_MAKETOSTR);
+        genCallTypedBuiltin(&umka->gen, *src, BUILTIN_MAKESTR);
         doCopyResultToTempVar(umka, dest);
 
         if (lhs)
@@ -195,7 +195,7 @@ static void doDynArrayToStrConv(Umka *umka, const Type *dest, const Type **src, 
     if (lhs)
         genSwap(&umka->gen);
 
-    genCallTypedBuiltin(&umka->gen, *src, BUILTIN_MAKETOSTR);
+    genCallTypedBuiltin(&umka->gen, *src, BUILTIN_MAKESTR);
     doCopyResultToTempVar(umka, dest);
 
     if (lhs)
@@ -236,7 +236,7 @@ static void doDynArrayToArrayConv(Umka *umka, const Type *dest, const Type **src
 
     const int resultOffset = identAllocStack(&umka->idents, &umka->types, &umka->blocks, dest);
     genPushLocalPtr(&umka->gen, resultOffset);                          // Pointer to result (hidden parameter)
-    genCallTypedBuiltin(&umka->gen, dest, BUILTIN_MAKETOARR);
+    genCallTypedBuiltin(&umka->gen, dest, BUILTIN_MAKEARR);
     doCopyResultToTempVar(umka, dest);
 
     if (lhs)
@@ -1240,11 +1240,11 @@ static void parseBuiltinSortCall(Umka *umka, const Type **type, Const *constant)
     Type *fnType = typeAdd(&umka->types, &umka->blocks, TYPE_FN);
     const Type *paramType = typeAddPtrTo(&umka->types, &umka->blocks, (*type)->base);
 
-    typeAddParam(&umka->types, &fnType->sig, umka->types.predecl.anyType, "#upvalues", (Const){0});
-    typeAddParam(&umka->types, &fnType->sig, paramType, "a", (Const){0});
-    typeAddParam(&umka->types, &fnType->sig, paramType, "b", (Const){0});
+    typeAddParam(&umka->types, fnType->sig, umka->types.predecl.anyType, "#upvalues", (Const){0});
+    typeAddParam(&umka->types, fnType->sig, paramType, "a", (Const){0});
+    typeAddParam(&umka->types, fnType->sig, paramType, "b", (Const){0});
 
-    fnType->sig.resultType = umka->types.predecl.intType;
+    fnType->sig->resultType = umka->types.predecl.intType;
 
     Type *expectedCompareType = typeAdd(&umka->types, &umka->blocks, TYPE_CLOSURE);
     typeAddField(&umka->types, expectedCompareType, fnType, "#fn");
@@ -1386,7 +1386,7 @@ static void parseBuiltinCapCall(Umka *umka, const Type **type, Const *constant)
 
 
 // fn sizeof(T | a: T): int
-static void parseBuiltinSizeofCall(Umka *umka, const Type **type, Const *constant)
+static void parseBuiltinSizeOfCall(Umka *umka, const Type **type, Const *constant)
 {
     *type = NULL;
 
@@ -1427,7 +1427,7 @@ static void parseBuiltinSizeofCall(Umka *umka, const Type **type, Const *constan
 }
 
 
-static void parseBuiltinSizeofselfCall(Umka *umka, const Type **type, Const *constant)
+static void parseBuiltinSizeOfSelfCall(Umka *umka, const Type **type, Const *constant)
 {
     if (constant)
         umka->error.handler(umka->error.context, "Function is not allowed in constant expressions");
@@ -1441,7 +1441,7 @@ static void parseBuiltinSizeofselfCall(Umka *umka, const Type **type, Const *con
 }
 
 
-static void parseBuiltinSelfptrCall(Umka *umka, const Type **type, Const *constant)
+static void parseBuiltinSelfPtrCall(Umka *umka, const Type **type, Const *constant)
 {
     if (constant)
         umka->error.handler(umka->error.context, "Function is not allowed in constant expressions");
@@ -1455,7 +1455,7 @@ static void parseBuiltinSelfptrCall(Umka *umka, const Type **type, Const *consta
 }
 
 
-static void parseBuiltinSelfhasptrCall(Umka *umka, const Type **type, Const *constant)
+static void parseBuiltinSelfHasPtrCall(Umka *umka, const Type **type, Const *constant)
 {
     if (constant)
         umka->error.handler(umka->error.context, "Function is not allowed in constant expressions");
@@ -1469,7 +1469,7 @@ static void parseBuiltinSelfhasptrCall(Umka *umka, const Type **type, Const *con
 }
 
 
-static void parseBuiltinSelftypeeqCall(Umka *umka, const Type **type, Const *constant)
+static void parseBuiltinSelfTypeEqCall(Umka *umka, const Type **type, Const *constant)
 {
     if (constant)
         umka->error.handler(umka->error.context, "Function is not allowed in constant expressions");
@@ -1492,7 +1492,7 @@ static void parseBuiltinSelftypeeqCall(Umka *umka, const Type **type, Const *con
 
 
 // fn typeptr(T): ^void
-static void parseBuiltinTypeptrCall(Umka *umka, const Type **type, Const *constant)
+static void parseBuiltinTypePtrCall(Umka *umka, const Type **type, Const *constant)
 {
     *type = parseType(umka, NULL);
     typeAssertCompatibleBuiltin(&umka->types, *type, BUILTIN_TYPEPTR, (*type)->kind != TYPE_VOID && (*type)->kind != TYPE_NULL);
@@ -1521,7 +1521,7 @@ static void parseBuiltinValidCall(Umka *umka, const Type **type, Const *constant
 
 
 // fn validkey(m: map [keyType] type, key: keyType): bool
-static void parseBuiltinValidkeyCall(Umka *umka, const Type **type, Const *constant)
+static void parseBuiltinValidKeyCall(Umka *umka, const Type **type, Const *constant)
 {
     if (constant)
         umka->error.handler(umka->error.context, "Function is not allowed in constant expressions");
@@ -1590,7 +1590,7 @@ static void parseBuiltinResumeCall(Umka *umka, const Type **type, Const *constan
 
 
 // fn memusage(): int
-static void parseBuiltinMemusageCall(Umka *umka, const Type **type, Const *constant)
+static void parseBuiltinMemUsageCall(Umka *umka, const Type **type, Const *constant)
 {
     if (constant)
         umka->error.handler(umka->error.context, "Function is not allowed in constant expressions");
@@ -1601,7 +1601,7 @@ static void parseBuiltinMemusageCall(Umka *umka, const Type **type, Const *const
 
 
 // fn leaksan(level: int)
-static void parseBuiltinLeaksanCall(Umka *umka, const Type **type, Const *constant)
+static void parseBuiltinLeakSanCall(Umka *umka, const Type **type, Const *constant)
 {
     if (constant)
         umka->error.handler(umka->error.context, "Function is not allowed in constant expressions");
@@ -1683,24 +1683,24 @@ static void parseBuiltinCall(Umka *umka, const Type **type, Const *constant, Bui
         case BUILTIN_SORT:          parseBuiltinSortCall(umka, type, constant);             break;
         case BUILTIN_LEN:           parseBuiltinLenCall(umka, type, constant);              break;
         case BUILTIN_CAP:           parseBuiltinCapCall(umka, type, constant);              break;
-        case BUILTIN_SIZEOF:        parseBuiltinSizeofCall(umka, type, constant);           break;
-        case BUILTIN_SIZEOFSELF:    parseBuiltinSizeofselfCall(umka, type, constant);       break;
-        case BUILTIN_SELFPTR:       parseBuiltinSelfptrCall(umka, type, constant);          break;
-        case BUILTIN_SELFHASPTR:    parseBuiltinSelfhasptrCall(umka, type, constant);       break;
-        case BUILTIN_SELFTYPEEQ:    parseBuiltinSelftypeeqCall(umka, type, constant);       break;
-        case BUILTIN_TYPEPTR:       parseBuiltinTypeptrCall(umka, type, constant);          break;
+        case BUILTIN_SIZEOF:        parseBuiltinSizeOfCall(umka, type, constant);           break;
+        case BUILTIN_SIZEOFSELF:    parseBuiltinSizeOfSelfCall(umka, type, constant);       break;
+        case BUILTIN_SELFPTR:       parseBuiltinSelfPtrCall(umka, type, constant);          break;
+        case BUILTIN_SELFHASPTR:    parseBuiltinSelfHasPtrCall(umka, type, constant);       break;
+        case BUILTIN_SELFTYPEEQ:    parseBuiltinSelfTypeEqCall(umka, type, constant);       break;
+        case BUILTIN_TYPEPTR:       parseBuiltinTypePtrCall(umka, type, constant);          break;
         case BUILTIN_VALID:         parseBuiltinValidCall(umka, type, constant);            break;
 
         // Maps
-        case BUILTIN_VALIDKEY:      parseBuiltinValidkeyCall(umka, type, constant);         break;
+        case BUILTIN_VALIDKEY:      parseBuiltinValidKeyCall(umka, type, constant);         break;
         case BUILTIN_KEYS:          parseBuiltinKeysCall(umka, type, constant);             break;
 
         // Fibers
         case BUILTIN_RESUME:        parseBuiltinResumeCall(umka, type, constant);           break;
 
         // Misc
-        case BUILTIN_MEMUSAGE:      parseBuiltinMemusageCall(umka, type, constant);         break;
-        case BUILTIN_LEAKSAN:       parseBuiltinLeaksanCall(umka, type, constant);          break;
+        case BUILTIN_MEMUSAGE:      parseBuiltinMemUsageCall(umka, type, constant);         break;
+        case BUILTIN_LEAKSAN:       parseBuiltinLeakSanCall(umka, type, constant);          break;
         case BUILTIN_EXIT:          parseBuiltinExitCall(umka, type, constant);             break;
 
         default: umka->error.handler(umka->error.context, "Illegal built-in function");
@@ -1788,18 +1788,18 @@ static void parseActualParamsAndCall(Umka *umka, const Type **type)
         *type = fn->type;
 
         genPushUpvalue(&umka->gen);
-        doPassParam(umka, (*type)->sig.param[0]->type);
+        doPassParam(umka, (*type)->sig->param[0]->type);
 
         numPreHiddenParams++;
         i++;
     }
-    else if ((*type)->sig.isMethod)
+    else if ((*type)->sig->isMethod)
     {
         // Method receiver
         genPushReg(&umka->gen, REG_SELF);
 
         // Increase receiver's reference count
-        genRefCnt(&umka->gen, TOK_PLUSPLUS, (*type)->sig.param[0]->type);
+        genRefCnt(&umka->gen, TOK_PLUSPLUS, (*type)->sig->param[0]->type);
 
         numPreHiddenParams++;
         i++;
@@ -1814,20 +1814,20 @@ static void parseActualParamsAndCall(Umka *umka, const Type **type)
     }
 
     // #result
-    if (typeStructured((*type)->sig.resultType))
+    if (typeStructured((*type)->sig->resultType))
         numPostHiddenParams++;
 
     if (umka->lex.tok.kind != TOK_RPAR)
     {
         while (1)
         {
-            if (numPreHiddenParams + numExplicitParams + numPostHiddenParams > (*type)->sig.numParams - 1)
+            if (numPreHiddenParams + numExplicitParams + numPostHiddenParams > (*type)->sig->numParams - 1)
             {
                 char fnTypeBuf[DEFAULT_STR_LEN + 1];
                 umka->error.handler(umka->error.context, "Too many actual parameters to %s", typeSpelling(*type, fnTypeBuf));
             }
 
-            const Type *formalParamType = (*type)->sig.param[i]->type;
+            const Type *formalParamType = (*type)->sig->param[i]->type;
             const Type *actualParamType = formalParamType;
 
             if (formalParamType->isVariadicParamList)
@@ -1861,25 +1861,25 @@ static void parseActualParamsAndCall(Umka *umka, const Type **type)
 
     int numDefaultOrVariadicFormalParams = 0;
 
-    if ((*type)->sig.numDefaultParams > 0)
-        numDefaultOrVariadicFormalParams = (*type)->sig.numDefaultParams;
-    else if ((*type)->sig.numParams > 0 && (*type)->sig.param[(*type)->sig.numParams - 1]->type->isVariadicParamList)
+    if ((*type)->sig->numDefaultParams > 0)
+        numDefaultOrVariadicFormalParams = (*type)->sig->numDefaultParams;
+    else if ((*type)->sig->numParams > 0 && (*type)->sig->param[(*type)->sig->numParams - 1]->type->isVariadicParamList)
         numDefaultOrVariadicFormalParams = 1;
 
-    if (numPreHiddenParams + numExplicitParams + numPostHiddenParams < (*type)->sig.numParams - numDefaultOrVariadicFormalParams)
+    if (numPreHiddenParams + numExplicitParams + numPostHiddenParams < (*type)->sig->numParams - numDefaultOrVariadicFormalParams)
     {
         char fnTypeBuf[DEFAULT_STR_LEN + 1];
         umka->error.handler(umka->error.context, "Too few actual parameters to %s", typeSpelling(*type, fnTypeBuf));
     }
 
     // Push default or variadic parameters, if not specified explicitly
-    while (i + numPostHiddenParams < (*type)->sig.numParams)
+    while (i + numPostHiddenParams < (*type)->sig->numParams)
     {
-        const Type *formalParamType = (*type)->sig.param[i]->type;
+        const Type *formalParamType = (*type)->sig->param[i]->type;
         
         Const paramVal = {0};
-        if ((*type)->sig.numDefaultParams > 0)
-            paramVal = (*type)->sig.param[i]->defaultVal;                                 // Default parameter
+        if ((*type)->sig->numDefaultParams > 0)
+            paramVal = (*type)->sig->param[i]->defaultVal;                                 // Default parameter
         else
             paramVal.ptrVal = storageAddDynArray(&umka->storage, formalParamType, 0);     // Variadic parameter (empty dynamic array)
 
@@ -1889,12 +1889,12 @@ static void parseActualParamsAndCall(Umka *umka, const Type **type)
     }
 
     // Push #result pointer
-    if (typeStructured((*type)->sig.resultType))
+    if (typeStructured((*type)->sig->resultType))
     {
-        const int resultOffset = identAllocStack(&umka->idents, &umka->types, &umka->blocks, (*type)->sig.resultType);
+        const int resultOffset = identAllocStack(&umka->idents, &umka->types, &umka->blocks, (*type)->sig->resultType);
         
         genPushLocalPtr(&umka->gen, resultOffset);
-        genZero(&umka->gen, typeSize(&umka->types, (*type)->sig.resultType));
+        genZero(&umka->gen, typeSize(&umka->types, (*type)->sig->resultType));
 
         genPushLocalPtr(&umka->gen, resultOffset);
         i++;
@@ -1904,14 +1904,14 @@ static void parseActualParamsAndCall(Umka *umka, const Type **type)
         genCall(&umka->gen, immediateEntryPoint);                                           // Direct call
     else if (immediateEntryPoint < 0)
     {
-        int paramSlots = typeParamSizeTotal(&umka->types, &(*type)->sig) / sizeof(Slot);
+        const int paramSlots = typeParamSizeTotal(&umka->types, (*type)->sig) / sizeof(Slot);
         genCallIndirect(&umka->gen, paramSlots);                                            // Indirect call
         genPop(&umka->gen);                                                                 // Pop entry point
     }
     else
         umka->error.handler(umka->error.context, "Called function is not defined");
 
-    *type = (*type)->sig.resultType;
+    *type = (*type)->sig->resultType;
 
     lexEat(&umka->lex, TOK_RPAR);
 }
@@ -2613,7 +2613,7 @@ static void parseFieldSelector(Umka *umka, const Type **type, bool *isVar, bool 
         lexNext(&umka->lex);
 
         // Save interface method's receiver to dedicated register
-        if (field->type->kind == TYPE_FN && field->type->sig.isInterfaceMethod)
+        if (field->type->kind == TYPE_FN && field->type->sig->isInterfaceMethod)
         {
             genDup(&umka->gen);
             genDeref(&umka->gen, TYPE_PTR);
@@ -2700,8 +2700,8 @@ static void parseDesignator(Umka *umka, const Type **type, Const *constant, bool
 
     parseSelectors(umka, type, constant, isVar, isCall, isCompLit);
 
-    if (((*type)->kind == TYPE_FN && (*type)->sig.isMethod) ||
-        ((*type)->kind == TYPE_PTR && (*type)->base->kind == TYPE_FN && (*type)->base->sig.isMethod))
+    if (((*type)->kind == TYPE_FN && (*type)->sig->isMethod) ||
+        ((*type)->kind == TYPE_PTR && (*type)->base->kind == TYPE_FN && (*type)->base->sig->isMethod))
     {
         umka->error.handler(umka->error.context, "Method must be called");
     }

@@ -420,8 +420,8 @@ void constCallBuiltin(const Consts *consts, Const *arg, const Const *arg2, TypeK
 {
     switch (builtinVal)
     {
-        case BUILTIN_REAL:
-        case BUILTIN_REAL_LHS:
+        case BUILTIN_MAKEREAL:
+        case BUILTIN_MAKEREALLEFT:
         {
             if (argTypeKind == TYPE_UINT)
                 arg->realVal = arg->uintVal;

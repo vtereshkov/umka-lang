@@ -460,11 +460,11 @@ static const Type *parseInterfaceType(Umka *umka)
             lexNext(&umka->lex);
 
             Type *methodType = typeAdd(&umka->types, &umka->blocks, TYPE_FN);
-            methodType->sig.isMethod = true;
-            methodType->sig.isInterfaceMethod = true;
+            methodType->sig->isMethod = true;
+            methodType->sig->isInterfaceMethod = true;
 
-            typeAddParam(&umka->types, &methodType->sig, umka->types.predecl.ptrVoidType, "#self", (Const){0});
-            parseSignature(umka, &methodType->sig);
+            typeAddParam(&umka->types, methodType->sig, umka->types.predecl.ptrVoidType, "#self", (Const){0});
+            parseSignature(umka, methodType->sig);
 
             typeAddField(&umka->types, type, methodType, methodName);
         }
@@ -501,7 +501,7 @@ static const Type *parseClosureType(Umka *umka)
 
     // Function field
     Type *fnType = typeAdd(&umka->types, &umka->blocks, TYPE_FN);
-    parseSignature(umka, &fnType->sig);
+    parseSignature(umka, fnType->sig);
     typeAddField(&umka->types, type, fnType, "#fn");
 
     // Upvalues field
@@ -733,16 +733,16 @@ static void parseFnDecl(Umka *umka)
     Type *fnType = typeAdd(&umka->types, &umka->blocks, TYPE_FN);
 
     if (umka->lex.tok.kind == TOK_LPAR)
-        parseRcvSignature(umka, &fnType->sig);
+        parseRcvSignature(umka, fnType->sig);
 
     lexCheck(&umka->lex, TOK_IDENT);
     IdentName name;
     strcpy(name, umka->lex.tok.name);
 
     // Check for method/field name collision
-    if (fnType->sig.isMethod)
+    if (fnType->sig->isMethod)
     {
-        const Type *rcvBaseType = fnType->sig.param[0]->type->base;
+        const Type *rcvBaseType = fnType->sig->param[0]->type->base;
 
         if (rcvBaseType->kind == TYPE_STRUCT && typeFindField(rcvBaseType, name, NULL))
             umka->error.handler(umka->error.context, "Structure already has field %s", name);
@@ -751,7 +751,7 @@ static void parseFnDecl(Umka *umka)
     lexNext(&umka->lex);
     bool exported = parseExportMark(umka);
 
-    parseSignature(umka, &fnType->sig);
+    parseSignature(umka, fnType->sig);
 
     Const constant = {.intVal = umka->gen.ip};
     Ident *fn = identAddConst(&umka->idents, &umka->modules, &umka->blocks, name, fnType, exported, constant);
