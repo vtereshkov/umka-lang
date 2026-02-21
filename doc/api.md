@@ -217,6 +217,26 @@ Parameters:
 
 Returned value: Pointer to the first stack slot occupied by the parameter, `NULL` if there is no such parameter.
 
+Notes:
+
+* Parameters of all ordinal types except `uint` are stored in the `intVal` field of the parameter slot
+
+* Parameters of type `uint` are stored in the `uintVal` field of the parameter slot
+
+* Parameters of type `real` are stored in the `realVal` field of the parameter slot
+
+* Parameters of type `real32` are stored in the `real32Val` field of the parameter slot
+
+* Parameters of all pointer types are stored in the `ptrVal` field of the parameter slot
+
+* Parameters of type `str` are stored in the `ptrVal` field of the parameter value slot, treated as being of type `const unsigned char *`
+
+* Parameters of all structured types `T` occupy as many slots as needed to store `sizeof(T)` bytes, each slot being 8 bytes. The first occupied slot is returned by `umkaGetParam`. It follows that:
+
+  * If a parameter is of type `T`, it is accessible as `*(T *)umkaGetParam(params, index)`
+
+  * If a parameter is of type `^T`, it is accessible as `(T *)umkaGetParam(params, index)->ptrVal`  
+
 ```
 UMKA_API UmkaAny *umkaGetUpvalue(UmkaStackSlot *params);
 ```
@@ -247,6 +267,8 @@ Notes:
 * Returned values of type `uint` are stored in the `uintVal` field of the returned value slot
 
 * Returned values of types `real` and `real32` are stored in the `realVal` field of the returned value slot
+
+* Returned values of all pointer types are stored in the `ptrVal` field of the returned value slot
 
 * Returned values of type `str` are stored in the `ptrVal` field of the returned value slot, treated as being of type `const unsigned char *`
 
