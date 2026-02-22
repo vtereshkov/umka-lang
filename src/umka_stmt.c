@@ -1211,7 +1211,6 @@ static void parseStmt(Umka *umka)
         case TOK_CARET:
         case TOK_WEAK:
         case TOK_LBRACKET:
-        case TOK_STR:
         case TOK_STRUCT:
         case TOK_INTERFACE:
         case TOK_MAP:

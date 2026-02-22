@@ -297,14 +297,6 @@ static const Type *parseArrayType(Umka *umka)
 }
 
 
-// strType = "str".
-static const Type *parseStrType(Umka *umka)
-{
-    lexEat(&umka->lex, TOK_STR);
-    return umka->types.predecl.strType;
-}
-
-
 // enumItem = ident ["=" expr].
 static void parseEnumItem(Umka *umka, Type *type, Const *constant)
 {
@@ -511,7 +503,7 @@ static const Type *parseClosureType(Umka *umka)
 }
 
 
-// type = qualIdent | ptrType | arrayType | dynArrayType | strType | enumType | mapType | structType | interfaceType | closureType.
+// type = qualIdent | ptrType | arrayType | dynArrayType | enumType | mapType | structType | interfaceType | closureType.
 const Type *parseType(Umka *umka, const Ident *ident)
 {
     if (ident)
@@ -528,7 +520,6 @@ const Type *parseType(Umka *umka, const Ident *ident)
         case TOK_CARET:
         case TOK_WEAK:      return parsePtrType(umka);
         case TOK_LBRACKET:  return parseArrayType(umka);
-        case TOK_STR:       return parseStrType(umka);
         case TOK_ENUM:      return parseEnumType(umka);
         case TOK_MAP:       return parseMapType(umka);
         case TOK_STRUCT:    return parseStructType(umka);

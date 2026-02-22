@@ -24,7 +24,6 @@ typedef enum
     TOK_IN,
     TOK_MAP,
     TOK_RETURN,
-    TOK_STR,
     TOK_STRUCT,
     TOK_SWITCH,
     TOK_TYPE,

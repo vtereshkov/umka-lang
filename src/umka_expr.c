@@ -2755,7 +2755,6 @@ static void parseFactor(Umka *umka, const Type **type, Const *constant)
         case TOK_CARET:
         case TOK_WEAK:
         case TOK_LBRACKET:
-        case TOK_STR:
         case TOK_ENUM:
         case TOK_MAP:
         case TOK_STRUCT:

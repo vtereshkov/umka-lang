@@ -3323,7 +3323,7 @@ static FORCE_INLINE void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
                 if (inPlace)
                 {
                     buf = lhsStr;
-                    Type strType = {.kind = TYPE_STR};
+                    const Type strType = {.kind = TYPE_STR};
                     doRefCntImpl(pages, buf, &strType, TOK_PLUSPLUS);
                 }
                 else

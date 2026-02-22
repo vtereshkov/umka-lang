@@ -83,6 +83,7 @@ static void compilerDeclareBuiltinIdents(Umka *umka)
     identAddType(&umka->idents, &umka->modules, &umka->blocks,  "char",     umka->types.predecl.charType,    true);
     identAddType(&umka->idents, &umka->modules, &umka->blocks,  "real32",   umka->types.predecl.real32Type,  true);
     identAddType(&umka->idents, &umka->modules, &umka->blocks,  "real",     umka->types.predecl.realType,    true);
+    identAddType(&umka->idents, &umka->modules, &umka->blocks,  "str",      umka->types.predecl.strType,     true);
     identAddType(&umka->idents, &umka->modules, &umka->blocks,  "fiber",    umka->types.predecl.fiberType,   true);
     identAddType(&umka->idents, &umka->modules, &umka->blocks,  "any",      umka->types.predecl.anyType,     true);
     identAddType(&umka->idents, &umka->modules, &umka->blocks,  "__file",   umka->types.predecl.fileType,    true);

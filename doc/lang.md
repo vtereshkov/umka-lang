@@ -136,7 +136,7 @@ Umka uses semicolons as statement terminators. To reduce the number of semicolon
 
 * An identifier
 * A number, character literal or string literal
-* `str`,  `break`,  `continue` or `return`
+* `break`,  `continue` or `return`
 * `++`, `--`, `)`, `]`, `}`or `^`
 * `*` as an export mark 
 
@@ -165,7 +165,7 @@ Umka is a statically typed language. Each variable or constant has a type that i
 Syntax:
 
 ```
-type = qualIdent | ptrType | arrayType | dynArrayType | strType | enumType | 
+type = qualIdent | ptrType | arrayType | dynArrayType | enumType | 
        mapType | structType | interfaceType | closureType.
 ```
 
@@ -235,13 +235,7 @@ weak ^Vec
 
 ### String type
 
-A string is a sequence of UTF-8 characters terminated by the `'\0'` character. 
-
-Syntax:
-
-```
-strType = "str"
-```
+Umka supports the string type `str`. A string is a sequence of UTF-8 characters terminated by the `'\0'` character. 
 
 String assignment copies the pointer, but not the contents of the string.
 
@@ -519,6 +513,7 @@ uint8 uint16 uint32 uint
 bool
 char
 real32 real
+str
 fiber
 any
 __file
@@ -1542,12 +1537,11 @@ signature           = "(" [typedIdentList ["=" expr] {"," typedIdentList ["=" ex
 exportMark          = ["*"].
 identList           = ident exportMark {"," ident exportMark}.
 typedIdentList      = identList ":" [".."] type.
-type                = qualIdent | ptrType | arrayType | dynArrayType | strType | enumType | 
+type                = qualIdent | ptrType | arrayType | dynArrayType | enumType | 
                       mapType | structType | interfaceType | closureType.
 ptrType             = ["weak"] "^" type.
 arrayType           = "[" expr "]" type.
 dynArrayType        = "[" "]" type.
-strType             = "str".
 enumType            = "enum" ["(" type ")"] "{" {enumItem ";"} "}".
 enumItem            = ident ["=" expr].
 mapType             = "map" "[" type "]" type.
