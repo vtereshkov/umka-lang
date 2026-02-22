@@ -16,7 +16,7 @@ Keywords have special meaning and cannot be used in any other role. Umka has the
 
 ```
 break case const continue default else enum fn for import 
-interface if in map return str struct switch type var weak
+interface if in map return struct switch type var weak
 ```
 
 ### Identifiers
