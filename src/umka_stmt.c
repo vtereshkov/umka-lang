@@ -98,6 +98,21 @@ void doResolveExtern(Umka *umka)
                 for (int i = 0; i < ident->type->sig->numParams; i++)
                     identAllocParam(&umka->idents, &umka->types, &umka->modules, &umka->blocks, ident->type->sig, i);
 
+                // Assign upvalue provided from C
+                if (external && external->upvalue)
+                {
+                    const Ident *upvaluesParamIdent = identAssertFind(&umka->idents, &umka->modules, &umka->blocks, umka->blocks.module, "#upvalues", NULL);
+                    
+                    Interface *upvalue = storageAdd(&umka->storage, sizeof(Interface));
+                    upvalue->self = external->upvalue;
+                    upvalue->selfType = umka->types.predecl.ptrVoidType;
+                    
+                    doPushVarPtr(umka, upvaluesParamIdent);
+                    genPushGlobalPtr(&umka->gen, upvalue);
+                    genDeref(&umka->gen, TYPE_INTERFACE);
+                    genRefCntAssign(&umka->gen, upvaluesParamIdent->type);
+                }
+                
                 genCallExtern(&umka->gen, fn);
 
                 doGarbageCollection(umka);

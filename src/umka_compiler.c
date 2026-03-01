@@ -54,7 +54,8 @@ static void compilerSetAPI(Umka *umka)
     umka->api.umkaGetResultType     = umkaGetResultType;
     umka->api.umkaGetFieldType      = umkaGetFieldType;
     umka->api.umkaGetMapKeyType     = umkaGetMapKeyType;
-    umka->api.umkaGetMapItemType    = umkaGetMapItemType;         
+    umka->api.umkaGetMapItemType    = umkaGetMapItemType; 
+    umka->api.umkaAddClosure        = umkaAddClosure;        
 }
 
 
@@ -147,27 +148,27 @@ static void compilerDeclareBuiltinIdents(Umka *umka)
 
 static void compilerDeclareExternalFuncs(Umka *umka, bool fileSystemEnabled)
 {
-    externalAdd(&umka->externals, "rtlmemcpy",      &rtlmemcpy,                                           true);
-    externalAdd(&umka->externals, "rtlstdin",       &rtlstdin,                                            true);
-    externalAdd(&umka->externals, "rtlstdout",      &rtlstdout,                                           true);
-    externalAdd(&umka->externals, "rtlstderr",      &rtlstderr,                                           true);
-    externalAdd(&umka->externals, "rtlfopen",       fileSystemEnabled ? &rtlfopen  : &rtlfopenSandbox,    true);
-    externalAdd(&umka->externals, "rtlfclose",      fileSystemEnabled ? &rtlfclose : &rtlfcloseSandbox,   true);
-    externalAdd(&umka->externals, "rtlfread",       fileSystemEnabled ? &rtlfread  : &rtlfreadSandbox,    true);
-    externalAdd(&umka->externals, "rtlfwrite",      fileSystemEnabled ? &rtlfwrite : &rtlfwriteSandbox,   true);
-    externalAdd(&umka->externals, "rtlfseek",       fileSystemEnabled ? &rtlfseek  : &rtlfseekSandbox,    true);
-    externalAdd(&umka->externals, "rtlftell",       fileSystemEnabled ? &rtlftell  : &rtlftellSandbox,    true);
-    externalAdd(&umka->externals, "rtlremove",      fileSystemEnabled ? &rtlremove : &rtlremoveSandbox,   true);
-    externalAdd(&umka->externals, "rtlfeof",        fileSystemEnabled ? &rtlfeof   : &rtlfeofSandbox,     true);
-    externalAdd(&umka->externals, "rtlfflush",      &rtlfflush,                                           true);
-    externalAdd(&umka->externals, "rtltime",        &rtltime,                                             true);
-    externalAdd(&umka->externals, "rtlclock",       &rtlclock,                                            true);
-    externalAdd(&umka->externals, "rtllocaltime",   &rtllocaltime,                                        true);
-    externalAdd(&umka->externals, "rtlgmtime",      &rtlgmtime,                                           true);
-    externalAdd(&umka->externals, "rtlmktime",      &rtlmktime,                                           true);
-    externalAdd(&umka->externals, "rtlgetenv",      fileSystemEnabled ? &rtlgetenv : &rtlgetenvSandbox,   true);
-    externalAdd(&umka->externals, "rtlsystem",      fileSystemEnabled ? &rtlsystem : &rtlsystemSandbox,   true);
-    externalAdd(&umka->externals, "rtltrace",       &rtltrace,                                            true);
+    externalAdd(&umka->externals, "rtlmemcpy",      &rtlmemcpy,                                           NULL, true);
+    externalAdd(&umka->externals, "rtlstdin",       &rtlstdin,                                            NULL, true);
+    externalAdd(&umka->externals, "rtlstdout",      &rtlstdout,                                           NULL, true);
+    externalAdd(&umka->externals, "rtlstderr",      &rtlstderr,                                           NULL, true);
+    externalAdd(&umka->externals, "rtlfopen",       fileSystemEnabled ? &rtlfopen  : &rtlfopenSandbox,    NULL, true);
+    externalAdd(&umka->externals, "rtlfclose",      fileSystemEnabled ? &rtlfclose : &rtlfcloseSandbox,   NULL, true);
+    externalAdd(&umka->externals, "rtlfread",       fileSystemEnabled ? &rtlfread  : &rtlfreadSandbox,    NULL, true);
+    externalAdd(&umka->externals, "rtlfwrite",      fileSystemEnabled ? &rtlfwrite : &rtlfwriteSandbox,   NULL, true);
+    externalAdd(&umka->externals, "rtlfseek",       fileSystemEnabled ? &rtlfseek  : &rtlfseekSandbox,    NULL, true);
+    externalAdd(&umka->externals, "rtlftell",       fileSystemEnabled ? &rtlftell  : &rtlftellSandbox,    NULL, true);
+    externalAdd(&umka->externals, "rtlremove",      fileSystemEnabled ? &rtlremove : &rtlremoveSandbox,   NULL, true);
+    externalAdd(&umka->externals, "rtlfeof",        fileSystemEnabled ? &rtlfeof   : &rtlfeofSandbox,     NULL, true);
+    externalAdd(&umka->externals, "rtlfflush",      &rtlfflush,                                           NULL, true);
+    externalAdd(&umka->externals, "rtltime",        &rtltime,                                             NULL, true);
+    externalAdd(&umka->externals, "rtlclock",       &rtlclock,                                            NULL, true);
+    externalAdd(&umka->externals, "rtllocaltime",   &rtllocaltime,                                        NULL, true);
+    externalAdd(&umka->externals, "rtlgmtime",      &rtlgmtime,                                           NULL, true);
+    externalAdd(&umka->externals, "rtlmktime",      &rtlmktime,                                           NULL, true);
+    externalAdd(&umka->externals, "rtlgetenv",      fileSystemEnabled ? &rtlgetenv : &rtlgetenvSandbox,   NULL, true);
+    externalAdd(&umka->externals, "rtlsystem",      fileSystemEnabled ? &rtlsystem : &rtlsystemSandbox,   NULL, true);
+    externalAdd(&umka->externals, "rtltrace",       &rtltrace,                                            NULL, true);
 }
 
 
@@ -312,12 +313,12 @@ bool compilerAddModule(Umka *umka, const char *fileName, const char *sourceStrin
 }
 
 
-bool compilerAddFunc(Umka *umka, const char *name, UmkaExternFunc func)
+bool compilerAddClosure(Umka *umka, const char *name, UmkaExternFunc func, void *upvalue)
 {
     if (externalFind(&umka->externals, name))
         return false;
 
-    externalAdd(&umka->externals, name, func, false);
+    externalAdd(&umka->externals, name, func, upvalue, false);
     return true;
 }
 

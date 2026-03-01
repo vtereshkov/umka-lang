@@ -165,7 +165,7 @@ UMKA_API bool umkaAddModule(Umka *umka, const char *fileName, const char *source
 
 UMKA_API bool umkaAddFunc(Umka *umka, const char *name, UmkaExternFunc func)
 {
-    return compilerAddFunc(umka, name, func);
+    return compilerAddClosure(umka, name, func, NULL);
 }
 
 
@@ -375,4 +375,10 @@ UMKA_API const UmkaType *umkaGetMapItemType(const UmkaType *mapType)
     if (mapType->kind == TYPE_MAP)
         return typeMapItem(mapType);
     return NULL;
+}
+
+
+UMKA_API bool umkaAddClosure(Umka *umka, const char *name, UmkaExternFunc func, void *upvalue)
+{
+    return compilerAddClosure(umka, name, func, upvalue);
 }

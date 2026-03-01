@@ -156,6 +156,7 @@ typedef struct tagExternal
 {
     char name[DEFAULT_STR_LEN + 1];
     void *entry;
+    void *upvalue;
     bool resolved, resolveInTrusted;
     struct tagExternal *next;
 } External;
@@ -228,7 +229,7 @@ int  blocksCurrent(const Blocks *blocks);
 
 void externalInit       (Externals *externals, Storage *storage);
 External *externalFind  (const Externals *externals, const char *name);
-External *externalAdd   (Externals *externals, const char *name, void *entry, bool resolveInTrusted);
+External *externalAdd   (Externals *externals, const char *name, void *entry, void *upvalue, bool resolveInTrusted);
 
 
 static inline int64_t nonneg(int64_t size)

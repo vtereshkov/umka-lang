@@ -49,7 +49,7 @@ void compilerRun                (Umka *umka);
 void compilerCall               (Umka *umka, UmkaFuncContext *fn);
 char *compilerAsm               (Umka *umka);
 bool compilerAddModule          (Umka *umka, const char *fileName, const char *sourceString);
-bool compilerAddFunc            (Umka *umka, const char *name, UmkaExternFunc func);
+bool compilerAddClosure         (Umka *umka, const char *name, UmkaExternFunc func, void *upvalue);
 bool compilerGetFunc            (Umka *umka, const char *moduleName, const char *funcName, UmkaFuncContext *fn);
 void compilerMakeFuncContext    (Umka *umka, const Type *fnType, int entryOffset, UmkaFuncContext *fn);
 

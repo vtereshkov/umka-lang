@@ -158,6 +158,7 @@ typedef const UmkaType *(*UmkaGetResultType)    (UmkaStackSlot *params, UmkaStac
 typedef const UmkaType *(*UmkaGetFieldType)     (const UmkaType *structType, const char *fieldName);
 typedef const UmkaType *(*UmkaGetMapKeyType)    (const UmkaType *mapType);
 typedef const UmkaType *(*UmkaGetMapItemType)   (const UmkaType *mapType);
+typedef bool (*UmkaAddClosure)                  (Umka *umka, const char *name, UmkaExternFunc func, void *upvalue);
 
 
 typedef struct
@@ -198,7 +199,8 @@ typedef struct
     UmkaGetResultType   umkaGetResultType; 
     UmkaGetFieldType    umkaGetFieldType;
     UmkaGetMapKeyType   umkaGetMapKeyType;
-    UmkaGetMapItemType  umkaGetMapItemType;   
+    UmkaGetMapItemType  umkaGetMapItemType;
+    UmkaAddClosure      umkaAddClosure;   
 } UmkaAPI;
 
 
@@ -239,6 +241,7 @@ UMKA_API const UmkaType *umkaGetResultType  (UmkaStackSlot *params, UmkaStackSlo
 UMKA_API const UmkaType *umkaGetFieldType   (const UmkaType *structType, const char *fieldName);
 UMKA_API const UmkaType *umkaGetMapKeyType  (const UmkaType *mapType);
 UMKA_API const UmkaType *umkaGetMapItemType (const UmkaType *mapType);
+UMKA_API bool umkaAddClosure                (Umka *umka, const char *name, UmkaExternFunc func, void *upvalue);
 
 
 static inline UmkaAPI *umkaGetAPI(Umka *umka)

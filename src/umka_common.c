@@ -576,11 +576,12 @@ External *externalFind(const Externals *externals, const char *name)
 }
 
 
-External *externalAdd(Externals *externals, const char *name, void *entry, bool resolveInTrusted)
+External *externalAdd(Externals *externals, const char *name, void *entry, void *upvalue, bool resolveInTrusted)
 {
     External *external = storageAdd(externals->storage, sizeof(External));
 
     external->entry = entry;
+    external->upvalue = upvalue;
     external->resolved = false;
     external->resolveInTrusted = resolveInTrusted;
 

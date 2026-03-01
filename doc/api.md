@@ -166,6 +166,20 @@ Parameters:
 Returned value: `true` if the function has been successfully added.
 
 ```
+UMKA_API bool umkaAddClosure(Umka *umka, const char *name, UmkaExternFunc func, void *upvalue);
+```
+Adds a C/C++ function to the list of external functions that can be called from Umka. The `upvalue` parameter is a pointer to any user data that should be available inside `func` as a captured variable and accessible via `umkaGetUpvalue`.
+
+Parameters:
+
+* `umka` Interpreter instance handle
+* `name` Function name
+* `func` Function pointer
+* `upvalue` User data pointer
+
+Returned value: `true` if the function has been successfully added.
+
+```
 UMKA_API bool umkaGetFunc(Umka *umka, const char *moduleName, const char *fnName, 
                           UmkaFuncContext *fn);
 ```
