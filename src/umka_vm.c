@@ -51,7 +51,7 @@ Virtual machine stack layout (64-bit slots):
     Stack frame ref count
     Caller's stack frame base pointer                <- Stack frame base pointer
     Return address
-    Parameter N                                      <- Parameter array (external functions only)
+    Parameter N                                      <- Parameter array passed to external functions
     ...
     Parameter N
     Parameter N - 1
@@ -544,12 +544,36 @@ static FORCE_INLINE HeapPage *pageFindById(HeapPages *pages, int id)
 }
 
 
-static FORCE_INLINE bool stackUnwind(Fiber *fiber, Slot **base, int *ip)
+static FORCE_INLINE const StackFrameLayout *doGetStackFrameLayout(const Slot *base)
+{
+    return base[-2].ptrVal;
+}
+
+
+static FORCE_INLINE int64_t *doGetStackFrameRefCnt(Slot *base)
+{
+    return &base[-1].intVal;
+}
+
+
+static FORCE_INLINE int doGetStackFrameReturnOffset(const Slot *base)
+{
+    return base[1].intVal;
+}
+
+
+static FORCE_INLINE Slot *doGetStackFrameParams(Slot *base)
+{
+    return &base[2];
+}
+
+
+static FORCE_INLINE bool doStackUnwind(Fiber *fiber, Slot **base, int *ip)
 {
     if (*base == fiber->stack + fiber->stackSize - 1)
         return false;
 
-    const int returnOffset = (*base + 1)->intVal;
+    const int returnOffset = doGetStackFrameReturnOffset(*base);
     if (returnOffset == RETURN_FROM_FIBER || returnOffset == RETURN_FROM_VM)
         return false;
 
@@ -560,23 +584,22 @@ static FORCE_INLINE bool stackUnwind(Fiber *fiber, Slot **base, int *ip)
 }
 
 
-static FORCE_INLINE void stackFrameRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, int delta)
+static FORCE_INLINE void doUpdateStackFrameRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, int delta)
 {
     if (ptr >= (void *)fiber->top && ptr < (void *)(fiber->stack + fiber->stackSize))
     {
         Slot *base = fiber->base;
-        const ParamLayout *paramLayout = base[-2].ptrVal;
+        const StackFrameLayout *layout = doGetStackFrameLayout(base);
 
-        while (ptr > (void *)(base + 1 + paramLayout->numParamSlots))   // + 1 for return address
+        while (ptr >= (void *)(doGetStackFrameParams(base) + getParamLayout(layout)->numParamSlots))
         {
-            if (UNLIKELY(!stackUnwind(fiber, &base, NULL)))
+            if (UNLIKELY(!doStackUnwind(fiber, &base, NULL)))
                 pages->error->runtimeHandler(pages->error->context, ERR_RUNTIME, "Illegal stack pointer");
 
-            paramLayout = base[-2].ptrVal;
+            layout = doGetStackFrameLayout(base);
         }
 
-        int64_t *stackFrameRefCnt = &base[-1].intVal;
-        *stackFrameRefCnt += delta;
+        *doGetStackFrameRefCnt(base) += delta;
     }
 }
 
@@ -641,7 +664,7 @@ static FORCE_INLINE int chunkRefCnt(HeapPages *pages, HeapPage *page, void *ptr,
 
     // Additional ref counts for a user-defined address interval (used for stack frames to detect escaping refs)
     for (Fiber *fiber = pages->fiber; fiber; fiber = fiber->parent)
-        stackFrameRefCnt(fiber, pages, ptr, delta);
+        doUpdateStackFrameRefCnt(fiber, pages, ptr, delta);
 
 #ifdef UMKA_REF_CNT_DEBUG
     fprintf(stderr, "%p: delta: %+d  chunk: %d  page: %d\n", ptr, delta, chunk->refCnt, page->refCnt);
@@ -3738,7 +3761,7 @@ static FORCE_INLINE void doCallExtern(Fiber *fiber, Error *error)
     fiber->reg[REG_RESULT].ptrVal = error->context;    // Upon entry, the result slot stores the Umka instance
 
     const int ip = fiber->ip;
-    fn(&fiber->base[2].apiSlot, &fiber->reg[REG_RESULT].apiSlot);      // + 2 from base pointer for old base pointer and return address
+    fn(&doGetStackFrameParams(fiber->base)->apiSlot, &fiber->reg[REG_RESULT].apiSlot);
     fiber->ip = ip;
 
     fiber->ip++;
@@ -3911,8 +3934,7 @@ static FORCE_INLINE void doEnterFrame(Fiber *fiber, const UmkaHookFunc *hooks, E
 static FORCE_INLINE void doLeaveFrame(Fiber *fiber, const UmkaHookFunc *hooks, Error *error)
 {
     // Check stack frame ref count
-    const int64_t stackFrameRefCnt = fiber->base[-1].intVal;
-    if (UNLIKELY(stackFrameRefCnt != 0))
+    if (UNLIKELY(*doGetStackFrameRefCnt(fiber->base) != 0))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Pointer to a local variable escapes from the function");
 
     // Call 'return' hook, if any
@@ -4193,7 +4215,7 @@ int vmAsm(int ip, const Instruction *code, const DebugInfo *debugPerInstr, const
 
 bool vmUnwindCallStack(VM *vm, Slot **base, int *ip)
 {
-    return stackUnwind(vm->fiber, base, ip);
+    return doStackUnwind(vm->fiber, base, ip);
 }
 
 
