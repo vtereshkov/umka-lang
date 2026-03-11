@@ -47,7 +47,7 @@ Virtual machine stack layout (64-bit slots):
     Local variable 0
     ...
     Local variable 0
-    Parameter layout table pointer
+    Stack frame layout table pointer
     Stack frame ref count
     Caller's stack frame base pointer                <- Stack frame base pointer
     Return address
@@ -182,25 +182,28 @@ static const char *regSpelling [] =
 
 static FORCE_INLINE UmkaStackSlot *doGetOnFreeParams(void *ptr)
 {  
-    static char layoutBuf[PARAM_LAYOUT_SIZE(2)];
-    ParamLayout *layout = (ParamLayout *)&layoutBuf;
+    static char layoutBuf[STACK_FRAME_LAYOUT_SIZE(2)];
+    StackFrameLayout *layout = (StackFrameLayout *)&layoutBuf;
 
-    layout->numParams = 2;
-    layout->numParamSlots = 1;
-    layout->numResultParams = 0;
-    layout->firstSlotIndex[0] = 0;     // No upvalues
-    layout->firstSlotIndex[1] = 0;     // Pointer to data to deallocate
+    ParamLayout *paramLayout = (ParamLayout *)getParamLayout(layout);
+    paramLayout->numParams = 2;
+    paramLayout->numParamSlots = 1;
+    paramLayout->numResultParams = 0;
+    paramLayout->firstSlotIndex[0] = 0;     // No upvalues
+    paramLayout->firstSlotIndex[1] = 0;     // Pointer to data to deallocate
 
-    ParamLayoutTypes *layoutTypes = PARAM_LAYOUT_TYPES(layout);
-
-    layoutTypes->resultType = NULL;
-    layoutTypes->paramType[0] = NULL;
-    layoutTypes->paramType[1] = NULL;      
+    ParamTypes *paramTypes = (ParamTypes *)getParamTypes(layout);
+    paramTypes->resultType = NULL;
+    paramTypes->paramType[0] = NULL;
+    paramTypes->paramType[1] = NULL; 
+    
+    LocalVarLayout *localVarLayout = (LocalVarLayout *)getLocalVarLayout(layout);
+    localVarLayout->localVarSlots = 0;
 
     static UmkaStackSlot paramsBuf[4 + 1] = {0};
     UmkaStackSlot *params = paramsBuf + 4;
 
-    *vmGetParamLayout(params) = layout;
+    *vmGetStackFrameLayout(params) = layout;
     
     params[0].ptrVal = ptr;
 
@@ -3875,10 +3878,11 @@ static FORCE_INLINE void doReturn(Fiber *fiber, Fiber **newFiber)
 
 static FORCE_INLINE void doEnterFrame(Fiber *fiber, const UmkaHookFunc *hooks, Error *error)
 {
-    const ParamAndLocalVarLayout *layout = fiber->code[fiber->ip].operand.ptrVal;
+    const StackFrameLayout *layout = fiber->code[fiber->ip].operand.ptrVal;
+    const int64_t localVarSlots = getLocalVarLayout(layout)->localVarSlots;
 
     // Allocate stack frame
-    if (UNLIKELY(fiber->top - layout->localVarSlots - fiber->stack < MEM_MIN_FREE_STACK))
+    if (UNLIKELY(fiber->top - localVarSlots - fiber->stack < MEM_MIN_FREE_STACK))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Stack overflow");
 
     // Push old stack frame base pointer, set new one
@@ -3888,14 +3892,14 @@ static FORCE_INLINE void doEnterFrame(Fiber *fiber, const UmkaHookFunc *hooks, E
     // Push stack frame ref count
     (--fiber->top)->intVal = 0;
 
-    // Push parameter layout table pointer
-    (--fiber->top)->ptrVal = (ParamLayout *)layout->paramLayout;
+    // Push stack frame layout table pointer
+    (--fiber->top)->ptrVal = (StackFrameLayout *)layout;
 
     // Move stack top
-    fiber->top -= layout->localVarSlots;
+    fiber->top -= localVarSlots;
 
     // Zero the whole stack frame
-    memset(fiber->top, 0, layout->localVarSlots * sizeof(Slot));
+    memset(fiber->top, 0, localVarSlots * sizeof(Slot));
 
     // Call 'call' hook, if any
     doHook(fiber, hooks, UMKA_HOOK_CALL);
@@ -4035,7 +4039,7 @@ void vmCall(VM *vm, UmkaFuncContext *fn)
     int numParamSlots = 0;
     if (fn->params)
     {
-        const ParamLayout *paramLayout = *vmGetParamLayout(fn->params);
+        const ParamLayout *paramLayout = getParamLayout(*vmGetStackFrameLayout(fn->params));
         numParamSlots = paramLayout->numParamSlots;
 
         if (paramLayout->numResultParams > 0)

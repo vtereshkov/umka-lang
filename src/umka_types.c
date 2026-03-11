@@ -819,33 +819,28 @@ int typeParamOffset(const Types *types, const Signature *sig, int index)
 }
 
 
-const ParamLayout *typeMakeParamLayout(const Types *types, const Signature *sig)
+const StackFrameLayout *typeMakeStackFrameLayout(const Types *types, const Signature *sig, int64_t localVarSlots)
 {
-    ParamLayout *layout = storageAdd(types->storage, PARAM_LAYOUT_SIZE(sig->numParams));
+    StackFrameLayout *layout = storageAdd(types->storage, STACK_FRAME_LAYOUT_SIZE(sig->numParams));
 
-    layout->numParams = sig->numParams;
-    layout->numResultParams = typeStructured(sig->resultType) ? 1 : 0;
-    layout->numParamSlots = typeParamSizeTotal(types, sig) / sizeof(Slot);
+    ParamLayout *paramLayout = (ParamLayout *)getParamLayout(layout);
+
+    paramLayout->numParams = sig->numParams;
+    paramLayout->numResultParams = typeStructured(sig->resultType) ? 1 : 0;
+    paramLayout->numParamSlots = typeParamSizeTotal(types, sig) / sizeof(Slot);
 
     for (int i = 0; i < sig->numParams; i++)
-        layout->firstSlotIndex[i] = typeParamOffset(types, sig, i) / sizeof(Slot) - 2;   // - 2 slots for old base pointer and return address
+        paramLayout->firstSlotIndex[i] = typeParamOffset(types, sig, i) / sizeof(Slot) - 2;   // - 2 slots for old base pointer and return address
 
-    ParamLayoutTypes *layoutTypes = PARAM_LAYOUT_TYPES(layout);
-
+    ParamTypes *layoutTypes = (ParamTypes *)getParamTypes(layout);
     layoutTypes->resultType = sig->resultType;
 
     for (int i = 0; i < sig->numParams; i++)
-        layoutTypes->paramType[i] = sig->param[i]->type;    
+        layoutTypes->paramType[i] = sig->param[i]->type;
+        
+    LocalVarLayout *localVarLayout = (LocalVarLayout *)getLocalVarLayout(layout);
+    localVarLayout->localVarSlots = localVarSlots;
     
-    return layout;
-}
-
-
-const ParamAndLocalVarLayout *typeMakeParamAndLocalVarLayout(const Types *types, const ParamLayout *paramLayout, int localVarSlots)
-{
-    ParamAndLocalVarLayout *layout = storageAdd(types->storage, sizeof(ParamAndLocalVarLayout));
-    layout->paramLayout = paramLayout;
-    layout->localVarSlots = localVarSlots;
     return layout;
 }
 

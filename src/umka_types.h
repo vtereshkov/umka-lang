@@ -457,13 +457,13 @@ int typeParamSizeUpTo   (const Types *types, const Signature *sig, int index);
 int typeParamSizeTotal  (const Types *types, const Signature *sig);
 int typeParamOffset     (const Types *types, const Signature *sig, int index);
 
-const ParamLayout            *typeMakeParamLayout           (const Types *types, const Signature *sig);
-const ParamAndLocalVarLayout *typeMakeParamAndLocalVarLayout(const Types *types, const ParamLayout *paramLayout, int localVarSlots);
+const StackFrameLayout *typeMakeStackFrameLayout(const Types *types, const Signature *sig, int64_t localVarSlots);
 
 const char *typeKindSpelling(TypeKind kind);
 const char *typeSpelling    (const Type *type, char *buf);
 
 bool typeFormatStringValid(const char *format, int *formatLen, int *typeLetterPos, TypeKind *typeKind, FormatStringTypeSize *size);
+
 
 static inline const Type *typeMapKey(const Type *mapType)
 {

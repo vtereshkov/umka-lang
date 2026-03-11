@@ -285,7 +285,7 @@ UMKA_API void umkaMakeFuncContext(Umka *umka, const UmkaType *closureType, int e
 
 UMKA_API UmkaStackSlot *umkaGetParam(UmkaStackSlot *params, int index)
 {
-    const ParamLayout *paramLayout = *vmGetParamLayout(params);
+    const ParamLayout *paramLayout = getParamLayout(*vmGetStackFrameLayout(params));
     if (index < 0 || index >= paramLayout->numParams - paramLayout->numResultParams - 1)
         return NULL;
     return params + paramLayout->firstSlotIndex[index + 1];                                                 // + 1 to skip upvalues
@@ -294,14 +294,14 @@ UMKA_API UmkaStackSlot *umkaGetParam(UmkaStackSlot *params, int index)
 
 UMKA_API UmkaAny *umkaGetUpvalue(UmkaStackSlot *params)
 {
-    const ParamLayout *paramLayout = *vmGetParamLayout(params);
+    const ParamLayout *paramLayout = getParamLayout(*vmGetStackFrameLayout(params));
     return (UmkaAny *)(params + paramLayout->firstSlotIndex[0]);
 }
 
 
 UMKA_API UmkaStackSlot *umkaGetResult(UmkaStackSlot *params, UmkaStackSlot *result)
 {
-    const ParamLayout *paramLayout = *vmGetParamLayout(params);
+    const ParamLayout *paramLayout = getParamLayout(*vmGetStackFrameLayout(params));
     if (paramLayout->numResultParams == 1)
         result->ptrVal = params[paramLayout->firstSlotIndex[paramLayout->numParams - 1]].ptrVal;
     return result;
@@ -336,17 +336,18 @@ UMKA_API const UmkaType *umkaGetBaseType(const UmkaType *type)
 
 UMKA_API const UmkaType *umkaGetParamType(UmkaStackSlot *params, int index)
 {
-    const ParamLayout *paramLayout = *vmGetParamLayout(params);
+    const StackFrameLayout *layout = *vmGetStackFrameLayout(params);
+    const ParamLayout *paramLayout = getParamLayout(layout);
     if (index < 0 || index >= paramLayout->numParams - paramLayout->numResultParams - 1)
         return NULL;
-    return PARAM_LAYOUT_TYPES(paramLayout)->paramType[index + 1]; 
+    return getParamTypes(layout)->paramType[index + 1]; 
 }
 
 
 UMKA_API const UmkaType *umkaGetResultType(UmkaStackSlot *params, UmkaStackSlot *result)
 {
-    const ParamLayout *paramLayout = *vmGetParamLayout(params);
-    return PARAM_LAYOUT_TYPES(paramLayout)->resultType;
+    const StackFrameLayout *layout = *vmGetStackFrameLayout(params);
+    return getParamTypes(layout)->resultType;
 }
 
 

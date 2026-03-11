@@ -227,9 +227,9 @@ int64_t vmGetMemUsage           (VM *vm);
 const char *vmBuiltinSpelling   (BuiltinFunc builtin);
 
 
-static inline const ParamLayout **vmGetParamLayout(UmkaStackSlot *params)
+static inline const StackFrameLayout **vmGetStackFrameLayout(UmkaStackSlot *params)
 {
-    return (const ParamLayout **)&params[-4].ptrVal;     // For -4, see the stack layout diagram in umka_vm.c
+    return (const StackFrameLayout **)&params[-4].ptrVal;     // For -4, see the stack layout diagram in umka_vm.c
 }
 
 #endif // UMKA_VM_H_INCLUDED
