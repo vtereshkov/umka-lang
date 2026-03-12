@@ -268,6 +268,72 @@ static FORCE_INLINE void candidatePop(RefCntCandidates *candidates, void **ptr, 
 }
 
 
+static FORCE_INLINE const StackFrameLayout *stackGetFrameLayout(const Slot *base)
+{
+    return base[-2].ptrVal;
+}
+
+
+static FORCE_INLINE int64_t *stackGetFrameRefCnt(const Slot *base)
+{
+    return (int64_t *)&base[-1].intVal;
+}
+
+
+static FORCE_INLINE int stackGetFrameReturnOffset(const Slot *base)
+{
+    return base[1].intVal;
+}
+
+
+static FORCE_INLINE Slot *stackGetFrameParams(const Slot *base)
+{
+    return (Slot *)&base[2];
+}
+
+
+static FORCE_INLINE const Slot *stackGetFrameLocalVars(const Slot *base, const StackFrameLayout *layout)
+{
+    return (const Slot *)(base - 2 - getLocalVarLayout(layout)->localVarSlots);
+}
+
+
+static FORCE_INLINE bool stackUnwind(Fiber *fiber, const Slot **base, int *ip)
+{
+    if (*base == fiber->stack + fiber->stackSize - 1)
+        return false;
+
+    const int returnOffset = stackGetFrameReturnOffset(*base);
+    if (returnOffset == RETURN_FROM_FIBER || returnOffset == RETURN_FROM_VM)
+        return false;
+
+    *base = (*base)->ptrVal;
+    if (ip)
+        *ip = returnOffset;
+    return true;
+}
+
+
+static FORCE_INLINE void stackUpdateFrameRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, int delta)
+{
+    if (ptr >= (void *)fiber->top && ptr < (void *)(fiber->stack + fiber->stackSize))
+    {
+        const Slot *base = fiber->base;
+        const StackFrameLayout *layout = stackGetFrameLayout(base);
+
+        while (ptr >= (void *)(stackGetFrameParams(base) + getParamLayout(layout)->numParamSlots))
+        {
+            if (UNLIKELY(!stackUnwind(fiber, &base, NULL)))
+                pages->error->runtimeHandler(pages->error->context, ERR_RUNTIME, "Illegal stack pointer");
+
+            layout = stackGetFrameLayout(base);
+        }
+
+        *stackGetFrameRefCnt(base) += delta;
+    }
+}
+
+
 static void pageLeakSan(HeapPages *pages, const HeapPage *page, Storage *storage)
 {
     typedef struct tagLeakLocation
@@ -321,10 +387,10 @@ static void pageLeakSan(HeapPages *pages, const HeapPage *page, Storage *storage
 
 static void pageInit(HeapPages *pages, Fiber *fiber, Storage *storage, Error *error)
 {
-    pages->first = pages->firstRecycled = pages->lastAccessed = NULL;
+    pages->first = pages->firstRecycled = pages->firstBlacklisted = pages->lastAccessed = NULL;
     pages->lowest = pages->highest = NULL;
     pages->freeId = 1;
-    pages->totalSize = 0;
+    pages->totalSize = pages->blacklistedSize = 0;
     pages->fiber = fiber;
     pages->leakSanLevel = 1;
     candidateInit(&pages->refCntCandidates, storage);
@@ -364,10 +430,18 @@ static void pageFree(HeapPages *pages, Storage *storage)
         free(page);
         page = next;
     }
+
+    // Remove remaining blacklisted pages
+    for (HeapPage *page = pages->firstBlacklisted; page;)
+    {
+        HeapPage *next = page->next;
+        free(page);
+        page = next;
+    }    
 }
 
 
-static FORCE_INLINE void pageAddRecycled(HeapPages *pages, HeapPage *page)
+static FORCE_INLINE void pageMoveToRecycled(HeapPages *pages, HeapPage *page)
 {
     page->next = pages->firstRecycled;
     pages->firstRecycled = page;
@@ -392,6 +466,81 @@ static FORCE_INLINE HeapPage *pageFindRecycled(HeapPages *pages, int size)
 
     return NULL;   
 }
+
+
+static FORCE_INLINE bool pageMayBeReferencedByTemporaries(HeapPages *pages, const HeapPage *page)
+{
+    // Naive Deutsch-Bobrow-style conservative stack scanning for temporaries referencing the page
+    for (Fiber *fiber = pages->fiber; fiber; fiber = fiber->parent)
+    {
+        const Slot *base = fiber->base;
+        const Slot *temporariesTop = fiber->top;
+        do
+        {
+            const StackFrameLayout *layout = stackGetFrameLayout(base);
+            if (!layout)
+                break;
+
+            const Slot *localVarsTop = stackGetFrameLocalVars(base, layout);
+
+            for (const Slot *temporary = temporariesTop; temporary < localVarsTop; temporary++)
+            {
+                // Everything that looks like a pointer into the page may be a pointer
+                if (temporary->ptrVal >= (void *)page->data && temporary->ptrVal < (void *)page->end)
+                    return true;
+            }
+
+            temporariesTop = stackGetFrameParams(base) + getParamLayout(layout)->numParamSlots;
+        } while (stackUnwind(fiber, &base, NULL));    
+    }
+
+    return false;
+}
+
+
+static FORCE_INLINE void pageMoveBlacklistedToRecycled(HeapPages *pages)
+{
+    if (pages->blacklistedSize < MEM_MAX_BLACKLISTED)
+        return;
+    
+    for (HeapPage *page = pages->firstBlacklisted; page;)
+    {
+        HeapPage *next = page->next;
+        if (!pageMayBeReferencedByTemporaries(pages, page))
+        {
+            if (page == pages->firstBlacklisted)
+                pages->firstBlacklisted = page->next;
+
+            if (page->prev)
+                page->prev->next = page->next;
+
+            if (page->next)
+                page->next->prev = page->prev;
+
+            pageMoveToRecycled(pages, page);
+
+            pages->blacklistedSize -= page->numChunks * page->chunkSize;     
+        }
+        page = next; 
+    }
+}
+
+
+static FORCE_INLINE void pageMoveToBlacklisted(HeapPages *pages, HeapPage *page)
+{  
+    pageMoveBlacklistedToRecycled(pages);
+    
+    page->prev = NULL;
+    page->next = pages->firstBlacklisted;
+
+    if (pages->firstBlacklisted)
+        pages->firstBlacklisted->prev = page;
+
+    pages->firstBlacklisted = page;
+
+    pages->blacklistedSize += page->numChunks * page->chunkSize;
+}
+
 
 static FORCE_INLINE HeapPage *pageAdd(HeapPages *pages, int numChunks, int chunkSize)
 {
@@ -438,7 +587,7 @@ static FORCE_INLINE HeapPage *pageAdd(HeapPages *pages, int numChunks, int chunk
 }
 
 
-static FORCE_INLINE void pageRemove(HeapPages *pages, HeapPage *page)
+static FORCE_INLINE void pageRemove(HeapPages *pages, HeapPage *page, bool blacklist)
 {
 #ifdef UMKA_REF_CNT_DEBUG
     fprintf(stderr, "Remove page at %p\n", page->data);
@@ -456,7 +605,10 @@ static FORCE_INLINE void pageRemove(HeapPages *pages, HeapPage *page)
     if (page == pages->lastAccessed)
         pages->lastAccessed = pages->first; 
         
-    pageAddRecycled(pages, page);
+    if (blacklist)
+        pageMoveToBlacklisted(pages, page);
+    else
+        pageMoveToRecycled(pages, page);
 }
 
 
@@ -544,66 +696,6 @@ static FORCE_INLINE HeapPage *pageFindById(HeapPages *pages, int id)
 }
 
 
-static FORCE_INLINE const StackFrameLayout *doGetStackFrameLayout(const Slot *base)
-{
-    return base[-2].ptrVal;
-}
-
-
-static FORCE_INLINE int64_t *doGetStackFrameRefCnt(Slot *base)
-{
-    return &base[-1].intVal;
-}
-
-
-static FORCE_INLINE int doGetStackFrameReturnOffset(const Slot *base)
-{
-    return base[1].intVal;
-}
-
-
-static FORCE_INLINE Slot *doGetStackFrameParams(Slot *base)
-{
-    return &base[2];
-}
-
-
-static FORCE_INLINE bool doStackUnwind(Fiber *fiber, Slot **base, int *ip)
-{
-    if (*base == fiber->stack + fiber->stackSize - 1)
-        return false;
-
-    const int returnOffset = doGetStackFrameReturnOffset(*base);
-    if (returnOffset == RETURN_FROM_FIBER || returnOffset == RETURN_FROM_VM)
-        return false;
-
-    *base = (Slot *)((*base)->ptrVal);
-    if (ip)
-        *ip = returnOffset;
-    return true;
-}
-
-
-static FORCE_INLINE void doUpdateStackFrameRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, int delta)
-{
-    if (ptr >= (void *)fiber->top && ptr < (void *)(fiber->stack + fiber->stackSize))
-    {
-        Slot *base = fiber->base;
-        const StackFrameLayout *layout = doGetStackFrameLayout(base);
-
-        while (ptr >= (void *)(doGetStackFrameParams(base) + getParamLayout(layout)->numParamSlots))
-        {
-            if (UNLIKELY(!doStackUnwind(fiber, &base, NULL)))
-                pages->error->runtimeHandler(pages->error->context, ERR_RUNTIME, "Illegal stack pointer");
-
-            layout = doGetStackFrameLayout(base);
-        }
-
-        *doGetStackFrameRefCnt(base) += delta;
-    }
-}
-
-
 static FORCE_INLINE void *chunkAlloc(HeapPages *pages, int64_t size, const Type *type, UmkaExternFunc onFree, bool isStack, Error *error)
 {
     // Page layout: header, data, footer (char), padding, header, data, footer (char), padding...
@@ -662,9 +754,9 @@ static FORCE_INLINE int chunkRefCnt(HeapPages *pages, HeapPage *page, void *ptr,
     chunk->refCnt += delta;
     page->refCnt += delta;
 
-    // Additional ref counts for a user-defined address interval (used for stack frames to detect escaping refs)
+    // Detect escaping refs
     for (Fiber *fiber = pages->fiber; fiber; fiber = fiber->parent)
-        doUpdateStackFrameRefCnt(fiber, pages, ptr, delta);
+        stackUpdateFrameRefCnt(fiber, pages, ptr, delta);
 
 #ifdef UMKA_REF_CNT_DEBUG
     fprintf(stderr, "%p: delta: %+d  chunk: %d  page: %d\n", ptr, delta, chunk->refCnt, page->refCnt);
@@ -672,7 +764,8 @@ static FORCE_INLINE int chunkRefCnt(HeapPages *pages, HeapPage *page, void *ptr,
 
     if (page->refCnt == 0)
     {
-        pageRemove(pages, page);
+        const bool blacklist = pageMayBeReferencedByTemporaries(pages, page);
+        pageRemove(pages, page, blacklist);
         return 0;
     }
 
@@ -3761,7 +3854,7 @@ static FORCE_INLINE void doCallExtern(Fiber *fiber, Error *error)
     fiber->reg[REG_RESULT].ptrVal = error->context;    // Upon entry, the result slot stores the Umka instance
 
     const int ip = fiber->ip;
-    fn(&doGetStackFrameParams(fiber->base)->apiSlot, &fiber->reg[REG_RESULT].apiSlot);
+    fn(&stackGetFrameParams(fiber->base)->apiSlot, &fiber->reg[REG_RESULT].apiSlot);
     fiber->ip = ip;
 
     fiber->ip++;
@@ -3934,7 +4027,7 @@ static FORCE_INLINE void doEnterFrame(Fiber *fiber, const UmkaHookFunc *hooks, E
 static FORCE_INLINE void doLeaveFrame(Fiber *fiber, const UmkaHookFunc *hooks, Error *error)
 {
     // Check stack frame ref count
-    if (UNLIKELY(*doGetStackFrameRefCnt(fiber->base) != 0))
+    if (UNLIKELY(*stackGetFrameRefCnt(fiber->base) != 0))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Pointer to a local variable escapes from the function");
 
     // Call 'return' hook, if any
@@ -4213,9 +4306,9 @@ int vmAsm(int ip, const Instruction *code, const DebugInfo *debugPerInstr, const
 }
 
 
-bool vmUnwindCallStack(VM *vm, Slot **base, int *ip)
+bool vmUnwindCallStack(VM *vm, const Slot **base, int *ip)
 {
-    return doStackUnwind(vm->fiber, base, ip);
+    return stackUnwind(vm->fiber, base, ip);
 }
 
 

@@ -177,7 +177,7 @@ UMKA_API bool umkaGetFunc(Umka *umka, const char *moduleName, const char *fnName
 
 UMKA_API bool umkaGetCallStack(Umka *umka, int depth, int nameSize, int *offset, char *fileName, char *fnName, int *line)
 {
-    Slot *base = umka->vm.fiber->base;
+    const Slot *base = umka->vm.fiber->base;
     int ip = umka->vm.fiber->ip;
 
     while (depth-- > 0)

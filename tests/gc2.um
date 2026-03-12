@@ -32,9 +32,27 @@ fn test2() {
   tail.next = p  // cycle
 }
 
+fn contrived(arr: ^[]int, x: int): int {
+  i := len(arr^)
+  arr^ = append(arr^, 0)
+  dummy := make([]int, 100000)
+  if x != 0 {
+    arr^[i] = contrived(arr, x-1)
+  }
+  return x + 1
+}
+
+fn test3() {
+  for i := 0; i < 1000; i++ {
+    arr := []int{}
+    contrived(&arr, 10)
+  }
+}
+
 fn test*() {
   test1()
   test2()
+  test3()
   printf("Ok")
 }
 

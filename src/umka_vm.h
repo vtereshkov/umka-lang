@@ -25,6 +25,7 @@ enum    // Memory manager settings
     MEM_MIN_FREE_HEAP     = 1024,                   // Bytes
     MEM_MIN_HEAP_CHUNK    = 64,                     // Bytes
     MEM_MIN_HEAP_PAGE     = 1024 * 1024,            // Bytes
+    MEM_MAX_BLACKLISTED   = 16 * 1024 * 1024        // Bytes   
 };
 
 
@@ -152,10 +153,10 @@ typedef struct tagHeapPage
 
 typedef struct
 {
-    HeapPage *first, *firstRecycled, *lastAccessed;
+    HeapPage *first, *firstRecycled, *firstBlacklisted, *lastAccessed;
     char *lowest, *highest;
     int freeId;
-    int64_t totalSize;
+    int64_t totalSize, blacklistedSize;
     struct tagFiber *fiber;
     int64_t leakSanLevel;
     RefCntCandidates refCntCandidates;
@@ -214,7 +215,7 @@ void vmCleanup                  (VM *vm);
 bool vmAlive                    (VM *vm);
 void vmKill                     (VM *vm);
 int vmAsm                       (int ip, const Instruction *code, const DebugInfo *debugPerInstr, const Idents *idents, char *buf, int size);
-bool vmUnwindCallStack          (VM *vm, Slot **base, int *ip);
+bool vmUnwindCallStack          (VM *vm, const Slot **base, int *ip);
 void vmSetHook                  (VM *vm, UmkaHookEvent event, UmkaHookFunc hook);
 void *vmAllocData               (VM *vm, int size, UmkaExternFunc onFree);
 void vmIncRef                   (VM *vm, void *ptr, const Type *type);
