@@ -4190,7 +4190,23 @@ void vmCall(VM *vm, UmkaFuncContext *fn)
 
 void vmCleanup(VM *vm)
 {
+    // Push 'return from VM' signal as return address
+    (--vm->fiber->top)->intVal = RETURN_FROM_VM;
+
+    // Go to the entry point
     vm->fiber->ip = JUMP_TO_CLEANUP;
+
+    // Push old stack frame base pointer, set new one
+    (--vm->fiber->top)->ptrVal = vm->fiber->base;
+    vm->fiber->base = vm->fiber->top;
+
+    // Push fake stack frame ref count
+    (--vm->fiber->top)->intVal = 0;
+
+    // Push fake stack frame layout table pointer
+    (--vm->fiber->top)->ptrVal = NULL;
+
+    // Main loop
     vmLoop(vm);
 }
 
