@@ -20,6 +20,10 @@ fn bar(as: ..any) {
     }
 }
 
+fn baz(): int {
+    return 1 + 2
+}
+
 fn test*() {
     a := 42
     b := "42"
@@ -34,6 +38,14 @@ fn test*() {
 
     foo(&a, &b, &c, &d)
     printf("\n") 
+
+    x := any(baz)
+    switch v := type(x) {
+        case fn(): int:
+            printf("hi\n")
+        default:
+            printf("bye\n")
+    }    
 }
 
 fn main() {

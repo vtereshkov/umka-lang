@@ -2700,10 +2700,24 @@ static void parseDesignator(Umka *umka, const Type **type, Const *constant, bool
 
     parseSelectors(umka, type, constant, isVar, isCall, isCompLit);
 
-    if (((*type)->kind == TYPE_FN && (*type)->sig->isMethod) ||
-        ((*type)->kind == TYPE_PTR && (*type)->base->kind == TYPE_FN && (*type)->base->sig->isMethod))
+    if ((*type)->kind == TYPE_FN) 
     {
-        umka->error.handler(umka->error.context, "Method must be called");
+        if ((*type)->sig->isMethod)
+            umka->error.handler(umka->error.context, "Expected method call");
+
+        // Convert function to closure, as variables can only store closures, not functions
+        Type *closureType = typeAdd(&umka->types, &umka->blocks, TYPE_CLOSURE);
+        typeAddField(&umka->types, closureType, *type, "#fn");
+        typeAddField(&umka->types, closureType, umka->types.predecl.anyType, "#upvalues");
+
+        doImplicitTypeConv(umka, closureType, type, constant);
+    }
+    else if ((*type)->kind == TYPE_PTR && (*type)->base->kind == TYPE_FN)
+    {
+        if ((*type)->base->sig->isMethod)
+            umka->error.handler(umka->error.context, "Expected method call");
+
+        umka->error.handler(umka->error.context, "Expected function call");
     }
 }
 

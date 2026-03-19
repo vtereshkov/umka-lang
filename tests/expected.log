@@ -1143,6 +1143,7 @@ str: 425 + 5 = 4255
 []real: [42 5] + [5] = [42 5 5]
 unknown: 42
 
+hi
 
 
 >>> Redeclarations
