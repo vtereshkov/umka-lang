@@ -13,6 +13,28 @@
 static int parseModule(Umka *umka);
 
 
+static const Type *parseTypeOrForwardType(Umka *umka, bool resolveByStructured)
+{
+    // Forward declaration?
+    if (umka->types.forwardTypesEnabled && umka->lex.tok.kind == TOK_IDENT)
+    {
+        Lexer lookaheadLex = umka->lex;
+        lexNext(&lookaheadLex);
+        if (lookaheadLex.tok.kind != TOK_COLONCOLON && !identFind(&umka->idents, &umka->modules, &umka->blocks, umka->blocks.module, umka->lex.tok.name, NULL, true))
+        {
+            Type *forwardType = typeAdd(&umka->types, &umka->blocks, TYPE_FORWARD);
+            forwardType->typeIdent = identAddType(&umka->idents, &umka->modules, &umka->blocks, umka->lex.tok.name, forwardType, false);
+            forwardType->resolveByStructured = resolveByStructured;
+            identSetUsed(forwardType->typeIdent);
+            lexNext(&umka->lex);
+            return forwardType;
+        }
+    }
+
+    return parseType(umka, NULL);
+}
+
+
 // exportMark = ["*"].
 static bool parseExportMark(Umka *umka)
 {
@@ -48,19 +70,28 @@ static void parseIdentList(Umka *umka, IdentName *names, bool *exported, int cap
 }
 
 
-// typedIdentList = identList ":" [".."] type.
-static void parseTypedIdentList(Umka *umka, IdentName *names, bool *exported, int capacity, int *num, const Type **type, bool allowVariadicParamList)
+// typedIdentList = identList ":" type.
+static void parseTypedIdentList(Umka *umka, IdentName *names, bool *exported, int capacity, int *num, const Type **type)
+{
+    parseIdentList(umka, names, exported, capacity, num);
+    lexEat(&umka->lex, TOK_COLON);
+    *type = parseType(umka, NULL);
+}
+
+
+// typedParamList = identList ":" [".."] type.
+static void parseTypedParamList(Umka *umka, IdentName *names, bool *exported, int capacity, int *num, const Type **type)
 {
     parseIdentList(umka, names, exported, capacity, num);
     lexEat(&umka->lex, TOK_COLON);
 
-    if (allowVariadicParamList && umka->lex.tok.kind == TOK_ELLIPSIS)
+    if (umka->lex.tok.kind == TOK_ELLIPSIS)
     {
         if (*num != 1)
             umka->error.handler(umka->error.context, "Only one variadic parameter list is allowed");
 
         lexNext(&umka->lex);
-        const Type *itemType = parseType(umka, NULL);
+        const Type *itemType = parseTypeOrForwardType(umka, false);
         if (itemType->kind == TYPE_VOID)
             umka->error.handler(umka->error.context, "Variadic parameters cannot be void");
 
@@ -70,7 +101,7 @@ static void parseTypedIdentList(Umka *umka, IdentName *names, bool *exported, in
         *type = variadicListType;
     }
     else
-        *type = parseType(umka, NULL);
+        *type = parseTypeOrForwardType(umka, false);
 }
 
 
@@ -102,7 +133,7 @@ static void parseRcvSignature(Umka *umka, Signature *sig)
 }
 
 
-// signature = "(" [typedIdentList ["=" expr] {"," typedIdentList ["=" expr]}] ")" [":" (type | "(" type {"," type} ")")].
+// signature = "(" [typedParamList ["=" expr] {"," typedParamList ["=" expr]}] ")" [":" (type | "(" type {"," type} ")")].
 static void parseSignature(Umka *umka, Signature *sig)
 {
     // Dummy hidden parameter that allows any function to be converted to a closure
@@ -125,7 +156,7 @@ static void parseSignature(Umka *umka, Signature *sig)
             bool paramExported[MAX_PARAMS];
             const Type *paramType = NULL;
             int numParams = 0;
-            parseTypedIdentList(umka, paramNames, paramExported, MAX_PARAMS, &numParams, &paramType, true);
+            parseTypedParamList(umka, paramNames, paramExported, MAX_PARAMS, &numParams, &paramType);
 
             variadicParamListFound = paramType->isVariadicParamList;
 
@@ -138,6 +169,9 @@ static void parseSignature(Umka *umka, Signature *sig)
 
                 if (paramType->isVariadicParamList)
                     umka->error.handler(umka->error.context, "Variadic parameter list cannot have default value");
+
+                if (paramType->kind == TYPE_FORWARD)
+                    umka->error.handler(umka->error.context, "Parameter of unresolved type cannot have default value");
 
                 if (!typeComparable(paramType) && !typeEquivalent(paramType, umka->types.predecl.anyType))
                     umka->error.handler(umka->error.context, "Parameter must be of comparable or 'any' type to have default value");
@@ -202,35 +236,14 @@ static void parseSignature(Umka *umka, Signature *sig)
         }
         else
             // Single result type
-            sig->resultType = parseType(umka, NULL);
+            sig->resultType = parseTypeOrForwardType(umka, true);
     }
     else
         sig->resultType = umka->types.predecl.voidType;
 
-    // Structured result parameter
-    if (typeStructured(sig->resultType))
+    // Structured result parameter (if it's a forward-declared type, we require it to be resolved by a structured type later)
+    if (typeStructured(sig->resultType) || sig->resultType->kind == TYPE_FORWARD)
         typeAddParam(&umka->types, sig, typeAddPtrTo(&umka->types, &umka->blocks, sig->resultType), "#result", (Const){0});
-}
-
-
-static const Type *parseTypeOrForwardType(Umka *umka)
-{
-    // Forward declaration?
-    if (umka->types.forwardTypesEnabled && umka->lex.tok.kind == TOK_IDENT)
-    {
-        Lexer lookaheadLex = umka->lex;
-        lexNext(&lookaheadLex);
-        if (lookaheadLex.tok.kind != TOK_COLONCOLON && !identFind(&umka->idents, &umka->modules, &umka->blocks, umka->blocks.module, umka->lex.tok.name, NULL, true))
-        {
-            Type *forwardType = typeAdd(&umka->types, &umka->blocks, TYPE_FORWARD);
-            forwardType->typeIdent = identAddType(&umka->idents, &umka->modules, &umka->blocks, umka->lex.tok.name, forwardType, false);
-            identSetUsed(forwardType->typeIdent);
-            lexNext(&umka->lex);
-            return forwardType;
-        }
-    }
-
-    return parseType(umka, NULL);
 }
 
 
@@ -246,7 +259,7 @@ static const Type *parsePtrType(Umka *umka)
 
     lexEat(&umka->lex, TOK_CARET);
 
-    const Type *baseType = parseTypeOrForwardType(umka);
+    const Type *baseType = parseTypeOrForwardType(umka, false);
 
     if (weak)
         return typeAddWeakPtrTo(&umka->types, &umka->blocks, baseType);
@@ -283,7 +296,7 @@ static const Type *parseArrayType(Umka *umka)
 
     lexEat(&umka->lex, TOK_RBRACKET);
 
-    const Type *baseType = (typeKind == TYPE_DYNARRAY) ? parseTypeOrForwardType(umka) : parseType(umka, NULL);
+    const Type *baseType = (typeKind == TYPE_DYNARRAY) ? parseTypeOrForwardType(umka, false) : parseType(umka, NULL);
     if (baseType->kind == TYPE_VOID)
         umka->error.handler(umka->error.context, "Array items cannot be void");
 
@@ -374,7 +387,7 @@ static const Type *parseMapType(Umka *umka)
 
     lexEat(&umka->lex, TOK_RBRACKET);
 
-    const Type *itemType = parseTypeOrForwardType(umka);
+    const Type *itemType = parseTypeOrForwardType(umka, false);
     if (itemType->kind == TYPE_VOID)
         umka->error.handler(umka->error.context, "Map items cannot be void");
 
@@ -410,7 +423,7 @@ static const Type *parseStructType(Umka *umka)
         bool fieldExported[MAX_IDENTS_IN_LIST];
         const Type *fieldType = NULL;
         int numFields = 0;
-        parseTypedIdentList(umka, fieldNames, fieldExported, MAX_IDENTS_IN_LIST, &numFields, &fieldType, false);
+        parseTypedIdentList(umka, fieldNames, fieldExported, MAX_IDENTS_IN_LIST, &numFields, &fieldType);
 
         for (int i = 0; i < numFields; i++)
         {
@@ -635,7 +648,7 @@ static void parseVarDeclItem(Umka *umka)
     bool varExported[MAX_IDENTS_IN_LIST];
     int numVars = 0;
     const Type *varType = NULL;
-    parseTypedIdentList(umka, varNames, varExported, MAX_IDENTS_IN_LIST, &numVars, &varType, false);
+    parseTypedIdentList(umka, varNames, varExported, MAX_IDENTS_IN_LIST, &numVars, &varType);
 
     Ident *var[MAX_IDENTS_IN_LIST];
     for (int i = 0; i < numVars; i++)

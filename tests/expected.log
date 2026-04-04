@@ -338,6 +338,12 @@ meow
 woof
 
 
+>>> Interfaces - 4
+
+{min: [3 3] max: [8 8]}
+{parts: [{min: [3 3] max: [8 8]} {min: [5 5] max: [7 9]}]}
+
+
 >>> Maps - 1
 
 
@@ -704,7 +710,7 @@ Error: Empty string (code -2) from "foo":
     foo: (5)
     fooTest: (11)
     test: (25)
-    main: (78)
+    main: (80)
 9
 
 

@@ -361,8 +361,9 @@ The type of the last parameter in the function signature may be prefixed with `.
 Syntax:
 
 ```
-signature = "(" [typedIdentList ["=" expr] {"," typedIdentList ["=" expr]}] ")" 
-            [":" (type | "(" type {"," type} ")")].
+typedParamList = identList ":" [".."] type.
+signature      = "(" [typedParamList ["=" expr] {"," typedParamList ["=" expr]}] ")" 
+                 [":" (type | "(" type {"," type} ")")].
 ```
 
 Each function definition in the module scope defines a constant of a function type. A constant or variable of a function type cannot be declared using a `const` or `var` declaration, which produce a closure type instead.   
@@ -464,7 +465,15 @@ If a value `s` of type `S` is given where a value `t` of some other type `T` is 
 
 ## Declarations
 
-All types, constants, variables and functions should be declared before the first use. As an exception, a pointer base type, a dynamic array base type or a map item type may be declared after using the pointer type, the dynamic array type or the map type, respectively, but before the end of the same `type` declaration list. No identifier may be declared twice in the same block, except for redeclarations allowed in multi-value short variable declarations.
+All types, constants, variables and functions should be declared before the first use. 
+
+As an exception, a type may be declared after using it, but before the end of the same `type` declaration list, if this type is only used as
+* A pointer base type
+* A dynamic array base type
+* A map item type 
+* A function parameter type or returned value type
+
+No identifier may be declared twice in the same block, except for redeclarations allowed in multi-value short variable declarations.
 
 Syntax:
 
@@ -572,7 +581,7 @@ Syntax:
 ```
 fullVarDecl    = "var" (varDeclItem | "(" {varDeclItem ";"} ")").
 varDeclItem    = typedIdentList "=" exprList.
-typedIdentList = identList ":" [".."] type.
+typedIdentList = identList ":" type.
 identList      = ident exportMark {"," ident exportMark}.
 ```
 
@@ -1532,11 +1541,12 @@ varDeclItem         = typedIdentList "=" exprList.
 shortVarDecl        = declAssignmentStmt.
 fnDecl              = "fn" [rcvSignature] ident exportMark signature [block].
 rcvSignature        = "(" ident ":" type ")".
-signature           = "(" [typedIdentList ["=" expr] {"," typedIdentList ["=" expr]}] ")" 
+signature           = "(" [typedParamList ["=" expr] {"," typedParamList ["=" expr]}] ")" 
                       [":" (type | "(" type {"," type} ")")].
 exportMark          = ["*"].
 identList           = ident exportMark {"," ident exportMark}.
-typedIdentList      = identList ":" [".."] type.
+typedIdentList      = identList ":" type.
+typedParamList      = identList ":" [".."] type.
 type                = qualIdent | ptrType | arrayType | dynArrayType | enumType | 
                       mapType | structType | interfaceType | closureType.
 ptrType             = ["weak"] "^" type.

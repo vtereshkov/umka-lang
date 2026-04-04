@@ -158,6 +158,7 @@ typedef struct tagType
     bool isVariadicParamList;                   // For dynamic arrays that represent variadic parameter lists
     bool isEnum;                                // For enumerations
     bool isGarbageCollected;
+    bool resolveByStructured;                   // For forward types that should be resolved by a structured type (used for function results)   
     const struct tagIdent *typeIdent;           // For types that have identifiers
     const struct tagType *sameAs;               // For types declared as type T = ...
     union
