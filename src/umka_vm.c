@@ -318,6 +318,9 @@ static FORCE_INLINE void stackUpdateFrameRefCnt(Fiber *fiber, HeapPages *pages, 
 {
     if (ptr >= (void *)fiber->top && ptr < (void *)(fiber->stack + fiber->stackSize))
     {
+        if (fiber->base == fiber->stack + fiber->stackSize - 1)
+            return;
+        
         const Slot *base = fiber->base;
         const StackFrameLayout *layout = stackGetFrameLayout(base);
 
@@ -473,6 +476,9 @@ static FORCE_INLINE bool pageMayBeReferencedByTemporaries(HeapPages *pages, cons
     // Naive Deutsch-Bobrow-style conservative stack scanning for temporaries referencing the page
     for (Fiber *fiber = pages->fiber; fiber; fiber = fiber->parent)
     {
+        if (fiber->base == fiber->stack + fiber->stackSize - 1)
+            continue;
+        
         const Slot *base = fiber->base;
         const Slot *temporariesTop = fiber->top;
         do
@@ -4190,21 +4196,8 @@ void vmCall(VM *vm, UmkaFuncContext *fn)
 
 void vmCleanup(VM *vm)
 {
-    // Push 'return from VM' signal as return address
-    (--vm->fiber->top)->intVal = RETURN_FROM_VM;
-
     // Go to the entry point
     vm->fiber->ip = JUMP_TO_CLEANUP;
-
-    // Push old stack frame base pointer, set new one
-    (--vm->fiber->top)->ptrVal = vm->fiber->base;
-    vm->fiber->base = vm->fiber->top;
-
-    // Push fake stack frame ref count
-    (--vm->fiber->top)->intVal = 0;
-
-    // Push fake stack frame layout table pointer
-    (--vm->fiber->top)->ptrVal = NULL;
 
     // Main loop
     vmLoop(vm);
