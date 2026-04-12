@@ -357,7 +357,7 @@ static void pageLeakSan(HeapPages *pages, const HeapPage *page, Storage *storage
 
             for (int i = 0; i < page->numOccupiedChunks; i++)
             {
-                const HeapChunk *chunk = (const HeapChunk *)(page->data + i * page->chunkSize);
+                const HeapChunk *chunk = (const HeapChunk *)((char *)page->data + i * page->chunkSize);
                 if (chunk->refCnt == 0)
                     continue;
 
@@ -414,7 +414,7 @@ static void pageFree(HeapPages *pages, Storage *storage)
         // Call custom deallocators, if any
         for (int i = 0; i < page->numOccupiedChunks && page->numChunksWithOnFree > 0; i++)
         {
-            HeapChunk *chunk = (HeapChunk *)(page->data + i * page->chunkSize);
+            HeapChunk *chunk = (HeapChunk *)((char *)page->data + i * page->chunkSize);
             if (chunk->refCnt == 0 || !chunk->onFree)
                 continue;
 
@@ -571,14 +571,14 @@ static FORCE_INLINE HeapPage *pageAdd(HeapPages *pages, int numChunks, int chunk
     page->chunkSize = chunkSize;
     page->prev = NULL;
     page->next = pages->first;
-    page->end = page->data + size;
+    page->end = (char *)page->data + size;
 
     if (pages->first)
         pages->first->prev = page;
     pages->first = page;
 
-    if (!pages->lowest || pages->lowest > page->data)
-        pages->lowest = page->data;
+    if (!pages->lowest || pages->lowest > (char *)page->data)
+        pages->lowest = (char *)page->data;
 
     if (!pages->highest || pages->highest < page->end)
         pages->highest = page->end;
@@ -620,7 +620,7 @@ static FORCE_INLINE void pageRemove(HeapPages *pages, HeapPage *page, bool black
 
 static FORCE_INLINE HeapChunk *pageGetChunk(const HeapPage *page, void *ptr)
 {
-    const int chunkOffset = ((char *)ptr - page->data) % page->chunkSize;
+    const int chunkOffset = ((char *)ptr - (char *)page->data) % page->chunkSize;
     return (HeapChunk *)((char *)ptr - chunkOffset);
 }
 
@@ -720,7 +720,7 @@ static FORCE_INLINE void *chunkAlloc(HeapPages *pages, int64_t size, const Type 
         page = pageAdd(pages, numChunks, chunkSize);
     }
 
-    HeapChunk *chunk = (HeapChunk *)(page->data + page->numOccupiedChunks * page->chunkSize);
+    HeapChunk *chunk = (HeapChunk *)((char *)page->data + page->numOccupiedChunks * page->chunkSize);
 
     memset(chunk, 0, page->chunkSize);
     chunk->refCnt = 1;
@@ -1279,7 +1279,7 @@ static void doRefCntImpl(HeapPages *pages, void *ptr, const Type *type, TokenKin
                             {
                                 // When allocating dynamic arrays, we mark with type the data chunk, not the header chunk
                                 const DynArrayDimensions *dims = (DynArrayDimensions *)chunk->data;
-                                void *data = chunk->data + sizeof(DynArrayDimensions);
+                                void *data = (char *)chunk->data + sizeof(DynArrayDimensions);
                                 doAddArrayItemsRefCntCandidates(candidates, data, chunk->type, dims->len);
                                 break;
                             }
@@ -3760,7 +3760,7 @@ static FORCE_INLINE void doWeakenPtr(Fiber *fiber, HeapPages *pages)
 
         const bool isHeapPtr = true;
         const int pageId = page->id;
-        const int pageOffset = (char *)ptr - page->data;
+        const int pageOffset = (char *)ptr - (char *)page->data;
 
         weakPtr = ((uint64_t)isHeapPtr << 63) | ((uint64_t)pageId << 32) | pageOffset;
     }
@@ -3785,7 +3785,7 @@ static FORCE_INLINE void doStrengthenPtr(Fiber *fiber, HeapPages *pages)
         if (page)
         {
             const int pageOffset = weakPtr & 0x7FFFFFFF;
-            ptr = page->data + pageOffset;
+            ptr = (char *)page->data + pageOffset;
 
             const HeapChunk *chunk = pageGetChunk(page, ptr);
             if (UNLIKELY(chunk->isStack))

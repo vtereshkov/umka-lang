@@ -147,7 +147,7 @@ typedef struct tagHeapPage
     int numChunks, numOccupiedChunks, numChunksWithOnFree, chunkSize;
     struct tagHeapPage *prev, *next;
     char *end;
-    char data[];
+    int64_t data[];
 } HeapPage;
 
 
@@ -172,8 +172,7 @@ typedef struct
     UmkaExternFunc onFree;      // Optional callback called when ref count reaches zero
     int64_t ip;                 // Optional instruction pointer at which the chunk has been allocated
     bool isStack;
-    bool reserved[7];
-    char data[];
+    int64_t data[];
 } HeapChunk;
 
 
