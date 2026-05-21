@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 
 #include "umka_ident.h"
 
@@ -321,7 +322,11 @@ int identAllocStack(Idents *idents, const Types *types, Blocks *blocks, const Ty
     if (!localVarSize)
         idents->error->handler(idents->error->context, "Stack frame is not found");
 
-    *localVarSize = align(*localVarSize + typeSize(types, type), typeAlignment(types, type));
+    const int size = typeSize(types, type);
+    if (size > INT_MAX - *localVarSize)
+        idents->error->handler(idents->error->context, "Stack frame is too large");
+
+    *localVarSize = align(*localVarSize + size, typeAlignment(types, type));
     return -2 * sizeof(Slot) - (*localVarSize);  // 2 extra slots for the stack frame ref count and parameter layout table
 }
 
