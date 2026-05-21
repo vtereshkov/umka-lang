@@ -300,12 +300,9 @@ static const Type *parseArrayType(Umka *umka)
     if (baseType->kind == TYPE_VOID)
         umka->error.handler(umka->error.context, "Array items cannot be void");
 
-    if (len.intVal > 0 && typeSize(&umka->types, baseType) > INT_MAX / len.intVal)
-        umka->error.handler(umka->error.context, "Array is too large");
-
     Type *type = typeAdd(&umka->types, &umka->blocks, typeKind);
     typeSetBase(type, baseType);
-    typeResizeArray(type, len.intVal);
+    typeAssertResizeArray(&umka->types, type, len.intVal);
     return type;
 }
 

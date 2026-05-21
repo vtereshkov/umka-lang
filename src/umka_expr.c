@@ -1734,7 +1734,7 @@ static void parseVariadicParamList(Umka *umka, const Type **type)
 
         doAssertImplicitTypeConv(umka, staticArrayType->base, &itemType, NULL);
 
-        typeResizeArray(staticArrayType, staticArrayType->numItems + 1);
+        typeAssertResizeArray(&umka->types, staticArrayType, staticArrayType->numItems + 1);
 
         if (umka->lex.tok.kind != TOK_COMMA)
             break;
@@ -2135,7 +2135,7 @@ static void parseDynArrayLiteral(Umka *umka, const Type **type, Const *constant)
         parseExpr(umka, &itemType, constItem);
         doAssertImplicitTypeConv(umka, staticArrayType->base, &itemType, constItem);
 
-        typeResizeArray(staticArrayType, staticArrayType->numItems + 1);
+        typeAssertResizeArray(&umka->types, staticArrayType, staticArrayType->numItems + 1);
 
         if (umka->lex.tok.kind != TOK_COMMA)
             break;

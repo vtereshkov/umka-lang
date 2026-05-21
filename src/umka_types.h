@@ -433,6 +433,9 @@ static inline void typeResizeArray(Type *type, int numItems)
 }
 
 
+void typeAssertResizeArray(Types *types, Type *type, int numItems);
+
+
 static inline Type typeMakeDetachedArray(const Type *base, int numItems)
 {
     Type type = {.kind = TYPE_ARRAY};

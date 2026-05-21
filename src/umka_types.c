@@ -618,6 +618,18 @@ void typeEnableForward(Types *types, bool enable)
 }
 
 
+void typeAssertResizeArray(Types *types, Type *type, int numItems)
+{
+    if (type->kind != TYPE_ARRAY && type->kind != TYPE_DYNARRAY)
+        types->error->handler(types->error->context, "Array expected");
+    
+    if (numItems > 0 && typeSize(types, type->base) > INT_MAX / numItems)
+        types->error->handler(types->error->context, "Array is too large");
+    
+    typeResizeArray(type, numItems);
+}
+
+
 const Field *typeFindField(const Type *structType, const char *name, int *index)
 {
     if (structType->kind == TYPE_STRUCT || structType->kind == TYPE_INTERFACE || structType->kind == TYPE_CLOSURE)

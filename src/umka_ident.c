@@ -319,12 +319,13 @@ int identAllocStack(Idents *idents, const Types *types, Blocks *blocks, const Ty
             localVarSize = &blocks->item[i].localVarSize;
             break;
         }
+        
     if (!localVarSize)
         idents->error->handler(idents->error->context, "Stack frame is not found");
 
     const int size = typeSize(types, type);
     if (size > INT_MAX - *localVarSize)
-        idents->error->handler(idents->error->context, "Stack frame is too large");
+        idents->error->handler(idents->error->context, "Stack overflow");
 
     *localVarSize = align(*localVarSize + size, typeAlignment(types, type));
     return -2 * sizeof(Slot) - (*localVarSize);  // 2 extra slots for the stack frame ref count and parameter layout table
