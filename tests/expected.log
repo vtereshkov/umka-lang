@@ -710,7 +710,7 @@ Error: Empty string (code -2) from "foo":
     foo: (5)
     fooTest: (11)
     test: (25)
-    main: (80)
+    main: (81)
 9
 
 
@@ -1406,3 +1406,339 @@ true
 {[0 1 4 9 16 25 36 49 64] true}
 {[0 1 4 9 16 25 36 49 64 81] true}
 {[0 1 4 9 16 25 36 49 64 81 100] true}
+
+
+>>> Fuzz
+
+Umka fuzz: starting at seed=0xdeadbeefcafebabe
+
+====== int arithmetic ======
+int arithmetic: OK
+
+====== float arithmetic ======
+float arithmetic: OK
+
+====== bitwise ======
+bitwise: OK
+
+====== strings basic ======
+strings basic: OK
+
+====== strings fuzz ======
+strings fuzz: OK
+
+====== intslice fuzz ======
+intslice fuzz: len=423 OK
+
+====== nested slices ======
+nested slices: OK
+
+====== static arrays ======
+static arrays: OK
+
+====== map int fuzz ======
+map int fuzz: size=7 OK
+
+====== map str ======
+map str: OK
+
+====== map struct keys ======
+map struct keys: OK
+
+====== recursion ======
+recursion: OK
+
+====== mutual recursion ======
+mutual recursion: OK
+
+====== closures ======
+closures: OK
+
+====== interfaces ======
+interfaces: OK
+
+====== type switch ======
+type switch: OK
+
+====== variadic ======
+variadic: OK
+
+====== default params ======
+default params: OK
+
+====== ternary ======
+ternary: OK
+
+====== enums ======
+enums: OK
+
+====== sorting ======
+sorting: OK
+
+====== fibers ======
+fibers: OK
+
+====== fibers many ======
+fibers many: OK
+
+====== weak pointers ======
+weak pointers: OK
+
+====== errors ======
+errors: OK
+
+====== any ======
+any: OK
+
+====== format ======
+format: OK
+
+====== gc stress ======
+gc stress: OK
+
+====== gc churn ======
+gc churn: OK
+
+====== fnptr map ======
+fnptr map: OK
+
+====== slice aliasing ======
+slice aliasing: OK
+
+====== append growth ======
+append growth: OK
+
+====== struct fuzz ======
+struct fuzz: OK
+
+====== many locals ======
+many locals: OK
+
+====== deep nesting ======
+deep nesting: OK
+
+====== switch many cases ======
+switch many cases: OK
+
+====== short-circuit ======
+short-circuit: OK
+
+====== map iter ======
+map iter: OK
+
+====== string<->[]char ======
+string<->[]char: OK
+
+====== pointer basic ======
+pointer basic: OK
+
+====== loop stability ======
+loop stability: OK
+
+====== iface collections ======
+iface collections: OK
+
+====== conversions ======
+conversions: OK
+
+====== std strings ======
+std strings: OK
+
+====== any map ======
+any map: OK
+
+====== comparisons ======
+comparisons: OK
+
+====== mini program (nearest-neighbor) ======
+mini program: OK
+
+====== big map drop ======
+big map drop: OK
+
+====== stats ======
+stats: OK
+
+====== cleanup-like ======
+cleanup-like: OK
+
+====== recursive closure ======
+recursive closure: OK
+
+====== many params ======
+many params: OK
+
+====== method chain ======
+method chain: OK
+
+====== map of maps ======
+map of maps: OK
+
+====== struct slice sort ======
+struct slice sort: OK
+
+====== break/continue ======
+break/continue: OK
+
+====== long sprintf ======
+long sprintf: OK
+
+====== closure gc ======
+closure gc: OK
+
+====== mixed arithmetic ======
+mixed arithmetic: OK
+
+====== shuffle ======
+shuffle: OK
+
+====== stack ======
+stack: OK
+
+====== queue ======
+queue: OK
+
+====== PRNG repro ======
+PRNG repro: OK
+
+====== aliases ======
+aliases: OK
+
+====== deep recursion ======
+deep recursion: OK
+
+====== string slice ops ======
+string slice ops: OK
+
+====== format edge ======
+format edge: OK
+
+====== enum round-trip ======
+enum round-trip: OK
+
+====== nested closure param ======
+nested closure param: OK
+
+====== fiber in closure ======
+fiber in closure: OK
+
+====== mod cycle ======
+mod cycle: OK
+
+====== dispatch slice ======
+dispatch slice: OK
+
+====== bool slice ======
+bool slice: OK
+
+====== byte buffer ======
+byte buffer: OK
+
+====== histogram ======
+histogram: OK
+
+====== repeat ======
+repeat: OK
+
+====== pascal ======
+pascal: OK
+
+====== char arith ======
+char arith: OK
+
+====== life step ======
+life step: OK
+
+====== distribution ======
+distribution: OK
+
+====== gcd ======
+gcd: OK
+
+====== assign ops ======
+assign ops: OK
+
+====== random walk ======
+random walk: OK
+
+====== matmul ======
+matmul: OK
+
+====== short-circuit ptr ======
+short-circuit ptr: OK
+
+====== enum extra ======
+enum extra: OK
+
+====== long type ======
+long type: OK
+
+====== append self ======
+append self: OK
+
+====== weak cycle ======
+weak cycle: OK
+
+====== multi-return ======
+multi-return: OK
+
+====== const decl ======
+const decl: OK
+
+====== grouped decl ======
+grouped decl: OK
+
+====== cap builtin ======
+cap builtin: OK
+
+====== sort compare ======
+sort compare: OK
+
+====== std assert ======
+std assert: OK
+
+====== reflection ======
+reflection: OK
+
+====== int widths ======
+int widths: OK
+
+====== real32 ======
+real32: OK
+
+====== method call forms ======
+method call forms: OK
+
+====== slice edges ======
+slice edges: OK
+
+====== multiline str ======
+multiline str: OK
+
+====== digit sep ======
+digit sep: OK
+
+====== for in map ======
+for in map: OK
+
+====== memusage ======
+memusage: OK
+
+====== null compare ======
+null compare: OK
+
+====== type switch default ======
+type switch default: OK
+
+====== default complex ======
+default complex: OK
+
+====== typeptr ======
+typeptr: OK
+
+====== any complex ======
+any complex: OK
+
+========================================
+All fuzz sections completed successfully.
+========================================

@@ -3765,7 +3765,7 @@ static FORCE_INLINE void doWeakenPtr(Fiber *fiber, HeapPages *pages)
         weakPtr = ((uint64_t)isHeapPtr << 63) | ((uint64_t)pageId << 32) | pageOffset;
     }
     else
-        weakPtr = (uint64_t)ptr;
+        weakPtr = (uint64_t)(uintptr_t)ptr;
 
     fiber->top->weakPtrVal = weakPtr;
     fiber->ip++;
@@ -3796,7 +3796,7 @@ static FORCE_INLINE void doStrengthenPtr(Fiber *fiber, HeapPages *pages)
         }
     }
     else
-        ptr = (void *)weakPtr;
+        ptr = (void *)(uintptr_t)weakPtr;
 
     fiber->top->ptrVal = ptr;
     fiber->ip++;

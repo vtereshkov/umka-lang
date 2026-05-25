@@ -53,6 +53,7 @@ import (
     "sorting.um"
     "optim.um"
     "extlib.um"
+    "fuzz.um"
 )
 
 fn main() {
@@ -110,4 +111,5 @@ fn main() {
     printf("\n\n>>> Sorting\n\n");                  sorting::test()
     printf("\n\n>>> Peephole optimizations\n\n");   optim::test()
     printf("\n\n>>> External libraries\n\n");       extlib::test()
+    printf("\n\n>>> Fuzz\n\n");                     fuzz::test()
 }

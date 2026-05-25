@@ -1,0 +1,4393 @@
+// ============================================================================
+// Umka fuzzing / stress test
+//
+// A single-file deterministic stress test that exercises a wide range of the
+// Umka language and runtime: arithmetic edge cases, strings, slices, maps,
+// closures, interfaces, fibers, recursion, type conversions, sorting, etc.
+//
+// All sections are deterministic (driven by a hand-coded LCG PRNG so the
+// output is reproducible). Internal invariants are checked with check();
+// any failure aborts with a non-zero exit code.
+// ============================================================================
+
+import "std.um"
+
+// ----------------------------------------------------------------------------
+// Section 0: deterministic PRNG and small helpers
+// ----------------------------------------------------------------------------
+
+var prngState: uint = 0xDEADBEEFCAFEBABE
+
+fn srand(seed: uint) {
+    prngState = seed
+    if prngState == 0 {
+        prngState = 1
+    }
+}
+
+fn rand32(): uint32 {
+    // 64-bit LCG (Numerical Recipes constants), return high 32 bits.
+    prngState = prngState * 6364136223846793005 + 1442695040888963407
+    return uint32(prngState >> 32)
+}
+
+fn randInt(): int {
+    // Build a non-negative int from two 32-bit chunks. Keep result < 2^62.
+    hi := int(rand32() & 0x3FFFFFFF)
+    lo := int(rand32())
+    return (hi << 32) | lo
+}
+
+fn randRange(lo, hi: int): int {
+    // Inclusive lo, exclusive hi; assumes hi > lo.
+    if hi <= lo {
+        return lo
+    }
+    span := uint(hi - lo)
+    return lo + int(uint(rand32()) % span)
+}
+
+fn randBool(): bool {
+    return (rand32() & 1) == 1
+}
+
+fn randReal(): real {
+    // Roughly uniform on (-1e6, 1e6). Keep value in int32 range.
+    u := rand32()
+    v := int(u & 0x7FFFFFFF)
+    if (u & 0x80000000) != 0 {
+        v = -v
+    }
+    x := real(v) / 2147483648.0
+    return x * 1e6
+}
+
+fn check(cond: bool, tag: str) {
+    if !cond {
+        printf("CHECK FAILED: %s\n", tag)
+        exit(1, "fuzz failure: " + tag)
+    }
+}
+
+fn banner(s: str) {
+    printf("\n====== %s ======\n", s)
+}
+
+// ----------------------------------------------------------------------------
+// Section 1: integer arithmetic edge cases
+// ----------------------------------------------------------------------------
+
+fn section_int_arith() {
+    banner("int arithmetic")
+
+    // Identity / commutativity / associativity over signed ints.
+    srand(1)
+    for i := 0; i < 200; i++ {
+        a := randInt() % 1_000_000_000
+        b := randInt() % 1_000_000_000
+        c := randInt() % 1_000_000_000
+
+        check(a + 0 == a, "add identity")
+        check(a * 1 == a, "mul identity")
+        check(a + b == b + a, "add commutative")
+        check(a * b == b * a, "mul commutative")
+        check((a + b) + c == a + (b + c), "add associative")
+        check((a * b) + (a * c) == a * (b + c), "distributive")
+        check(-(-a) == a, "double neg")
+        check(a - a == 0, "self minus")
+        check(a ~ a == 0, "self xor")
+        check((a | b) >= a || (a | b) >= b, "or grows")
+        check((a & b) <= a || (a & b) <= b, "and shrinks")
+    }
+
+    // Division / modulo invariants (truncated toward zero in Umka).
+    srand(2)
+    for i := 0; i < 200; i++ {
+        a := randInt() % 1_000_000_000
+        b := randInt() % 1_000_000
+        if b == 0 {
+            b = 1
+        }
+        q := a / b
+        r := a % b
+        check(q * b + r == a, "div+mod identity")
+    }
+
+    // int8 / int16 / int32 boundary behavior.
+    var i8a, i8b: int8
+    i8a = 100
+    i8b = 27
+    check(int(i8a) + int(i8b) == 127, "int8 add at boundary")
+
+    var i16a: int16 = -32768
+    check(int(i16a) == -32768, "int16 min")
+
+    var i32a: int32 = 2147483647
+    check(int(i32a) == 2147483647, "int32 max")
+
+    // uint behaviour.
+    var ua: uint = 0
+    ua = ua - 1
+    check(ua > 0, "uint underflow wraps")
+    check(ua == 0xFFFFFFFFFFFFFFFF, "uint wrap value")
+
+    // Shifts.
+    check((1 << 0) == 1, "shl 0")
+    check((1 << 30) == 1073741824, "shl 30")
+    check((255 >> 4) == 15, "shr 4")
+
+    // abs.
+    check(abs(-1234) == 1234, "abs negative")
+    check(abs(0) == 0, "abs zero")
+    check(abs(1234) == 1234, "abs positive")
+
+    printf("int arithmetic: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 2: floating point edge cases
+// ----------------------------------------------------------------------------
+
+fn section_float_arith() {
+    banner("float arithmetic")
+
+    eps := 1e-9
+    check(fabs(1.0 + 2.0 - 3.0) < eps, "1+2=3")
+    check(fabs(0.1 + 0.2 - 0.3) < 1e-12, "0.1+0.2 close 0.3")
+
+    // sqrt of squares.
+    srand(3)
+    for i := 0; i < 200; i++ {
+        x := fabs(randReal())
+        if x > 1e9 {
+            x = 1e9
+        }
+        s := sqrt(x)
+        check(fabs(s*s - x) < 1e-3 + 1e-9*x, "sqrt squared")
+    }
+
+    // sin^2 + cos^2 == 1.
+    srand(4)
+    for i := 0; i < 200; i++ {
+        t := randReal()
+        s := sin(t)
+        c := cos(t)
+        check(fabs(s*s + c*c - 1.0) < 1e-9, "sin^2+cos^2=1")
+    }
+
+    // exp(log(x)) == x for positive x.
+    srand(5)
+    for i := 0; i < 100; i++ {
+        x := fabs(randReal()) + 1e-3
+        if x > 1e6 {
+            x = 1e6
+        }
+        y := exp(log(x))
+        check(fabs(y - x) < 1e-6 * (1.0 + x), "exp(log)")
+    }
+
+    // atan2 quadrant sanity (avoid (0,0) domain error; use small y).
+    check(fabs(atan2(1e-12, 1.0)) < 1e-9, "atan2(~0,1) ~ 0")
+    check(atan2(1.0, 1e-12) > 0.0, "atan2(1,~0) > 0")
+    check(atan2(-1.0, 1e-12) < 0.0, "atan2(-1,~0) < 0")
+
+    // Rounding family on a known set.
+    check(trunc(1.9) == 1, "trunc 1.9")
+    check(trunc(-1.9) == -1, "trunc -1.9")
+    check(floor(1.9) == 1, "floor 1.9")
+    check(floor(-1.1) == -2, "floor -1.1")
+    check(ceil(1.1) == 2, "ceil 1.1")
+    check(ceil(-1.9) == -1, "ceil -1.9")
+
+    // real32 round-trip should not change small magnitudes too much.
+    srand(6)
+    for i := 0; i < 50; i++ {
+        x := randReal() / 1e3
+        y := real(real32(x))
+        check(fabs(y - x) < 1e-3 * (1.0 + fabs(x)), "real32 round-trip")
+    }
+
+    printf("float arithmetic: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 3: bitwise operations
+// ----------------------------------------------------------------------------
+
+fn popcount(x: uint): int {
+    n := 0
+    for x != 0 {
+        n += int(x & 1)
+        x >>= 1
+    }
+    return n
+}
+
+fn section_bitwise() {
+    banner("bitwise")
+
+    srand(7)
+    for i := 0; i < 200; i++ {
+        a := uint(rand32())
+        b := uint(rand32())
+        // De Morgan.
+        check(~(a & b) == (~a | ~b), "de morgan and")
+        check(~(a | b) == (~a & ~b), "de morgan or")
+        // xor identity.
+        check((a ~ b) ~ b == a, "xor inverse")
+        check((a ~ 0) == a, "xor 0")
+        check((a ~ a) == 0, "xor self")
+        // popcount consistency.
+        pa := popcount(a)
+        pb := popcount(b)
+        pu := popcount(a | b)
+        pi := popcount(a & b)
+        check(pa + pb == pu + pi, "popcount inclusion-exclusion")
+    }
+
+    // Specific shift edge cases.
+    var u: uint32 = 1
+    u <<= 31
+    check(u == 0x80000000, "uint32 high bit")
+    // Don't shift out — Umka detects uint32 overflow.
+
+    printf("bitwise: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 4: strings - concatenation, indexing, comparison
+// ----------------------------------------------------------------------------
+
+fn section_strings_basic() {
+    banner("strings basic")
+
+    // Concatenation.
+    a := ""
+    pieces := []str{"Hello", ", ", "World", "!", " ", "Umka"}
+    expected := "Hello, World! Umka"
+    for _, p in pieces {
+        a += p
+    }
+    check(a == expected, "concat preserves order")
+    check(len(a) == len(expected), "concat length")
+
+    // Repeated concatenation should grow length linearly.
+    s := ""
+    for i := 0; i < 100; i++ {
+        s += "ab"
+    }
+    check(len(s) == 200, "loop concat length")
+    check(s[0] == 'a' && s[1] == 'b' && s[199] == 'b', "loop concat content")
+
+    // String comparison.
+    check("aaa" < "aab", "lex less")
+    check("aab" > "aaa", "lex greater")
+    check("abc" == "abc", "eq")
+    check("abc" != "abd", "neq")
+    check("" < "x", "empty less")
+    check("" == "", "empty eq")
+
+    // Indexing.
+    s2 := "Hello"
+    check(s2[0] == 'H', "index 0")
+    check(s2[4] == 'o', "index 4")
+
+    // slice of string.
+    check(slice(s2, 0, 5) == "Hello", "string slice full")
+    check(slice(s2, 1, 4) == "ell", "string slice middle")
+    check(slice(s2, 0, 0) == "", "string slice empty")
+    check(slice(s2, 2) == "llo", "string slice open end")
+
+    // Raw string literal.
+    raw := `line1
+line2
+line3`
+    check(len(raw) > 0, "raw string nonempty")
+
+    printf("strings basic: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 5: string fuzz - build, slice, convert via []char
+// ----------------------------------------------------------------------------
+
+fn section_strings_fuzz() {
+    banner("strings fuzz")
+
+    srand(11)
+    alphabet := "abcdefghijklmnopqrstuvwxyz0123456789"
+    for it := 0; it < 50; it++ {
+        n := randRange(0, 200)
+        s := ""
+        for i := 0; i < n; i++ {
+            idx := randRange(0, len(alphabet))
+            s += slice(alphabet, idx, idx + 1)
+        }
+        check(len(s) == n, "fuzz string length")
+
+        // Round-trip through []char.
+        bytes := []char(s)
+        check(len(bytes) == n, "string->bytes length")
+        if n > 0 {
+            check(bytes[0] == s[0], "byte[0] matches")
+            check(bytes[n - 1] == s[n - 1], "byte[n-1] matches")
+        }
+        s2 := str(bytes)
+        check(s2 == s, "round-trip equal")
+
+        // Reverse and reverse again.
+        rev := ""
+        for i := n - 1; i >= 0; i-- {
+            rev += slice(s, i, i + 1)
+        }
+        rev2 := ""
+        for i := len(rev) - 1; i >= 0; i-- {
+            rev2 += slice(rev, i, i + 1)
+        }
+        check(rev2 == s, "double reverse")
+
+        // Slicing arithmetic invariants.
+        if n >= 4 {
+            lo := randRange(0, n)
+            hi := randRange(lo, n + 1)
+            ss := slice(s, lo, hi)
+            check(len(ss) == hi - lo, "slice length")
+            head := slice(s, 0, lo)
+            tail := slice(s, hi, n)
+            check(head + ss + tail == s, "slice reassemble")
+        }
+    }
+
+    printf("strings fuzz: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 6: dynamic int slice - append/insert/delete fuzz
+// ----------------------------------------------------------------------------
+
+fn section_intslice_fuzz() {
+    banner("intslice fuzz")
+
+    srand(13)
+    var a: []int = make([]int, 0)
+    model := []int{}
+
+    ops := 2000
+    for k := 0; k < ops; k++ {
+        op := rand32() % 5
+        switch op {
+            case 0:
+                // append
+                v := randInt() % 100000
+                a = append(a, v)
+                model = append(model, v)
+            case 1:
+                // insert at random position
+                pos := 0
+                if len(a) > 0 {
+                    pos = int(rand32() % uint32(len(a) + 1))
+                }
+                v := randInt() % 100000
+                a = insert(a, pos, v)
+                model = insert(model, pos, v)
+            case 2:
+                // delete at random position
+                if len(a) > 0 {
+                    pos := int(rand32() % uint32(len(a)))
+                    a = delete(a, pos)
+                    model = delete(model, pos)
+                }
+            case 3:
+                // modify in place
+                if len(a) > 0 {
+                    pos := int(rand32() % uint32(len(a)))
+                    v := randInt() % 100000
+                    a[pos] = v
+                    model[pos] = v
+                }
+            case 4:
+                // copy + mutate copy shouldn't affect a (deep enough for int).
+                if len(a) > 0 {
+                    b := copy(a)
+                    pos := int(rand32() % uint32(len(b)))
+                    b[pos] = -999
+                    check(a[pos] != -999 || model[pos] == -999, "copy independence")
+                }
+        }
+        check(len(a) == len(model), "length sync")
+    }
+
+    // Final equality check.
+    for i, v in a {
+        check(v == model[i], "element sync")
+    }
+
+    printf("intslice fuzz: len=%lld OK\n", len(a))
+}
+
+// ----------------------------------------------------------------------------
+// Section 7: nested slices - deep manipulation
+// ----------------------------------------------------------------------------
+
+fn section_nested_slices() {
+    banner("nested slices")
+
+    srand(17)
+    grid := make([][]int, 10)
+    for i in grid {
+        n := randRange(1, 6)
+        row := make([]int, n)
+        for j in row {
+            row[j] = i * 100 + j
+        }
+        grid[i] = row
+    }
+
+    // Sum invariant.
+    total := 0
+    expected := 0
+    for i, row in grid {
+        for _, v in row {
+            total += v
+        }
+        for j := 0; j < len(row); j++ {
+            expected += i * 100 + j
+        }
+    }
+    check(total == expected, "nested sum")
+
+    // Replace one row entirely.
+    grid[3] = []int{1, 2, 3, 4, 5}
+    sum2 := 0
+    for _, v in grid[3] {
+        sum2 += v
+    }
+    check(sum2 == 15, "replaced row sum")
+
+    // Append a new row.
+    grid = append(grid, []int{42})
+    check(len(grid) == 11, "append row length")
+    check(grid[10][0] == 42, "appended row content")
+
+    // Delete a row from the middle.
+    grid = delete(grid, 5)
+    check(len(grid) == 10, "deleted row length")
+
+    // Insert a row.
+    grid = insert(grid, 0, []int{-1, -2, -3})
+    check(len(grid) == 11, "inserted row length")
+    check(grid[0][0] == -1, "inserted row content")
+
+    // Sort each row using a tiny insertion sort.
+    for _, row in grid {
+        for i := 1; i < len(row); i++ {
+            for j := i; j > 0 && row[j - 1] > row[j]; j-- {
+                row[j - 1], row[j] = row[j], row[j - 1]
+            }
+        }
+        for i := 1; i < len(row); i++ {
+            check(row[i - 1] <= row[i], "row sorted")
+        }
+    }
+
+    printf("nested slices: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 8: multi-dim static arrays
+// ----------------------------------------------------------------------------
+
+fn section_static_arrays() {
+    banner("static arrays")
+
+    var m: [4][4]int
+    for i := 0; i < 4; i++ {
+        for j := 0; j < 4; j++ {
+            m[i][j] = i * 10 + j
+        }
+    }
+    sum := 0
+    for i := 0; i < 4; i++ {
+        for j := 0; j < 4; j++ {
+            sum += m[i][j]
+        }
+    }
+    check(sum == 240 + 24, "static 4x4 sum")
+
+    // Transpose.
+    var t: [4][4]int
+    for i := 0; i < 4; i++ {
+        for j := 0; j < 4; j++ {
+            t[j][i] = m[i][j]
+        }
+    }
+    for i := 0; i < 4; i++ {
+        for j := 0; j < 4; j++ {
+            check(t[j][i] == m[i][j], "transpose")
+        }
+    }
+
+    // Array assignment is by value.
+    copy_m := m
+    copy_m[0][0] = 999
+    check(m[0][0] == 0, "static array assignment is copy")
+
+    // Static array literal.
+    rs := [3][2]int{{1, 2}, {3, 4}, {5, 6}}
+    check(rs[2][1] == 6, "literal access")
+
+    printf("static arrays: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 9: map fuzz with int keys
+// ----------------------------------------------------------------------------
+
+fn findIndex(k: int, keys: []int): int {
+    for i, x in keys {
+        if x == k {
+            return i
+        }
+    }
+    return -1
+}
+
+fn section_map_int_fuzz() {
+    banner("map int fuzz")
+
+    srand(19)
+    m := make(map[int]int)
+    // Keep a parallel model in slices of pairs.
+    keys := []int{}
+    vals := []int{}
+
+    for k := 0; k < 1000; k++ {
+        op := rand32() % 3
+        switch op {
+            case 0:
+                key := int(rand32() % 200)
+                val := randInt() % 100000
+                m[key] = val
+                idx := findIndex(key, keys)
+                if idx < 0 {
+                    keys = append(keys, key)
+                    vals = append(vals, val)
+                } else {
+                    vals[idx] = val
+                }
+            case 1:
+                if len(keys) > 0 {
+                    idx := int(rand32() % uint32(len(keys)))
+                    key := keys[idx]
+                    m = delete(m, key)
+                    keys = delete(keys, idx)
+                    vals = delete(vals, idx)
+                }
+            case 2:
+                if len(keys) > 0 {
+                    idx := int(rand32() % uint32(len(keys)))
+                    key := keys[idx]
+                    check(validkey(m, key), "validkey existing")
+                    check(m[key] == vals[idx], "value match")
+                }
+        }
+    }
+
+    // Final verify.
+    for i, k in keys {
+        check(validkey(m, k), "final validkey")
+        check(m[k] == vals[i], "final value match")
+    }
+
+    // Iterate over map and confirm size.
+    cnt := 0
+    for _ in m {
+        cnt++
+    }
+    check(cnt == len(keys), "map iter count")
+
+    printf("map int fuzz: size=%lld OK\n", len(m))
+}
+
+// ----------------------------------------------------------------------------
+// Section 10: map with string keys
+// ----------------------------------------------------------------------------
+
+fn section_map_str() {
+    banner("map str")
+
+    m := map[str]int{
+        "alpha":   1,
+        "beta":    2,
+        "gamma":   3,
+        "delta":   4,
+        "epsilon": 5,
+    }
+    check(len(m) == 5, "map literal length")
+    check(m["gamma"] == 3, "map literal access")
+
+    m["zeta"] = 6
+    check(len(m) == 6, "map after assign")
+    check(validkey(m, "zeta"), "map validkey")
+
+    m = delete(m, "alpha")
+    check(!validkey(m, "alpha"), "map after delete")
+    check(len(m) == 5, "map length after delete")
+
+    // Iteration should be in ascending key order per docs.
+    prev := ""
+    first := true
+    for k in m {
+        if !first {
+            check(k > prev, "map iter ordered")
+        }
+        prev = k
+        first = false
+    }
+
+    // Stress: many random string keys.
+    srand(23)
+    big := make(map[str]int)
+    for i := 0; i < 500; i++ {
+        key := sprintf("k%d", randRange(0, 200))
+        big[key] = i
+    }
+    check(len(big) <= 200, "stress upper bound")
+    check(len(big) > 0, "stress nonempty")
+
+    printf("map str: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 11: map with struct/array keys
+// ----------------------------------------------------------------------------
+
+type Point = struct {
+    x, y: int
+}
+
+fn section_map_struct_keys() {
+    banner("map struct keys")
+
+    m := make(map[Point]str)
+    for x := 0; x < 5; x++ {
+        for y := 0; y < 5; y++ {
+            m[Point{x, y}] = sprintf("(%d,%d)", x, y)
+        }
+    }
+    check(len(m) == 25, "struct key count")
+    check(m[Point{2, 3}] == "(2,3)", "struct key lookup")
+    check(!validkey(m, Point{99, 99}), "struct key missing")
+
+    // Array keys.
+    am := make(map[[3]int]bool)
+    am[[3]int{1, 2, 3}] = true
+    am[[3]int{4, 5, 6}] = false
+    check(len(am) == 2, "array key count")
+    check(am[[3]int{1, 2, 3}], "array key lookup")
+    check(!am[[3]int{4, 5, 6}], "array key lookup false")
+
+    printf("map struct keys: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 12: recursion - factorial, fibonacci, sum
+// ----------------------------------------------------------------------------
+
+fn fact(n: int): int {
+    if n <= 1 {
+        return 1
+    }
+    return n * fact(n - 1)
+}
+
+fn fib(n: int): int {
+    if n < 2 {
+        return n
+    }
+    return fib(n - 1) + fib(n - 2)
+}
+
+fn sumTo(n: int): int {
+    if n <= 0 {
+        return 0
+    }
+    return n + sumTo(n - 1)
+}
+
+fn section_recursion() {
+    banner("recursion")
+
+    check(fact(0) == 1, "fact 0")
+    check(fact(1) == 1, "fact 1")
+    check(fact(5) == 120, "fact 5")
+    check(fact(10) == 3628800, "fact 10")
+    check(fact(15) == 1307674368000, "fact 15")
+
+    check(fib(0) == 0, "fib 0")
+    check(fib(1) == 1, "fib 1")
+    check(fib(10) == 55, "fib 10")
+    check(fib(20) == 6765, "fib 20")
+
+    check(sumTo(100) == 5050, "sumTo 100")
+    check(sumTo(1000) == 500500, "sumTo 1000")
+
+    printf("recursion: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 13: mutual recursion
+// ----------------------------------------------------------------------------
+
+fn isOddF(n: int): bool
+fn isEvenF(n: int): bool {
+    if n == 0 {
+        return true
+    }
+    return isOddF(n - 1)
+}
+fn isOddF(n: int): bool {
+    if n == 0 {
+        return false
+    }
+    return isEvenF(n - 1)
+}
+
+fn section_mutual_recursion() {
+    banner("mutual recursion")
+    for n := 0; n < 50; n++ {
+        check(isEvenF(n) == (n % 2 == 0), "isEven")
+        check(isOddF(n) == (n % 2 != 0), "isOdd")
+    }
+    printf("mutual recursion: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 14: closures capturing locals
+// ----------------------------------------------------------------------------
+
+fn makeCounter(start: int): fn(): int {
+    n := new(int)
+    n^ = start
+    return fn (): int |n| {
+        v := n^
+        n^++
+        return v
+    }
+}
+
+fn makeAdder(d: int): fn(x: int): int {
+    return fn (x: int): int |d| {
+        return x + d
+    }
+}
+
+fn section_closures() {
+    banner("closures")
+
+    c1 := makeCounter(10)
+    c2 := makeCounter(100)
+    for i := 0; i < 5; i++ {
+        check(c1() == 10 + i, "counter c1")
+        check(c2() == 100 + i, "counter c2")
+    }
+
+    add3 := makeAdder(3)
+    add7 := makeAdder(7)
+    check(add3(10) == 13, "add3")
+    check(add7(10) == 17, "add7")
+
+    // Closures returning closures.
+    outer := fn (x: int): fn (y: int): fn (z: int): int {
+        return fn (y: int): fn (z: int): int |x| {
+            return fn (z: int): int |x, y| {
+                return x + y + z
+            }
+        }
+    }
+    check(outer(1)(2)(3) == 6, "triple-nested closure")
+    check(outer(10)(20)(30) == 60, "triple-nested closure 2")
+
+    // Closure stored in a slice and iterated.
+    cs := []fn(): int{}
+    for i := 0; i < 10; i++ {
+        ic := new(int)
+        ic^ = i
+        cs = append(cs, fn (): int |ic| { return ic^ * ic^ })
+    }
+    for i, f in cs {
+        check(f() == i * i, "closure slice")
+    }
+
+    printf("closures: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 15: interfaces and method dispatch
+// ----------------------------------------------------------------------------
+
+type Shape = interface {
+    area(): real
+    name(): str
+}
+
+type Circle = struct {
+    r: real
+}
+
+type Rect = struct {
+    w, h: real
+}
+
+type Triangle = struct {
+    base, height: real
+}
+
+fn (c: ^Circle) area(): real { return 3.141592653589793 * c.r * c.r }
+fn (c: ^Circle) name(): str  { return "circle" }
+
+fn (r: ^Rect) area(): real { return r.w * r.h }
+fn (r: ^Rect) name(): str  { return "rect" }
+
+fn (t: ^Triangle) area(): real { return 0.5 * t.base * t.height }
+fn (t: ^Triangle) name(): str  { return "triangle" }
+
+fn section_interfaces() {
+    banner("interfaces")
+
+    shapes := []Shape{
+        &Circle{r: 1.0},
+        &Rect{w: 2.0, h: 3.0},
+        &Triangle{base: 4.0, height: 5.0},
+        &Circle{r: 2.0},
+        &Rect{w: 0.5, h: 0.5},
+    }
+
+    expectedAreas := []real{
+        3.141592653589793,
+        6.0,
+        10.0,
+        12.566370614359172,
+        0.25,
+    }
+    expectedNames := []str{"circle", "rect", "triangle", "circle", "rect"}
+
+    for i, s in shapes {
+        check(fabs(s.area() - expectedAreas[i]) < 1e-9, "iface area")
+        check(s.name() == expectedNames[i], "iface name")
+    }
+
+    // Type assertions.
+    var sShape: Shape = &Circle{r: 5.0}
+    cp := ^Circle(sShape)
+    check(cp != null, "iface assert circle ptr")
+    check(cp.r == 5.0, "iface assert value")
+
+    // Bad assertion to incompatible pointer type returns null per docs.
+    tp := ^Triangle(sShape)
+    check(tp == null, "iface bad assert returns null")
+
+    printf("interfaces: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 16: type switch
+// ----------------------------------------------------------------------------
+
+fn classifyAny(v: any): str {
+    switch x := type(v) {
+        case int:    return sprintf("int:%d", x)
+        case real:   return sprintf("real:%.3f", x)
+        case str:    return sprintf("str:%s", x)
+        case bool:   return sprintf("bool:%v", x)
+        case []int:  return sprintf("intslice:%d", len(x))
+        default:     return "other"
+    }
+    return "unreachable"
+}
+
+fn section_type_switch() {
+    banner("type switch")
+
+    check(classifyAny(42) == "int:42", "ts int")
+    check(classifyAny(3.14) == "real:3.140", "ts real")
+    check(classifyAny("hi") == "str:hi", "ts str")
+    check(classifyAny(true) == "bool:true", "ts bool true")
+    check(classifyAny(false) == "bool:false", "ts bool false")
+    check(classifyAny([]int{1, 2, 3, 4}) == "intslice:4", "ts intslice")
+
+    printf("type switch: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 17: variadic functions
+// ----------------------------------------------------------------------------
+
+fn sumv(xs: ..int): int {
+    s := 0
+    for _, x in xs {
+        s += x
+    }
+    return s
+}
+
+fn maxv(first: int, rest: ..int): int {
+    m := first
+    for _, x in rest {
+        if x > m {
+            m = x
+        }
+    }
+    return m
+}
+
+fn section_variadic() {
+    banner("variadic")
+
+    check(sumv() == 0, "sumv empty")
+    check(sumv(1) == 1, "sumv single")
+    check(sumv(1, 2, 3) == 6, "sumv triple")
+    check(sumv(1, 2, 3, 4, 5, 6, 7, 8, 9, 10) == 55, "sumv ten")
+
+    check(maxv(0) == 0, "maxv lone")
+    check(maxv(5, 3, 9, 1, 7) == 9, "maxv five")
+    check(maxv(-1, -5, -3) == -1, "maxv negatives")
+
+    printf("variadic: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 18: default parameters
+// ----------------------------------------------------------------------------
+
+fn greet(name: str = "World", greeting: str = "Hello", excl: int = 1): str {
+    out := greeting + ", " + name
+    for i := 0; i < excl; i++ {
+        out += "!"
+    }
+    return out
+}
+
+fn section_default_params() {
+    banner("default params")
+    check(greet() == "Hello, World!", "all defaults")
+    check(greet("Umka") == "Hello, Umka!", "first overridden")
+    check(greet("Umka", "Hi") == "Hi, Umka!", "two overridden")
+    check(greet("Umka", "Hi", 3) == "Hi, Umka!!!", "all overridden")
+    printf("default params: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 19: ternary
+// ----------------------------------------------------------------------------
+
+fn section_ternary() {
+    banner("ternary")
+
+    for i := -10; i <= 10; i++ {
+        sign := i > 0 ? 1 : i < 0 ? -1 : 0
+        if i > 0 {
+            check(sign == 1, "ternary +")
+        } else if i < 0 {
+            check(sign == -1, "ternary -")
+        } else {
+            check(sign == 0, "ternary 0")
+        }
+    }
+
+    // Ternary in expression.
+    xs := []int{}
+    for i := 0; i < 20; i++ {
+        xs = append(xs, i % 2 == 0 ? i : -i)
+    }
+    for i, v in xs {
+        check(v == (i % 2 == 0 ? i : -i), "ternary append")
+    }
+
+    printf("ternary: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 20: enums
+// ----------------------------------------------------------------------------
+
+type Color = enum {
+    red
+    green
+    blue
+    cyan
+    magenta
+    yellow
+    white
+    black
+}
+
+fn colorName(c: Color): str {
+    switch c {
+        case .red:     return "red"
+        case .green:   return "green"
+        case .blue:    return "blue"
+        case .cyan:    return "cyan"
+        case .magenta: return "magenta"
+        case .yellow:  return "yellow"
+        case .white:   return "white"
+        case .black:   return "black"
+    }
+    return "?"
+}
+
+fn section_enums() {
+    banner("enums")
+
+    check(colorName(.red) == "red", "enum red")
+    check(colorName(.green) == "green", "enum green")
+    check(colorName(.blue) == "blue", "enum blue")
+    check(colorName(.black) == "black", "enum black")
+
+    check(int(Color.red) == 0, "enum red int")
+    check(int(Color.black) == 7, "enum black int")
+
+    c := Color(3)
+    check(colorName(c) == "cyan", "enum from int")
+
+    printf("enums: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 21: sorting (insertion sort over random arrays)
+// ----------------------------------------------------------------------------
+
+fn insertionSort(a: []int) {
+    for i := 1; i < len(a); i++ {
+        for j := i; j > 0 && a[j - 1] > a[j]; j-- {
+            a[j - 1], a[j] = a[j], a[j - 1]
+        }
+    }
+}
+
+fn isSorted(a: []int): bool {
+    for i := 1; i < len(a); i++ {
+        if a[i - 1] > a[i] {
+            return false
+        }
+    }
+    return true
+}
+
+fn section_sorting() {
+    banner("sorting")
+
+    srand(29)
+    for trial := 0; trial < 20; trial++ {
+        n := randRange(0, 100)
+        a := make([]int, n)
+        for i in a {
+            a[i] = randInt() % 1000
+        }
+        b := copy(a)
+        insertionSort(a)
+        check(isSorted(a), "sorted invariant")
+        check(len(a) == len(b), "sorted length preserved")
+        insertionSort(b)
+        for i in a {
+            check(a[i] == b[i], "multiset equal")
+        }
+    }
+
+    printf("sorting: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 22: fibers - producer/consumer
+// ----------------------------------------------------------------------------
+
+fn section_fibers() {
+    banner("fibers")
+
+    box := new(int)
+    box^ = 0
+    consumed := new([]int)
+    consumed^ = []int{}
+
+    prod := make(fiber, |box| {
+        for i := 1; i <= 10; i++ {
+            box^ = i
+            resume()
+        }
+        box^ = -1
+    })
+
+    for box^ != -1 {
+        resume(prod)
+        if box^ >= 0 {
+            consumed^ = append(consumed^, box^)
+        }
+    }
+
+    check(len(consumed^) == 10, "fiber count")
+    sum := 0
+    for _, x in consumed^ {
+        sum += x
+    }
+    check(sum == 55, "fiber sum")
+
+    printf("fibers: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 23: fibers - several alternating
+// ----------------------------------------------------------------------------
+
+fn section_fibers_many() {
+    banner("fibers many")
+
+    n := 5
+    counts := make([]int, n)
+    fibers := make([]fiber, n)
+
+    for k := 0; k < n; k++ {
+        idx := new(int)
+        idx^ = k
+        fibers[k] = make(fiber, |idx, counts| {
+            for i := 0; i < 5; i++ {
+                counts[idx^]++
+                resume()
+            }
+        })
+    }
+
+    // Resume each fiber 6 times so it can exit cleanly (5 increments + final return).
+    for i := 0; i < 6; i++ {
+        for k := 0; k < n; k++ {
+            resume(fibers[k])
+        }
+    }
+
+    for _, c in counts {
+        check(c == 5, "fiber many count")
+    }
+
+    printf("fibers many: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 24: weak pointers
+// ----------------------------------------------------------------------------
+
+type Node = struct {
+    name:  str
+    other: weak ^Node
+}
+
+fn section_weak_pointers() {
+    banner("weak pointers")
+
+    a := new(Node)
+    a.name = "A"
+    b := new(Node)
+    b.name = "B"
+
+    a.other = b
+    b.other = a
+
+    check(a.other != null, "weak A points")
+    check(b.other != null, "weak B points")
+    check(a.other.name == "B", "weak A target name")
+    check(b.other.name == "A", "weak B target name")
+
+    // Strong link in array so we keep them alive.
+    keep := []^Node{a, b}
+    check(len(keep) == 2, "weak keep len")
+
+    printf("weak pointers: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 25: error type and propagation
+// ----------------------------------------------------------------------------
+
+fn parsePosInt(s: str): (int, std::Err) {
+    if s == "" {
+        return 0, std::error(-1, "empty", "parsePosInt")
+    }
+    n := 0
+    for i := 0; i < len(s); i++ {
+        c := s[i]
+        if c < '0' || c > '9' {
+            return 0, std::error(-2, "non-digit", "parsePosInt")
+        }
+        n = n * 10 + int(c) - int('0')
+    }
+    return n, std::error()
+}
+
+fn section_errors() {
+    banner("errors")
+
+    n, err := parsePosInt("123")
+    check(err.code == 0, "ok no err")
+    check(n == 123, "ok value")
+
+    n, err = parsePosInt("")
+    check(err.code == -1, "empty err code")
+    check(err.msg == "empty", "empty err msg")
+
+    n, err = parsePosInt("12x")
+    check(err.code == -2, "bad err code")
+
+    printf("errors: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 26: any type
+// ----------------------------------------------------------------------------
+
+type AnyP = struct { x, y: int }
+
+fn section_any() {
+    banner("any")
+
+    xs := []any{1, 2.5, "hi", true, []int{1, 2, 3}}
+    check(len(xs) == 5, "any slice len")
+
+    cnt := 0
+    for _, v in xs {
+        matched := false
+        switch x := type(v) {
+            case int:    matched = true; sprintf("%v", x)
+            case real:   matched = true; sprintf("%v", x)
+            case str:    matched = true; sprintf("%v", x)
+            case bool:   matched = true; sprintf("%v", x)
+            case []int:  matched = true; sprintf("%v", len(x))
+        }
+        if matched {
+            cnt++
+        }
+    }
+    check(cnt == 5, "any classify all")
+
+    // any from struct.
+    var v: any = AnyP{3, 4}
+    p := AnyP(v)
+    check(p.x == 3 && p.y == 4, "any struct values")
+
+    printf("any: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 27: sprintf round-trip / formatting
+// ----------------------------------------------------------------------------
+
+fn section_format() {
+    banner("format")
+
+    check(sprintf("%d", 42) == "42", "fmt d")
+    check(sprintf("%d", -42) == "-42", "fmt d neg")
+    check(sprintf("%05d", 7) == "00007", "fmt 05d")
+    check(sprintf("%x", 255) == "ff", "fmt x")
+    check(sprintf("%X", 255) == "FF", "fmt X")
+    check(sprintf("%s", "hi") == "hi", "fmt s")
+    check(sprintf("[%6s]", "ab") == "[    ab]", "fmt s pad")
+    check(sprintf("[%-6s]", "ab") == "[ab    ]", "fmt s left")
+    check(sprintf("%.3f", 3.14159) == "3.142", "fmt .3f")
+    check(sprintf("%v", true) == "true", "fmt v bool")
+    check(sprintf("%v", false) == "false", "fmt v bool false")
+
+    printf("format: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 28: garbage collection stress (allocate lots, drop refs)
+// ----------------------------------------------------------------------------
+
+type Big = struct {
+    payload: [64]int
+    next:    ^Big
+}
+
+fn section_gc_stress() {
+    banner("gc stress")
+
+    head := new(Big)
+    head.payload[0] = 0
+    cur := head
+    for i := 1; i < 5000; i++ {
+        n := new(Big)
+        n.payload[0] = i
+        cur.next = n
+        cur = n
+    }
+
+    // Walk the list.
+    cur = head
+    cnt := 0
+    for cur != null {
+        check(cur.payload[0] == cnt, "list value")
+        cnt++
+        cur = cur.next
+    }
+    check(cnt == 5000, "list length")
+
+    // Drop reference to first half by repointing head.
+    cur = head
+    for i := 0; i < 2500; i++ {
+        cur = cur.next
+    }
+    head = cur
+
+    cur = head
+    cnt = 0
+    for cur != null {
+        cnt++
+        cur = cur.next
+    }
+    check(cnt == 2500, "list length after trim")
+
+    printf("gc stress: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 29: gc churn (allocate-and-forget many slices)
+// ----------------------------------------------------------------------------
+
+fn section_gc_churn() {
+    banner("gc churn")
+
+    srand(31)
+    for trial := 0; trial < 200; trial++ {
+        n := randRange(1, 500)
+        a := make([]real, n)
+        for i in a {
+            a[i] = real(i) * 1.5
+        }
+        s := 0.0
+        for _, x in a {
+            s += x
+        }
+        expected := 1.5 * real(n - 1) * real(n) / 2.0
+        check(fabs(s - expected) < 1e-3 * (1.0 + fabs(expected)), "churn sum")
+    }
+
+    printf("gc churn: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 30: function pointers in maps
+// ----------------------------------------------------------------------------
+
+fn section_fnptr_map() {
+    banner("fnptr map")
+
+    ops := map[str]fn(a, b: int): int{
+        "add": fn(a, b: int): int { return a + b },
+        "sub": fn(a, b: int): int { return a - b },
+        "mul": fn(a, b: int): int { return a * b },
+    }
+
+    check(ops["add"](3, 4) == 7, "fn map add")
+    check(ops["sub"](10, 3) == 7, "fn map sub")
+    check(ops["mul"](6, 7) == 42, "fn map mul")
+
+    ops["add"] = fn (a, b: int): int { return a + b + 1 }
+    check(ops["add"](3, 4) == 8, "fn map add replaced")
+
+    printf("fnptr map: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 31: slice == reslice semantics
+// ----------------------------------------------------------------------------
+
+fn section_slice_aliasing() {
+    banner("slice aliasing")
+
+    a := []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
+    b := slice(a, 2, 7)
+    check(len(b) == 5, "slice len")
+    check(b[0] == 2 && b[4] == 6, "slice contents")
+
+    // Make a deep copy and verify independence.
+    c := copy(a)
+    c[0] = -1
+    check(a[0] != -1 || c[0] == -1, "copy independence")
+
+    // Slice with negative end indices.
+    d := slice(a, 1, -2)
+    check(len(d) == len(a) - 1 - 2, "negative end slice len")
+
+    // Slice with single arg (open end).
+    e := slice(a, 5)
+    check(len(e) == len(a) - 5, "open-end slice len")
+    check(len(b) == 5, "b still ok")
+
+    printf("slice aliasing: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 32: large append growth pattern
+// ----------------------------------------------------------------------------
+
+fn section_append_growth() {
+    banner("append growth")
+
+    a := []int{}
+    for i := 0; i < 10000; i++ {
+        a = append(a, i)
+    }
+    check(len(a) == 10000, "append growth length")
+    check(a[0] == 0 && a[9999] == 9999, "append growth ends")
+
+    sum := 0
+    for _, x in a {
+        sum += x
+    }
+    check(sum == 10000 * 9999 / 2, "append growth sum")
+
+    // Append slice to slice.
+    b := []int{}
+    chunk := []int{1, 2, 3, 4, 5}
+    for i := 0; i < 1000; i++ {
+        b = append(b, chunk)
+    }
+    check(len(b) == 5000, "append slice growth length")
+    sum = 0
+    for _, x in b {
+        sum += x
+    }
+    check(sum == 1000 * (1 + 2 + 3 + 4 + 5), "append slice growth sum")
+
+    printf("append growth: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 33: struct literal / field access fuzz
+// ----------------------------------------------------------------------------
+
+type Vec3 = struct {
+    x, y, z: real
+}
+
+fn vdot(a, b: Vec3): real {
+    return a.x * b.x + a.y * b.y + a.z * b.z
+}
+
+fn vadd(a, b: Vec3): Vec3 {
+    return Vec3{a.x + b.x, a.y + b.y, a.z + b.z}
+}
+
+fn vscale(a: Vec3, s: real): Vec3 {
+    return Vec3{a.x * s, a.y * s, a.z * s}
+}
+
+fn vlen(a: Vec3): real {
+    return sqrt(vdot(a, a))
+}
+
+fn section_struct_fuzz() {
+    banner("struct fuzz")
+
+    srand(37)
+    for trial := 0; trial < 200; trial++ {
+        a := Vec3{randReal(), randReal(), randReal()}
+        b := Vec3{randReal(), randReal(), randReal()}
+        c := vadd(a, b)
+        check(fabs(c.x - (a.x + b.x)) < 1e-9, "vadd x")
+        check(fabs(c.y - (a.y + b.y)) < 1e-9, "vadd y")
+        check(fabs(c.z - (a.z + b.z)) < 1e-9, "vadd z")
+
+        s := randReal() / 1e3
+        d := vscale(a, s)
+        if s != 0 {
+            check(fabs(vlen(d) - fabs(s) * vlen(a)) < 1e-3 * (1.0 + vlen(a)),
+                  "vscale length")
+        }
+
+        check(fabs(vdot(a, b) - vdot(b, a)) < 1e-6, "vdot symmetric")
+    }
+
+    printf("struct fuzz: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 34: many local variables and arithmetic
+// ----------------------------------------------------------------------------
+
+fn manyLocals(): int {
+    a01 := 1
+    a02 := 2
+    a03 := 3
+    a04 := 4
+    a05 := 5
+    a06 := 6
+    a07 := 7
+    a08 := 8
+    a09 := 9
+    a10 := 10
+    a11 := 11
+    a12 := 12
+    a13 := 13
+    a14 := 14
+    a15 := 15
+    a16 := 16
+    a17 := 17
+    a18 := 18
+    a19 := 19
+    a20 := 20
+    a21 := 21
+    a22 := 22
+    a23 := 23
+    a24 := 24
+    a25 := 25
+    a26 := 26
+    a27 := 27
+    a28 := 28
+    a29 := 29
+    a30 := 30
+    s := a01 + a02 + a03 + a04 + a05 + a06 + a07 + a08 + a09 + a10
+    s += a11 + a12 + a13 + a14 + a15 + a16 + a17 + a18 + a19 + a20
+    s += a21 + a22 + a23 + a24 + a25 + a26 + a27 + a28 + a29 + a30
+    return s
+}
+
+fn section_many_locals() {
+    banner("many locals")
+    check(manyLocals() == 30 * 31 / 2, "many locals sum")
+    printf("many locals: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 35: deep nesting of blocks and loops
+// ----------------------------------------------------------------------------
+
+fn section_deep_nesting() {
+    banner("deep nesting")
+
+    total := 0
+    for a := 0; a < 5; a++ {
+        for b := 0; b < 5; b++ {
+            for c := 0; c < 5; c++ {
+                for d := 0; d < 5; d++ {
+                    {
+                        {
+                            {
+                                {
+                                    if a + b + c + d >= 0 {
+                                        total++
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    check(total == 5 * 5 * 5 * 5, "deep nesting count")
+
+    printf("deep nesting: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 36: switch with many cases
+// ----------------------------------------------------------------------------
+
+fn classify_int(n: int): str {
+    switch n {
+        case 0: return "zero"
+        case 1, 2, 3, 4, 5, 6, 7, 8, 9: return "tiny"
+        case 10, 20, 30, 40, 50, 60, 70, 80, 90: return "round"
+        case 100: return "hundred"
+        case 1000: return "thousand"
+        default:
+            if n < 0 {
+                return "neg"
+            }
+            if n > 1000 {
+                return "huge"
+            }
+            return "other"
+    }
+    return ""
+}
+
+fn section_switch() {
+    banner("switch many cases")
+
+    check(classify_int(0) == "zero", "switch zero")
+    check(classify_int(3) == "tiny", "switch tiny")
+    check(classify_int(40) == "round", "switch round")
+    check(classify_int(100) == "hundred", "switch hundred")
+    check(classify_int(1000) == "thousand", "switch thousand")
+    check(classify_int(2000) == "huge", "switch huge")
+    check(classify_int(-1) == "neg", "switch neg")
+    check(classify_int(42) == "other", "switch other")
+
+    printf("switch many cases: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 37: bool short-circuit evaluation
+// ----------------------------------------------------------------------------
+
+var boomCount: int = 0
+
+fn boom(): bool {
+    boomCount++
+    return true
+}
+
+fn section_short_circuit() {
+    banner("short-circuit")
+
+    boomCount = 0
+    if false && boom() { }
+    check(boomCount == 0, "&& short-circuit")
+
+    boomCount = 0
+    if true || boom() { }
+    check(boomCount == 0, "|| short-circuit")
+
+    boomCount = 0
+    if true && boom() { }
+    check(boomCount == 1, "&& evaluates second")
+
+    boomCount = 0
+    if false || boom() { }
+    check(boomCount == 1, "|| evaluates second")
+
+    printf("short-circuit: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 38: map iteration / mutation invariants
+// ----------------------------------------------------------------------------
+
+fn section_map_iter() {
+    banner("map iter")
+
+    m := make(map[int]int)
+    for i := 0; i < 100; i++ {
+        m[i] = i * i
+    }
+    sum := 0
+    for k in m {
+        sum += m[k]
+    }
+    expected := 0
+    for i := 0; i < 100; i++ {
+        expected += i * i
+    }
+    check(sum == expected, "map iter sum")
+
+    sum2 := 0
+    for k in m {
+        sum2 += m[k]
+    }
+    check(sum2 == expected, "map iter reproducible")
+
+    keys := []int{}
+    for k in m {
+        keys = append(keys, k)
+    }
+    check(len(keys) == 100, "extracted keys len")
+    for _, k in keys {
+        m[k] += 1
+    }
+    sum3 := 0
+    for k in m {
+        sum3 += m[k]
+    }
+    check(sum3 == expected + 100, "post-mutation sum")
+
+    printf("map iter: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 39: string -> []char -> string round-trips
+// ----------------------------------------------------------------------------
+
+fn section_string_bytes() {
+    banner("string<->[]char")
+
+    srand(41)
+    for trial := 0; trial < 50; trial++ {
+        n := randRange(0, 300)
+        bs := make([]char, n)
+        for i in bs {
+            bs[i] = char(randRange(32, 127))
+        }
+        s := str(bs)
+        check(len(s) == n, "bytes->str length")
+        bs2 := []char(s)
+        check(len(bs2) == n, "str->bytes length")
+        for i := 0; i < n; i++ {
+            check(bs[i] == bs2[i], "byte round-trip")
+        }
+    }
+
+    printf("string<->[]char: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 40: pointer basics
+// ----------------------------------------------------------------------------
+
+type PtrS = struct { a, b: int }
+
+fn section_pointer_basic() {
+    banner("pointer basic")
+
+    p := new(int)
+    p^ = 42
+    check(p^ == 42, "ptr write/read")
+
+    q := p
+    q^ = 100
+    check(p^ == 100, "ptr shared")
+
+    r := new(int, 7)
+    check(r^ == 7, "new with init")
+
+    s := new(PtrS)
+    s.a = 11
+    s.b = 22
+    pa := &s.a
+    pa^ = 100
+    check(s.a == 100, "ptr to field")
+
+    printf("pointer basic: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 41: large arithmetic loops as stability test
+// ----------------------------------------------------------------------------
+
+fn section_loop_stability() {
+    banner("loop stability")
+
+    n := 0
+    for i := 0; i < 1_000_000; i++ {
+        n++
+    }
+    check(n == 1_000_000, "1M loop count")
+
+    s := 0
+    for i := 1; i <= 1000; i++ {
+        s += i
+    }
+    check(s == 500500, "sum 1..1000")
+
+    cnt := 0
+    for i := 0; i < 1000; i++ {
+        for j := 0; j < 100; j++ {
+            cnt++
+        }
+    }
+    check(cnt == 100000, "nested loop count")
+
+    printf("loop stability: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 42: interfaces inside slices and maps
+// ----------------------------------------------------------------------------
+
+fn section_iface_collections() {
+    banner("iface collections")
+
+    shapes := []Shape{}
+    for i := 1; i <= 10; i++ {
+        if i % 3 == 0 {
+            shapes = append(shapes, &Circle{r: real(i)})
+        } else if i % 3 == 1 {
+            shapes = append(shapes, &Rect{w: real(i), h: real(i + 1)})
+        } else {
+            shapes = append(shapes, &Triangle{base: real(i), height: real(i + 1)})
+        }
+    }
+    totalArea := 0.0
+    for _, s in shapes {
+        totalArea += s.area()
+    }
+    check(totalArea > 0.0, "iface slice area positive")
+
+    nameToShape := map[str]Shape{}
+    nameToShape["c"] = &Circle{r: 2.0}
+    nameToShape["r"] = &Rect{w: 3.0, h: 4.0}
+    nameToShape["t"] = &Triangle{base: 5.0, height: 6.0}
+    check(nameToShape["c"].name() == "circle", "iface map circle")
+    check(nameToShape["r"].name() == "rect", "iface map rect")
+    check(nameToShape["t"].name() == "triangle", "iface map triangle")
+    check(fabs(nameToShape["r"].area() - 12.0) < 1e-9, "iface map rect area")
+
+    printf("iface collections: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 43: numeric conversions
+// ----------------------------------------------------------------------------
+
+fn section_conversions() {
+    banner("conversions")
+
+    for i := -100; i <= 100; i++ {
+        x := real(i)
+        check(trunc(x) == i, "real round-trip")
+    }
+
+    var iv: int = 257
+    var i8: int8 = int8(iv & 0xFF)
+    check(int(i8) == 1, "int -> int8 truncation low byte")
+
+    var u: uint = uint(int(0xFFFFFFFF))
+    check(u == 0xFFFFFFFF, "uint from int")
+
+    check(sprintf("%v", true) == "true", "bool sprintf")
+    check(sprintf("%v", false) == "false", "bool sprintf false")
+
+    var n: int
+    cnt := sscanf("12345", "%lld", &n)
+    check(cnt == 1, "sscanf count")
+    check(n == 12345, "sscanf value")
+
+    var r: real
+    cnt = sscanf("3.14", "%lf", &r)
+    check(cnt == 1, "sscanf real count")
+    check(fabs(r - 3.14) < 1e-9, "sscanf real value")
+
+    printf("conversions: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 44: std::itoa, std::ftoa, sscanf
+// ----------------------------------------------------------------------------
+
+fn section_std_strings() {
+    banner("std strings")
+
+    check(std::itoa(0) == "0", "itoa 0")
+    check(std::itoa(123) == "123", "itoa 123")
+    check(std::itoa(-456) == "-456", "itoa -456")
+
+    f := std::ftoa(3.14, 2)
+    check(len(f) > 0, "ftoa nonempty")
+
+    srand(43)
+    for trial := 0; trial < 100; trial++ {
+        v := randInt() % 1_000_000_000
+        s := std::itoa(v)
+        var v2: int
+        cnt := sscanf(s, "%lld", &v2)
+        check(cnt == 1, "itoa-sscanf cnt")
+        check(v2 == v, "itoa-sscanf value")
+    }
+
+    printf("std strings: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 45: any inside map and dispatch
+// ----------------------------------------------------------------------------
+
+fn section_any_map() {
+    banner("any map")
+
+    m := map[str]any{}
+    m["int"]   = 7
+    m["real"]  = 2.5
+    m["str"]   = "hello"
+    m["bool"]  = true
+    m["slice"] = []int{1, 2, 3}
+
+    check(int(m["int"]) == 7, "any map int")
+    check(fabs(real(m["real"]) - 2.5) < 1e-9, "any map real")
+    check(str(m["str"]) == "hello", "any map str")
+    check(bool(m["bool"]), "any map bool")
+
+    sl := []int(m["slice"])
+    check(len(sl) == 3 && sl[2] == 3, "any map slice")
+
+    printf("any map: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 46: comparison operators across types
+// ----------------------------------------------------------------------------
+
+type CmpP = struct { x, y: int }
+
+fn section_comparisons() {
+    banner("comparisons")
+
+    check(1.0 < 1.1, "real lt")
+    check(1.1 > 1.0, "real gt")
+    check(1.0 == 1.0, "real eq")
+    check(1.0 != 1.1, "real neq")
+
+    check(real(1) < 1.5, "int<real")
+    check(1.5 > real(1), "real>int")
+
+    p1 := CmpP{1, 2}
+    p2 := CmpP{1, 2}
+    p3 := CmpP{1, 3}
+    check(p1 == p2, "struct eq")
+    check(p1 != p3, "struct neq")
+
+    a1 := [3]int{1, 2, 3}
+    a2 := [3]int{1, 2, 3}
+    a3 := [3]int{1, 2, 4}
+    check(a1 == a2, "array eq")
+    check(a1 != a3, "array neq")
+
+    printf("comparisons: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 47: combining everything in a mini-program (k-NN-ish)
+// ----------------------------------------------------------------------------
+
+type Point2 = struct {
+    x, y: real
+    lbl:  str
+}
+
+fn distance(a, b: Point2): real {
+    dx := a.x - b.x
+    dy := a.y - b.y
+    return sqrt(dx*dx + dy*dy)
+}
+
+fn nearest(pts: []Point2, q: Point2): Point2 {
+    best := pts[0]
+    bestD := distance(pts[0], q)
+    for i := 1; i < len(pts); i++ {
+        d := distance(pts[i], q)
+        if d < bestD {
+            bestD = d
+            best = pts[i]
+        }
+    }
+    return best
+}
+
+fn section_mini_program() {
+    banner("mini program (nearest-neighbor)")
+
+    srand(47)
+    pts := []Point2{}
+    for i := 0; i < 200; i++ {
+        pts = append(pts, Point2{
+            x:   randReal() / 1e3,
+            y:   randReal() / 1e3,
+            lbl: sprintf("p%d", i),
+        })
+    }
+
+    for trial := 0; trial < 20; trial++ {
+        q := Point2{randReal() / 1e3, randReal() / 1e3, "q"}
+        got := nearest(pts, q)
+        gotD := distance(got, q)
+        for _, p in pts {
+            check(distance(p, q) >= gotD - 1e-9, "nn min")
+        }
+    }
+
+    printf("mini program: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 48: stress big map then drop
+// ----------------------------------------------------------------------------
+
+fn section_big_map_drop() {
+    banner("big map drop")
+
+    m := make(map[int]str)
+    for i := 0; i < 10000; i++ {
+        m[i] = sprintf("v%d", i)
+    }
+    check(len(m) == 10000, "big map len")
+    check(m[1234] == "v1234", "big map lookup")
+
+    m = make(map[int]str)
+    check(len(m) == 0, "big map dropped")
+
+    printf("big map drop: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 49: stats sanity
+// ----------------------------------------------------------------------------
+
+fn section_stats() {
+    banner("stats")
+
+    srand(53)
+    for trial := 0; trial < 50; trial++ {
+        n := randRange(1, 1000)
+        xs := make([]real, n)
+        for i in xs {
+            xs[i] = randReal() / 1e3
+        }
+        s := 0.0
+        for _, x in xs {
+            s += x
+        }
+        avg := s / real(n)
+
+        d := 0.0
+        for _, x in xs {
+            d += x - avg
+        }
+        check(fabs(d) < 1e-3 * (1.0 + fabs(s)), "mean-deviation zero")
+    }
+
+    printf("stats: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 50: cleanup-like via closures
+// ----------------------------------------------------------------------------
+
+fn section_cleanup() {
+    banner("cleanup-like")
+
+    state := new(int)
+    state^ = 0
+
+    cleanup := fn () |state| {
+        state^ = -1
+    }
+
+    {
+        state^ = 100
+        check(state^ == 100, "during work")
+        cleanup()
+    }
+    check(state^ == -1, "cleanup ran")
+
+    printf("cleanup-like: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 51: re-entrant recursion with closure
+// ----------------------------------------------------------------------------
+
+fn section_recursive_closure() {
+    banner("recursive closure")
+
+    fact_ptr := new(fn(n: int): int)
+    fact_ptr^ = fn (n: int): int |fact_ptr| {
+        if n <= 1 {
+            return 1
+        }
+        return n * fact_ptr^(n - 1)
+    }
+
+    check(fact_ptr^(5) == 120, "rec closure fact 5")
+    check(fact_ptr^(10) == 3628800, "rec closure fact 10")
+
+    // Break the self-reference cycle so the reference-counted GC can reclaim it.
+    fact_ptr^ = fn (n: int): int { return 0 }
+
+    printf("recursive closure: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 52: many parameters in a function
+// ----------------------------------------------------------------------------
+
+fn manyParams(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o: int): int {
+    return a + b + c + d + e + f + g + h + i + j + k + l + m + n + o
+}
+
+fn section_many_params() {
+    banner("many params")
+    s := manyParams(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)
+    check(s == 15 * 16 / 2, "many params sum")
+    printf("many params: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 53: deeply chained method calls
+// ----------------------------------------------------------------------------
+
+type Builder = struct {
+    s: str
+}
+
+fn (b: ^Builder) add(s: str): ^Builder {
+    b.s += s
+    return b
+}
+
+fn section_method_chain() {
+    banner("method chain")
+
+    b := new(Builder)
+    b.add("Hello").add(", ").add("World").add("!").add(" ").add("Umka")
+    check(b.s == "Hello, World! Umka", "method chain content")
+
+    printf("method chain: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 54: nested map (map of maps)
+// ----------------------------------------------------------------------------
+
+fn section_map_of_maps() {
+    banner("map of maps")
+
+    mm := make(map[str]map[str]int)
+    mm["a"] = map[str]int{"x": 1, "y": 2}
+    mm["b"] = map[str]int{"x": 10, "y": 20}
+    mm["c"] = map[str]int{"x": 100, "y": 200}
+
+    check(mm["a"]["x"] == 1, "mm a x")
+    check(mm["b"]["y"] == 20, "mm b y")
+    check(mm["c"]["x"] == 100, "mm c x")
+
+    mm["a"]["z"] = 999
+    check(mm["a"]["z"] == 999, "mm a z")
+    check(len(mm["a"]) == 3, "inner len")
+
+    printf("map of maps: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 55: slice of structs - sort by field
+// ----------------------------------------------------------------------------
+
+type Pair = struct {
+    k: int
+    v: str
+}
+
+fn section_struct_slice_sort() {
+    banner("struct slice sort")
+
+    srand(59)
+    items := make([]Pair, 50)
+    for i in items {
+        items[i] = Pair{k: int(rand32() % 1000), v: sprintf("v%d", i)}
+    }
+
+    for i := 1; i < len(items); i++ {
+        for j := i; j > 0 && items[j - 1].k > items[j].k; j-- {
+            items[j - 1], items[j] = items[j], items[j - 1]
+        }
+    }
+
+    for i := 1; i < len(items); i++ {
+        check(items[i - 1].k <= items[i].k, "struct sorted by k")
+    }
+
+    printf("struct slice sort: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 56: continue/break in loops
+// ----------------------------------------------------------------------------
+
+fn section_break_continue() {
+    banner("break/continue")
+
+    sumEven := 0
+    for i := 0; i < 100; i++ {
+        if i % 2 != 0 {
+            continue
+        }
+        sumEven += i
+    }
+    expected := 0
+    for i := 0; i < 100; i++ {
+        if i % 2 == 0 {
+            expected += i
+        }
+    }
+    check(sumEven == expected, "continue evens")
+
+    firstDiv7 := -1
+    for i := 1; i < 100; i++ {
+        if i % 7 == 0 {
+            firstDiv7 = i
+            break
+        }
+    }
+    check(firstDiv7 == 7, "break first div 7")
+
+    cnt := 0
+    for i := 0; i < 10; i++ {
+        for j := 0; j < 10; j++ {
+            if j == 5 {
+                break
+            }
+            cnt++
+        }
+    }
+    check(cnt == 50, "inner break count")
+
+    printf("break/continue: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 57: long-string sprintf concatenation
+// ----------------------------------------------------------------------------
+
+fn section_long_sprintf() {
+    banner("long sprintf")
+
+    s := ""
+    for i := 0; i < 1000; i++ {
+        s += sprintf("[%d]", i)
+    }
+    expected := 0
+    for i := 0; i < 1000; i++ {
+        expected += 2 + len(std::itoa(i))
+    }
+    check(len(s) == expected, "long sprintf length")
+    check(slice(s, 0, 3) == "[0]", "first segment")
+
+    printf("long sprintf: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 58: gc + closure capture stress
+// ----------------------------------------------------------------------------
+
+fn section_closure_gc() {
+    banner("closure gc")
+
+    closures := []fn(): int{}
+    for i := 0; i < 500; i++ {
+        box := new(int)
+        box^ = i * 3
+        closures = append(closures, fn (): int |box| { return box^ })
+    }
+    sum := 0
+    for _, f in closures {
+        sum += f()
+    }
+    expected := 0
+    for i := 0; i < 500; i++ {
+        expected += i * 3
+    }
+    check(sum == expected, "closure gc sum")
+
+    printf("closure gc: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 59: arithmetic identities for mixed signed/unsigned
+// ----------------------------------------------------------------------------
+
+fn section_mixed_arith() {
+    banner("mixed arithmetic")
+
+    var u: uint32 = 1000
+    var i: int32 = 500
+    var s: int = int(u) - int(i)
+    check(s == 500, "u-i as int")
+
+    var u64: uint = 0
+    u64 = u64 - 1
+    var lo: uint32 = uint32(u64 & 0xFFFFFFFF)
+    check(lo == 0xFFFFFFFF, "uint low bits")
+
+    var v: uint32 = 0xFFFFFFFF
+    check(v == 0xFFFFFFFF, "uint32 all ones")
+
+    printf("mixed arithmetic: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 60: pseudo-random shuffle via Fisher-Yates
+// ----------------------------------------------------------------------------
+
+fn section_shuffle() {
+    banner("shuffle")
+
+    srand(61)
+    n := 200
+    a := make([]int, n)
+    for i in a {
+        a[i] = i
+    }
+
+    for i := n - 1; i > 0; i-- {
+        j := int(rand32() % uint32(i + 1))
+        a[i], a[j] = a[j], a[i]
+    }
+
+    seen := make([]bool, n)
+    for _, v in a {
+        check(v >= 0 && v < n, "shuffle range")
+        check(!seen[v], "shuffle unique")
+        seen[v] = true
+    }
+    for _, b in seen {
+        check(b, "shuffle covers all")
+    }
+
+    printf("shuffle: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 61: simple stack via dynamic array
+// ----------------------------------------------------------------------------
+
+fn section_stack() {
+    banner("stack")
+
+    stk := []int{}
+    for i := 0; i < 1000; i++ {
+        stk = append(stk, i)
+    }
+    check(len(stk) == 1000, "stack push count")
+
+    for i := 999; i >= 0; i-- {
+        top := stk[len(stk) - 1]
+        check(top == i, "stack pop value")
+        stk = slice(stk, 0, len(stk) - 1)
+    }
+    check(len(stk) == 0, "stack empty after pops")
+
+    printf("stack: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 62: queue via two stacks
+// ----------------------------------------------------------------------------
+
+type Queue = struct {
+    inS:  []int
+    outS: []int
+}
+
+fn (q: ^Queue) push(v: int) {
+    q.inS = append(q.inS, v)
+}
+
+fn (q: ^Queue) pop(): (int, bool) {
+    if len(q.outS) == 0 {
+        for i := len(q.inS) - 1; i >= 0; i-- {
+            q.outS = append(q.outS, q.inS[i])
+        }
+        q.inS = []int{}
+    }
+    if len(q.outS) == 0 {
+        return 0, false
+    }
+    v := q.outS[len(q.outS) - 1]
+    q.outS = slice(q.outS, 0, len(q.outS) - 1)
+    return v, true
+}
+
+fn section_queue() {
+    banner("queue")
+
+    q := new(Queue)
+    for i := 0; i < 100; i++ {
+        q.push(i)
+    }
+    for i := 0; i < 100; i++ {
+        v, ok := q.pop()
+        check(ok, "queue ok")
+        check(v == i, "queue order")
+    }
+    _, ok := q.pop()
+    check(!ok, "queue empty")
+
+    printf("queue: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 63: PRNG deterministic
+// ----------------------------------------------------------------------------
+
+fn section_prng_repro() {
+    banner("PRNG repro")
+
+    srand(123)
+    a := []uint32{}
+    for i := 0; i < 100; i++ {
+        a = append(a, rand32())
+    }
+    srand(123)
+    b := []uint32{}
+    for i := 0; i < 100; i++ {
+        b = append(b, rand32())
+    }
+    for i, x in a {
+        check(x == b[i], "prng deterministic")
+    }
+
+    printf("PRNG repro: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 64: type aliases
+// ----------------------------------------------------------------------------
+
+type (
+    IntArr = []int
+    Matrix = []IntArr
+)
+
+fn section_aliases() {
+    banner("aliases")
+
+    var m: Matrix
+    m = append(m, IntArr{1, 2, 3})
+    m = append(m, IntArr{4, 5, 6})
+    m = append(m, IntArr{7, 8, 9})
+    sum := 0
+    for _, row in m {
+        for _, v in row {
+            sum += v
+        }
+    }
+    check(sum == 45, "alias matrix sum")
+
+    printf("aliases: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 65: large recursion depth
+// ----------------------------------------------------------------------------
+
+fn deepRecur(n: int): int {
+    if n == 0 {
+        return 0
+    }
+    return 1 + deepRecur(n - 1)
+}
+
+fn section_deep_recursion() {
+    banner("deep recursion")
+    check(deepRecur(500) == 500, "deep recursion 500")
+    check(deepRecur(2000) == 2000, "deep recursion 2000")
+    printf("deep recursion: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 66: string append idiom
+// ----------------------------------------------------------------------------
+
+fn section_string_slice() {
+    banner("string slice ops")
+
+    parts := []str{}
+    for i := 0; i < 100; i++ {
+        parts = append(parts, sprintf("part-%d", i))
+    }
+    check(len(parts) == 100, "parts len")
+
+    joined := ""
+    for i, p in parts {
+        if i > 0 {
+            joined += ","
+        }
+        joined += p
+    }
+    check(len(joined) > 0, "joined nonempty")
+    commas := 0
+    for i := 0; i < len(joined); i++ {
+        if joined[i] == ',' {
+            commas++
+        }
+    }
+    check(commas == 99, "join comma count")
+
+    printf("string slice ops: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 67: more sprintf edge cases
+// ----------------------------------------------------------------------------
+
+fn section_format_edge() {
+    banner("format edge")
+
+    check(sprintf("[%-5d]", 7) == "[7    ]", "neg width int")
+    check(sprintf("[%5d]", 7) == "[    7]", "pos width int")
+
+    s := sprintf("%d + %d = %d", 2, 3, 5)
+    check(s == "2 + 3 = 5", "fmt multi args")
+
+    check(sprintf("100%%") == "100%", "fmt percent escape")
+
+    printf("format edge: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 68: enum from int round-trip
+// ----------------------------------------------------------------------------
+
+fn section_enum_roundtrip() {
+    banner("enum round-trip")
+
+    for i := 0; i < 8; i++ {
+        c := Color(i)
+        check(int(c) == i, "enum round-trip")
+    }
+
+    printf("enum round-trip: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 69: nested closures referencing outer's parameter
+// ----------------------------------------------------------------------------
+
+fn section_nested_closure_param() {
+    banner("nested closure param")
+
+    chain := fn (start: int): fn(): int {
+        n := new(int)
+        n^ = start
+        return fn (): int |n| {
+            r := n^
+            n^ *= 2
+            return r
+        }
+    }
+
+    f := chain(3)
+    check(f() == 3, "chain start")
+    check(f() == 6, "chain doubled")
+    check(f() == 12, "chain doubled again")
+    check(f() == 24, "chain doubled 3")
+
+    printf("nested closure param: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 70: fiber inside closure
+// ----------------------------------------------------------------------------
+
+fn section_fiber_in_closure() {
+    banner("fiber in closure")
+
+    counts := new([]int)
+    counts^ = []int{}
+
+    spawn := fn (k: int) |counts| {
+        out := new(int)
+        out^ = -1
+        kc := new(int)
+        kc^ = k
+        f := make(fiber, |out, kc| {
+            for i := 0; i < kc^; i++ {
+                out^ = i
+                resume()
+            }
+            out^ = -1
+        })
+        for true {
+            resume(f)
+            if out^ < 0 {
+                break
+            }
+            counts^ = append(counts^, out^)
+            out^ = -1
+        }
+    }
+
+    spawn(3)
+    spawn(5)
+    spawn(2)
+
+    expected := []int{0, 1, 2, 0, 1, 2, 3, 4, 0, 1}
+    check(len(counts^) == len(expected), "fiber in closure len")
+    for i, v in counts^ {
+        check(v == expected[i], "fiber in closure value")
+    }
+
+    printf("fiber in closure: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 71: modulo cycle
+// ----------------------------------------------------------------------------
+
+fn section_modcycle() {
+    banner("mod cycle")
+
+    counts := make([]int, 7)
+    for i := 0; i < 7000; i++ {
+        counts[i % 7]++
+    }
+    for _, c in counts {
+        check(c == 1000, "mod cycle count")
+    }
+
+    printf("mod cycle: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 72: dynamic dispatch via fn pointer slice
+// ----------------------------------------------------------------------------
+
+type Op = fn (a, b: int): int
+
+fn section_dispatch_slice() {
+    banner("dispatch slice")
+
+    ops := []Op{
+        fn (a, b: int): int { return a + b },
+        fn (a, b: int): int { return a - b },
+        fn (a, b: int): int { return a * b },
+        fn (a, b: int): int {
+            if b == 0 {
+                return 0
+            }
+            return a / b
+        },
+    }
+
+    check(ops[0](10, 3) == 13, "dispatch add")
+    check(ops[1](10, 3) == 7, "dispatch sub")
+    check(ops[2](10, 3) == 30, "dispatch mul")
+    check(ops[3](10, 3) == 3, "dispatch div")
+    check(ops[3](10, 0) == 0, "dispatch div guard")
+
+    printf("dispatch slice: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 73: bool slice ops
+// ----------------------------------------------------------------------------
+
+fn section_bool_slice() {
+    banner("bool slice")
+
+    n := 1000
+    a := make([]bool, n)
+    for i in a {
+        a[i] = (i % 3 == 0)
+    }
+    cnt := 0
+    for _, x in a {
+        if x {
+            cnt++
+        }
+    }
+    expected := (n - 1) / 3 + 1
+    check(cnt == expected, "bool slice count")
+
+    // XOR fold.
+    fold := false
+    for _, x in a {
+        fold = fold != x   // xor
+    }
+    check(fold == (expected % 2 == 1), "bool xor fold")
+
+    printf("bool slice: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 74: byte buffer manipulations
+// ----------------------------------------------------------------------------
+
+fn section_byte_buffer() {
+    banner("byte buffer")
+
+    buf := make([]uint8, 256)
+    for i in buf {
+        buf[i] = uint8(i)
+    }
+    for i, b in buf {
+        check(int(b) == i, "byte buf identity")
+    }
+
+    for i := 0; i < len(buf) / 2; i++ {
+        j := len(buf) - 1 - i
+        buf[i], buf[j] = buf[j], buf[i]
+    }
+    for i, b in buf {
+        check(int(b) == 255 - i, "byte buf reversed")
+    }
+
+    printf("byte buffer: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 75: struct with slice field
+// ----------------------------------------------------------------------------
+
+type Histogram = struct {
+    label:  str
+    counts: []int
+}
+
+fn (h: ^Histogram) bump(i: int) {
+    h.counts[i]++
+}
+
+fn (h: ^Histogram) total(): int {
+    s := 0
+    for _, c in h.counts {
+        s += c
+    }
+    return s
+}
+
+fn section_histogram() {
+    banner("histogram")
+
+    h := new(Histogram)
+    h.label = "x"
+    h.counts = make([]int, 10)
+
+    srand(67)
+    for i := 0; i < 1000; i++ {
+        h.bump(int(rand32() % 10))
+    }
+    check(h.total() == 1000, "histogram total")
+
+    printf("histogram: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 76: string repeat
+// ----------------------------------------------------------------------------
+
+fn repeatStr(s: str, n: int): str {
+    out := ""
+    for i := 0; i < n; i++ {
+        out += s
+    }
+    return out
+}
+
+fn section_repeat() {
+    banner("repeat")
+
+    check(repeatStr("ab", 0) == "", "repeat 0")
+    check(repeatStr("ab", 1) == "ab", "repeat 1")
+    check(repeatStr("ab", 5) == "ababababab", "repeat 5")
+    check(len(repeatStr("x", 1000)) == 1000, "repeat 1000")
+
+    printf("repeat: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 77: Pascal's triangle
+// ----------------------------------------------------------------------------
+
+fn section_pascal() {
+    banner("pascal")
+
+    rows := 15
+    p := make([][]int, rows)
+    for i in p {
+        p[i] = make([]int, i + 1)
+        p[i][0] = 1
+        p[i][i] = 1
+        for j := 1; j < i; j++ {
+            p[i][j] = p[i - 1][j - 1] + p[i - 1][j]
+        }
+    }
+    for i, row in p {
+        s := 0
+        for _, v in row {
+            s += v
+        }
+        expected := 1
+        for k := 0; k < i; k++ {
+            expected *= 2
+        }
+        check(s == expected, "pascal row sum")
+    }
+
+    printf("pascal: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 78: char arithmetic
+// ----------------------------------------------------------------------------
+
+fn section_char_arith() {
+    banner("char arith")
+
+    for ci := int('a'); ci <= int('z'); ci++ {
+        upc := char(ci + int('A') - int('a'))
+        check(upc >= 'A' && upc <= 'Z', "char upper range")
+    }
+
+    s := 0
+    for ci := int('a'); ci <= int('z'); ci++ {
+        s += ci
+    }
+    expected := 0
+    for c := int('a'); c <= int('z'); c++ {
+        expected += c
+    }
+    check(s == expected, "char loop sum")
+
+    printf("char arith: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 79: 2D Game of Life one-step verification
+// ----------------------------------------------------------------------------
+
+fn section_life_step() {
+    banner("life step")
+
+    w := 10
+    h := 10
+    grid := make([][]int, h)
+    for i in grid {
+        grid[i] = make([]int, w)
+    }
+    grid[1][2] = 1
+    grid[2][3] = 1
+    grid[3][1] = 1
+    grid[3][2] = 1
+    grid[3][3] = 1
+
+    next := make([][]int, h)
+    for i in next {
+        next[i] = make([]int, w)
+    }
+
+    for y := 0; y < h; y++ {
+        for x := 0; x < w; x++ {
+            n := 0
+            for dy := -1; dy <= 1; dy++ {
+                for dx := -1; dx <= 1; dx++ {
+                    if dx == 0 && dy == 0 {
+                        continue
+                    }
+                    nx := x + dx
+                    ny := y + dy
+                    if nx >= 0 && nx < w && ny >= 0 && ny < h {
+                        n += grid[ny][nx]
+                    }
+                }
+            }
+            cell := grid[y][x]
+            if cell == 1 && (n == 2 || n == 3) {
+                next[y][x] = 1
+            } else if cell == 0 && n == 3 {
+                next[y][x] = 1
+            } else {
+                next[y][x] = 0
+            }
+        }
+    }
+
+    cnt := 0
+    for _, row in next {
+        for _, v in row {
+            cnt += v
+        }
+    }
+    check(cnt == 5, "life cells preserved")
+
+    printf("life step: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 80: hash-like distribution sanity
+// ----------------------------------------------------------------------------
+
+fn section_distribution() {
+    banner("distribution")
+
+    srand(71)
+    bins := make([]int, 32)
+    n := 32000
+    for i := 0; i < n; i++ {
+        bins[int(rand32() % 32)]++
+    }
+    expected := n / 32
+    for _, c in bins {
+        diff := c - expected
+        if diff < 0 {
+            diff = -diff
+        }
+        check(diff <= expected * 30 / 100, "bin within 30%")
+    }
+
+    printf("distribution: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 81: GCD via Euclid (recursive)
+// ----------------------------------------------------------------------------
+
+fn gcd(a, b: int): int {
+    if a < 0 { a = -a }
+    if b < 0 { b = -b }
+    if b == 0 {
+        return a
+    }
+    return gcd(b, a % b)
+}
+
+fn section_gcd() {
+    banner("gcd")
+
+    check(gcd(12, 18) == 6, "gcd 12,18")
+    check(gcd(100, 75) == 25, "gcd 100,75")
+    check(gcd(17, 13) == 1, "gcd coprime")
+    check(gcd(0, 7) == 7, "gcd 0,7")
+    check(gcd(7, 0) == 7, "gcd 7,0")
+
+    srand(73)
+    for trial := 0; trial < 200; trial++ {
+        a := randInt() % 100000
+        b := randInt() % 100000
+        if a < 0 { a = -a }
+        if b < 0 { b = -b }
+        g := gcd(a, b)
+        if g != 0 {
+            check(a % g == 0 || a == 0, "gcd divides a")
+            check(b % g == 0 || b == 0, "gcd divides b")
+        }
+    }
+
+    printf("gcd: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 82: assignment ops sanity
+// ----------------------------------------------------------------------------
+
+fn section_assign_ops() {
+    banner("assign ops")
+
+    x := 10
+    x += 5;   check(x == 15, "+= 5")
+    x -= 3;   check(x == 12, "-= 3")
+    x *= 2;   check(x == 24, "*= 2")
+    x /= 4;   check(x == 6,  "/= 4")
+    x %= 4;   check(x == 2,  "%= 4")
+    x |= 5;   check(x == 7,  "|= 5")
+    x &= 6;   check(x == 6,  "&= 6")
+    x ~= 3;   check(x == 5,  "~= 3")
+    x <<= 2;  check(x == 20, "<<= 2")
+    x >>= 1;  check(x == 10, ">>= 1")
+
+    s := "hello"
+    s += " world"
+    check(s == "hello world", "str +=")
+
+    printf("assign ops: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 83: random walk
+// ----------------------------------------------------------------------------
+
+fn section_random_walk() {
+    banner("random walk")
+
+    srand(79)
+    x, y := 0, 0
+    minx, miny, maxx, maxy := 0, 0, 0, 0
+    for i := 0; i < 10000; i++ {
+        d := rand32() % 4
+        switch d {
+            case 0: x++
+            case 1: x--
+            case 2: y++
+            case 3: y--
+        }
+        if x < minx { minx = x }
+        if x > maxx { maxx = x }
+        if y < miny { miny = y }
+        if y > maxy { maxy = y }
+    }
+    check(maxx >= minx, "walk x range")
+    check(maxy >= miny, "walk y range")
+    check(maxx - minx <= 10000, "walk x span bound")
+    check(maxy - miny <= 10000, "walk y span bound")
+
+    printf("random walk: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 84: matrix multiply correctness
+// ----------------------------------------------------------------------------
+
+fn matmul(a, b: [][]real, n: int): [][]real {
+    c := make([][]real, n)
+    for i in c {
+        c[i] = make([]real, n)
+        for j := 0; j < n; j++ {
+            s := 0.0
+            for k := 0; k < n; k++ {
+                s += a[i][k] * b[k][j]
+            }
+            c[i][j] = s
+        }
+    }
+    return c
+}
+
+fn section_matmul() {
+    banner("matmul")
+
+    n := 20
+    id := make([][]real, n)
+    for i in id {
+        id[i] = make([]real, n)
+        id[i][i] = 1.0
+    }
+
+    srand(83)
+    a := make([][]real, n)
+    for i in a {
+        a[i] = make([]real, n)
+        for j := 0; j < n; j++ {
+            a[i][j] = randReal() / 1e6
+        }
+    }
+
+    b := matmul(a, id, n)
+    for i := 0; i < n; i++ {
+        for j := 0; j < n; j++ {
+            check(fabs(a[i][j] - b[i][j]) < 1e-9, "a*I=a")
+        }
+    }
+
+    printf("matmul: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 85: bool short-circuit with side effects through pointer
+// ----------------------------------------------------------------------------
+
+fn section_short_circuit_ptr() {
+    banner("short-circuit ptr")
+
+    side := new(int)
+    side^ = 0
+    incr := fn (): bool |side| {
+        side^++
+        return true
+    }
+
+    if false && incr() {}
+    check(side^ == 0, "&& skip")
+    if true || incr() {}
+    check(side^ == 0, "|| skip")
+    if true && incr() {}
+    check(side^ == 1, "&& run")
+    if false || incr() {}
+    check(side^ == 2, "|| run")
+
+    printf("short-circuit ptr: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 86: enum with custom values
+// ----------------------------------------------------------------------------
+
+type Status = enum {
+    inactive
+    active
+    pending
+    failure
+    done
+}
+
+fn section_enum_extra() {
+    banner("enum extra")
+
+    counts := make(map[Status]int)
+    seq := []Status{.inactive, .active, .pending, .failure, .done, .active, .done, .done}
+    for _, s in seq {
+        counts[s]++
+    }
+    check(counts[.done] == 3, "enum count done")
+    check(counts[.active] == 2, "enum count active")
+    check(counts[.inactive] == 1, "enum count inactive")
+
+    printf("enum extra: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 87: very long type expression
+// ----------------------------------------------------------------------------
+
+fn section_long_type() {
+    banner("long type")
+
+    var v: map[str][]map[int][]^Vec3
+    v = make(map[str][]map[int][]^Vec3)
+    v["a"] = []map[int][]^Vec3{}
+    v["a"] = append(v["a"], make(map[int][]^Vec3))
+    v["a"][0][7] = []^Vec3{new(Vec3, Vec3{1, 2, 3}), new(Vec3, Vec3{4, 5, 6})}
+
+    check(v["a"][0][7][0].x == 1.0, "long type ax")
+    check(v["a"][0][7][1].z == 6.0, "long type bz")
+    check(len(v["a"][0][7]) == 2, "long type len")
+
+    printf("long type: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 88: append same slice to itself
+// ----------------------------------------------------------------------------
+
+fn section_append_self() {
+    banner("append self")
+
+    a := []int{1, 2, 3, 4}
+    b := append(copy(a), copy(a))
+    expected := []int{1, 2, 3, 4, 1, 2, 3, 4}
+    check(len(b) == len(expected), "append self length")
+    for i, v in b {
+        check(v == expected[i], "append self values")
+    }
+
+    // 'a' itself remains a 4-element slice.
+    check(len(a) == 4, "original len unchanged")
+    for i := 0; i < 4; i++ {
+        check(a[i] == i + 1, "original values unchanged")
+    }
+
+    printf("append self: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section 89: weak pointer cycle
+// ----------------------------------------------------------------------------
+
+type Cyc = struct {
+    name: str
+    nxt:  weak ^Cyc
+}
+
+fn section_weak_cycle() {
+    banner("weak cycle")
+
+    a := new(Cyc)
+    a.name = "A"
+    b := new(Cyc)
+    b.name = "B"
+    c := new(Cyc)
+    c.name = "C"
+
+    a.nxt = b
+    b.nxt = c
+    c.nxt = a
+
+    keep := []^Cyc{a, b, c}
+    check(len(keep) == 3, "cyc keep len")
+    check(a.nxt.nxt.nxt.name == "A", "cyc traversal")
+
+    printf("weak cycle: OK\n")
+}
+
+// ============================================================================
+// Extension sections: cover features missed in the original 89 sections.
+// ============================================================================
+
+// ----------------------------------------------------------------------------
+// Section X1: multi-return functions
+// ----------------------------------------------------------------------------
+
+fn divmod(a, b: int): (int, int) {
+    return a / b, a % b
+}
+
+fn triple(x: int): (int, int, int) {
+    return x, x * x, x * x * x
+}
+
+fn statLine(): (str, int, real, bool) {
+    return "umka", 42, 3.5, true
+}
+
+fn section_multi_return() {
+    banner("multi-return")
+
+    q, r := divmod(17, 5)
+    check(q == 3, "divmod q")
+    check(r == 2, "divmod r")
+
+    a, b, c := triple(4)
+    check(a == 4, "triple a")
+    check(b == 16, "triple b")
+    check(c == 64, "triple c")
+
+    // Multi-assignment to pre-existing locals.
+    var x, y: int
+    x, y = divmod(100, 7)
+    check(x == 14, "reassign q")
+    check(y == 2, "reassign r")
+
+    // Field access on the tuple result via .itemN
+    check(triple(5).item0 == 5, "tuple item0")
+    check(triple(5).item1 == 25, "tuple item1")
+    check(triple(5).item2 == 125, "tuple item2")
+
+    // Heterogeneous tuple
+    name, n, f, ok := statLine()
+    check(name == "umka", "tuple str")
+    check(n == 42, "tuple int")
+    check(f > 3.49 && f < 3.51, "tuple real")
+    check(ok, "tuple bool")
+
+    // Fuzz: divmod identity a = (a/b)*b + a%b
+    for trial := 0; trial < 200; trial++ {
+        ai := randInt() % 1_000_000
+        bi := (randInt() % 999) + 1
+        if bi == 0 { bi = 1 }
+        qq, rr := divmod(ai, bi)
+        check(qq * bi + rr == ai, "divmod identity")
+    }
+
+    printf("multi-return: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section X2: const declarations (single, grouped, implicit increment)
+// ----------------------------------------------------------------------------
+
+const kSingle = 42
+const kPi* = 3.14159265358979
+
+const (
+    kRed   = 0xFF0000
+    kGreen = 0x00FF00
+    kBlue  = 0x0000FF
+)
+
+const (
+    kE0 = 10
+    kE1
+    kE2
+    kE3 = 100
+    kE4
+    kE5
+)
+
+const (
+    kHello = "Hello"
+    kWorld = "World"
+    kBoth  = kHello + ", " + kWorld + "!"
+)
+
+const kBig = 100_000_000
+const kHex = 0xFF_FF_FF
+const kReal = 1.0e6
+
+fn section_const_decl() {
+    banner("const decl")
+
+    check(kSingle == 42, "single const")
+    check(kPi > 3.14 && kPi < 3.15, "exported const")
+
+    check(kRed   == 0xFF0000, "grouped const red")
+    check(kGreen == 0x00FF00, "grouped const green")
+    check(kBlue  == 0x0000FF, "grouped const blue")
+
+    check(kE0 == 10, "implicit base")
+    check(kE1 == 11, "implicit +1")
+    check(kE2 == 12, "implicit +2")
+    check(kE3 == 100, "reset base")
+    check(kE4 == 101, "implicit after reset")
+    check(kE5 == 102, "implicit after reset 2")
+
+    check(kBoth == "Hello, World!", "const string concat")
+
+    check(kBig == 100000000, "digit-separator decimal")
+    check(kHex == 0xFFFFFF, "digit-separator hex")
+    check(kReal > 999999.0 && kReal < 1000001.0, "real const")
+
+    // Use consts in array sizing / arithmetic.
+    var buf: [kE0]int
+    check(len(buf) == 10, "const as array size")
+    for i := 0; i < kE0; i++ {
+        buf[i] = i * kSingle
+        check(buf[i] == i * 42, "const arithmetic")
+    }
+
+    printf("const decl: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section X3: grouped var / type declarations at module scope
+//
+// Module-scope vars cannot have non-constant initializers, so the group below
+// declares uninitialised slots and the section populates them at runtime.
+// ----------------------------------------------------------------------------
+
+var (
+    gv1: int
+    gv2: str
+    gv3: []int
+    gv4: map[str]int
+)
+
+type (
+    GA = int
+    GB = str
+    GC = []GA
+    GD = struct {
+        a: GA
+        b: GB
+    }
+)
+
+fn section_grouped_decl() {
+    banner("grouped decl")
+
+    gv1 = 7
+    gv2 = "grouped"
+    gv3 = []int{1, 2, 3}
+    gv4 = map[str]int{"x": 10, "y": 20}
+
+    check(gv1 == 7, "gv1")
+    check(gv2 == "grouped", "gv2")
+    check(len(gv3) == 3, "gv3 len")
+    check(gv4["x"] == 10 && gv4["y"] == 20, "gv4 lookup")
+
+    // Type alias group.
+    var x: GA = 99
+    var s: GB = "alias"
+    var v: GC = GC{1, 2, 3, 4}
+    var d: GD = GD{a: 5, b: "five"}
+    check(x == 99, "GA value")
+    check(s == "alias", "GB value")
+    check(len(v) == 4 && v[2] == 3, "GC value")
+    check(d.a == 5 && d.b == "five", "GD value")
+
+    // Local var group.
+    var (
+        lx: int = 1
+        ly: int = 2
+        lz: int = 3
+    )
+    check(lx + ly + lz == 6, "local var group")
+
+    // Local const group inside a function.
+    const (
+        c0 = 1
+        c1
+        c2
+        c3 = 10
+        c4
+    )
+    check(c0 == 1 && c1 == 2 && c2 == 3, "local const inc")
+    check(c3 == 10 && c4 == 11, "local const reset")
+
+    printf("grouped decl: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section X4: cap() built-in on slices and strings
+// ----------------------------------------------------------------------------
+
+fn section_cap_builtin() {
+    banner("cap builtin")
+
+    a := make([]int, 0)
+    prevCap := cap(a)
+    growths := 0
+    for i := 0; i < 1000; i++ {
+        a = append(a, i)
+        if cap(a) != prevCap {
+            growths++
+            prevCap = cap(a)
+        }
+    }
+    check(len(a) == 1000, "cap test final len")
+    check(cap(a) >= 1000, "cap >= len after appends")
+    check(growths > 0, "cap grew at least once")
+    check(growths < 200, "cap growth amortized")
+
+    // String cap includes the terminating NUL.
+    s := "hello"
+    check(len(s) == 5, "str len")
+    check(cap(s) >= 6, "str cap >= len+1")
+
+    // Pre-sized slice has cap == len initially.
+    b := make([]int, 50)
+    check(len(b) == 50, "make len")
+    check(cap(b) >= 50, "make cap")
+
+    // copy() preserves logical length.
+    c := copy(a)
+    check(len(c) == len(a), "copy len")
+    for i, v in c {
+        check(v == a[i], "copy values")
+    }
+
+    printf("cap builtin: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section X5: sort with a custom comparator function
+// ----------------------------------------------------------------------------
+
+type SItem = struct {
+    key:  int
+    name: str
+}
+
+fn cmpItemAsc(a, b: ^SItem): int {
+    return a.key - b.key
+}
+
+fn cmpItemDesc(a, b: ^SItem): int {
+    return b.key - a.key
+}
+
+fn cmpItemByName(a, b: ^SItem): int {
+    if a.name < b.name { return -1 }
+    if a.name > b.name { return  1 }
+    return 0
+}
+
+fn section_sort_compare() {
+    banner("sort compare")
+
+    n := 200
+    items := make([]SItem, n)
+    for i := 0; i < n; i++ {
+        items[i] = SItem{key: int(rand32() % 1000), name: sprintf("nm%04d", i)}
+    }
+
+    asc := copy(items)
+    sort(asc, cmpItemAsc)
+    for i := 0; i < len(asc) - 1; i++ {
+        check(asc[i].key <= asc[i + 1].key, "asc sorted")
+    }
+
+    desc := copy(items)
+    sort(desc, cmpItemDesc)
+    for i := 0; i < len(desc) - 1; i++ {
+        check(desc[i].key >= desc[i + 1].key, "desc sorted")
+    }
+
+    byName := copy(items)
+    sort(byName, cmpItemByName)
+    for i := 0; i < len(byName) - 1; i++ {
+        check(byName[i].name <= byName[i + 1].name, "byName sorted")
+    }
+
+    // Inline closure-style comparator.
+    nums := []int{5, 3, 8, 1, 9, 4, 7, 2, 6, 0}
+    sort(nums, fn (a, b: ^int): int { return a^ - b^ })
+    for i := 0; i < len(nums); i++ {
+        check(nums[i] == i, "inline cmp")
+    }
+
+    // Empty array — comparator must not be called.
+    called := false
+    sort([]int{}, fn (a, b: ^int): int |called| { called = true; return 0 })
+    check(!called, "empty array no cmp call")
+
+    printf("sort compare: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section X6: std.assert / std.exitif / std.error
+// ----------------------------------------------------------------------------
+
+fn safeDiv(a, b: int): (int, std::Err) {
+    if b == 0 {
+        return 0, std::error(1, "division by zero", "safeDiv")
+    }
+    return a / b, std::Err{}
+}
+
+fn section_std_assert() {
+    banner("std assert")
+
+    // Plain asserts that should pass.
+    std::assert(true)
+    std::assert(1 + 1 == 2, "arithmetic")
+    std::assert("a" + "b" == "ab", "concat")
+
+    // exitif of a zero (no-op) Err.
+    var ok: std::Err
+    std::exitif(ok)
+
+    // Construct an error and inspect its fields.
+    e := std::error(42, "boom", "test")
+    check(e.code == 42, "err code")
+    check(e.msg == "boom", "err msg")
+    check(len(e.trace) > 0, "err has trace")
+
+    // safeDiv happy + sad paths.
+    q, err := safeDiv(10, 2)
+    check(q == 5, "safeDiv ok value")
+    check(err.code == 0, "safeDiv ok no err")
+
+    q2, err2 := safeDiv(10, 0)
+    check(q2 == 0, "safeDiv zero")
+    check(err2.code == 1, "safeDiv err code")
+    check(err2.msg == "division by zero", "safeDiv err msg")
+
+    // Fuzz: 1000 asserts on random invariants.
+    for i := 0; i < 1000; i++ {
+        x := randInt() % 1000
+        std::assert(x * 2 / 2 == x || x % 2 != 0, "div2")
+        std::assert(x + 0 == x, "+0")
+        std::assert(x - x == 0, "-self")
+    }
+
+    printf("std assert: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section X7: reflection-ish built-ins
+//   sizeof / sizeofself / selfptr / selfhasptr / selftypeeq / valid /
+//   validkey / keys / typeptr
+// ----------------------------------------------------------------------------
+
+type RBox = struct {
+    a: int
+    b: real
+    c: str
+}
+
+type RIface = interface {
+    label(): str
+}
+
+type RAtom = struct {
+    n: int
+}
+
+fn (a: ^RAtom) label(): str {
+    return sprintf("atom-%d", a.n)
+}
+
+type RPair = struct {
+    p: ^RAtom
+    q: ^RAtom
+}
+
+fn (r: ^RPair) label(): str {
+    return r.p.label() + "/" + r.q.label()
+}
+
+fn section_reflection() {
+    banner("reflection")
+
+    // sizeof on type and value.
+    sb := sizeof(RBox)
+    si := sizeof(int)
+    sc := sizeof(char)
+    check(sb > 0, "sizeof RBox > 0")
+    check(si == 8, "sizeof int == 8")
+    check(sc == 1, "sizeof char == 1")
+
+    var box: RBox
+    check(sizeof(box) == sb, "sizeof(value) == sizeof(type)")
+
+    // sizeofself / selfhasptr / selfptr on interface vars.
+    a := RAtom{n: 7}
+    var ia: RIface = &a
+    check(sizeofself(ia) > 0, "sizeofself > 0")
+    selfhasptr(ia)
+    check(selfptr(ia) != null, "selfptr non-null")
+
+    p := RPair{p: &a, q: &a}
+    var ip: RIface = &p
+    check(sizeofself(ip) > 0, "sizeofself ip > 0")
+    check(selfhasptr(ip), "selfhasptr for pair (has ptrs)")
+
+    // selftypeeq
+    var ia2: RIface = &a
+    check(selftypeeq(ia, ia2), "same dynamic type")
+    check(!selftypeeq(ia, ip), "different dynamic type")
+
+    // valid() on slices/maps/interfaces/fibers/closures
+    var nilArr: []int
+    check(!valid(nilArr), "nil slice not valid")
+    nilArr = []int{1, 2, 3}
+    check(valid(nilArr), "init slice valid")
+
+    var nilMap: map[str]int
+    check(!valid(nilMap), "nil map not valid")
+    nilMap = make(map[str]int)
+    check(valid(nilMap), "init map valid")
+
+    var nilIface: RIface
+    check(!valid(nilIface), "nil iface not valid")
+    nilIface = &a
+    check(valid(nilIface), "init iface valid")
+
+    var nilFn: fn(): int
+    check(!valid(nilFn), "nil fn not valid")
+    nilFn = fn (): int { return 1 }
+    check(valid(nilFn), "init fn valid")
+
+    var nilFib: fiber
+    check(!valid(nilFib), "nil fiber not valid")
+
+    // validkey / keys
+    m := map[str]int{"a": 1, "b": 2, "c": 3}
+    check(validkey(m, "a"), "validkey a")
+    check(!validkey(m, "z"), "validkey missing")
+    ks := keys(m)
+    check(len(ks) == 3, "keys len")
+    seen := map[str]bool{}
+    for _, k in ks {
+        seen[k] = true
+    }
+    check(seen["a"] && seen["b"] && seen["c"], "keys content")
+
+    printf("reflection: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section X8: alternate integer widths
+//   int8, int16, int64, uint16, uint64
+// ----------------------------------------------------------------------------
+
+fn section_int_widths() {
+    banner("int widths")
+
+    // int8: range [-128, 127]
+    var i8: int8 = 127
+    check(int(i8) == 127, "int8 max")
+    i8 = -128
+    check(int(i8) == -128, "int8 min")
+
+    // int16: range [-32768, 32767]
+    var i16: int16 = 32767
+    check(int(i16) == 32767, "int16 max")
+    i16 = -32768
+    check(int(i16) == -32768, "int16 min")
+
+    // uint16
+    var u16: uint16 = 0xFFFF
+    check(int(u16) == 65535, "uint16 max")
+
+    // Arithmetic in each width.
+    var sum8: int8 = 0
+    for k := 0; k < 100; k++ {
+        sum8 += int8(k % 3)
+    }
+    check(int(sum8) == 99, "int8 sum")
+
+    var sum16: int16 = 0
+    for k := 0; k < 1000; k++ {
+        sum16 += int16(k % 7)
+    }
+    check(int(sum16) > 0, "int16 sum positive")
+
+    // Mixed widths via conversion.
+    var a16: int16 = 1000
+    var a32: int32 = int32(a16) * 1000
+    var a64: int   = int(a32) * 1000
+    check(a64 == 1000000000, "ladder mul")
+
+    // uint16 near-max (Umka traps on overflow, so don't wrap past max).
+    var w: uint16 = 65534
+    w += 1
+    check(int(w) == 65535, "uint16 near max")
+
+    printf("int widths: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section X9: real32 arithmetic
+// ----------------------------------------------------------------------------
+
+fn section_real32() {
+    banner("real32")
+
+    var x: real32 = 1.5
+    var y: real32 = 2.25
+    z := x + y
+    check(real(z) > 3.749 && real(z) < 3.751, "real32 add")
+
+    var pi32: real32 = 3.14159265
+    var area: real32 = pi32 * 5.0 * 5.0
+    check(real(area) > 78.5 && real(area) < 78.6, "real32 area")
+
+    // Loop accumulation.
+    var s: real32 = 0
+    for i := 0; i < 1000; i++ {
+        s += 0.001
+    }
+    check(real(s) > 0.99 && real(s) < 1.01, "real32 accum")
+
+    // Round-trip through real.
+    var r64: real = 12.5
+    var r32: real32 = real32(r64)
+    check(real(r32) > 12.49 && real(r32) < 12.51, "real round-trip")
+
+    // sqrt / sin via promotion to real.
+    var rs: real32 = real32(sqrt(real(area)))
+    check(real(rs) > 8.85 && real(rs) < 8.87, "real32 sqrt")
+
+    printf("real32: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section X10: method dispatch on values vs pointers (Umka uses pointer rcvrs)
+// ----------------------------------------------------------------------------
+
+type VRec = struct {
+    x, y: int
+}
+
+fn (v: ^VRec) sum(): int {
+    return v.x + v.y
+}
+
+fn (v: ^VRec) scaleInPlace(k: int) {
+    v.x *= k
+    v.y *= k
+}
+
+fn (v: ^VRec) plus(o: VRec): VRec {
+    return VRec{x: v.x + o.x, y: v.y + o.y}
+}
+
+fn section_value_receiver() {
+    banner("method call forms")
+
+    v := VRec{x: 3, y: 4}
+    // Auto address-of on value designators.
+    check(v.sum() == 7, "method on value designator")
+
+    // Explicit pointer call.
+    p := &v
+    check(p.sum() == 7, "method on pointer")
+
+    // Mutating method.
+    p.scaleInPlace(10)
+    check(v.x == 30 && v.y == 40, "scaleInPlace mutates")
+
+    // Method chain (each step returns a new value, so we take address again).
+    w := v.plus(VRec{x: 1, y: 1})
+    check(w.x == 31 && w.y == 41, "method returns new")
+    check(v.x == 30 && v.y == 40, "no mutation by plus")
+
+    // Method on element of slice (auto address-of on indexed designator).
+    arr := []VRec{VRec{x: 1, y: 2}, VRec{x: 10, y: 20}}
+    check(arr[0].sum() == 3, "method on slice element")
+    arr[1].scaleInPlace(2)
+    check(arr[1].x == 20 && arr[1].y == 40, "mutating slice element via method")
+
+    printf("method call forms: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section X11: slice() builtin edge cases
+// ----------------------------------------------------------------------------
+
+fn section_slice_expr() {
+    banner("slice edges")
+
+    a := []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
+
+    head := slice(a, 0, 3)
+    check(len(head) == 3, "head len")
+    check(head[0] == 0 && head[2] == 2, "head values")
+
+    tail := slice(a, 7)
+    check(len(tail) == 3, "tail len")
+    check(tail[0] == 7 && tail[2] == 9, "tail values")
+
+    full := slice(a, 0, len(a))
+    check(len(full) == 10, "full len")
+    for i, v in full {
+        check(v == a[i], "full values")
+    }
+
+    mid := slice(a, 2, 6)
+    check(len(mid) == 4 && mid[0] == 2 && mid[3] == 5, "mid")
+
+    // Negative endIndex: len(a) is added.
+    neg := slice(a, 2, -2)
+    check(len(neg) == 6, "negative end len")
+    check(neg[0] == 2 && neg[5] == 7, "negative end values")
+
+    // Strings.
+    s := "abcdefghij"
+    check(slice(s, 0, 3) == "abc", "str head")
+    check(slice(s, 7) == "hij", "str tail")
+    check(slice(s, 2, 6) == "cdef", "str mid")
+    check(slice(s, 0, -3) == "abcdefg", "str neg end")
+
+    // Empty slices.
+    e1 := slice(a, 5, 5)
+    check(len(e1) == 0, "empty mid")
+    e2 := slice(a, len(a))
+    check(len(e2) == 0, "empty at end")
+
+    // Random fuzz comparing two equivalent calls.
+    for trial := 0; trial < 100; trial++ {
+        lo := int(rand32() % uint32(len(a) + 1))
+        hi := lo + int(rand32() % uint32(len(a) - lo + 1))
+        s1 := slice(a, lo, hi)
+        s2 := slice(slice(a, 0, len(a)), lo, hi)
+        check(len(s1) == len(s2), "slice round-trip len")
+        for i, v in s1 {
+            check(v == s2[i], "slice round-trip values")
+        }
+    }
+
+    printf("slice edges: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section X12: multi-line back-quoted strings and escape sequences
+// ----------------------------------------------------------------------------
+
+const kMultiLine = `line one
+line two
+line three`
+
+const kEscaped = "tab:\there\nnl-end\n"
+
+const kHexEsc = "\x41\x42\x43"
+
+fn section_multiline_str() {
+    banner("multiline str")
+
+    // Backtick literal: newlines preserved, no escape interpretation.
+    check(len(kMultiLine) == len("line one") + 1 + len("line two") + 1 + len("line three"), "backtick len")
+    // First character is 'l'.
+    check(kMultiLine[0] == 'l', "backtick first char")
+    // Count newlines.
+    nl := 0
+    for i := 0; i < len(kMultiLine); i++ {
+        if kMultiLine[i] == '\n' {
+            nl++
+        }
+    }
+    check(nl == 2, "backtick newline count")
+
+    // Quoted literal: escape sequences interpreted.
+    check(kEscaped[4] == '\t', "tab esc")
+    found := false
+    for i := 0; i < len(kEscaped); i++ {
+        if kEscaped[i] == '\n' {
+            found = true
+            break
+        }
+    }
+    check(found, "nl esc")
+
+    // Hex escapes
+    check(kHexEsc == "ABC", "hex escapes")
+    check(kHexEsc[0] == 'A' && kHexEsc[1] == 'B' && kHexEsc[2] == 'C', "hex esc chars")
+
+    // Mix of supported escapes (Umka supports: \\ \" \' \a \b \e \f \n \r \t \v \xHH).
+    // Note: \0 / \x00 cannot be embedded in a string literal because the lexer
+    // bails on any NUL byte even when it came from an escape (see umka_lexer.c
+    // "Unterminated string" check); so we keep \0 out of this literal.
+    s := "\n\t\r\v\f\b\\\"\'"
+    check(len(s) == 9, "all escapes length")
+    check(s[0] == '\n', "nl esc")
+    check(s[1] == '\t', "tab esc")
+    check(s[2] == '\r', "cr esc")
+    check(s[3] == '\v', "v esc")
+    check(s[4] == '\f', "f esc")
+    check(s[5] == '\b', "b esc")
+    check(s[6] == '\\', "backslash esc")
+    check(s[7] == '\"', "dquote esc")
+    check(s[8] == '\'', "squote esc")
+
+    // \\, \", \' also work individually.
+    bs := "\\"
+    dq := "\""
+    sq := "\'"
+    check(len(bs) == 1 && int(bs[0]) == 92, "single backslash escape")
+    check(len(dq) == 1 && int(dq[0]) == 34, "single dquote escape")
+    check(len(sq) == 1 && int(sq[0]) == 39, "single squote escape")
+
+    // \xHH produces a specific byte.
+    s0 := "a\x41\x42"
+    check(len(s0) == 3, "hex byte length")
+    check(s0[1] == 'A' && s0[2] == 'B', "hex byte values")
+
+    printf("multiline str: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section X13: digit separators
+// ----------------------------------------------------------------------------
+
+fn section_digit_sep() {
+    banner("digit sep")
+
+    check(1_000 == 1000, "decimal sep")
+    check(1_000_000 == 1000000, "decimal sep large")
+    check(0xFF_FF == 65535, "hex sep")
+    check(0xDEAD_BEEF == 0xDEADBEEF, "hex sep deadbeef")
+
+    // Underscores in real literals are allowed in the integer part.
+    r := 1_000.5
+    check(r > 1000.49 && r < 1000.51, "real with sep")
+
+    // Hex with single separator.
+    check(0x1_0 == 16, "hex small sep")
+
+    // Mixed in expressions.
+    var sum: int = 0
+    for i := 0; i < 1_000; i++ {
+        sum += 1
+    }
+    check(sum == 1000, "loop count with sep")
+
+    printf("digit sep: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section X14: for k, v in map
+// ----------------------------------------------------------------------------
+
+fn section_for_in_map() {
+    banner("for in map")
+
+    m := map[str]int{}
+    for i := 0; i < 50; i++ {
+        m[sprintf("key%02d", i)] = i * 10
+    }
+
+    // Iterate k, v and verify each pair.
+    seen := 0
+    sum := 0
+    for k, v in m {
+        check(validkey(m, k), "key exists during iter")
+        check(m[k] == v, "value matches map lookup")
+        sum += v
+        seen++
+    }
+    check(seen == 50, "for-in-map full count")
+    expected := 0
+    for i := 0; i < 50; i++ {
+        expected += i * 10
+    }
+    check(sum == expected, "for-in-map sum")
+
+    // Iterate k only.
+    countKeys := 0
+    for k in m {
+        if len(k) == 5 {
+            countKeys++
+        }
+    }
+    check(countKeys == 50, "key-only iter")
+
+    // Iterate map of struct.
+    type PPP = struct { x, y: int }
+    mp := map[int]PPP{
+        1: PPP{x: 1, y: 10},
+        2: PPP{x: 2, y: 20},
+        3: PPP{x: 3, y: 30},
+    }
+    total := 0
+    for k, v in mp {
+        total += k * v.y
+    }
+    check(total == 1*10 + 2*20 + 3*30, "map of struct iter")
+
+    // Modify map during separate phase (after collecting keys).
+    ks := keys(m)
+    for _, k in ks {
+        m[k] = m[k] + 1
+    }
+    for k, v in m {
+        // original value was multiple of 10; now +1.
+        check(v % 10 == 1, "post-update mod")
+    }
+
+    printf("for in map: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section X15: memusage() before/after allocations
+// ----------------------------------------------------------------------------
+
+fn section_memusage() {
+    banner("memusage")
+
+    before := memusage()
+    check(before >= 0, "memusage non-negative")
+
+    // Allocate a large slice and a large map.
+    a := make([]int, 100000)
+    m := map[int]str{}
+    for i := 0; i < 5000; i++ {
+        m[i] = sprintf("v%06d", i)
+    }
+
+    during := memusage()
+    check(during > before, "memusage grew with allocations")
+
+    // Touch the allocations so the optimizer can't elide them.
+    sum := 0
+    for i, v in a {
+        a[i] = i
+        sum += v
+    }
+    check(sum == 0, "fresh slice zeroes")
+    check(len(m) == 5000, "map populated")
+
+    // Drop references; reclaim should happen via RC.
+    a = []int{}
+    m = map[int]str{}
+    after := memusage()
+    check(after <= during, "memusage dropped after release")
+
+    printf("memusage: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section X16: null comparisons across dynamic types
+// ----------------------------------------------------------------------------
+
+type NIface = interface {
+    name(): str
+}
+
+type NImpl = struct { tag: int }
+
+fn (n: ^NImpl) name(): str { return sprintf("tag%d", n.tag) }
+
+fn section_null_compare() {
+    banner("null compare")
+
+    // Pointer.
+    var p: ^int
+    check(p == null, "nil ptr == null")
+    check(!(p != null), "nil ptr not != null")
+    x := 5
+    p = &x
+    check(p != null, "ptr to var != null")
+    check(!(p == null), "ptr to var not == null")
+
+    // Dynamic array uninitialised vs initialised.
+    var s: []int
+    check(!valid(s), "nil slice invalid")
+    s = []int{1, 2, 3}
+    check(valid(s), "slice now valid")
+
+    // Map uninitialised vs initialised.
+    var m: map[str]int
+    check(!valid(m), "nil map invalid")
+    m = map[str]int{"a": 1}
+    check(valid(m), "map now valid")
+
+    // Interface.
+    var i: NIface
+    check(!valid(i), "nil iface invalid")
+    impl := NImpl{tag: 42}
+    i = &impl
+    check(valid(i), "iface now valid")
+    check(i.name() == "tag42", "iface dispatch")
+
+    // Closure variable.
+    var f: fn(x: int): int
+    check(!valid(f), "nil closure invalid")
+    f = fn(x: int): int { return x + 1 }
+    check(valid(f), "closure now valid")
+    check(f(7) == 8, "closure call")
+
+    // Fiber.
+    var fb: fiber
+    check(!valid(fb), "nil fiber invalid")
+    fb = make(fiber, fn() {})
+    check(valid(fb), "fiber now valid")
+    resume(fb)
+    check(!valid(fb), "fiber completed -> invalid")
+
+    printf("null compare: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section X17: type switch with default + bound variable
+// ----------------------------------------------------------------------------
+
+fn classifyKind(x: any): str {
+    switch v := type(x) {
+        case int:
+            return sprintf("int(%d)", v)
+        case real:
+            return sprintf("real(%f)", v)
+        case str:
+            return sprintf("str(%s)", v)
+        case bool:
+            if v { return "bool(true)" }
+            return "bool(false)"
+        default:
+            return "other"
+    }
+    return ""
+}
+
+fn section_type_switch_default() {
+    banner("type switch default")
+
+    check(classifyKind(42) == "int(42)", "tsw int")
+    check(classifyKind("hi") == "str(hi)", "tsw str")
+    check(classifyKind(true) == "bool(true)", "tsw bool true")
+    check(classifyKind(false) == "bool(false)", "tsw bool false")
+
+    r := classifyKind(2.5)
+    check(len(r) >= 8 && slice(r, 0, 5) == "real(", "tsw real prefix")
+
+    // Default branch: pass a slice (not int/real/str/bool).
+    check(classifyKind([]int{1, 2}) == "other", "tsw default slice")
+    check(classifyKind(map[str]int{}) == "other", "tsw default map")
+
+    // Fuzz with mixed types.
+    cnt := 0
+    for i := 0; i < 200; i++ {
+        var a: any
+        switch i % 4 {
+            case 0: a = i
+            case 1: a = real(i) + 0.5
+            case 2: a = sprintf("s%d", i)
+            case 3: a = (i % 2) == 0
+        }
+        if len(classifyKind(a)) > 0 { cnt++ }
+    }
+    check(cnt == 200, "tsw fuzz count")
+
+    printf("type switch default: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section X18: default parameters with composite default values
+// ----------------------------------------------------------------------------
+
+fn greet2(name: str = "world", greeting: str = "Hello", punct: char = '!'): str {
+    return greeting + ", " + name + sprintf("%c", punct)
+}
+
+fn padInt(x: int, width: int = 4, pad: char = '0'): str {
+    s := sprintf("%d", x)
+    for len(s) < width {
+        s = sprintf("%c", pad) + s
+    }
+    return s
+}
+
+fn sumDef(a: int = 1, b: int = 2, c: int = 3, d: int = 4): int {
+    return a + b + c + d
+}
+
+fn section_default_complex() {
+    banner("default complex")
+
+    check(greet2() == "Hello, world!", "all defaults")
+    check(greet2("Umka") == "Hello, Umka!", "one positional")
+    check(greet2("Umka", "Hi") == "Hi, Umka!", "two positional")
+    check(greet2("Umka", "Hi", '?') == "Hi, Umka?", "all positional")
+
+    check(padInt(7) == "0007", "pad default width")
+    check(padInt(7, 6) == "000007", "pad custom width")
+    check(padInt(7, 6, ' ') == "     7", "pad custom char")
+
+    check(sumDef() == 10, "sum all default")
+    check(sumDef(10) == 19, "sum one override")
+    check(sumDef(10, 20) == 37, "sum two override")
+    check(sumDef(10, 20, 30, 40) == 100, "sum all override")
+
+    printf("default complex: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section X19: typeptr round-trip
+// ----------------------------------------------------------------------------
+
+fn section_typeptr() {
+    banner("typeptr")
+
+    t1 := typeptr(int)
+    t2 := typeptr(int)
+    t3 := typeptr(str)
+    check(t1 == t2, "same type same ptr")
+    check(t1 != t3, "different type different ptr")
+    check(t1 != null, "typeptr not null")
+
+    t4 := typeptr([]int)
+    t6 := typeptr([]real)
+    check(t4 != null, "slice typeptr not null")
+    check(t4 != t6, "slice item type differs")
+
+    printf("typeptr: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section X20: any with complex payloads round-trip
+// ----------------------------------------------------------------------------
+
+type AnyBox = struct {
+    label: str
+    payload: any
+}
+
+fn section_any_complex() {
+    banner("any complex")
+
+    boxes := []AnyBox{
+        AnyBox{label: "int",   payload: 42},
+        AnyBox{label: "real",  payload: 3.14},
+        AnyBox{label: "str",   payload: "umka"},
+        AnyBox{label: "slice", payload: []int{1, 2, 3}},
+        AnyBox{label: "map",   payload: map[str]int{"a": 1}},
+    }
+
+    counts := map[str]int{}
+    for _, b in boxes {
+        switch v := type(b.payload) {
+            case int:           counts["int"] = v
+            case real:          counts["real"] = trunc(v * 100)
+            case str:           counts["str"] = len(v)
+            case []int:         counts["slice"] = len(v)
+            case map[str]int:   counts["map"] = len(v)
+            default:            counts["other"] = -1
+        }
+    }
+    check(counts["int"] == 42, "any int")
+    check(counts["real"] == 314, "any real")
+    check(counts["str"] == 4, "any str len")
+    check(counts["slice"] == 3, "any slice len")
+    check(counts["map"] == 1, "any map len")
+
+    // Round-trip int via any via type assertion in a switch.
+    sum := 0
+    for i := 0; i < 1000; i++ {
+        var a: any = i
+        switch v := type(a) {
+            case int: sum += v
+        }
+    }
+    check(sum == 1000 * 999 / 2, "any int sum")
+
+    printf("any complex: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// main
+// ----------------------------------------------------------------------------
+
+fn test*() {
+    printf("Umka fuzz: starting at seed=0x%llx\n", prngState)
+
+    section_int_arith()
+    section_float_arith()
+    section_bitwise()
+    section_strings_basic()
+    section_strings_fuzz()
+    section_intslice_fuzz()
+    section_nested_slices()
+    section_static_arrays()
+    section_map_int_fuzz()
+    section_map_str()
+    section_map_struct_keys()
+    section_recursion()
+    section_mutual_recursion()
+    section_closures()
+    section_interfaces()
+    section_type_switch()
+    section_variadic()
+    section_default_params()
+    section_ternary()
+    section_enums()
+    section_sorting()
+    section_fibers()
+    section_fibers_many()
+    section_weak_pointers()
+    section_errors()
+    section_any()
+    section_format()
+    section_gc_stress()
+    section_gc_churn()
+    section_fnptr_map()
+    section_slice_aliasing()
+    section_append_growth()
+    section_struct_fuzz()
+    section_many_locals()
+    section_deep_nesting()
+    section_switch()
+    section_short_circuit()
+    section_map_iter()
+    section_string_bytes()
+    section_pointer_basic()
+    section_loop_stability()
+    section_iface_collections()
+    section_conversions()
+    section_std_strings()
+    section_any_map()
+    section_comparisons()
+    section_mini_program()
+    section_big_map_drop()
+    section_stats()
+    section_cleanup()
+    section_recursive_closure()
+    section_many_params()
+    section_method_chain()
+    section_map_of_maps()
+    section_struct_slice_sort()
+    section_break_continue()
+    section_long_sprintf()
+    section_closure_gc()
+    section_mixed_arith()
+    section_shuffle()
+    section_stack()
+    section_queue()
+    section_prng_repro()
+    section_aliases()
+    section_deep_recursion()
+    section_string_slice()
+    section_format_edge()
+    section_enum_roundtrip()
+    section_nested_closure_param()
+    section_fiber_in_closure()
+    section_modcycle()
+    section_dispatch_slice()
+    section_bool_slice()
+    section_byte_buffer()
+    section_histogram()
+    section_repeat()
+    section_pascal()
+    section_char_arith()
+    section_life_step()
+    section_distribution()
+    section_gcd()
+    section_assign_ops()
+    section_random_walk()
+    section_matmul()
+    section_short_circuit_ptr()
+    section_enum_extra()
+    section_long_type()
+    section_append_self()
+    section_weak_cycle()
+
+    // ---- extension sections ----
+    section_multi_return()
+    section_const_decl()
+    section_grouped_decl()
+    section_cap_builtin()
+    section_sort_compare()
+    section_std_assert()
+    section_reflection()
+    section_int_widths()
+    section_real32()
+    section_value_receiver()
+    section_slice_expr()
+    section_multiline_str()
+    section_digit_sep()
+    section_for_in_map()
+    section_memusage()
+    section_null_compare()
+    section_type_switch_default()
+    section_default_complex()
+    section_typeptr()
+    section_any_complex()
+
+    printf("\n========================================\n")
+    printf("All fuzz sections completed successfully.\n")
+    printf("========================================\n")
+}
