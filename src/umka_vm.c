@@ -1441,6 +1441,9 @@ static FORCE_INLINE void doAllocDynArray(HeapPages *pages, DynArray *array, cons
     array->type     = type;
     array->itemSize = array->type->base->size;
 
+    if (UNLIKELY(len < 0 || len > INT_MAX))
+        error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal array length");    
+
     DynArrayDimensions dims = {.len = len, .capacity = 2 * (len + 1)};
 
     if (dims.capacity * array->itemSize > INT_MAX - MEM_MIN_FREE_HEAP)
