@@ -22,12 +22,14 @@
 
 void errorReportInit(UmkaError *report, Storage *storage, const char *fileName, const char *fnName, int line, int pos, int code, const char *format, va_list args)
 {
-    char *reportFileName = storageAdd(storage, strlen(fileName) + 1);
-    strcpy(reportFileName, fileName);
+    size_t fileNameLen = strlen(fileName);
+    char *reportFileName = storageAdd(storage, fileNameLen + 1);
+    memcpy(reportFileName, fileName, fileNameLen + 1);
     report->fileName = reportFileName;
 
-    char *reportFnName = storageAdd(storage, strlen(fnName) + 1);
-    strcpy(reportFnName, fnName);
+    size_t fnNameLen = strlen(fnName);
+    char *reportFnName = storageAdd(storage, fnNameLen + 1);
+    memcpy(reportFnName, fnName, fnNameLen + 1);
     report->fnName = reportFnName;
 
     report->line = line;
@@ -255,8 +257,12 @@ void moduleNameFromPath(const Modules *modules, const char *path, char *folder, 
     if (stop <= start)
         modules->error->handler(modules->error->context, "Illegal module path %s", path);
 
-    strncpy(folder, path, (start - path < size - 1) ? (start - path) : (size - 1));
-    strncpy(name, start,  (stop - start < size - 1) ? (stop - start) : (size - 1));
+    int folderLen = (int)((start - path < size - 1) ? (start - path) : (size - 1));
+    memcpy(folder, path, folderLen);
+    folder[folderLen] = '\0';
+    int nameLen = (int)((stop - start < size - 1) ? (stop - start) : (size - 1));
+    memcpy(name, start, nameLen);
+    name[nameLen] = '\0';
 
     folder[size - 1] = 0;
     name[size - 1] = 0;
@@ -304,13 +310,13 @@ int moduleAdd(Modules *modules, const char *path)
 
     Module *module = storageAdd(modules->storage, sizeof(Module));
 
-    strncpy(module->path, path, DEFAULT_STR_LEN);
+    snprintf(module->path, DEFAULT_STR_LEN + 1, "%s", path);
     module->path[DEFAULT_STR_LEN] = 0;
 
-    strncpy(module->folder, folder, DEFAULT_STR_LEN);
+    snprintf(module->folder, DEFAULT_STR_LEN + 1, "%s", folder);
     module->folder[DEFAULT_STR_LEN] = 0;
 
-    strncpy(module->name, name, DEFAULT_STR_LEN);
+    snprintf(module->name, DEFAULT_STR_LEN + 1, "%s", name);
     module->name[DEFAULT_STR_LEN] = 0;
 
     if (modules->implLibsEnabled)
@@ -333,7 +339,7 @@ int moduleAdd(Modules *modules, const char *path)
 
     // Self-import
     module->importAlias[modules->numModules] = storageAdd(modules->storage, DEFAULT_STR_LEN + 1);
-    strcpy(module->importAlias[modules->numModules], name);
+    snprintf(module->importAlias[modules->numModules], DEFAULT_STR_LEN + 1, "%s", name);
 
     module->isCompiled = false;
 
