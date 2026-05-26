@@ -14,7 +14,7 @@ type (
 	}
 )
 
-fn test*() {
+fn test1() {
 	arrtree := ArrNode{
 		"node1",
 		{
@@ -48,6 +48,22 @@ fn test*() {
 	maptree.children["child2"].children["child21"] = {"node121", {}}
 
 	printf("%llv\n\n%llv\n", arrtree, maptree)
+}
+
+type T = struct {
+    data: int
+    children: []T
+}
+
+fn test2() {
+    a := T{42, {T{data: 13}, T{data: 14}}}
+    b := T{42, {T{data: 13}, T{data: 14}}}
+    MapNode::assert(a == b)
+}
+
+fn test*() {
+	test1()
+	test2()
 }
 
 fn main() {

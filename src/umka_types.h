@@ -174,10 +174,17 @@ typedef struct tagType
 } Type;
 
 
+typedef struct tagVisitedType
+{
+    const Type *type;
+    const struct tagVisitedType *next;
+} VisitedType;
+
+
 typedef struct tagVisitedTypePair
 {
     const Type *left, *right;
-    struct tagVisitedTypePair *next;
+    const struct tagVisitedTypePair *next;
 } VisitedTypePair;
 
 
