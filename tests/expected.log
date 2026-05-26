@@ -1739,6 +1739,51 @@ typeptr: OK
 ====== any complex ======
 any complex: OK
 
+====== rc deep chain ======
+rc deep chain: OK
+
+====== rc wide share ======
+rc wide share: OK
+
+====== rc cycle weak ======
+rc cycle weak: OK
+
+====== rc cycle manual break ======
+rc cycle manual break: OK
+
+====== rc map churn ======
+rc map churn: OK
+
+====== rc slice churn ======
+rc slice churn: OK
+
+====== rc closure capture ======
+rc closure capture: OK
+
+====== rc interface box ======
+rc interface box: OK
+
+====== rc string churn ======
+rc string churn: OK
+
+====== rc tilemap-like ======
+rc tilemap-like: OK
+
+====== rc fiber data ======
+rc fiber data: OK
+
+====== rc swap storm ======
+rc swap storm: OK
+
+====== rc self replace ======
+rc self replace: OK
+
+====== rc append inplace ======
+rc append inplace: OK
+
+====== rc entity graph ======
+rc entity graph: OK
+
 ========================================
 All fuzz sections completed successfully.
 ========================================

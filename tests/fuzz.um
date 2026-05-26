@@ -4268,9 +4268,1005 @@ fn section_any_complex() {
     printf("any complex: OK\n")
 }
 
+// ============================================================================
+// Reference-counting stress tests.
+//
+// These sections exercise the RC machinery harder than the original
+// `section_memusage` does: deep linked structures, wide sharing, deliberate
+// cycles broken by weak pointers or by hand, churn through maps/slices/strings,
+// closures capturing heap state, interface boxing, fibers that own state,
+// rapid swaps, and self-replacing pointers.
+//
+// Each section sandwiches its work between memusage() snapshots and checks
+// that the live byte count returns to (roughly) the baseline. A small slack
+// is allowed because some sections leave a small residual (e.g. the section's
+// own locals are alive until return); the goal is not exact equality but
+// catching outright leaks where the residual grows with the workload.
 // ----------------------------------------------------------------------------
-// main
+
+const (
+    // Absolute slack: accounts for transient allocator bookkeeping, retained
+    // map buckets, intermediate stringification, and other small residuals.
+    kRcSlackBytesAbs = 16 * 1024 * 1024  // 16 MB
+    // Relative slack: tolerated drift as a fraction of the entry baseline.
+    // memusage() is process-wide, so a few percent drift around a large
+    // baseline is normal and not indicative of a leak.
+    kRcSlackPercent = 5
+)
+
+fn rcCheckRelease(before, after: int, tag: str) {
+    delta := after - before
+    if delta <= 0 {
+        return
+    }
+    limit := kRcSlackBytesAbs
+    rel := before / 100 * kRcSlackPercent
+    if rel > limit {
+        limit = rel
+    }
+    if delta > limit {
+        printf("RC LEAK in %s: before=%d after=%d delta=%d limit=%d\n",
+               tag, before, after, delta, limit)
+        check(false, "rc release: " + tag)
+    }
+}
+
 // ----------------------------------------------------------------------------
+// Section R1: deep linked list
+// ----------------------------------------------------------------------------
+
+type LNode = struct {
+    val:  int
+    next: ^LNode
+}
+
+fn buildList(n: int): ^LNode {
+    var head: ^LNode = null
+    for i := 0; i < n; i++ {
+        node := new(LNode)
+        node^.val = i
+        node^.next = head
+        head = node
+    }
+    return head
+}
+
+fn lenList(head: ^LNode): int {
+    n := 0
+    p := head
+    for p != null {
+        n++
+        p = p^.next
+    }
+    return n
+}
+
+fn sumList(head: ^LNode): int {
+    s := 0
+    p := head
+    for p != null {
+        s += p^.val
+        p = p^.next
+    }
+    return s
+}
+
+fn section_rc_deep_chain() {
+    banner("rc deep chain")
+    before := memusage()
+
+    // Allocate and discard a series of long chains.
+    for iter := 0; iter < 8; iter++ {
+        {
+            n := 4000 + iter * 250
+            head := buildList(n)
+            check(lenList(head) == n, "deep chain length")
+            check(sumList(head) == n * (n - 1) / 2, "deep chain sum")
+            // head drops here (end of block scope)
+        }
+    }
+
+    // One long chain that we manually unlink node-by-node from the head.
+    {
+        head := buildList(3000)
+        check(lenList(head) == 3000, "unlink length pre")
+        // Walk forward, unhooking head step by step. Each detached node has
+        // refcount 0 (only its predecessor referred to it), so RC must
+        // free it eagerly.
+        for head != null {
+            next := head^.next
+            head^.next = null
+            head = next
+        }
+        check(head == null, "fully unlinked")
+    }
+
+    after := memusage()
+    rcCheckRelease(before, after, "deep chain")
+    printf("rc deep chain: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section R2: wide sharing (many parents -> few children)
+// ----------------------------------------------------------------------------
+
+type RcChild = struct {
+    payload: []int
+    name:    str
+}
+
+type RcParent = struct {
+    id:    int
+    kid:   ^RcChild
+    extra: str
+}
+
+fn section_rc_wide_share() {
+    banner("rc wide share")
+    before := memusage()
+
+    {
+        // 50 unique children
+        children := make([]^RcChild, 50)
+        for i := 0; i < len(children); i++ {
+            c := new(RcChild)
+            c^.payload = make([]int, 32)
+            for j := 0; j < len(c^.payload); j++ {
+                c^.payload[j] = i * 1000 + j
+            }
+            c^.name = sprintf("child-%d", i)
+            children[i] = c
+        }
+
+        // 5000 parents, each pointing to one of the 50 children.
+        parents := make([]^RcParent, 5000)
+        for i := 0; i < len(parents); i++ {
+            p := new(RcParent)
+            p^.id = i
+            p^.kid = children[i % len(children)]
+            p^.extra = sprintf("p%d", i)
+            parents[i] = p
+        }
+
+        // Verify shared identity: parents 0, 50, 100 share child[0].
+        check(parents[0]^.kid == parents[50]^.kid, "shared child identity 0/50")
+        check(parents[0]^.kid == parents[100]^.kid, "shared child identity 0/100")
+        check(parents[1]^.kid != parents[0]^.kid, "non-shared distinct")
+
+        // Drop parents in a pseudo-random order by null-ing entries.
+        for i := 0; i < len(parents); i++ {
+            j := randRange(0, len(parents))
+            parents[i], parents[j] = parents[j], parents[i]
+        }
+        for i := 0; i < len(parents); i++ {
+            parents[i] = null
+        }
+
+        // Children should still be live (still in `children`).
+        for i := 0; i < len(children); i++ {
+            check(children[i] != null, "child still alive")
+            check(len(children[i]^.payload) == 32, "child payload intact")
+        }
+
+        // Now drop the children too.
+        for i := 0; i < len(children); i++ {
+            children[i] = null
+        }
+    }
+
+    after := memusage()
+    rcCheckRelease(before, after, "wide share")
+    printf("rc wide share: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section R3: doubly-linked list with weak back-pointers
+// ----------------------------------------------------------------------------
+
+type DNode = struct {
+    val:  int
+    next: ^DNode
+    prev: weak ^DNode
+}
+
+fn section_rc_cycle_weak() {
+    banner("rc cycle weak")
+    before := memusage()
+
+    {
+        // Build a 2000-element doubly-linked list. `next` is strong;
+        // `prev` is weak so the graph is acyclic from RC's POV.
+        head := new(DNode)
+        head^.val = 0
+        tail := head
+        for i := 1; i < 2000; i++ {
+            node := new(DNode)
+            node^.val = i
+            node^.prev = tail
+            tail^.next = node
+            tail = node
+        }
+
+        // Forward traversal.
+        n := 0
+        s := 0
+        p := head
+        for p != null {
+            s += p^.val
+            n++
+            p = p^.next
+        }
+        check(n == 2000, "dll forward count")
+        check(s == 2000 * 1999 / 2, "dll forward sum")
+
+        // Backward traversal via weak prev: must promote to strong each step.
+        bn := 0
+        q := tail
+        for q != null {
+            bn++
+            wp := q^.prev      // weak ^DNode
+            sp := ^DNode(wp)   // promote weak to strong (nil if collected)
+            q = sp
+        }
+        check(bn == 2000, "dll backward count")
+
+        // Drop head -> entire chain releases via the strong next pointers.
+        head = null
+        tail = null
+    }
+
+    after := memusage()
+    rcCheckRelease(before, after, "cycle weak")
+    printf("rc cycle weak: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section R4: deliberate cycle, broken by hand
+// ----------------------------------------------------------------------------
+
+type CNode = struct {
+    val:  int
+    link: ^CNode
+}
+
+fn section_rc_cycle_manual_break() {
+    banner("rc cycle manual break")
+    before := memusage()
+
+    // Build N two-node cycles, break each, repeat.
+    for iter := 0; iter < 200; iter++ {
+        a := new(CNode)
+        b := new(CNode)
+        a^.val = iter
+        b^.val = iter + 1
+        a^.link = b
+        b^.link = a
+        // At this point a and b both have refcount 2 (local + back-pointer).
+        // Local drop at end of iteration would leave a strong cycle; break it:
+        a^.link = null
+        b^.link = null
+        // Now refcount of each is 1 (the local). Function-end / iteration-end
+        // releases them properly.
+    }
+
+    // Larger cycle: ring of 500 nodes broken by null-ing one edge.
+    {
+        first := new(CNode)
+        first^.val = 0
+        prev := first
+        for i := 1; i < 500; i++ {
+            node := new(CNode)
+            node^.val = i
+            prev^.link = node
+            prev = node
+        }
+        // Close the ring.
+        prev^.link = first
+
+        // Walk it to make sure the ring is connected.
+        steps := 0
+        p := first
+        for steps < 500 {
+            p = p^.link
+            steps++
+        }
+        check(p == first, "ring closes back to first")
+
+        // Break one edge -> ring becomes a chain -> RC can free it on scope exit.
+        prev^.link = null
+    }
+
+    after := memusage()
+    rcCheckRelease(before, after, "cycle manual break")
+    printf("rc cycle manual break: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section R5: map churn with struct keys and pointer payloads
+// ----------------------------------------------------------------------------
+
+type RcKey = struct {
+    a, b: int
+}
+
+type RcVal = struct {
+    data: []int
+    name: str
+}
+
+fn section_rc_map_churn() {
+    banner("rc map churn")
+    before := memusage()
+
+    {
+        m := map[RcKey]^RcVal{}
+
+        // Insert 5000 entries.
+        for i := 0; i < 5000; i++ {
+            k := RcKey{a: randRange(0, 1000), b: randRange(0, 1000)}
+            v := new(RcVal)
+            v^.data = make([]int, 8)
+            for j := 0; j < 8; j++ {
+                v^.data[j] = j + i
+            }
+            v^.name = sprintf("v%d", i)
+            m[k] = v
+        }
+
+        // Delete a random ~50% of keys.
+        ks := keys(m)
+        for i := 0; i < len(ks); i++ {
+            if randRange(0, 2) == 0 {
+                delete(m, ks[i])
+            }
+        }
+        ks = []RcKey{}  // drop the keys slice
+
+        // Overwrite the remaining entries with brand-new values.
+        ks = keys(m)
+        for i := 0; i < len(ks); i++ {
+            nv := new(RcVal)
+            nv^.data = make([]int, 4)
+            nv^.name = "overwritten"
+            m[ks[i]] = nv
+        }
+
+        // Sanity walk.
+        n := 0
+        sum := 0
+        for k, v in m {
+            n++
+            sum += k.a + k.b
+            check(v != null, "overwritten val not null")
+            check(v^.name == "overwritten", "overwrite name")
+        }
+        check(n == len(m), "map size matches walk")
+
+        // Clear by reassignment.
+        m = map[RcKey]^RcVal{}
+        check(len(m) == 0, "cleared map empty")
+    }
+
+    after := memusage()
+    rcCheckRelease(before, after, "map churn")
+    printf("rc map churn: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section R6: slice grow / shrink / sub-slice churn
+// ----------------------------------------------------------------------------
+
+fn section_rc_slice_churn() {
+    banner("rc slice churn")
+    before := memusage()
+
+    {
+        // Repeatedly grow and shrink a slice of pointers.
+        items := make([]^RcVal, 0)
+        for i := 0; i < 3000; i++ {
+            v := new(RcVal)
+            v^.data = make([]int, randRange(0, 16) + 1)
+            v^.name = sprintf("i%d", i)
+            items = append(items, v)
+        }
+        check(len(items) == 3000, "grow count")
+
+        // Shrink via slice() to keep the first half, dropping the tail.
+        items = slice(items, 0, 1500)
+        check(len(items) == 1500, "shrink length")
+
+        // Mid-window: take a sliding sub-slice without reallocating contents.
+        win := slice(items, 100, 200)
+        check(len(win) == 100, "window length")
+        // Mutating through the window must be visible in items (shared buffer):
+        win[0]^.name = "tagged-by-window"
+        check(items[100]^.name == "tagged-by-window", "shared buffer mutation")
+
+        // Drop the window first, then drop items.
+        win = []^RcVal{}
+        items = []^RcVal{}
+    }
+
+    {
+        // Slice-of-slice ownership: each row owns its data; the parent
+        // owns the rows. Drop in mixed order.
+        rows := make([][]int, 200)
+        for i := 0; i < len(rows); i++ {
+            row := make([]int, randRange(0, 64) + 1)
+            for j := 0; j < len(row); j++ {
+                row[j] = i * j
+            }
+            rows[i] = row
+        }
+        // Replace random rows.
+        for k := 0; k < 500; k++ {
+            i := randRange(0, len(rows))
+            rows[i] = make([]int, randRange(0, 64) + 1)
+        }
+        // Drop parent (rows go with it).
+        rows = [][]int{}
+    }
+
+    after := memusage()
+    rcCheckRelease(before, after, "slice churn")
+    printf("rc slice churn: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section R7: closure capture lifetime
+// ----------------------------------------------------------------------------
+
+type IntFn = fn (): int
+
+fn makeRcAdder(base: int, tail: []int): IntFn {
+    return fn (): int |base, tail| {
+        s := base
+        for i := 0; i < len(tail); i++ {
+            s += tail[i]
+        }
+        return s
+    }
+}
+
+fn section_rc_closure_capture() {
+    banner("rc closure capture")
+    before := memusage()
+
+    {
+        closures := make([]IntFn, 2000)
+        for i := 0; i < len(closures); i++ {
+            // Each closure captures a freshly-allocated slice. When the
+            // closures slice is dropped, every captured tail must be freed.
+            tail := make([]int, 8)
+            for j := 0; j < 8; j++ {
+                tail[j] = i + j
+            }
+            closures[i] = makeRcAdder(i, tail)
+        }
+
+        // Exercise every closure once.
+        total := 0
+        for i := 0; i < len(closures); i++ {
+            total += closures[i]()
+        }
+        check(total > 0, "closure total positive")
+
+        closures = []IntFn{}
+    }
+
+    {
+        // Closure that captures a heap struct -> mutate via captured ptr.
+        v := new(RcVal)
+        v^.data = make([]int, 4)
+        v^.name = "shared"
+        mutator := fn () |v| {
+            v^.data = append(v^.data, 99)
+        }
+        for i := 0; i < 1000; i++ {
+            mutator()
+        }
+        check(len(v^.data) == 4 + 1000, "captured ptr mutation length")
+        v = null
+    }
+
+    after := memusage()
+    rcCheckRelease(before, after, "closure capture")
+    printf("rc closure capture: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section R8: interface boxing churn
+// ----------------------------------------------------------------------------
+
+type RcDrawable = interface {
+    area(): int
+}
+
+type RcRect = struct {
+    w, h: int
+}
+
+fn (r: ^RcRect) area(): int {
+    return r^.w * r^.h
+}
+
+type RcCircle = struct {
+    r: int
+}
+
+fn (c: ^RcCircle) area(): int {
+    return c^.r * c^.r * 3
+}
+
+fn section_rc_interface_box() {
+    banner("rc interface box")
+    before := memusage()
+
+    {
+        shapes := make([]RcDrawable, 4000)
+        for i := 0; i < len(shapes); i++ {
+            if i % 2 == 0 {
+                r := new(RcRect)
+                r^.w = i + 1
+                r^.h = (i % 7) + 1
+                shapes[i] = r
+            } else {
+                c := new(RcCircle)
+                c^.r = (i % 9) + 1
+                shapes[i] = c
+            }
+        }
+
+        // Sum via dynamic dispatch.
+        total := 0
+        for i := 0; i < len(shapes); i++ {
+            total += shapes[i].area()
+        }
+        check(total > 0, "interface dispatch total")
+
+        // Type-switch over interface elements.
+        rects := 0
+        circles := 0
+        for i := 0; i < len(shapes); i++ {
+            switch v := type(shapes[i]) {
+                case ^RcRect:   rects++; check(v^.w > 0, "rect w")
+                case ^RcCircle: circles++; check(v^.r > 0, "circle r")
+            }
+        }
+        check(rects + circles == len(shapes), "type switch covers all")
+
+        shapes = []RcDrawable{}
+    }
+
+    {
+        // Box everything into `any` and drop.
+        bag := make([]any, 1000)
+        for i := 0; i < len(bag); i++ {
+            if i % 3 == 0 {
+                bag[i] = sprintf("s%d", i)
+            } else if i % 3 == 1 {
+                bag[i] = make([]int, 4)
+            } else {
+                bag[i] = map[str]int{"x": i}
+            }
+        }
+        bag = []any{}
+    }
+
+    after := memusage()
+    rcCheckRelease(before, after, "interface box")
+    printf("rc interface box: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section R9: string churn
+// ----------------------------------------------------------------------------
+
+fn section_rc_string_churn() {
+    banner("rc string churn")
+    before := memusage()
+
+    {
+        // Concatenate many small strings.
+        acc := ""
+        for i := 0; i < 5000; i++ {
+            acc += sprintf("%d,", i)
+        }
+        check(len(acc) > 5000, "concat acc length")
+        acc = ""
+    }
+
+    {
+        // Build a slice of random short strings, sort-of, and discard.
+        bag := make([]str, 3000)
+        for i := 0; i < len(bag); i++ {
+            n := randRange(0, 8) + 1
+            s := ""
+            for j := 0; j < n; j++ {
+                s += sprintf("%c", char(int('a') + randRange(0, 26)))
+            }
+            bag[i] = s
+        }
+        // Pick a sub-window.
+        window := slice(bag, 100, 200)
+        check(len(window) == 100, "string window len")
+        bag = []str{}
+        window = []str{}
+    }
+
+    {
+        // Repeatedly mutate (replace) entries in a map of strings.
+        m := map[int]str{}
+        for i := 0; i < 2000; i++ {
+            m[randRange(0, 500)] = sprintf("val-%d", i)
+        }
+        for i := 0; i < 500; i++ {
+            if randRange(0, 2) == 0 {
+                delete(m, i)
+            }
+        }
+        m = map[int]str{}
+    }
+
+    after := memusage()
+    rcCheckRelease(before, after, "string churn")
+    printf("rc string churn: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section R10: tilemap-like nested structure
+// ----------------------------------------------------------------------------
+
+type ChunkPos = struct {
+    cx, cy: int
+}
+
+type Tile = struct {
+    id:    int
+    flags: uint8
+}
+
+type Chunk = struct {
+    tiles: [][]Tile
+}
+
+fn newChunk(w, h: int, seed: int): Chunk {
+    var c: Chunk
+    c.tiles = make([][]Tile, h)
+    for y := 0; y < h; y++ {
+        row := make([]Tile, w)
+        for x := 0; x < w; x++ {
+            row[x] = Tile{id: (seed + x * 7 + y * 13) % 64, flags: uint8(x ~ y)}
+        }
+        c.tiles[y] = row
+    }
+    return c
+}
+
+fn section_rc_tilemap_like() {
+    banner("rc tilemap-like")
+    before := memusage()
+
+    {
+        world := map[ChunkPos]Chunk{}
+
+        // 12x12 chunk grid, each chunk 10x10 tiles.
+        for cy := 0; cy < 12; cy++ {
+            for cx := 0; cx < 12; cx++ {
+                world[ChunkPos{cx: cx, cy: cy}] = newChunk(10, 10, cx * 100 + cy)
+            }
+        }
+        check(len(world) == 144, "world chunk count")
+
+        // Replace random chunks repeatedly.
+        for i := 0; i < 800; i++ {
+            cp := ChunkPos{cx: randRange(0, 12), cy: randRange(0, 12)}
+            world[cp] = newChunk(10, 10, i)
+        }
+
+        // Random deletions.
+        for i := 0; i < 80; i++ {
+            cp := ChunkPos{cx: randRange(0, 12), cy: randRange(0, 12)}
+            delete(world, cp)
+        }
+
+        // Walk what's left, summing all tile ids — must not crash.
+        s := 0
+        for cp, ch in world {
+            for y := 0; y < len(ch.tiles); y++ {
+                for x := 0; x < len(ch.tiles[y]); x++ {
+                    s += ch.tiles[y][x].id
+                }
+            }
+            check(cp.cx >= 0 && cp.cx < 12, "chunk pos cx in range")
+        }
+        check(s >= 0, "tile sum non-negative")
+
+        world = map[ChunkPos]Chunk{}
+    }
+
+    after := memusage()
+    rcCheckRelease(before, after, "tilemap-like")
+    printf("rc tilemap-like: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section R11: fibers owning heap state
+// ----------------------------------------------------------------------------
+
+fn section_rc_fiber_data() {
+    banner("rc fiber data")
+    before := memusage()
+
+    {
+        // NB: each fiber holds a default-sized stack (multi-MB), so we keep
+        // the array small. Even completed fibers retain their stack memory
+        // until the array itself is released (here: end of this block).
+        const FIB_N = 4
+        var fibers: [FIB_N]fiber
+        for i := 0; i < len(fibers); i++ {
+            // Each fiber owns a small chunk of heap state.
+            payload := make([]int, 32)
+            for j := 0; j < len(payload); j++ {
+                payload[j] = i * 100 + j
+            }
+            tag := sprintf("fib-%d", i)
+            fibers[i] = make(fiber, |payload, tag| {
+                // Touch the captured data so RC must keep it alive across
+                // the fiber-suspended pause; then exit cleanly so the fiber
+                // is collectable.
+                s := 0
+                for k := 0; k < len(payload); k++ {
+                    s += payload[k]
+                }
+                if len(tag) == 0 {
+                    s = -1
+                }
+            })
+        }
+
+        // Resume each fiber once -> body runs to completion -> fiber becomes
+        // invalid and is released.
+        for i := 0; i < len(fibers); i++ {
+            resume(fibers[i])
+            check(!valid(fibers[i]), "fiber completed")
+        }
+    }
+
+    after := memusage()
+    rcCheckRelease(before, after, "fiber data")
+    printf("rc fiber data: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section R12: swap storm
+// ----------------------------------------------------------------------------
+
+fn section_rc_swap_storm() {
+    banner("rc swap storm")
+    before := memusage()
+
+    {
+        a := new(RcVal)
+        a^.data = make([]int, 16)
+        a^.name = "A"
+        b := new(RcVal)
+        b^.data = make([]int, 16)
+        b^.name = "B"
+
+        // Many swaps; both objects must stay alive throughout.
+        for i := 0; i < 50000; i++ {
+            a, b = b, a
+        }
+        check(a != null && b != null, "swap storm survivors")
+        // Even number of swaps -> original identity restored.
+        // (Umka has tuple swap; both refs are still pointing at original heap objs.)
+        // We can't directly compare ptr identity in a stable way across iters,
+        // but we can compare names: both must still be "A" and "B".
+        nameSet := map[str]int{a^.name: 1, b^.name: 1}
+        check(len(nameSet) == 2, "swap preserved two distinct names")
+        check(nameSet["A"] == 1 && nameSet["B"] == 1, "swap preserved A and B")
+
+        a = null
+        b = null
+    }
+
+    after := memusage()
+    rcCheckRelease(before, after, "swap storm")
+    printf("rc swap storm: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section R13: self-replacing pointer (x = wrap(x, ...))
+// ----------------------------------------------------------------------------
+
+type Wrap = struct {
+    depth: int
+    inner: ^Wrap
+    label: str
+}
+
+fn wrapOnce(prev: ^Wrap, label: str): ^Wrap {
+    w := new(Wrap)
+    if prev != null {
+        w^.depth = prev^.depth + 1
+    } else {
+        w^.depth = 0
+    }
+    w^.inner = prev
+    w^.label = label
+    return w
+}
+
+fn section_rc_self_replace() {
+    banner("rc self replace")
+    before := memusage()
+
+    {
+        // Build a deep chain by repeatedly self-replacing.
+        var w: ^Wrap = null
+        for i := 0; i < 4000; i++ {
+            w = wrapOnce(w, sprintf("L%d", i))
+        }
+        check(w^.depth == 3999, "wrap depth final")
+
+        // Walk back via inner pointers.
+        n := 0
+        p := w
+        for p != null {
+            n++
+            p = p^.inner
+        }
+        check(n == 4000, "wrap walk length")
+
+        // Now self-unwrap: w = w^.inner repeatedly. Each step the old `w`
+        // becomes unreferenced and must be released.
+        for w != null {
+            w = w^.inner
+        }
+        check(w == null, "fully unwrapped")
+    }
+
+    after := memusage()
+    rcCheckRelease(before, after, "self replace")
+    printf("rc self replace: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section R14: append-in-place lifetime
+// ----------------------------------------------------------------------------
+
+fn section_rc_append_inplace() {
+    banner("rc append inplace")
+    before := memusage()
+
+    {
+        // Build a slice by repeated append. Each underlying buffer
+        // reallocation must release the old buffer.
+        s := make([]^RcVal, 0)
+        for i := 0; i < 8000; i++ {
+            v := new(RcVal)
+            v^.data = make([]int, 4)
+            v^.name = sprintf("v%d", i)
+            s = append(s, v)
+        }
+        check(len(s) == 8000, "append count")
+
+        // Replace half the elements -> the old objects at those positions
+        // lose their last reference and must be freed.
+        for i := 0; i < len(s); i += 2 {
+            nv := new(RcVal)
+            nv^.data = make([]int, 2)
+            nv^.name = "repl"
+            s[i] = nv
+        }
+        // Verify some replacements.
+        check(s[0]^.name == "repl", "replaced 0")
+        check(s[1]^.name != "repl", "non-replaced 1")
+
+        s = []^RcVal{}
+    }
+
+    after := memusage()
+    rcCheckRelease(before, after, "append inplace")
+    printf("rc append inplace: OK\n")
+}
+
+// ----------------------------------------------------------------------------
+// Section R15: mixed-graph workload
+// ----------------------------------------------------------------------------
+
+type Entity = struct {
+    id:       int
+    name:     str
+    tags:     []str
+    children: []^Entity
+    parent:   weak ^Entity
+    props:    map[str]int
+}
+
+fn newEntity(id: int, name: str): ^Entity {
+    e := new(Entity)
+    e^.id = id
+    e^.name = name
+    e^.tags = make([]str, 0)
+    e^.children = make([]^Entity, 0)
+    e^.props = map[str]int{}
+    return e
+}
+
+fn attach(parent, child: ^Entity) {
+    parent^.children = append(parent^.children, child)
+    child^.parent = parent
+}
+
+fn section_rc_entity_graph() {
+    banner("rc entity graph")
+    before := memusage()
+
+    {
+        // Build a forest of entities: 50 roots, each with up to 20 children,
+        // each child with up to 5 grandchildren.
+        roots := make([]^Entity, 50)
+        nextId := 0
+        for r := 0; r < len(roots); r++ {
+            root := newEntity(nextId, sprintf("root-%d", r))
+            nextId++
+            cn := randRange(0, 20) + 1
+            for c := 0; c < cn; c++ {
+                child := newEntity(nextId, sprintf("c-%d", nextId))
+                nextId++
+                child^.tags = append(child^.tags, "kid")
+                child^.props["w"] = randRange(0, 100)
+                attach(root, child)
+
+                gn := randRange(0, 5)
+                for g := 0; g < gn; g++ {
+                    gc := newEntity(nextId, sprintf("g-%d", nextId))
+                    nextId++
+                    attach(child, gc)
+                }
+            }
+            roots[r] = root
+        }
+
+        // Walk the forest counting nodes via weak-parent verification.
+        total := 0
+        for r := 0; r < len(roots); r++ {
+            root := roots[r]
+            check(^Entity(root^.parent) == null, "root has no parent")
+            for ci := 0; ci < len(root^.children); ci++ {
+                child := root^.children[ci]
+                total++
+                check(^Entity(child^.parent) == root, "child parent matches root")
+                for gi := 0; gi < len(child^.children); gi++ {
+                    gc := child^.children[gi]
+                    total++
+                    check(^Entity(gc^.parent) == child, "gc parent matches child")
+                }
+            }
+        }
+        check(total > 0, "entity count positive")
+
+        // Detach random subtrees: pick a root, replace its children slice.
+        for k := 0; k < 30; k++ {
+            r := randRange(0, len(roots))
+            roots[r]^.children = make([]^Entity, 0)
+        }
+
+        // Drop every other root.
+        for r := 0; r < len(roots); r += 2 {
+            roots[r] = null
+        }
+
+        roots = []^Entity{}
+    }
+
+    after := memusage()
+    rcCheckRelease(before, after, "entity graph")
+    printf("rc entity graph: OK\n")
+}
+
 
 fn test*() {
     printf("Umka fuzz: starting at seed=0x%llx\n", prngState)
@@ -4387,7 +5383,28 @@ fn test*() {
     section_typeptr()
     section_any_complex()
 
+    // RC stress sections
+    section_rc_deep_chain()
+    section_rc_wide_share()
+    section_rc_cycle_weak()
+    section_rc_cycle_manual_break()
+    section_rc_map_churn()
+    section_rc_slice_churn()
+    section_rc_closure_capture()
+    section_rc_interface_box()
+    section_rc_string_churn()
+    section_rc_tilemap_like()
+    section_rc_fiber_data()
+    section_rc_swap_storm()
+    section_rc_self_replace()
+    section_rc_append_inplace()
+    section_rc_entity_graph()
+
     printf("\n========================================\n")
     printf("All fuzz sections completed successfully.\n")
     printf("========================================\n")
+}
+
+fn main() {
+    test()
 }
