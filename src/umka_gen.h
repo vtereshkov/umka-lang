@@ -106,7 +106,7 @@ void genCallBuiltin         (CodeGen *gen, TypeKind typeKind, BuiltinFunc builti
 void genCallTypedBuiltin    (CodeGen *gen, const Type *type, BuiltinFunc builtin);
 void genReturn              (CodeGen *gen, int paramSlots);
 
-void genEnterFrame(CodeGen *gen, const ParamAndLocalVarLayout *layout);
+void genEnterFrame(CodeGen *gen, const StackFrameLayout *layout);
 void genLeaveFrame(CodeGen *gen);
 
 void genHalt(CodeGen *gen);
@@ -140,7 +140,7 @@ void genShortCircuitProlog(CodeGen *gen);
 void genShortCircuitEpilog(CodeGen *gen, TokenKind op);
 
 void genEnterFrameStub (CodeGen *gen);
-void genLeaveFrameFixup(CodeGen *gen, const ParamAndLocalVarLayout *layout);
+void genLeaveFrameFixup(CodeGen *gen, const StackFrameLayout *layout);
 
 void genEntryPoint(CodeGen *gen, int start);
 

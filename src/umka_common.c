@@ -68,6 +68,9 @@ void storageFree(Storage *storage)
 
 void *storageAdd(Storage *storage, int64_t size)
 {
+    if (size < 0 || sizeof(StorageChunk) + size > INT_MAX)
+        storage->error->handler(storage->error->context, "Cannot allocate a block of %lld bytes", size);
+    
     StorageChunk *chunk = malloc(sizeof(StorageChunk) + size);
     if (!chunk)
         storage->error->handler(storage->error->context, "Out of memory");
@@ -107,6 +110,11 @@ DynArray *storageAddDynArray(Storage *storage, const struct tagType *type, int64
     array->itemSize = array->type->base->size;
 
     DynArrayDimensions dims = {.len = len, .capacity = 2 * (len + 1)};
+
+    if (dims.capacity * array->itemSize > INT_MAX - sizeof(DynArrayDimensions))
+        dims.capacity = (INT_MAX - sizeof(DynArrayDimensions)) / array->itemSize;
+    if (dims.capacity < dims.len)
+        dims.capacity = dims.len;
 
     char *dimsAndData = storageAdd(storage, sizeof(DynArrayDimensions) + dims.capacity * array->itemSize);
     *(DynArrayDimensions *)dimsAndData = dims;

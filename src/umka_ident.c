@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 
 #include "umka_ident.h"
 
@@ -144,6 +145,49 @@ bool identIsOuterLocalVar(const Blocks *blocks, const Ident *ident)
 }
 
 
+static Ident *identTryResolveForwardType(Idents *idents, const Ident *existingIdent, IdentKind kind, const char *name, const Type *type, bool exported)
+{
+    if (existingIdent->kind == IDENT_TYPE && existingIdent->type->kind == TYPE_FORWARD &&
+        kind == IDENT_TYPE && type->kind != TYPE_FORWARD &&
+        strcmp(existingIdent->type->typeIdent->name, name) == 0)
+    {
+        if (existingIdent->type->resolveByStructured && !typeStructured(type))
+            idents->error->handler(idents->error->context, "Forward-declared type %s returned by a function must be a structured type", name);
+        
+        Ident *modifiableIdent = (Ident *)existingIdent;
+        Type *modifiableType = (Type *)type;
+        Type *modifiableIdentType = (Type *)existingIdent->type;
+
+        modifiableType->typeIdent = existingIdent;
+        typeDeepCopy(idents->storage, modifiableIdentType, type);
+        modifiableIdent->isExported = exported;
+
+        return modifiableIdent;
+    }
+    return NULL;
+}
+
+
+static Ident *identTryResolveFnPrototype(Idents *idents, const Ident *existingIdent, IdentKind kind, const char *name, const Type *type, bool exported)
+{
+    if (existingIdent->kind == IDENT_CONST && existingIdent->type->kind == TYPE_FN &&
+        kind == IDENT_CONST && type->kind == TYPE_FN &&
+        existingIdent->isExported == exported &&
+        strcmp(existingIdent->name, name) == 0 &&
+        typeCompatible(existingIdent->type, type) &&
+        existingIdent->prototypeOffset >= 0)
+    {
+        Ident *modifiableIdent = (Ident *)existingIdent;
+        Type *modifiableIdentType = (Type *)existingIdent->type;
+
+        typeDeepCopy(idents->storage, modifiableIdentType, type);
+
+        return modifiableIdent;
+    }
+    return NULL;
+}
+
+
 static Ident *identAdd(Idents *idents, const Modules *modules, const Blocks *blocks, IdentKind kind, const char *name, const Type *type, bool exported)
 {
     const Type *rcvType = NULL;
@@ -156,37 +200,13 @@ static Ident *identAdd(Idents *idents, const Modules *modules, const Blocks *blo
     {
         if (existingIdent->block == blocks->item[blocks->top].block)
         {
-            // Forward type declaration resolution
-            if (existingIdent->kind == IDENT_TYPE && existingIdent->type->kind == TYPE_FORWARD &&
-                kind == IDENT_TYPE && type->kind != TYPE_FORWARD &&
-                strcmp(existingIdent->type->typeIdent->name, name) == 0)
-            {
-                Ident *modifiableIdent = (Ident *)existingIdent;
-                Type *modifiableType = (Type *)type;
-                Type *modifiableIdentType = (Type *)existingIdent->type;
+            Ident *resolvedForwardTypeIdent = identTryResolveForwardType(idents, existingIdent, kind, name, type, exported);
+            if (resolvedForwardTypeIdent)
+                return resolvedForwardTypeIdent;
 
-                modifiableType->typeIdent = existingIdent;
-                typeDeepCopy(idents->storage, modifiableIdentType, type);
-                modifiableIdent->isExported = exported;
-
-                return modifiableIdent;
-            }
-
-            // Function prototype resolution
-            if (existingIdent->kind == IDENT_CONST && existingIdent->type->kind == TYPE_FN &&
-                kind == IDENT_CONST && type->kind == TYPE_FN &&
-                existingIdent->isExported == exported &&
-                strcmp(existingIdent->name, name) == 0 &&
-                typeCompatible(existingIdent->type, type) &&
-                existingIdent->prototypeOffset >= 0)
-            {
-                Ident *modifiableIdent = (Ident *)existingIdent;
-                Type *modifiableIdentType = (Type *)existingIdent->type;
-
-                typeDeepCopy(idents->storage, modifiableIdentType, type);
-
-                return modifiableIdent;
-            }
+            Ident *resolvedFnPrototypeIdent = identTryResolveFnPrototype(idents, existingIdent, kind, name, type, exported);
+            if (resolvedFnPrototypeIdent)
+                return resolvedFnPrototypeIdent;
 
             idents->error->handler(idents->error->context, "Duplicate identifier %s", name);
         }
@@ -214,16 +234,16 @@ static Ident *identAdd(Idents *idents, const Modules *modules, const Blocks *blo
     strncpy(ident->name, name, MAX_IDENT_LEN);
     ident->name[MAX_IDENT_LEN] = 0;
 
-    ident->type              = type;
-    ident->module            = blocks->module;
-    ident->block             = blocks->item[blocks->top].block;
+    ident->type                = type;
+    ident->module              = blocks->module;
+    ident->block               = blocks->item[blocks->top].block;
     ident->isExported          = exported;
     ident->isGloballyAllocated = false;
     ident->isTemporary         = false;
     ident->isUsed              = exported || ident->module == 0 || identIsHidden(ident->name) || identIsPlaceholder(ident->name) || identIsMain(ident);  // Exported, predefined, hidden, placeholder identifiers and main() are always treated as used
     ident->isGarbageCollected  = identIsGarbageCollected(blocks, ident);
-    ident->prototypeOffset   = -1;
-    ident->debug             = *(idents->debug);
+    ident->prototypeOffset     = -1;
+    ident->debug               = *(idents->debug);
 
     ident->next   = idents->first;
     idents->first = ident;
@@ -299,10 +319,15 @@ int identAllocStack(Idents *idents, const Types *types, Blocks *blocks, const Ty
             localVarSize = &blocks->item[i].localVarSize;
             break;
         }
+        
     if (!localVarSize)
         idents->error->handler(idents->error->context, "Stack frame is not found");
 
-    *localVarSize = align(*localVarSize + typeSize(types, type), typeAlignment(types, type));
+    const int size = typeSize(types, type);
+    if (size > INT_MAX - *localVarSize)
+        idents->error->handler(idents->error->context, "Stack overflow");
+
+    *localVarSize = align(*localVarSize + size, typeAlignment(types, type));
     return -2 * sizeof(Slot) - (*localVarSize);  // 2 extra slots for the stack frame ref count and parameter layout table
 }
 

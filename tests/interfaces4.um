@@ -1,0 +1,40 @@
+type Solid = interface {
+  union(other: Solid): Solid
+}
+
+type Composite = struct {
+  parts: [2]Solid
+}
+
+fn (comp: ^Composite) union(other: Solid): Solid {
+  return Composite{{comp.parts[0].union(other), comp.parts[1].union(other)}}
+}
+
+type Box = struct {
+  min, max: [2]int
+}
+
+fn (box: ^Box) contains(other: Box): bool {
+  return box.min[0] <= other.min[0] && box.min[1] <= other.min[1] &&
+         box.max[0] >= other.max[0] && box.max[1] >= other.max[1]  
+}
+
+fn (box: ^Box) union(other: Solid): Solid {
+  if box2 := ^Box(other); box2 != null {
+    if box.contains(box2^) {return box^}
+    if box2.contains(box^) {return box2^}
+    return Composite{{box^, box2^}}
+  }
+  return other.union(box^)
+}
+
+fn test*() {
+  solid1 := Box{{3, 3}, {8, 8}}.union(Box{{4, 4}, {7, 6}})
+  solid2 := solid1.union(Box{{5, 5}, {7, 9}}).union(Box{{5, 6}, {7, 7}})
+
+  printf("%v\n%v\n", solid1, solid2)
+}
+
+fn main() {
+  test()
+}

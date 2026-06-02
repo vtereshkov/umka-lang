@@ -230,7 +230,7 @@ void compilerInit(Umka *umka, const char *fileName, const char *sourceString, in
     // Command-line-arguments
     Type *argvType = typeAdd(&umka->types, &umka->blocks, TYPE_ARRAY);
     typeSetBase(argvType, umka->types.predecl.strType);
-    typeResizeArray(argvType, argc);
+    typeAssertResizeArray(&umka->types, argvType, argc);
 
     const Ident *rtlargv = identAllocVar(&umka->idents, &umka->types, &umka->modules, &umka->blocks, "rtlargv", argvType, true);
     char **argArray = (char **)rtlargv->ptr;
@@ -350,8 +350,7 @@ void compilerMakeFuncContext(Umka *umka, const Type *fnType, int entryOffset, Um
     const int paramSlots = typeParamSizeTotal(&umka->types, fnType->sig) / sizeof(Slot);
     fn->params = (UmkaStackSlot *)storageAdd(&umka->storage, (paramSlots + 4) * sizeof(Slot)) + 4;          // + 4 slots for compatibility with umkaGetParam()
 
-    const ParamLayout *paramLayout = typeMakeParamLayout(&umka->types, fnType->sig);
-    *vmGetParamLayout(fn->params) = paramLayout;
+    *vmGetStackFrameLayout(fn->params) = typeMakeStackFrameLayout(&umka->types, fnType->sig, 0);
 
     fn->result = storageAdd(&umka->storage, sizeof(Slot));
 }

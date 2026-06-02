@@ -25,6 +25,7 @@ enum    // Memory manager settings
     MEM_MIN_FREE_HEAP     = 1024,                   // Bytes
     MEM_MIN_HEAP_CHUNK    = 64,                     // Bytes
     MEM_MIN_HEAP_PAGE     = 1024 * 1024,            // Bytes
+    MEM_MAX_BLACKLISTED   = 16 * 1024 * 1024        // Bytes   
 };
 
 
@@ -146,16 +147,16 @@ typedef struct tagHeapPage
     int numChunks, numOccupiedChunks, numChunksWithOnFree, chunkSize;
     struct tagHeapPage *prev, *next;
     char *end;
-    char data[];
+    int64_t data[];
 } HeapPage;
 
 
 typedef struct
 {
-    HeapPage *first, *firstRecycled, *lastAccessed;
+    HeapPage *first, *firstRecycled, *firstBlacklisted, *lastAccessed;
     char *lowest, *highest;
     int freeId;
-    int64_t totalSize;
+    int64_t totalSize, blacklistedSize;
     struct tagFiber *fiber;
     int64_t leakSanLevel;
     RefCntCandidates refCntCandidates;
@@ -171,8 +172,7 @@ typedef struct
     UmkaExternFunc onFree;      // Optional callback called when ref count reaches zero
     int64_t ip;                 // Optional instruction pointer at which the chunk has been allocated
     bool isStack;
-    bool reserved[7];
-    char data[];
+    int64_t data[];
 } HeapChunk;
 
 
@@ -214,7 +214,7 @@ void vmCleanup                  (VM *vm);
 bool vmAlive                    (VM *vm);
 void vmKill                     (VM *vm);
 int vmAsm                       (int ip, const Instruction *code, const DebugInfo *debugPerInstr, const Idents *idents, char *buf, int size);
-bool vmUnwindCallStack          (VM *vm, Slot **base, int *ip);
+bool vmUnwindCallStack          (VM *vm, const Slot **base, int *ip);
 void vmSetHook                  (VM *vm, UmkaHookEvent event, UmkaHookFunc hook);
 void *vmAllocData               (VM *vm, int size, UmkaExternFunc onFree);
 void vmIncRef                   (VM *vm, void *ptr, const Type *type);
@@ -227,9 +227,9 @@ int64_t vmGetMemUsage           (VM *vm);
 const char *vmBuiltinSpelling   (BuiltinFunc builtin);
 
 
-static inline const ParamLayout **vmGetParamLayout(UmkaStackSlot *params)
+static inline const StackFrameLayout **vmGetStackFrameLayout(UmkaStackSlot *params)
 {
-    return (const ParamLayout **)&params[-4].ptrVal;     // For -4, see the stack layout diagram in umka_vm.c
+    return (const StackFrameLayout **)&params[-4].ptrVal;     // For -4, see the stack layout diagram in umka_vm.c
 }
 
 #endif // UMKA_VM_H_INCLUDED

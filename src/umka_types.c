@@ -316,23 +316,39 @@ bool typeHasPtr(const Type *type, bool alsoWeakPtr)
 }
 
 
-bool typeComparable(const Type *type)
+static bool typeComparableRecursive(const Type *type, const VisitedType *firstVisited)
 {
+    // Recursively defined types visited before (need to check first in order to break a possible circular definition)
+    const VisitedType *visited = firstVisited;
+    while (visited && visited->type != type)
+        visited = visited->next;
+
+    if (visited)
+        return true;
+
+    const VisitedType newVisited = {type, firstVisited};    
+    
     if (typeOrdinal(type) || typeReal(type) || type->kind == TYPE_PTR || type->kind == TYPE_WEAKPTR || type->kind == TYPE_STR)
         return true;
 
     if (type->kind == TYPE_ARRAY || type->kind == TYPE_DYNARRAY)
-        return typeComparable(type->base);
+        return typeComparableRecursive(type->base, &newVisited);
 
     if (type->kind == TYPE_STRUCT)
     {
         for (int i = 0; i < type->numItems; i++)
-            if (!typeComparable(type->field[i]->type))
+            if (!typeComparableRecursive(type->field[i]->type, &newVisited))
                 return false;
         return true;
     }
 
     return false;
+}
+
+
+bool typeComparable(const Type *type)
+{
+    return typeComparableRecursive(type, NULL);
 }
 
 
@@ -349,17 +365,17 @@ static bool typeDefaultParamEqual(const Const *left, const Const *right, const T
 }
 
 
-static bool typeEquivalentRecursive(const Type *left, const Type *right, VisitedTypePair *firstPair)
+static bool typeEquivalentRecursive(const Type *left, const Type *right, const VisitedTypePair *firstVisited)
 {
     // Recursively defined types visited before (need to check first in order to break a possible circular definition)
-    VisitedTypePair *pair = firstPair;
-    while (pair && !(pair->left == left && pair->right == right))
-        pair = pair->next;
+    const VisitedTypePair *visited = firstVisited;
+    while (visited && !(visited->left == left && visited->right == right))
+        visited = visited->next;
 
-    if (pair)
+    if (visited)
         return true;
 
-    VisitedTypePair newPair = {left, right, firstPair};
+    const VisitedTypePair newVisited = {left, right, firstVisited};
 
     // Same types
     if (left == right)
@@ -373,7 +389,7 @@ static bool typeEquivalentRecursive(const Type *left, const Type *right, Visited
     {
         // Pointers or weak pointers
         if (left->kind == TYPE_PTR || left->kind == TYPE_WEAKPTR)
-            return typeEquivalentRecursive(left->base, right->base, &newPair);
+            return typeEquivalentRecursive(left->base, right->base, &newVisited);
 
         // Arrays
         else if (left->kind == TYPE_ARRAY)
@@ -382,12 +398,12 @@ static bool typeEquivalentRecursive(const Type *left, const Type *right, Visited
             if (left->numItems != right->numItems)
                 return false;
 
-            return typeEquivalentRecursive(left->base, right->base, &newPair);
+            return typeEquivalentRecursive(left->base, right->base, &newVisited);
         }
 
         // Dynamic arrays
         else if (left->kind == TYPE_DYNARRAY)
-            return typeEquivalentRecursive(left->base, right->base, &newPair);
+            return typeEquivalentRecursive(left->base, right->base, &newVisited);
 
         // Strings
         else if (left->kind == TYPE_STR)
@@ -401,10 +417,10 @@ static bool typeEquivalentRecursive(const Type *left, const Type *right, Visited
         else if (left->kind == TYPE_MAP)
         {
             // Key type
-            if (!typeEquivalentRecursive(typeMapKey(left), typeMapKey(right), &newPair))
+            if (!typeEquivalentRecursive(typeMapKey(left), typeMapKey(right), &newVisited))
                 return false;
 
-            return typeEquivalentRecursive(left->base, right->base, &newPair);
+            return typeEquivalentRecursive(left->base, right->base, &newVisited);
         }
 
         // Structures or interfaces
@@ -422,7 +438,7 @@ static bool typeEquivalentRecursive(const Type *left, const Type *right, Visited
                     return false;
 
                 // Type
-                if (!typeEquivalentRecursive(left->field[i]->type, right->field[i]->type, &newPair))
+                if (!typeEquivalentRecursive(left->field[i]->type, right->field[i]->type, &newVisited))
                     return false;
             }
             return true;
@@ -451,7 +467,7 @@ static bool typeEquivalentRecursive(const Type *left, const Type *right, Visited
                     continue;
                 
                 // Type
-                if (!typeEquivalentRecursive(left->sig->param[i]->type, right->sig->param[i]->type, &newPair))
+                if (!typeEquivalentRecursive(left->sig->param[i]->type, right->sig->param[i]->type, &newVisited))
                     return false;
 
                 // Default value
@@ -461,7 +477,7 @@ static bool typeEquivalentRecursive(const Type *left, const Type *right, Visited
             }
 
             // Result type
-            if (!typeEquivalentRecursive(left->sig->resultType, right->sig->resultType, &newPair))
+            if (!typeEquivalentRecursive(left->sig->resultType, right->sig->resultType, &newVisited))
                 return false;
 
             return true;
@@ -615,6 +631,18 @@ void typeEnableForward(Types *types, bool enable)
         for (const Type *type = types->first; type; type = type->next)
             if (type->kind == TYPE_FORWARD)
                 types->error->handler(types->error->context, "Unresolved forward declaration of %s", (Ident *)(type->typeIdent)->name);
+}
+
+
+void typeAssertResizeArray(Types *types, Type *type, int numItems)
+{
+    if (type->kind != TYPE_ARRAY && type->kind != TYPE_DYNARRAY)
+        types->error->handler(types->error->context, "Array expected");
+    
+    if (numItems > 0 && typeSize(types, type->base) > INT_MAX / numItems)
+        types->error->handler(types->error->context, "Array is too large");
+    
+    typeResizeArray(type, numItems);
 }
 
 
@@ -819,33 +847,28 @@ int typeParamOffset(const Types *types, const Signature *sig, int index)
 }
 
 
-const ParamLayout *typeMakeParamLayout(const Types *types, const Signature *sig)
+const StackFrameLayout *typeMakeStackFrameLayout(const Types *types, const Signature *sig, int64_t localVarSlots)
 {
-    ParamLayout *layout = storageAdd(types->storage, PARAM_LAYOUT_SIZE(sig->numParams));
+    StackFrameLayout *layout = storageAdd(types->storage, STACK_FRAME_LAYOUT_SIZE(sig->numParams));
 
-    layout->numParams = sig->numParams;
-    layout->numResultParams = typeStructured(sig->resultType) ? 1 : 0;
-    layout->numParamSlots = typeParamSizeTotal(types, sig) / sizeof(Slot);
+    ParamLayout *paramLayout = (ParamLayout *)getParamLayout(layout);
+
+    paramLayout->numParams = sig->numParams;
+    paramLayout->numResultParams = typeStructured(sig->resultType) ? 1 : 0;
+    paramLayout->numParamSlots = typeParamSizeTotal(types, sig) / sizeof(Slot);
 
     for (int i = 0; i < sig->numParams; i++)
-        layout->firstSlotIndex[i] = typeParamOffset(types, sig, i) / sizeof(Slot) - 2;   // - 2 slots for old base pointer and return address
+        paramLayout->firstSlotIndex[i] = typeParamOffset(types, sig, i) / sizeof(Slot) - 2;   // - 2 slots for old base pointer and return address
 
-    ParamLayoutTypes *layoutTypes = PARAM_LAYOUT_TYPES(layout);
-
+    ParamTypes *layoutTypes = (ParamTypes *)getParamTypes(layout);
     layoutTypes->resultType = sig->resultType;
 
     for (int i = 0; i < sig->numParams; i++)
-        layoutTypes->paramType[i] = sig->param[i]->type;    
+        layoutTypes->paramType[i] = sig->param[i]->type;
+        
+    LocalVarLayout *localVarLayout = (LocalVarLayout *)getLocalVarLayout(layout);
+    localVarLayout->localVarSlots = localVarSlots;
     
-    return layout;
-}
-
-
-const ParamAndLocalVarLayout *typeMakeParamAndLocalVarLayout(const Types *types, const ParamLayout *paramLayout, int localVarSlots)
-{
-    ParamAndLocalVarLayout *layout = storageAdd(types->storage, sizeof(ParamAndLocalVarLayout));
-    layout->paramLayout = paramLayout;
-    layout->localVarSlots = localVarSlots;
     return layout;
 }
 

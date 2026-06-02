@@ -803,8 +803,11 @@ static int lexSingleLineStrLiteralAndGetSize(Lexer *lex)
 
     while (ch != '\"' || escaped)
     {
-        if (ch == 0 || (ch == '\n' && !escaped))
+        if ((ch == 0 || ch == '\n') && !escaped)
             lex->error->handler(lex->error->context, "Unterminated string");
+
+        if (ch == 0)
+            lex->error->handler(lex->error->context, "Illegal character in string");
 
         if (lex->tok.strVal)
             lex->tok.strVal[size] = ch;

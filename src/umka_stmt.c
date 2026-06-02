@@ -117,10 +117,10 @@ void doResolveExtern(Umka *umka)
 
                 doGarbageCollection(umka);
 
-                const ParamLayout *paramLayout = typeMakeParamLayout(&umka->types, ident->type->sig);
-
-                genLeaveFrameFixup(&umka->gen, typeMakeParamAndLocalVarLayout(&umka->types, paramLayout, 0));
-                genReturn(&umka->gen, paramLayout->numParamSlots);
+                const StackFrameLayout *layout = typeMakeStackFrameLayout(&umka->types, ident->type->sig, 0);
+                
+                genLeaveFrameFixup(&umka->gen, layout);
+                genReturn(&umka->gen, getParamLayout(layout)->numParamSlots);
 
                 identFree(&umka->idents, blocksCurrent(&umka->blocks));
                 blocksLeave(&umka->blocks);
@@ -1364,12 +1364,11 @@ void parseFnBlock(Umka *umka, Ident *fn, const Type *upvaluesStructType)
     doGarbageCollection(umka);
     identFree(&umka->idents, blocksCurrent(&umka->blocks));
 
-    const int localVarSlots = align(umka->blocks.item[umka->blocks.top].localVarSize, sizeof(Slot)) / sizeof(Slot);
-
-    const ParamLayout *paramLayout = typeMakeParamLayout(&umka->types, fn->type->sig);
-
-    genLeaveFrameFixup(&umka->gen, typeMakeParamAndLocalVarLayout(&umka->types, paramLayout, localVarSlots));
-    genReturn(&umka->gen, paramLayout->numParamSlots);
+    const int64_t localVarSlots = align(umka->blocks.item[umka->blocks.top].localVarSize, sizeof(Slot)) / sizeof(Slot);
+    const StackFrameLayout *layout = typeMakeStackFrameLayout(&umka->types, fn->type->sig, localVarSlots);
+    
+    genLeaveFrameFixup(&umka->gen, layout);
+    genReturn(&umka->gen, getParamLayout(layout)->numParamSlots);
 
     umka->lex.debug->fnName = prevDebugFnName;
 

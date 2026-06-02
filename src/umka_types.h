@@ -158,6 +158,7 @@ typedef struct tagType
     bool isVariadicParamList;                   // For dynamic arrays that represent variadic parameter lists
     bool isEnum;                                // For enumerations
     bool isGarbageCollected;
+    bool resolveByStructured;                   // For forward types that should be resolved by a structured type (used for function results)   
     const struct tagIdent *typeIdent;           // For types that have identifiers
     const struct tagType *sameAs;               // For types declared as type T = ...
     union
@@ -173,10 +174,17 @@ typedef struct tagType
 } Type;
 
 
+typedef struct tagVisitedType
+{
+    const Type *type;
+    const struct tagVisitedType *next;
+} VisitedType;
+
+
 typedef struct tagVisitedTypePair
 {
     const Type *left, *right;
-    struct tagVisitedTypePair *next;
+    const struct tagVisitedTypePair *next;
 } VisitedTypePair;
 
 
@@ -432,6 +440,9 @@ static inline void typeResizeArray(Type *type, int numItems)
 }
 
 
+void typeAssertResizeArray(Types *types, Type *type, int numItems);
+
+
 static inline Type typeMakeDetachedArray(const Type *base, int numItems)
 {
     Type type = {.kind = TYPE_ARRAY};
@@ -457,13 +468,13 @@ int typeParamSizeUpTo   (const Types *types, const Signature *sig, int index);
 int typeParamSizeTotal  (const Types *types, const Signature *sig);
 int typeParamOffset     (const Types *types, const Signature *sig, int index);
 
-const ParamLayout            *typeMakeParamLayout           (const Types *types, const Signature *sig);
-const ParamAndLocalVarLayout *typeMakeParamAndLocalVarLayout(const Types *types, const ParamLayout *paramLayout, int localVarSlots);
+const StackFrameLayout *typeMakeStackFrameLayout(const Types *types, const Signature *sig, int64_t localVarSlots);
 
 const char *typeKindSpelling(TypeKind kind);
 const char *typeSpelling    (const Type *type, char *buf);
 
 bool typeFormatStringValid(const char *format, int *formatLen, int *typeLetterPos, TypeKind *typeKind, FormatStringTypeSize *size);
+
 
 static inline const Type *typeMapKey(const Type *mapType)
 {
