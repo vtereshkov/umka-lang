@@ -3334,6 +3334,20 @@ static FORCE_INLINE void doUnary(Fiber *fiber, Error *error)
             default:        error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal instruction"); return;
         }
     }
+    else if (type->kind == TYPE_UINT)
+    {
+        switch (op)
+        {
+            case TOK_PLUS:       break;
+            case TOK_MINUS:      slot->intVal  = -slot->uintVal; break;
+            case TOK_XOR:        slot->uintVal = ~slot->uintVal; break;
+
+            case TOK_PLUSPLUS:   (*(uint64_t *)slot->ptrVal)++; fiber->top++; break;
+            case TOK_MINUSMINUS: (*(uint64_t *)slot->ptrVal)--; fiber->top++; break;
+
+            default:             error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal instruction"); return;
+        }
+    }
     else
     {
         switch (op)
@@ -3354,7 +3368,6 @@ static FORCE_INLINE void doUnary(Fiber *fiber, Error *error)
                     case TYPE_UINT8:  (*(uint8_t  *)slot->ptrVal)++; break;
                     case TYPE_UINT16: (*(uint16_t *)slot->ptrVal)++; break;
                     case TYPE_UINT32: (*(uint32_t *)slot->ptrVal)++; break;
-                    case TYPE_UINT:   (*(uint64_t *)slot->ptrVal)++; break;
                     
                     default:          error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal type"); return;
                 }
@@ -3373,7 +3386,6 @@ static FORCE_INLINE void doUnary(Fiber *fiber, Error *error)
                     case TYPE_UINT8:  (*(uint8_t  *)slot->ptrVal)--; break;
                     case TYPE_UINT16: (*(uint16_t *)slot->ptrVal)--; break;
                     case TYPE_UINT32: (*(uint32_t *)slot->ptrVal)--; break;
-                    case TYPE_UINT:   (*(uint64_t *)slot->ptrVal)--; break;
                     
                     default:          error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal type"); return;
                 }

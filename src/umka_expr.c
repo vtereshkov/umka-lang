@@ -2863,6 +2863,10 @@ static void parseFactor(Umka *umka, const Type **type, Const *constant)
                 constUnary(&umka->consts, constant, op, *type);
             else
                 genUnary(&umka->gen, op, *type);
+
+            if (op == TOK_MINUS && typeInteger(*type) && !typeKindSigned((*type)->kind))
+                *type = umka->types.predecl.intType;
+
             break;
         }
 

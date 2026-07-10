@@ -226,6 +226,17 @@ void constUnary(const Consts *consts, Const *arg, TokenKind op, const Type *type
             default:        consts->error->handler(consts->error->context, "Illegal operator");
         }
     }
+    else if (type->kind == TYPE_UINT)
+    {
+        switch (op)
+        {
+            case TOK_PLUS:  break;
+            case TOK_MINUS: arg->intVal  = -arg->uintVal; break;
+            case TOK_XOR:   arg->uintVal = ~arg->uintVal; break;
+
+            default:        consts->error->handler(consts->error->context, "Illegal operator");
+        }
+    }
     else
     {
         switch (op)

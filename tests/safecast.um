@@ -105,6 +105,30 @@ fn test6() {
     printf("%v %v %v\n", s1, s2, s1 == s2)
 }
 
+fn test7() {
+	a := uint(1)
+	b := 0 - a
+	printf("%v %lld\n", b, b)
+
+	c := 0 - uint(1)
+    printf("%v %lld\n", c, c)
+
+	d := int(0) - uint(1)
+    printf("%v %lld\n", d, d)
+
+	g := -a
+	printf("%v %lld\n", g, g)
+
+	printf("%v %lld\n", -uint(1), -uint(1))
+
+	e := 9223372036854775808
+    printf("%v %llu\n", e, e)
+
+	printf("%v %llu\n", 9223372036854775808, 9223372036854775808)
+
+	printf("%v %lld\n", -9223372036854775808, -9223372036854775808)
+}
+
 fn test*() {
 	test1()
 	test2()
@@ -112,6 +136,7 @@ fn test*() {
 	test4()
 	test5()
 	test6()
+	test7()
 }
 
 fn main() {
