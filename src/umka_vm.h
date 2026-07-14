@@ -31,6 +31,12 @@ enum    // Memory manager settings
 
 enum
 {
+    MAX_VM_CALL_NESTING = 64
+};
+
+
+enum
+{
     JUMP_TO_CLEANUP = 0
 };
 
@@ -198,6 +204,7 @@ typedef struct tagVM
     HeapPages pages;
     UmkaHookFunc hooks[UMKA_NUM_HOOKS];
     bool terminatedNormally;
+    int callNesting;
     Storage *storage;
     Error *error;
 } VM;

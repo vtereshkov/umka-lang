@@ -35,6 +35,7 @@ typedef struct
     int stack[MAX_BLOCK_NESTING];
     int top;
     int lastJump;
+    int exprNesting;
     Gotos *breaks, *continues, *returns;
     Storage *storage;
     DebugInfo *debug, *debugPerInstr;

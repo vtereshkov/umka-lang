@@ -43,6 +43,7 @@ void genInit(CodeGen *gen, Storage *storage, DebugInfo *debug, Error *error)
     gen->code = storageAdd(gen->storage, gen->capacity * sizeof(Instruction));
     gen->top = -1;
     gen->lastJump = 0;
+    gen->exprNesting = 0;
     gen->breaks = gen->continues = gen->returns = NULL;
     gen->debug = debug;
     gen->debugPerInstr = storageAdd(gen->storage, gen->capacity * sizeof(DebugInfo));

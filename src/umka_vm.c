@@ -909,6 +909,7 @@ void vmInit(VM *vm, Storage *storage, int stackSize, bool fileSystemEnabled, Err
 
     memset(&vm->hooks, 0, sizeof(vm->hooks));
     vm->terminatedNormally = false;
+    vm->callNesting = 0;
     vm->error = error;
 
     srand(1);
@@ -4073,6 +4074,9 @@ static FORCE_INLINE void doHalt(VM *vm)
 
 static void vmLoop(VM *vm)
 {
+    if (UNLIKELY(vm->callNesting++ >= MAX_VM_CALL_NESTING))
+        vm->error->runtimeHandler(vm->error->context, ERR_RUNTIME, "Interpreter call nesting is too deep");
+    
     Fiber *fiber = vm->fiber;
     HeapPages *pages = &vm->pages;
     const UmkaHookFunc *hooks = vm->hooks;
@@ -4133,7 +4137,7 @@ static void vmLoop(VM *vm)
                 doCallBuiltin(fiber, &newFiber, pages, error);
 
                 if (!fiber->alive)
-                    return;
+                    goto end;
 
                 if (newFiber)
                     fiber = vm->fiber = vm->pages.fiber = newFiber;
@@ -4149,17 +4153,20 @@ static void vmLoop(VM *vm)
                     fiber = vm->fiber = vm->pages.fiber = newFiber;
 
                 if (!fiber->alive || fiber->ip == RETURN_FROM_VM)
-                    return;
+                    goto end;
 
                 break;
             }
             case OP_ENTER_FRAME:                    doEnterFrame(fiber, hooks, error);            break;
             case OP_LEAVE_FRAME:                    doLeaveFrame(fiber, hooks, error);            break;
-            case OP_HALT:                           doHalt(vm);                                   return;
+            case OP_HALT:                           doHalt(vm);                                   goto end;
 
             default: error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal instruction"); return;
         } // switch
     }
+
+    end: 
+    vm->callNesting--;
 }
 
 

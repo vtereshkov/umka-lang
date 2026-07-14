@@ -4,7 +4,8 @@
 #include "umka_compiler.h"
 
 
-const Type *parseType(Umka *umka, const Ident *ident);
+const Type *parseTypeIdent(Umka *umka, const Ident *ident);
+const Type *parseType(Umka *umka);
 void parseShortVarDecl(Umka *umka);
 void parseDecl(Umka *umka);
 void parseProgram(Umka *umka);

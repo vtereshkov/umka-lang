@@ -583,7 +583,7 @@ static void parseTypeCase(Umka *umka, const char *concreteVarName, ConstArray *e
     lexEat(&umka->lex, TOK_CASE);
 
     // type
-    const Type *concreteType = parseType(umka, NULL);
+    const Type *concreteType = parseType(umka);
     if (concreteType->kind == TYPE_INTERFACE)
         umka->error.handler(umka->error.context, "Non-interface type expected");
 
