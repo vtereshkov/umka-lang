@@ -73,8 +73,9 @@ fn test5() {
         std::assert(x == w)                        
     }
  
-    std::assert(w == null)
-    std::assert(null == w)
+    // The weak keyword is ignored, so the pointer keeps its target alive
+    std::assert(w != null)
+    std::assert(null != w)
 }
 
 fn test*() {

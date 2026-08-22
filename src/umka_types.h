@@ -27,7 +27,6 @@ typedef enum
     TYPE_REAL32,
     TYPE_REAL,
     TYPE_PTR,
-    TYPE_WEAKPTR,       // Actually a handle that stores the heap page ID and the offset within the page: (pageId << 32) | pageOffset
     TYPE_ARRAY,
     TYPE_DYNARRAY,
     TYPE_STR,           // Pointer of a special kind that admits assignment of string literals, concatenation and comparison by content
@@ -110,7 +109,6 @@ typedef union
     int64_t intVal;
     uint64_t uintVal;
     void *ptrVal;
-    uint64_t weakPtrVal;
     double realVal;
 } Const;
 
@@ -231,7 +229,6 @@ Type *typeAdd       (Types *types, const Blocks *blocks, TypeKind kind);
 void typeDeepCopy   (Storage *storage, Type *dest, const Type *src);
 
 const Type *typeAddPtrTo    (Types *types, const Blocks *blocks, const Type *type);
-const Type *typeAddWeakPtrTo(Types *types, const Blocks *blocks, const Type *type);
 
 int typeSize     (const Types *types, const Type *type);
 int typeAlignment(const Types *types, const Type *type);
@@ -303,7 +300,7 @@ static inline bool typeStructured(const Type *type)
 }
 
 
-bool typeHasPtr(const Type *type, bool alsoWeakPtr);
+bool typeHasPtr(const Type *type);
 
 
 static inline bool typeExprListStruct(const Type *type)
@@ -365,7 +362,7 @@ static inline bool typeImplicitlyConvertibleBaseTypes(const Type *left, const Ty
 
 static inline bool typeExplicitlyConvertibleBaseTypes(const Types *types, const Type *left, const Type *right)
 {
-    return typeSize(types, left) <= typeSize(types, right) && !typeHasPtr(left, true) && !typeHasPtr(right, true);
+    return typeSize(types, left) <= typeSize(types, right) && !typeHasPtr(left) && !typeHasPtr(right);
 }
 
 
@@ -396,7 +393,6 @@ static inline bool typeConvOverflow(TypeKind destTypeKind, TypeKind srcTypeKind,
         case TYPE_REAL32:   return val.realVal < -FLT_MAX        || val.realVal > FLT_MAX;
         case TYPE_REAL:     return val.realVal < -DBL_MAX        || val.realVal > DBL_MAX;
         case TYPE_PTR:
-        case TYPE_WEAKPTR:
         case TYPE_STR:
         case TYPE_ARRAY:
         case TYPE_DYNARRAY:
@@ -419,7 +415,7 @@ static inline bool typeOverflow(TypeKind typeKind, Const val)
 
 static inline void typeSetBase(Type *type, const Type *base)
 {
-    if (type->kind == TYPE_PTR || type->kind == TYPE_WEAKPTR || type->kind == TYPE_ARRAY || type->kind == TYPE_DYNARRAY || type->kind == TYPE_MAP || type->kind == TYPE_FIBER)
+    if (type->kind == TYPE_PTR || type->kind == TYPE_ARRAY || type->kind == TYPE_DYNARRAY || type->kind == TYPE_MAP || type->kind == TYPE_FIBER)
     {
         type->base = base;
         if (type->kind == TYPE_ARRAY && base->isGarbageCollected)
@@ -440,15 +436,6 @@ static inline void typeResizeArray(Type *type, int numItems)
 
 
 void typeAssertResizeArray(Types *types, Type *type, int numItems);
-
-
-static inline Type typeMakeDetachedArray(const Type *base, int numItems)
-{
-    Type type = {.kind = TYPE_ARRAY};
-    typeSetBase(&type, base);
-    typeResizeArray(&type, numItems);
-    return type;
-}
 
 
 const Field *typeFindField        (const Type *structType, const char *name, int *index);

@@ -251,21 +251,14 @@ static void parseSignature(Umka *umka, Signature *sig, int depth)
 // ptrType = ["weak"] "^" type.
 static const Type *parsePtrType(Umka *umka, int depth)
 {
-    bool weak = false;
-    if (umka->lex.tok.kind == TOK_WEAK)
-    {
-        weak = true;
+    if (umka->lex.tok.kind == TOK_WEAK)      // Kept for backward compatibility, ignored
         lexNext(&umka->lex);
-    }
 
     lexEat(&umka->lex, TOK_CARET);
 
     const Type *baseType = parseTypeOrForwardType(umka, false, depth + 1);
 
-    if (weak)
-        return typeAddWeakPtrTo(&umka->types, &umka->blocks, baseType);
-    else
-        return typeAddPtrTo(&umka->types, &umka->blocks, baseType);
+    return typeAddPtrTo(&umka->types, &umka->blocks, baseType);
 }
 
 
@@ -945,6 +938,5 @@ void parseProgram(Umka *umka)
     }
 
     genEntryPoint(&umka->gen, JUMP_TO_CLEANUP);         // Cleanup code jump
-    doGarbageCollection(umka);
     genHalt(&umka->gen);
 }

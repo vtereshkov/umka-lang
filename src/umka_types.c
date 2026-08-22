@@ -30,7 +30,6 @@ static const char *spelling [] =
     "real32",
     "real",
     "^",
-    "weak ^",
     "[...]",
     "[]",
     "str",
@@ -117,7 +116,7 @@ Type *typeAdd(Types *types, const Blocks *blocks, TypeKind kind)
 
     type->kind  = kind;
     type->block = blocks->item[blocks->top].block;
-    type->isGarbageCollected = typeHasPtr(type, false);
+    type->isGarbageCollected = typeHasPtr(type);
     type->sameAs = type;
 
     if (type->kind == TYPE_FN)
@@ -179,14 +178,6 @@ const Type *typeAddPtrTo(Types *types, const Blocks *blocks, const Type *type)
 }
 
 
-const Type *typeAddWeakPtrTo(Types *types, const Blocks *blocks, const Type *type)
-{
-    Type *weakPtrType = typeAdd(types, blocks, TYPE_WEAKPTR);
-    typeSetBase(weakPtrType, type);
-    return weakPtrType;
-}
-
-
 static int typeSizeRecompute(const Type *type)
 {
     switch (type->kind)
@@ -205,7 +196,6 @@ static int typeSizeRecompute(const Type *type)
         case TYPE_REAL32:   return sizeof(float);
         case TYPE_REAL:     return sizeof(double);
         case TYPE_PTR:      return sizeof(void *);
-        case TYPE_WEAKPTR:  return sizeof(uint64_t);
         case TYPE_STR:      return sizeof(void *);
         case TYPE_ARRAY:    return type->numItems > 0 ? (type->numItems * typeSizeRecompute(type->base)) : 0;
         case TYPE_DYNARRAY: return sizeof(DynArray);
@@ -259,7 +249,6 @@ static int typeAlignmentRecompute(const Type *type)
         case TYPE_REAL32:
         case TYPE_REAL:
         case TYPE_PTR:
-        case TYPE_WEAKPTR:
         case TYPE_STR:      return typeSizeRecompute(type);
         case TYPE_ARRAY:    return type->numItems > 0 ? typeAlignmentRecompute(type->base) : 1;
         case TYPE_DYNARRAY:
@@ -295,21 +284,18 @@ int typeAlignment(const Types *types, const Type *type)
 }
 
 
-bool typeHasPtr(const Type *type, bool alsoWeakPtr)
+bool typeHasPtr(const Type *type)
 {
     if (type->kind == TYPE_PTR      || type->kind == TYPE_STR       || type->kind == TYPE_MAP     ||
         type->kind == TYPE_DYNARRAY || type->kind == TYPE_INTERFACE || type->kind == TYPE_CLOSURE || type->kind == TYPE_FIBER)
         return true;
 
-    if (type->kind == TYPE_WEAKPTR && alsoWeakPtr)
-        return true;
-
     if (type->kind == TYPE_ARRAY)
-        return type->numItems > 0 && typeHasPtr(type->base, alsoWeakPtr);
+        return type->numItems > 0 && typeHasPtr(type->base);
 
     if (type->kind == TYPE_STRUCT)
         for (int i = 0; i < type->numItems; i++)
-            if (typeHasPtr(type->field[i]->type, alsoWeakPtr))
+            if (typeHasPtr(type->field[i]->type))
                 return true;
 
     return false;
@@ -328,7 +314,7 @@ static bool typeComparableRecursive(const Type *type, const VisitedType *firstVi
 
     const VisitedType newVisited = {type, firstVisited};    
     
-    if (typeOrdinal(type) || typeReal(type) || type->kind == TYPE_PTR || type->kind == TYPE_WEAKPTR || type->kind == TYPE_STR)
+    if (typeOrdinal(type) || typeReal(type) || type->kind == TYPE_PTR || type->kind == TYPE_STR)
         return true;
 
     if (type->kind == TYPE_ARRAY || type->kind == TYPE_DYNARRAY)
@@ -387,8 +373,8 @@ static bool typeEquivalentRecursive(const Type *left, const Type *right, const V
 
     if (left->kind == right->kind)
     {
-        // Pointers or weak pointers
-        if (left->kind == TYPE_PTR || left->kind == TYPE_WEAKPTR)
+        // Pointers
+        if (left->kind == TYPE_PTR)
             return typeEquivalentRecursive(left->base, right->base, &newVisited);
 
         // Arrays
@@ -952,7 +938,7 @@ static char *typeSpellingRecursive(const Type *type, char *buf, int size, int de
             snprintf(buf + len, nonneg(size - len), "%s", spelling[type->kind]);
         }
 
-        if (type->kind == TYPE_PTR || type->kind == TYPE_WEAKPTR || type->kind == TYPE_ARRAY || type->kind == TYPE_DYNARRAY || type->kind == TYPE_MAP)
+        if (type->kind == TYPE_PTR || type->kind == TYPE_ARRAY || type->kind == TYPE_DYNARRAY || type->kind == TYPE_MAP)
         {
             const Type *itemType = (type->kind == TYPE_MAP) ? typeMapItem(type) : type->base;
 

@@ -8,9 +8,6 @@
 #include "umka_ident.h"
 
 
-static bool identIsGarbageCollected(const Blocks *blocks, const Ident *ident);
-
-
 static void identTempName(Idents *idents, char *buf)
 {
     snprintf(buf, DEFAULT_STR_LEN + 1, "#temp%d", idents->tempVarNameSuffix++);
@@ -20,7 +17,6 @@ static void identTempName(Idents *idents, char *buf)
 void identInit(Idents *idents, Storage *storage, DebugInfo *debug, Error *error)
 {
     idents->first = NULL;
-    idents->lastTempVarForResult = NULL;
     idents->tempVarNameSuffix = 0;
     idents->storage = storage;
     idents->debug = debug;
@@ -41,25 +37,6 @@ void identFree(Idents *idents, int block)
 
         storageRemove(idents->storage, idents->first);
         idents->first = next;
-    }
-}
-
-
-void identMoveBefore(Idents *idents, const Ident *next)
-{
-    for (Ident *ident = idents->first; ident; ident = ident->next)
-    {
-        if (ident->next == next)
-        {
-            Ident *moved = idents->first;
-            if (moved != ident)
-            {
-                idents->first = moved->next;
-                moved->next = ident->next;
-                ident->next = moved;                
-            }
-            return;
-        }
     }
 }
 
@@ -241,7 +218,6 @@ static Ident *identAdd(Idents *idents, const Modules *modules, const Blocks *blo
     ident->isGloballyAllocated = false;
     ident->isTemporary         = false;
     ident->isUsed              = exported || ident->module == 0 || identIsHidden(ident->name) || identIsPlaceholder(ident->name) || identIsMain(ident);  // Exported, predefined, hidden, placeholder identifiers and main() are always treated as used
-    ident->isGarbageCollected  = identIsGarbageCollected(blocks, ident);
     ident->prototypeOffset     = -1;
     ident->debug               = *(idents->debug);
 
@@ -328,7 +304,7 @@ int identAllocStack(Idents *idents, const Types *types, Blocks *blocks, const Ty
         idents->error->handler(idents->error->context, "Stack overflow");
 
     *localVarSize = align(*localVarSize + size, typeAlignment(types, type));
-    return -2 * sizeof(Slot) - (*localVarSize);  // 2 extra slots for the stack frame ref count and parameter layout table
+    return -2 * sizeof(Slot) - (*localVarSize);  // 2 extra slots for the reserved slot and the parameter layout table
 }
 
 
@@ -349,20 +325,13 @@ Ident *identAllocVar(Idents *idents, const Types *types, const Modules *modules,
 }
 
 
-Ident *identAllocTempVar(Idents *idents, const Types *types, const Modules *modules, Blocks *blocks, const Type *type, bool isFuncResult)
+Ident *identAllocTempVar(Idents *idents, const Types *types, const Modules *modules, Blocks *blocks, const Type *type)
 {
     IdentName tempName;
     identTempName(idents, tempName);
 
     Ident *ident = identAllocVar(idents, types, modules, blocks, tempName, type, false);
     ident->isTemporary = true;
-
-    if (isFuncResult)
-    {
-        if (blocks->top == 0)
-            idents->error->handler(idents->error->context, "Temporary variable must be local");
-        idents->lastTempVarForResult = ident;
-    }
 
     return ident;
 }
@@ -407,15 +376,6 @@ bool identIsMain(const Ident *ident)
             ident->type->sig->numParams == 1 &&                          // A dummy #upvalues is the only parameter 
             ident->type->sig->resultType->kind == TYPE_VOID &&
             strcmp(ident->name, "main") == 0;
-}
-
-
-static bool identIsGarbageCollected(const Blocks *blocks, const Ident *ident)
-{
-    return  ident->kind == IDENT_VAR && 
-            ident->type->isGarbageCollected && 
-            strcmp(ident->name, "#result") != 0 && 
-            (strcmp(ident->name, "#upvalues") != 0 || blocks->item[blocks->top].hasUpvalues);     // Collect #upvalues only if used
 }
 
 

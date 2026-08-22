@@ -561,14 +561,14 @@ Parameters:
 
 * `umka`: Interpreter instance handle
 * `size`: Chunk size in bytes
-* `onFree`: Optional callback function that will be called when the chunk reference count reaches zero. It accepts one parameter, the chunk pointer
+* `onFree`: Optional callback function that will be called when the chunk is collected as garbage. It accepts one parameter, the chunk pointer
 
 Returned value: Pointer to the allocated chunk. 
 
 ```
 UMKA_API void umkaIncRef(Umka *umka, void *ptr);
 ```
-Increments the reference count of a memory chunk.
+Kept for backward compatibility, does nothing. The garbage collector needs no reference counts.
 
 Parameters:
 
@@ -578,7 +578,7 @@ Parameters:
 ```
 UMKA_API void umkaDecRef(Umka *umka, void *ptr);
 ```
-Decrements the reference count of a memory chunk.
+Kept for backward compatibility, does nothing. The garbage collector needs no reference counts.
 
 Parameters:
 

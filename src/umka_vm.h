@@ -23,7 +23,7 @@ enum    // Memory manager settings
     MEM_MIN_FREE_HEAP     = 1024,                   // Bytes
     MEM_MIN_HEAP_CHUNK    = 64,                     // Bytes
     MEM_MIN_HEAP_PAGE     = 1024 * 1024,            // Bytes
-    MEM_MAX_BLACKLISTED   = 16 * 1024 * 1024        // Bytes   
+    MEM_MIN_GC_THRESHOLD  = 16 * 1024 * 1024        // Bytes
 };
 
 
@@ -72,11 +72,6 @@ typedef enum
     OP_ASSIGN,
     OP_SWAP_ASSIGN,
     OP_ASSIGN_PARAM,
-    OP_REF_CNT,
-    OP_REF_CNT_GLOBAL,
-    OP_REF_CNT_LOCAL,
-    OP_REF_CNT_ASSIGN,
-    OP_SWAP_REF_CNT_ASSIGN,
     OP_UNARY,
     OP_BINARY,
     OP_GET_ARRAY_PTR,
@@ -89,8 +84,6 @@ typedef enum
     OP_GET_FIELD,
     OP_ASSERT_TYPE,
     OP_ASSERT_RANGE,
-    OP_WEAKEN_PTR,
-    OP_STRENGTHEN_PTR,
     OP_GOTO,
     OP_GOTO_IF,
     OP_GOTO_IF_NOT,
@@ -111,7 +104,6 @@ typedef union               // Extended version of UmkaStackSlot
     uint64_t uintVal;
     int32_t int32Val[2];
     void *ptrVal;
-    uint64_t weakPtrVal;    // For global pointers, stores the pointer. For heap pointers, stores the heap flag (bit 63), page ID (bits 32...62), offset within page (bits 0..31)
     double realVal;         // For all real types
     BuiltinFunc builtinVal;
     UmkaStackSlot apiSlot;  // For compatibility with C API
@@ -131,25 +123,44 @@ typedef struct
 typedef struct
 {
     void *ptr;
-    const Type *type;
-    struct tagHeapPage *pageForDeferred;   // Mandatory for deferred ref count updates, NULL otherwise
-} RefCntCandidate;
+    const Type *type;           // If NULL, ptr is a fiber whose stack is to be scanned conservatively
+} MarkCandidate;
 
 
 typedef struct
 {
-    RefCntCandidate *stack;
+    MarkCandidate *stack;
     int top, capacity;
     Storage *storage;
-} RefCntCandidates;
+} MarkCandidates;
+
+
+typedef enum
+{
+    CHUNK_DATA,             // Data of the type stored in the chunk header, if any
+    CHUNK_DYNARRAY_DATA,    // Dynamic array dimensions followed by the items
+    CHUNK_FIBER,            // Fiber
+    CHUNK_STACK             // Fiber stack
+} ChunkKind;
+
+
+typedef struct tagHeapChunk
+{
+    struct tagHeapChunk *nextFree;
+    int size;
+    ChunkKind kind;
+    bool allocated, marked;
+    const Type *type;           // Optional type of the data stored in the chunk
+    UmkaExternFunc onFree;      // Optional callback called when the chunk is collected
+    int64_t data[];
+} HeapChunk;
 
 
 typedef struct tagHeapPage
 {
-    int id;
-    int refCnt;
-    int numChunks, numOccupiedChunks, numChunksWithOnFree, chunkSize;
+    int numChunks, numOccupiedChunks, numAllocatedChunks, chunkSize;
     struct tagHeapPage *prev, *next;
+    HeapChunk *firstFree;
     char *end;
     int64_t data[];
 } HeapPage;
@@ -157,27 +168,13 @@ typedef struct tagHeapPage
 
 typedef struct
 {
-    HeapPage *first, *firstRecycled, *firstBlacklisted, *lastAccessed;
+    HeapPage *first, *firstRecycled, *lastAccessed;
     char *lowest, *highest;
-    int freeId;
-    int64_t totalSize, blacklistedSize;
-    struct tagFiber *fiber;
-    int64_t leakSanLevel;
-    RefCntCandidates refCntCandidates;
+    int64_t totalSize, occupiedSize, gcThreshold;
+    bool gcRequested;
+    MarkCandidates markCandidates, escapeSuspects;
     Error *error;
 } HeapPages;
-
-
-typedef struct
-{
-    int refCnt;
-    int size;
-    const Type *type;           // Optional type for garbage collection
-    UmkaExternFunc onFree;      // Optional callback called when ref count reaches zero
-    int64_t ip;                 // Optional instruction pointer at which the chunk has been allocated
-    bool isStack;
-    int64_t data[];
-} HeapChunk;
 
 
 typedef struct tagFiber
@@ -196,10 +193,14 @@ typedef struct tagFiber
 } Fiber;
 
 
+typedef struct tagIdents Idents;
+
+
 typedef struct tagVM
 {
     Fiber *fiber, *mainFiber;
     HeapPages pages;
+    const Idents *idents;
     UmkaHookFunc hooks[UMKA_NUM_HOOKS];
     bool terminatedNormally;
     int callNesting;
@@ -208,10 +209,7 @@ typedef struct tagVM
 } VM;
 
 
-typedef struct tagIdents Idents;
-
-
-void vmInit                     (VM *vm, Storage *storage, int stackSize, bool fileSystemEnabled, Error *error);
+void vmInit                     (VM *vm, Storage *storage, const Idents *idents, int stackSize, bool fileSystemEnabled, Error *error);
 void vmFree                     (VM *vm);
 void vmReset                    (VM *vm, const Instruction *code, const DebugInfo *debugPerInstr);
 void vmCall                     (VM *vm, UmkaFuncContext *fn);
@@ -222,8 +220,6 @@ int vmAsm                       (int ip, const Instruction *code, const DebugInf
 bool vmUnwindCallStack          (VM *vm, const Slot **base, int *ip);
 void vmSetHook                  (VM *vm, UmkaHookEvent event, UmkaHookFunc hook);
 void *vmAllocData               (VM *vm, int size, UmkaExternFunc onFree);
-void vmIncRef                   (VM *vm, void *ptr, const Type *type);
-void vmDecRef                   (VM *vm, void *ptr, const Type *type);
 void *vmGetMapNodeData          (VM *vm, Map *map, Slot key);
 char *vmMakeStr                 (VM *vm, const char *str);
 void vmMakeDynArray             (VM *vm, DynArray *array, const Type *type, int len);

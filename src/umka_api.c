@@ -213,13 +213,13 @@ UMKA_API void *umkaAllocData(Umka *umka, int size, UmkaExternFunc onFree)
 
 UMKA_API void umkaIncRef(Umka *umka, void *ptr)
 {
-    vmIncRef(&umka->vm, ptr, umka->types.predecl.ptrVoidType);    // We have no actual type info provided by the user, so we can only rely on the type info from the heap chunk header, if any
+    // Kept for backward compatibility. The garbage collector needs no reference counts
 }
 
 
 UMKA_API void umkaDecRef(Umka *umka, void *ptr)
 {
-    vmDecRef(&umka->vm, ptr, umka->types.predecl.ptrVoidType);    // We have no actual type info provided by the user, so we can only rely on the type info from the heap chunk header, if any
+    // Kept for backward compatibility. The garbage collector needs no reference counts
 }
 
 
@@ -327,7 +327,7 @@ UMKA_API void *umkaMakeStruct(Umka *umka, const UmkaType *type)
 
 UMKA_API const UmkaType *umkaGetBaseType(const UmkaType *type) 
 {
-    if (type->kind == TYPE_PTR || type->kind == TYPE_WEAKPTR || type->kind == TYPE_ARRAY || type->kind == TYPE_DYNARRAY)
+    if (type->kind == TYPE_PTR || type->kind == TYPE_ARRAY || type->kind == TYPE_DYNARRAY)
         return type->base;
     return NULL;
 }

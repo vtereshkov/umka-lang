@@ -207,7 +207,7 @@ void compilerInit(Umka *umka, const char *fileName, const char *sourceString, in
     identInit    (&umka->idents, &umka->storage, &umka->debug, &umka->error);
     constInit    (&umka->consts, &umka->error);
     genInit      (&umka->gen, &umka->storage, &umka->debug, &umka->error);
-    vmInit       (&umka->vm, &umka->storage, stackSize, fileSystemEnabled, &umka->error);
+    vmInit       (&umka->vm, &umka->storage, &umka->idents, stackSize, fileSystemEnabled, &umka->error);
 
     vmReset(&umka->vm, umka->gen.code, umka->gen.debugPerInstr);
 

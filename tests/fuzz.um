@@ -4007,12 +4007,9 @@ fn section_for_in_map() {
 // Section X15: memusage() before/after allocations
 // ----------------------------------------------------------------------------
 
-fn section_memusage() {
-    banner("memusage")
-
-    before := memusage()
-    check(before >= 0, "memusage non-negative")
-
+// The allocations are made in a separate function, since the collector keeps
+// the local variables of the current stack frame alive until the frame is left.
+fn allocAndMeasure(): int {
     // Allocate a large slice and a large map.
     a := make([]int, 100000)
     m := map[int]str{}
@@ -4021,7 +4018,6 @@ fn section_memusage() {
     }
 
     during := memusage()
-    check(during > before, "memusage grew with allocations")
 
     // Touch the allocations so the optimizer can't elide them.
     sum := 0
@@ -4032,9 +4028,19 @@ fn section_memusage() {
     check(sum == 0, "fresh slice zeroes")
     check(len(m) == 5000, "map populated")
 
-    // Drop references; reclaim should happen via RC.
-    a = []int{}
-    m = map[int]str{}
+    return during
+}
+
+fn section_memusage() {
+    banner("memusage")
+
+    before := memusage()
+    check(before >= 0, "memusage non-negative")
+
+    during := allocAndMeasure()
+    check(during > before, "memusage grew with allocations")
+
+    // The references are dropped when the allocating function returns
     after := memusage()
     check(after <= during, "memusage dropped after release")
 
