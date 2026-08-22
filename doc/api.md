@@ -455,7 +455,6 @@ typedef enum
     TYPE_REAL32,
     TYPE_REAL,
     TYPE_PTR,
-    TYPE_WEAKPTR,
     TYPE_ARRAY,
     TYPE_DYNARRAY,
     TYPE_STR,
@@ -652,14 +651,14 @@ Parameters:
 
 * `umka`: Interpreter instance handle
 * `size`: Chunk size in bytes
-* `onFree`: Optional callback function that will be called when the chunk reference count reaches zero. It accepts one parameter, the chunk pointer
+* `onFree`: Optional callback function that will be called when the chunk is collected as garbage. It accepts one parameter, the chunk pointer
 
 Returned value: Pointer to the allocated chunk. 
 
 ```
 UMKA_API void umkaIncRef(Umka *umka, void *ptr);
 ```
-Increments the reference count of a memory chunk.
+Kept for backward compatibility, does nothing. The garbage collector needs no reference counts.
 
 Parameters:
 
@@ -669,7 +668,7 @@ Parameters:
 ```
 UMKA_API void umkaDecRef(Umka *umka, void *ptr);
 ```
-Decrements the reference count of a memory chunk.
+Kept for backward compatibility, does nothing. The garbage collector needs no reference counts.
 
 Parameters:
 
@@ -745,7 +744,7 @@ Parameters:
 * `map`: Umka map. Its `type` field must be set
 * `key`: Pointer to the key value. For a key obtained from `umkaGetMapKeys`, this is the address of an array item
 
-Returned value: Pointer to the map item; `NULL` if `map` is `NULL`, its type is not set, or `key` is `NULL`. The host is responsible for filling in the item memory, observing the reference counting rules.
+Returned value: Pointer to the map item; `NULL` if `map` is `NULL`, its type is not set, or `key` is `NULL`. The host is responsible for filling in the item memory.
 
 ```
 UMKA_API void umkaGetMapKeys(Umka *umka, UmkaMap *map, void *keys);

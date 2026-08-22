@@ -5,8 +5,6 @@
 
 
 void doPushVarPtr                   (Umka *umka, const Ident *ident);
-void doTryOptimizeIncRefCnt         (Umka *umka, const Type *type);
-void doTryOptimizeRefCntAssign      (Umka *umka, const Type *type, bool isOldLhsValid);
 void doImplicitTypeConv             (Umka *umka, const Type *dest, const Type **src, Const *constant);
 void doAssertImplicitTypeConv       (Umka *umka, const Type *dest, const Type **src, Const *constant);
 void doExplicitTypeConv             (Umka *umka, const Type *dest, const Type **src, Const *constant);

@@ -217,7 +217,9 @@ Umka supports the `real32` and `real` floating-point types. The `real` is the re
 
 A variable that stores a memory address of another variable has a pointer type. The type of the other variable is called the *base type* of the pointer type. The pointer type is specified by a `^` followed by the base type specification. If the base type is unknown, it should be specified as `void`. An uninitialized pointer has the value `null`. 
 
-Umka performs automatic memory management using reference counting. All pointers are reference-counted by default. However, in processing data structures with cyclic references (like doubly-linked lists), reference counting is unable to deallocate memory properly. In this case, one of the pointers that constitute the cycle can be declared `weak`. A weak pointer is not reference-counted and its existence does not prevent the pointed-to variable from being deallocated. If a weak pointer does not point to a valid memory block, it is equal to `null`. A weak pointer cannot point to a local variable.
+Umka performs automatic memory management using a mark-and-sweep garbage collector. Data structures with cyclic references (like doubly-linked lists) are deallocated as well as any others. The collector runs between instructions, so the exact moment at which unreachable memory is deallocated is not specified. The `weak` keyword is accepted for backward compatibility and ignored: all pointers are strong.
+
+A pointer to a local variable must not outlive the function whose variable it points to. Such an escaping pointer is reported as a runtime error when the garbage is collected, i.e. possibly later than the escape itself.
 
 Syntax:
 
@@ -230,7 +232,7 @@ Examples:
 ```
 ^int16
 ^void
-weak ^Vec
+^Vec
 ```
 
 ### String type
@@ -416,7 +418,7 @@ Two types are *equivalent* if
 
 * They are the same type
 * They are declared types that have the same identifier. Any other declared types are not equivalent 
-* They are pointer types and have equivalent base types and both are either strong or weak
+* They are pointer types and have equivalent base types
 * They are array types and have equal length and equivalent item types
 * They are dynamic array types and have equivalent item types
 * They are map types and have equivalent key types and equivalent item types
@@ -445,8 +447,6 @@ If a value `s` of type `S` is given where a value `t` of some other type `T` is 
 * `S` is a type (or a pointer to a type) that implements all the methods of `T` and `T` is an interface type 
 * `S` and `T` are interface types and `S` declares all the methods of `T`
 * `S` and `T` are pointer types and either `s` is `null`, or `T` is `^void`
-* `S` is a weak pointer type and `T` is a strong pointer type and either the base types of `S` and `T` are equivalent, or `t` is `null` 
-* `S` is a strong pointer type and `T` is a weak pointer type and either the base types of `S` and `T` are equivalent, or `s` is `null`, and `s` and `t` are not operands of a binary operator
 * `S` is a function type and `T` is a closure type and `S` and the underlying function type of `T` are equivalent
 * `s` and `t` are expression lists having equal numbers of items and each item of `s` can be implicitly converted to the corresponding item of `t`  
 
@@ -879,19 +879,13 @@ Starts or resumes the execution of the fiber `fib`. If `fib` is omitted, the par
 fn memusage(): int
 ```
 
-Returns the allocated heap memory size in bytes.
+Collects the garbage and returns the size of the live heap memory in bytes.
 
 ```
 fn leaksan(level: int)
 ```
 
-Sets memory leak sanitizer warnings level:
-
-* 0: No warnings
-* 1: Short warnings (default)
-* 2: Detailed warnings. Each leaked allocation is reported along with the exact source code location
-
-Warnings are output to `stderr` after program termination. All leaked memory is freed regardless of the warnings level.
+Kept for backward compatibility, does nothing. The garbage collector reclaims unreachable memory, including reference cycles.
 
 ```
 fn exit(code: int, msg: str = "")
@@ -1152,7 +1146,6 @@ From the implicit type conversion rules it follows that:
 
 * If one of the operands is a string and the other is a dynamic array, both are converted to the string type
 * If one of the operands is an array and the other is a dynamic array, both are converted to the array type
-* If one of the operands is a pointer and the other is a weak pointer, both are converted to the pointer type
 
 #### Ternary operator
 

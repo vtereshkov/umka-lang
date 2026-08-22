@@ -3,7 +3,6 @@
 
 #include "umka_compiler.h"
 
-void doGarbageCollection(Umka *umka);
 
 void doZeroVar(Umka *umka, const Ident *ident);
 void doResolveExtern(Umka *umka);

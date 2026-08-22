@@ -12,43 +12,6 @@ static void parseStmtList(Umka *umka);
 static void parseBlock(Umka *umka);
 
 
-static void doGarbageCollectionAt(Umka *umka, int block)
-{
-    bool blockFound = false;
-
-    for (const Ident *ident = umka->idents.first; ident; ident = ident->next)
-    {
-        if (ident->block == block)
-            blockFound = true;
-        else if (blockFound)
-            break;
-
-        if (blockFound && ident->isGarbageCollected && (!ident->isTemporary || ident->isUsed))
-        {
-            if (ident->block == 0)
-                genRefCntGlobal(&umka->gen, TOK_MINUSMINUS, ident->ptr, ident->type);
-            else
-                genRefCntLocal(&umka->gen, TOK_MINUSMINUS, ident->offset, ident->type);
-        }
-    }
-}
-
-
-void doGarbageCollection(Umka *umka)
-{
-    // Collect garbage in the current scope
-    doGarbageCollectionAt(umka, blocksCurrent(&umka->blocks));
-}
-
-
-static void doGarbageCollectionDownToBlock(Umka *umka, int block)
-{
-    // Collect garbage over all scopes down to the specified block (not inclusive)
-    for (int i = umka->blocks.top; i >= 1 && umka->blocks.item[i].block != block; i--)
-        doGarbageCollectionAt(umka, umka->blocks.item[i].block);
-}
-
-
 void doZeroVar(Umka *umka, const Ident *ident)
 {
     if (ident->block == 0)
@@ -110,12 +73,11 @@ void doResolveExtern(Umka *umka)
                     doPushVarPtr(umka, upvaluesParamIdent);
                     genPushGlobalPtr(&umka->gen, upvalue);
                     genDeref(&umka->gen, TYPE_INTERFACE);
-                    genRefCntAssign(&umka->gen, upvaluesParamIdent->type);
+                    genAssign(&umka->gen, upvaluesParamIdent->type->kind, typeSize(&umka->types, upvaluesParamIdent->type));
                 }
                 
                 genCallExtern(&umka->gen, fn);
 
-                doGarbageCollection(umka);
 
                 const StackFrameLayout *layout = typeMakeStackFrameLayout(&umka->types, ident->type->sig, 0);
                 
@@ -212,7 +174,7 @@ static void parseSingleAssignmentStmt(Umka *umka, const Type *type, Const *varPt
     if (varPtrConst)                                // Initialize global variable
         constAssign(&umka->consts, varPtrConst->ptrVal, rightConstant, type->kind, typeSize(&umka->types, type));
     else                                            // Assign to variable
-        doTryOptimizeRefCntAssign(umka, type, true);
+        genAssign(&umka->gen, type->kind, typeSize(&umka->types, type));
 }
 
 
@@ -265,7 +227,7 @@ static void parseListAssignmentStmt(Umka *umka, const Type *type, Const *varPtrC
 
             doAssertImplicitTypeConv(umka, leftType, &rightType, NULL);
 
-            genRefCntAssign(&umka->gen, leftType);                    // Assign expression to variable
+            genAssign(&umka->gen, leftType->kind, typeSize(&umka->types, leftType));   // Assign expression to variable
             genPushReg(&umka->gen, REG_EXPR_LIST);                          // Restore expression list pointer
         }
     }
@@ -307,7 +269,7 @@ static void parseShortAssignmentStmt(Umka *umka, const Type *type, TokenKind op)
     const TokenKind shortOp = (leftType->kind == TYPE_STR && op == TOK_PLUSEQ) ? op : lexShortAssignment(op);
 
     doApplyOperator(umka, &leftType, &rightType, NULL, NULL, shortOp, true, false);
-    genRefCntAssign(&umka->gen, type);
+    genAssign(&umka->gen, type->kind, typeSize(&umka->types, type));
 }
 
 
@@ -327,7 +289,6 @@ static void parseSingleDeclAssignmentStmt(Umka *umka, IdentName name, bool expor
         constAssign(&umka->consts, ident->ptr, rightConstant, rightType->kind, typeSize(&umka->types, rightType));
     else                        // Assign to variable
     {
-        doTryOptimizeIncRefCnt(umka, rightType);
         doPushVarPtr(umka, ident);
         genSwapAssign(&umka->gen, rightType->kind, typeSize(&umka->types, rightType));
     }
@@ -383,18 +344,10 @@ static void parseListDeclAssignmentStmt(Umka *umka, IdentName *names, const bool
             genDeref(&umka->gen, rightType->kind);                          // Get expression value
 
             if (redecl)
-            {
                 doAssertImplicitTypeConv(umka, ident->type, &rightType, NULL);
 
-                doPushVarPtr(umka, ident);
-                genSwapRefCntAssign(&umka->gen, ident->type);                                 // Assign expression to variable - both left-hand and right-hand side reference counts modified
-            }
-            else
-            {
-                genRefCnt(&umka->gen, TOK_PLUSPLUS, rightType);                               // Increase right-hand side reference count
-                doPushVarPtr(umka, ident);
-                genSwapAssign(&umka->gen, ident->type->kind, typeSize(&umka->types, ident->type));  // Assign expression to variable
-            }
+            doPushVarPtr(umka, ident);
+            genSwapAssign(&umka->gen, ident->type->kind, typeSize(&umka->types, ident->type));  // Assign expression to variable
         }
     }
 
@@ -522,7 +475,6 @@ static void parseIfStmt(Umka *umka)
     }
 
     // Additional scope embracing shortVarDecl and statement body
-    doGarbageCollection(umka);
     identFree(&umka->idents, blocksCurrent(&umka->blocks));
     blocksLeave(&umka->blocks);
 }
@@ -569,7 +521,6 @@ static void parseExprCase(Umka *umka, const Type *selectorType, ConstArray *exis
     parseStmtList(umka);
 
     // Additional scope embracing stmtList
-    doGarbageCollection(umka);
     identFree(&umka->idents, blocksCurrent(&umka->blocks));
     blocksLeave(&umka->blocks);
 
@@ -620,12 +571,11 @@ static void parseTypeCase(Umka *umka, const char *concreteVarName, ConstArray *e
         genDeref(&umka->gen, concreteType->kind);
 
     doPushVarPtr(umka, concreteIdent);
-    genSwapRefCntAssign(&umka->gen, concreteType);
+    genSwapAssign(&umka->gen, concreteType->kind, typeSize(&umka->types, concreteType));
 
     parseStmtList(umka);
 
     // Additional scope embracing stmtList
-    doGarbageCollection(umka);
     identFree(&umka->idents, blocksCurrent(&umka->blocks));
     blocksLeave(&umka->blocks);
 
@@ -647,7 +597,6 @@ static void parseDefault(Umka *umka)
     parseStmtList(umka);
 
     // Additional scope embracing stmtList
-    doGarbageCollection(umka);
     identFree(&umka->idents, blocksCurrent(&umka->blocks));
     blocksLeave(&umka->blocks);
 }
@@ -700,7 +649,6 @@ static void parseExprSwitchStmt(Umka *umka)
     genSwitchEpilog(&umka->gen, numCases);
 
     // Additional scope embracing shortVarDecl and statement body
-    doGarbageCollection(umka);
     identFree(&umka->idents, blocksCurrent(&umka->blocks));
     blocksLeave(&umka->blocks);
 }
@@ -760,7 +708,6 @@ static void parseTypeSwitchStmt(Umka *umka)
     genPop(&umka->gen);     // Remove expr
 
     // Additional scope embracing ident and statement body
-    doGarbageCollection(umka);
     identFree(&umka->idents, blocksCurrent(&umka->blocks));
     blocksLeave(&umka->blocks);
 }
@@ -805,7 +752,6 @@ static void parseForHeader(Umka *umka, ForPostStmt *postStmt)
     typeAssertCompatible(&umka->types, umka->types.predecl.boolType, type);
 
     // Additional scope embracing expr
-    doGarbageCollection(umka);
     identFree(&umka->idents, blocksCurrent(&umka->blocks));
     blocksLeave(&umka->blocks);
 
@@ -846,7 +792,6 @@ static void parseForHeader(Umka *umka, ForPostStmt *postStmt)
             parseSimpleStmt(umka);
 
             // Additional scope embracing simpleStmt
-            doGarbageCollection(umka);
             identFree(&umka->idents, blocksCurrent(&umka->blocks));
             blocksLeave(&umka->blocks);
 
@@ -901,11 +846,8 @@ static void parseForInHeader(Umka *umka, ForPostStmt *postStmt)
     parseExpr(umka, &collectionType, NULL);
 
     // Implicit dereferencing: x in a^ == x in a
-    if (collectionType->kind == TYPE_PTR || collectionType->kind == TYPE_WEAKPTR)
+    if (collectionType->kind == TYPE_PTR)
     {
-        if (collectionType->kind == TYPE_WEAKPTR)
-            genStrengthenPtr(&umka->gen);
-
         genDeref(&umka->gen, collectionType->base->kind);
         collectionType = collectionType->base;
     }
@@ -944,7 +886,7 @@ static void parseForInHeader(Umka *umka, ForPostStmt *postStmt)
         collectionIdent = identAllocVar(&umka->idents, &umka->types, &umka->modules, &umka->blocks, "#collection", collectionIdentType, false);
         doZeroVar(umka, collectionIdent);
         doPushVarPtr(umka, collectionIdent);
-        genSwapRefCntAssign(&umka->gen, collectionIdent->type);
+        genSwapAssign(&umka->gen, collectionIdent->type->kind, typeSize(&umka->types, collectionIdent->type));
     }
     else
     {
@@ -1029,7 +971,7 @@ static void parseForInHeader(Umka *umka, ForPostStmt *postStmt)
         genDeref(&umka->gen, keyIdent->type->kind);
 
         doPushVarPtr(umka, keyIdent);
-        genSwapRefCntAssign(&umka->gen, keyIdent->type);
+        genSwapAssign(&umka->gen, keyIdent->type->kind, typeSize(&umka->types, keyIdent->type));
     }
 
     // Assign collection item
@@ -1066,7 +1008,7 @@ static void parseForInHeader(Umka *umka, ForPostStmt *postStmt)
 
         // Assign collection item to iteration variable
         doPushVarPtr(umka, itemIdent);
-        genSwapRefCntAssign(&umka->gen, itemIdent->type);
+        genSwapAssign(&umka->gen, itemIdent->type->kind, typeSize(&umka->types, itemIdent->type));
     }
 }
 
@@ -1125,7 +1067,6 @@ static void parseForStmt(Umka *umka)
     umka->gen.breaks = outerBreaks;
 
     // Additional scope embracing shortVarDecl in forHeader/forInHeader and statement body
-    doGarbageCollection(umka);
     identFree(&umka->idents, blocksCurrent(&umka->blocks));
     blocksLeave(&umka->blocks);
 }
@@ -1139,7 +1080,6 @@ static void parseBreakStmt(Umka *umka)
     if (!umka->gen.breaks)
         umka->error.handler(umka->error.context, "No loop to break");
 
-    doGarbageCollectionDownToBlock(umka, umka->gen.breaks->block);
     genGotosAddStub(&umka->gen, umka->gen.breaks);
 }
 
@@ -1152,7 +1092,6 @@ static void parseContinueStmt(Umka *umka)
     if (!umka->gen.continues)
         umka->error.handler(umka->error.context, "No loop to continue");
 
-    doGarbageCollectionDownToBlock(umka, umka->gen.continues->block);
     genGotosAddStub(&umka->gen, umka->gen.continues);
 }
 
@@ -1195,7 +1134,6 @@ static void parseReturnStmt(Umka *umka)
         doPushVarPtr(umka, result);
         genDeref(&umka->gen, TYPE_PTR);
 
-        // Assignment to an anonymous stack area (pointed to by #result) does not require updating reference counts
         genSwapAssign(&umka->gen, sig->resultType->kind, typeSize(&umka->types, sig->resultType));
 
         doPushVarPtr(umka, result);
@@ -1203,12 +1141,8 @@ static void parseReturnStmt(Umka *umka)
     }
 
     if (sig->resultType->kind != TYPE_VOID)
-    {
-        doTryOptimizeIncRefCnt(umka, sig->resultType);
         genPopReg(&umka->gen, REG_RESULT);
-    }
 
-    doGarbageCollectionDownToBlock(umka, umka->gen.returns->block);
     genGotosAddStub(&umka->gen, umka->gen.returns);
 }
 
@@ -1263,7 +1197,6 @@ static void parseBlock(Umka *umka)
 
     parseStmtList(umka);
 
-    doGarbageCollection(umka);
     identFree(&umka->idents, blocksCurrent(&umka->blocks));
     blocksLeave(&umka->blocks);
 
@@ -1325,7 +1258,7 @@ void parseFnBlock(Umka *umka, Ident *fn, const Type *upvaluesStructType)
             doZeroVar(umka, upvalueIdent);
             doPushVarPtr(umka, upvalueIdent);
 
-            genSwapRefCntAssign(&umka->gen, upvalue->type);
+            genSwapAssign(&umka->gen, upvalue->type->kind, typeSize(&umka->types, upvalue->type));
         }
 
         genPop(&umka->gen);
@@ -1351,7 +1284,6 @@ void parseFnBlock(Umka *umka, Ident *fn, const Type *upvaluesStructType)
     const bool hasReturn = umka->blocks.item[umka->blocks.top].hasReturn;
 
     // Additional scope embracing StmtList
-    doGarbageCollection(umka);
     identFree(&umka->idents, blocksCurrent(&umka->blocks));
     blocksLeave(&umka->blocks);
 
@@ -1361,7 +1293,6 @@ void parseFnBlock(Umka *umka, Ident *fn, const Type *upvaluesStructType)
     umka->gen.continues = outerContinues;
     umka->gen.breaks = outerBreaks;
 
-    doGarbageCollection(umka);
     identFree(&umka->idents, blocksCurrent(&umka->blocks));
 
     const int64_t localVarSlots = align(umka->blocks.item[umka->blocks.top].localVarSize, sizeof(Slot)) / sizeof(Slot);

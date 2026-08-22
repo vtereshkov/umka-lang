@@ -13,20 +13,6 @@ typedef struct
 } Gotos;
 
 
-typedef enum
-{
-    GEN_NOTIFICATION_NONE,
-    GEN_NOTIFICATION_COPY_RESULT_TO_TEMP_VAR
-} GenNotificationKind;
-
-
-typedef struct
-{
-    GenNotificationKind kind;
-    int ip;
-} GenNotification;
-
-
 typedef struct
 {
     Instruction *code;
@@ -38,13 +24,11 @@ typedef struct
     Gotos *breaks, *continues, *returns;
     Storage *storage;
     DebugInfo *debug, *debugPerInstr;
-    GenNotification lastNotification;
     Error *error;
 } CodeGen;
 
 
 void genInit(CodeGen *gen, Storage *storage, DebugInfo *debug, Error *error);
-void genResetOptimizer(CodeGen *gen);
 
 // Atomic VM instructions
 
@@ -73,13 +57,6 @@ void genAssign       (CodeGen *gen, TypeKind typeKind, int structSize);
 void genSwapAssign   (CodeGen *gen, TypeKind typeKind, int structSize);
 void genAssignParam  (CodeGen *gen, TypeKind typeKind, int structSize);
 
-void genRefCnt            (CodeGen *gen, TokenKind tokKind, const Type *type);
-void genRefCntGlobal      (CodeGen *gen, TokenKind tokKind, void *ptrVal, const Type *type);
-void genRefCntLocal       (CodeGen *gen, TokenKind tokKind, int offset, const Type *type);
-void genRefCntAssign      (CodeGen *gen, const Type *type);
-void genSwapRefCntAssign  (CodeGen *gen, const Type *type);
-void genLeftRefCntAssign  (CodeGen *gen, const Type *type);
-
 void genUnary (CodeGen *gen, TokenKind tokKind, const Type *type);
 void genBinary(CodeGen *gen, TokenKind tokKind, const Type *type);
 
@@ -90,9 +67,6 @@ void genGetFieldPtr   (CodeGen *gen, int fieldOffset);
 
 void genAssertType   (CodeGen *gen, const Type *type);
 void genAssertRange  (CodeGen *gen, TypeKind destTypeKind, const Type *srcType);
-
-void genWeakenPtr    (CodeGen *gen);
-void genStrengthenPtr(CodeGen *gen);
 
 void genGoto        (CodeGen *gen, int dest);
 void genGotoIf      (CodeGen *gen, int dest);
@@ -148,9 +122,6 @@ int  genTryRemoveImmediateEntryPoint(CodeGen *gen);
 void genGotosProlog (CodeGen *gen, Gotos *gotos, int block);
 void genGotosAddStub(CodeGen *gen, Gotos *gotos);
 void genGotosEpilog (CodeGen *gen, Gotos *gotos);
-
-void genCopyResultToTempVar(CodeGen *gen, const Type *type, int offset);
-int  genTryRemoveCopyResultToTempVar(CodeGen *gen);
 
 int genAsm(CodeGen *gen, const Idents *idents, char *buf, int size);
 

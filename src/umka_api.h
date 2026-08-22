@@ -90,7 +90,6 @@ typedef enum
     TYPE_REAL32,
     TYPE_REAL,
     TYPE_PTR,
-    TYPE_WEAKPTR,       // Actually a handle that stores the heap page ID and the offset within the page: (pageId << 32) | pageOffset
     TYPE_ARRAY,
     TYPE_DYNARRAY,
     TYPE_STR,           // Pointer of a special kind that admits assignment of string literals, concatenation and comparison by content
