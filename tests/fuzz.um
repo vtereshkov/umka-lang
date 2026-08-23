@@ -4017,6 +4017,7 @@ fn allocAndMeasure(): int {
         m[i] = sprintf("v%06d", i)
     }
 
+    gc()
     during := memusage()
 
     // Touch the allocations so the optimizer can't elide them.
@@ -4031,9 +4032,17 @@ fn allocAndMeasure(): int {
     return during
 }
 
+fn allocGarbage() {
+    for i := 0; i < 1000; i++ {
+        p := new([100]int)
+        p[0] = i
+    }
+}
+
 fn section_memusage() {
     banner("memusage")
 
+    gc()
     before := memusage()
     check(before >= 0, "memusage non-negative")
 
@@ -4041,8 +4050,17 @@ fn section_memusage() {
     check(during > before, "memusage grew with allocations")
 
     // The references are dropped when the allocating function returns
+    gc()
     after := memusage()
     check(after <= during, "memusage dropped after release")
+
+    // memusage() reports the memory as still allocated - it never collects by itself
+    allocGarbage()
+    withGarbage := memusage()
+    check(withGarbage > after, "memusage does not collect implicitly")
+
+    gc()
+    check(memusage() < withGarbage, "gc reclaims the garbage")
 
     printf("memusage: OK\n")
 }
@@ -4300,6 +4318,12 @@ const (
     kRcSlackPercent = 5
 )
 
+// The collector is not required to reclaim memory eagerly, so force a collection first
+fn liveBytes(): int {
+    gc()
+    return memusage()
+}
+
 fn rcCheckRelease(before, after: int, tag: str) {
     delta := after - before
     if delta <= 0 {
@@ -4359,7 +4383,7 @@ fn sumList(head: ^LNode): int {
 
 fn section_rc_deep_chain() {
     banner("rc deep chain")
-    before := memusage()
+    before := liveBytes()
 
     // Allocate and discard a series of long chains.
     for iter := 0; iter < 8; iter++ {
@@ -4387,7 +4411,7 @@ fn section_rc_deep_chain() {
         check(head == null, "fully unlinked")
     }
 
-    after := memusage()
+    after := liveBytes()
     rcCheckRelease(before, after, "deep chain")
     printf("rc deep chain: OK\n")
 }
@@ -4409,7 +4433,7 @@ type RcParent = struct {
 
 fn section_rc_wide_share() {
     banner("rc wide share")
-    before := memusage()
+    before := liveBytes()
 
     {
         // 50 unique children
@@ -4460,7 +4484,7 @@ fn section_rc_wide_share() {
         }
     }
 
-    after := memusage()
+    after := liveBytes()
     rcCheckRelease(before, after, "wide share")
     printf("rc wide share: OK\n")
 }
@@ -4477,7 +4501,7 @@ type DNode = struct {
 
 fn section_rc_cycle_weak() {
     banner("rc cycle weak")
-    before := memusage()
+    before := liveBytes()
 
     {
         // Build a 2000-element doubly-linked list. `next` is strong;
@@ -4521,7 +4545,7 @@ fn section_rc_cycle_weak() {
         tail = null
     }
 
-    after := memusage()
+    after := liveBytes()
     rcCheckRelease(before, after, "cycle weak")
     printf("rc cycle weak: OK\n")
 }
@@ -4537,7 +4561,7 @@ type CNode = struct {
 
 fn section_rc_cycle_manual_break() {
     banner("rc cycle manual break")
-    before := memusage()
+    before := liveBytes()
 
     // Build N two-node cycles, break each, repeat.
     for iter := 0; iter < 200; iter++ {
@@ -4582,7 +4606,7 @@ fn section_rc_cycle_manual_break() {
         prev^.link = null
     }
 
-    after := memusage()
+    after := liveBytes()
     rcCheckRelease(before, after, "cycle manual break")
     printf("rc cycle manual break: OK\n")
 }
@@ -4602,7 +4626,7 @@ type RcVal = struct {
 
 fn section_rc_map_churn() {
     banner("rc map churn")
-    before := memusage()
+    before := liveBytes()
 
     {
         m := map[RcKey]^RcVal{}
@@ -4653,7 +4677,7 @@ fn section_rc_map_churn() {
         check(len(m) == 0, "cleared map empty")
     }
 
-    after := memusage()
+    after := liveBytes()
     rcCheckRelease(before, after, "map churn")
     printf("rc map churn: OK\n")
 }
@@ -4664,7 +4688,7 @@ fn section_rc_map_churn() {
 
 fn section_rc_slice_churn() {
     banner("rc slice churn")
-    before := memusage()
+    before := liveBytes()
 
     {
         // Repeatedly grow and shrink a slice of pointers.
@@ -4713,7 +4737,7 @@ fn section_rc_slice_churn() {
         rows = [][]int{}
     }
 
-    after := memusage()
+    after := liveBytes()
     rcCheckRelease(before, after, "slice churn")
     printf("rc slice churn: OK\n")
 }
@@ -4736,7 +4760,7 @@ fn makeRcAdder(base: int, tail: []int): IntFn {
 
 fn section_rc_closure_capture() {
     banner("rc closure capture")
-    before := memusage()
+    before := liveBytes()
 
     {
         closures := make([]IntFn, 2000)
@@ -4775,7 +4799,7 @@ fn section_rc_closure_capture() {
         v = null
     }
 
-    after := memusage()
+    after := liveBytes()
     rcCheckRelease(before, after, "closure capture")
     printf("rc closure capture: OK\n")
 }
@@ -4806,7 +4830,7 @@ fn (c: ^RcCircle) area(): int {
 
 fn section_rc_interface_box() {
     banner("rc interface box")
-    before := memusage()
+    before := liveBytes()
 
     {
         shapes := make([]RcDrawable, 4000)
@@ -4859,7 +4883,7 @@ fn section_rc_interface_box() {
         bag = []any{}
     }
 
-    after := memusage()
+    after := liveBytes()
     rcCheckRelease(before, after, "interface box")
     printf("rc interface box: OK\n")
 }
@@ -4870,7 +4894,7 @@ fn section_rc_interface_box() {
 
 fn section_rc_string_churn() {
     banner("rc string churn")
-    before := memusage()
+    before := liveBytes()
 
     {
         // Concatenate many small strings.
@@ -4914,7 +4938,7 @@ fn section_rc_string_churn() {
         m = map[int]str{}
     }
 
-    after := memusage()
+    after := liveBytes()
     rcCheckRelease(before, after, "string churn")
     printf("rc string churn: OK\n")
 }
@@ -4951,7 +4975,7 @@ fn newChunk(w, h: int, seed: int): Chunk {
 
 fn section_rc_tilemap_like() {
     banner("rc tilemap-like")
-    before := memusage()
+    before := liveBytes()
 
     {
         world := map[ChunkPos]Chunk{}
@@ -4991,7 +5015,7 @@ fn section_rc_tilemap_like() {
         world = map[ChunkPos]Chunk{}
     }
 
-    after := memusage()
+    after := liveBytes()
     rcCheckRelease(before, after, "tilemap-like")
     printf("rc tilemap-like: OK\n")
 }
@@ -5051,7 +5075,7 @@ fn section_rc_fiber_data() {
 
 fn section_rc_swap_storm() {
     banner("rc swap storm")
-    before := memusage()
+    before := liveBytes()
 
     {
         a := new(RcVal)
@@ -5078,7 +5102,7 @@ fn section_rc_swap_storm() {
         b = null
     }
 
-    after := memusage()
+    after := liveBytes()
     rcCheckRelease(before, after, "swap storm")
     printf("rc swap storm: OK\n")
 }
@@ -5107,7 +5131,7 @@ fn wrapOnce(prev: ^Wrap, label: str): ^Wrap {
 
 fn section_rc_self_replace() {
     banner("rc self replace")
-    before := memusage()
+    before := liveBytes()
 
     {
         // Build a deep chain by repeatedly self-replacing.
@@ -5134,7 +5158,7 @@ fn section_rc_self_replace() {
         check(w == null, "fully unwrapped")
     }
 
-    after := memusage()
+    after := liveBytes()
     rcCheckRelease(before, after, "self replace")
     printf("rc self replace: OK\n")
 }
@@ -5145,7 +5169,7 @@ fn section_rc_self_replace() {
 
 fn section_rc_append_inplace() {
     banner("rc append inplace")
-    before := memusage()
+    before := liveBytes()
 
     {
         // Build a slice by repeated append. Each underlying buffer
@@ -5174,7 +5198,7 @@ fn section_rc_append_inplace() {
         s = []^RcVal{}
     }
 
-    after := memusage()
+    after := liveBytes()
     rcCheckRelease(before, after, "append inplace")
     printf("rc append inplace: OK\n")
 }
@@ -5209,7 +5233,7 @@ fn attach(parent, child: ^Entity) {
 
 fn section_rc_entity_graph() {
     banner("rc entity graph")
-    before := memusage()
+    before := liveBytes()
 
     {
         // Build a forest of entities: 50 roots, each with up to 20 children,
@@ -5269,7 +5293,7 @@ fn section_rc_entity_graph() {
         roots = []^Entity{}
     }
 
-    after := memusage()
+    after := liveBytes()
     rcCheckRelease(before, after, "entity graph")
     printf("rc entity graph: OK\n")
 }

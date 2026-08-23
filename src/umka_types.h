@@ -98,6 +98,7 @@ typedef enum
     BUILTIN_RESUME,
 
     // Misc
+    BUILTIN_GC,
     BUILTIN_MEMUSAGE,
     BUILTIN_LEAKSAN,
     BUILTIN_EXIT

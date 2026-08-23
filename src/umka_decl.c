@@ -252,7 +252,10 @@ static void parseSignature(Umka *umka, Signature *sig, int depth)
 static const Type *parsePtrType(Umka *umka, int depth)
 {
     if (umka->lex.tok.kind == TOK_WEAK)      // Kept for backward compatibility, ignored
+    {
+        umka->error.warningHandler(umka->error.context, &umka->debug, "Weak pointers are deprecated");
         lexNext(&umka->lex);
+    }
 
     lexEat(&umka->lex, TOK_CARET);
 

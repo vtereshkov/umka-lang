@@ -217,7 +217,7 @@ Umka supports the `real32` and `real` floating-point types. The `real` is the re
 
 A variable that stores a memory address of another variable has a pointer type. The type of the other variable is called the *base type* of the pointer type. The pointer type is specified by a `^` followed by the base type specification. If the base type is unknown, it should be specified as `void`. An uninitialized pointer has the value `null`. 
 
-Umka performs automatic memory management using a mark-and-sweep garbage collector. Data structures with cyclic references (like doubly-linked lists) are deallocated as well as any others. The collector runs between instructions, so the exact moment at which unreachable memory is deallocated is not specified. The `weak` keyword is accepted for backward compatibility and ignored: all pointers are strong.
+Umka performs automatic memory management using a mark-and-sweep garbage collector. Data structures with cyclic references (like doubly-linked lists) are deallocated as well as any others. The collector runs between instructions, so the exact moment at which unreachable memory is deallocated is not specified. The `weak` keyword is deprecated. It is accepted for backward compatibility, but ignored, and its use is reported as a compilation warning: all pointers are strong.
 
 A pointer to a local variable must not outlive the function whose variable it points to. Such an escaping pointer is reported as a runtime error when the garbage is collected, i.e. possibly later than the escape itself.
 
@@ -876,10 +876,16 @@ Starts or resumes the execution of the fiber `fib`. If `fib` is omitted, the par
 ##### Miscellaneous functions
 
 ```
+fn gc()
+```
+
+Collects the garbage immediately. The collector runs on its own as the heap grows, so an explicit call is only needed to reclaim memory at a specific moment or to get an up-to-date `memusage()` reading.
+
+```
 fn memusage(): int
 ```
 
-Collects the garbage and returns the size of the live heap memory in bytes.
+Returns the size of the allocated heap memory in bytes. The garbage that has not been collected yet is still counted as allocated, so call `gc()` first to measure the live memory.
 
 ```
 fn leaksan(level: int)

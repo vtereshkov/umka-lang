@@ -1477,6 +1477,17 @@ static void parseBuiltinResumeCall(Umka *umka, const Type **type, Const *constan
 }
 
 
+// fn gc()
+static void parseBuiltinGcCall(Umka *umka, const Type **type, Const *constant)
+{
+    if (constant)
+        umka->error.handler(umka->error.context, "Function is not allowed in constant expressions");
+
+    genCallBuiltin(&umka->gen, TYPE_VOID, BUILTIN_GC);
+    *type = umka->types.predecl.voidType;
+}
+
+
 // fn memusage(): int
 static void parseBuiltinMemUsageCall(Umka *umka, const Type **type, Const *constant)
 {
@@ -1587,6 +1598,7 @@ static void parseBuiltinCall(Umka *umka, const Type **type, Const *constant, Bui
         case BUILTIN_RESUME:        parseBuiltinResumeCall(umka, type, constant);           break;
 
         // Misc
+        case BUILTIN_GC:            parseBuiltinGcCall(umka, type, constant);               break;
         case BUILTIN_MEMUSAGE:      parseBuiltinMemUsageCall(umka, type, constant);         break;
         case BUILTIN_LEAKSAN:       parseBuiltinLeakSanCall(umka, type, constant);          break;
         case BUILTIN_EXIT:          parseBuiltinExitCall(umka, type, constant);             break;
