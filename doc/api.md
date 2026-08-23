@@ -407,7 +407,7 @@ Parameters:
 ```
 UMKA_API int64_t umkaGetMemUsage(Umka *umka);
 ```
-Returns the allocated heap memory size.
+Returns the allocated heap memory size. The garbage that has not been collected yet is still counted as allocated.
 
 Parameters:
 

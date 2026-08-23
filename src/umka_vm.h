@@ -148,7 +148,7 @@ typedef struct tagHeapChunk
 {
     struct tagHeapChunk *nextFree;
     int size;
-    ChunkKind kind;
+    unsigned char kind;         // ChunkKind
     bool allocated, marked;
     const Type *type;           // Optional type of the data stored in the chunk
     UmkaExternFunc onFree;      // Optional callback called when the chunk is collected

@@ -155,6 +155,7 @@ static const char *builtinSpelling [] =
     "validkey",
     "keys",
     "resume",
+    "gc",
     "memusage",
     "leaksan",
     "exit"
@@ -2793,11 +2794,16 @@ static FORCE_INLINE void doBuiltinResume(Fiber *fiber, Fiber **newFiber, Error *
 }
 
 
+// fn gc()
+static FORCE_INLINE void doBuiltinGc(Fiber *fiber)
+{
+    vmCollect(fiber->vm);
+}
+
+
 // fn memusage(): int
 static FORCE_INLINE void doBuiltinMemUsage(Fiber *fiber, HeapPages *pages, Error *error)
 {
-    // Report the amount of live data, so collect the garbage first
-    vmCollect(fiber->vm);
     (--fiber->top)->intVal = pages->occupiedSize;
 }
 
@@ -3542,6 +3548,7 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         case BUILTIN_RESUME:        doBuiltinResume(fiber, newFiber, error); break;
 
         // Misc
+        case BUILTIN_GC:            doBuiltinGc(fiber);                    break;
         case BUILTIN_MEMUSAGE:      doBuiltinMemUsage(fiber, pages, error); break;
         case BUILTIN_LEAKSAN:       doBuiltinLeakSan(fiber, pages, error); break;
         case BUILTIN_EXIT:          doBuiltinExit(fiber, error); return;
@@ -3953,7 +3960,7 @@ void *vmMakeStruct(VM *vm, const Type *type)
 
 int64_t vmGetMemUsage(VM *vm)
 {
-    return vm->pages.totalSize;
+    return vm->pages.occupiedSize;
 }
 
 
