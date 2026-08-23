@@ -216,38 +216,38 @@ static FORCE_INLINE UmkaStackSlot *doGetOnFreeResult(HeapPages *pages)
 }
 
 
-static FORCE_INLINE void candidateInit(MarkCandidates *candidates, Storage *storage)
+static FORCE_INLINE void gcCandidateInit(GCCandidates *candidates, Storage *storage)
 {
     candidates->storage = storage;
     candidates->capacity = 100;
-    candidates->stack = storageAdd(candidates->storage, candidates->capacity * sizeof(MarkCandidate));
+    candidates->stack = storageAdd(candidates->storage, candidates->capacity * sizeof(GCCandidate));
     candidates->top = -1;
 }
 
 
-static FORCE_INLINE void candidateReset(MarkCandidates *candidates)
+static FORCE_INLINE void gcCandidateReset(GCCandidates *candidates)
 {
     candidates->top = -1;
 }
 
 
-static FORCE_INLINE void candidatePush(MarkCandidates *candidates, void *ptr, const Type *type)
+static FORCE_INLINE void gcCandidatePush(GCCandidates *candidates, void *ptr, const Type *type)
 {
     if (candidates->top >= candidates->capacity - 1)
     {
         candidates->capacity *= 2;
-        candidates->stack = storageRealloc(candidates->storage, candidates->stack, candidates->capacity * sizeof(MarkCandidate));
+        candidates->stack = storageRealloc(candidates->storage, candidates->stack, candidates->capacity * sizeof(GCCandidate));
     }
 
-    MarkCandidate *candidate = &candidates->stack[++candidates->top];
+    GCCandidate *candidate = &candidates->stack[++candidates->top];
     candidate->ptr = ptr;
     candidate->type = type;
 }
 
 
-static FORCE_INLINE void candidatePop(MarkCandidates *candidates, void **ptr, const Type **type)
+static FORCE_INLINE void gcCandidatePop(GCCandidates *candidates, void **ptr, const Type **type)
 {
-    const MarkCandidate *candidate = &candidates->stack[candidates->top--];
+    const GCCandidate *candidate = &candidates->stack[candidates->top--];
     *ptr = candidate->ptr;
     *type = candidate->type;
 }
@@ -288,8 +288,9 @@ static void pageInit(HeapPages *pages, Storage *storage, Error *error)
     pages->totalSize = pages->occupiedSize = 0;
     pages->gcThreshold = MEM_MIN_GC_THRESHOLD;
     pages->gcRequested = false;
-    candidateInit(&pages->markCandidates, storage);
-    candidateInit(&pages->escapeSuspects, storage);
+    gcCandidateInit(&pages->markCandidates, storage);
+    gcCandidateInit(&pages->escapeSuspects, storage);
+    gcCandidateInit(&pages->roots, storage);
     pages->error = error;
 }
 
@@ -644,6 +645,9 @@ void qsortEx(char *first, char *last, int itemSize, QSortCompareFn compare, void
 
 // Virtual machine
 
+static void gcResetRoots(VM *vm);
+
+
 void vmInit(VM *vm, Storage *storage, const Idents *idents, int stackSize, bool fileSystemEnabled, Error *error)
 {
     vm->storage = storage;
@@ -677,6 +681,8 @@ void vmFree(VM *vm)
 
 void vmReset(VM *vm, const Instruction *code, const DebugInfo *debugPerInstr)
 {
+    gcResetRoots(vm);
+
     vm->fiber = vm->mainFiber;
     vm->fiber->code = code;
     vm->fiber->debugPerInstr = debugPerInstr;
@@ -912,15 +918,7 @@ static int64_t doCompare(Slot lhs, Slot rhs, const Type *type, Error *error)
 }
 
 
-// Garbage collection
-//
-// The reachable data graph is traversed using the RTTI stored in the heap chunk headers and in the types of the roots.
-// The roots are the global variables, whose types are known, and the fiber stacks and registers, which carry no type info
-// and are therefore scanned conservatively: any slot that looks like a pointer into a heap chunk is treated as a pointer
-
-
-// ptr points to a value of the given type. Pointer-like values are dereferenced, all the others are traversed in place
-static FORCE_INLINE void doAddValueMarkCandidate(MarkCandidates *candidates, void *ptr, const Type *type)
+static FORCE_INLINE void gcAddValueCandidate(GCCandidates *candidates, void *ptr, const Type *type)
 {
     if (type->isGarbageCollected)
     {
@@ -928,32 +926,30 @@ static FORCE_INLINE void doAddValueMarkCandidate(MarkCandidates *candidates, voi
         if (type->kind == TYPE_PTR || type->kind == TYPE_STR || type->kind == TYPE_FIBER)
             data = *(void **)data;
 
-        candidatePush(candidates, data, type);
+        gcCandidatePush(candidates, data, type);
     }
 }
 
 
-static FORCE_INLINE void doAddArrayItemsMarkCandidates(MarkCandidates *candidates, void *ptr, const Type *type, int64_t len)
+static FORCE_INLINE void gcAddArrayItemsCandidates(GCCandidates *candidates, void *ptr, const Type *type, int64_t len)
 {
     char *itemPtr = ptr;
     for (int64_t i = 0; i < len; i++)
     {
-        doAddValueMarkCandidate(candidates, itemPtr, type->base);
+        gcAddValueCandidate(candidates, itemPtr, type->base);
         itemPtr += type->base->size;
     }
 }
 
 
-static FORCE_INLINE void doAddStructFieldsMarkCandidates(MarkCandidates *candidates, void *ptr, const Type *type)
+static FORCE_INLINE void gcAddStructFieldsCandidates(GCCandidates *candidates, void *ptr, const Type *type)
 {
     for (int i = 0; i < type->numItems; i++)
-        doAddValueMarkCandidate(candidates, (char *)ptr + type->field[i]->offset, type->field[i]->type);
+        gcAddValueCandidate(candidates, (char *)ptr + type->field[i]->offset, type->field[i]->type);
 }
 
 
-// Marks the chunk pointed to by ptr, which may be an interior pointer, and schedules its contents for traversal.
-// ptrType, if given, is the pointer type used when the chunk itself carries no type info
-static FORCE_INLINE void doMarkPtr(HeapPages *pages, void *ptr, const Type *ptrType)
+static FORCE_INLINE void gcMarkPtr(HeapPages *pages, void *ptr, const Type *ptrType)
 {
     HeapPage *page = pageFind(pages, ptr);
     if (!page)
@@ -963,109 +959,136 @@ static FORCE_INLINE void doMarkPtr(HeapPages *pages, void *ptr, const Type *ptrT
     if (!chunk->allocated)
         return;
 
-    // Stacks and registers are scanned conservatively, so only a pointer reached through the type info
-    // of a global variable or a heap chunk may point to a local variable. Its legality is checked after marking
+    // Stacks and registers are scanned conservatively
     if (UNLIKELY(ptrType && chunk->kind == CHUNK_STACK))
-        candidatePush(&pages->escapeSuspects, ptr, NULL);
+        gcCandidatePush(&pages->escapeSuspects, ptr, NULL);
 
     if (chunk->marked)
         return;
 
     chunk->marked = true;
 
-    MarkCandidates *candidates = &pages->markCandidates;
+    GCCandidates *candidates = &pages->markCandidates;
 
     switch (chunk->kind)
     {
         case CHUNK_FIBER:
-            candidatePush(candidates, chunk->data, NULL);
+            gcCandidatePush(candidates, chunk->data, NULL);
             break;
 
         case CHUNK_DYNARRAY_DATA:
         {
             const DynArrayDimensions *dims = (DynArrayDimensions *)chunk->data;
-            doAddArrayItemsMarkCandidates(candidates, (char *)chunk->data + sizeof(DynArrayDimensions), chunk->type, dims->len);
+            gcAddArrayItemsCandidates(candidates, (char *)chunk->data + sizeof(DynArrayDimensions), chunk->type, dims->len);
             break;
         }
 
         default:
         {
             if (chunk->type)
-                doAddValueMarkCandidate(candidates, chunk->data, chunk->type);
+                gcAddValueCandidate(candidates, chunk->data, chunk->type);
             else if (ptrType)
-                doAddValueMarkCandidate(candidates, ptr, ptrType->base);
+                gcAddValueCandidate(candidates, ptr, ptrType->base);
             break;
         }
     }
 }
 
 
-static void doMarkFiber(HeapPages *pages, const Fiber *fiber)
+static void gcMarkFiber(HeapPages *pages, const Fiber *fiber)
 {
     // The parent fiber is not referenced from the stack, but resume() needs it
-    doMarkPtr(pages, fiber->parent, NULL);
-    doMarkPtr(pages, fiber->stack, NULL);
+    gcMarkPtr(pages, fiber->parent, NULL);
+    gcMarkPtr(pages, fiber->stack, NULL);
 
     for (int i = 0; i < NUM_REGS; i++)
-        doMarkPtr(pages, fiber->reg[i].ptrVal, NULL);
+        gcMarkPtr(pages, fiber->reg[i].ptrVal, NULL);
 
     // The stack carries no type info, so it is scanned conservatively
     for (const Slot *slot = fiber->top; slot < fiber->stack + fiber->stackSize; slot++)
-        doMarkPtr(pages, slot->ptrVal, NULL);
+        gcMarkPtr(pages, slot->ptrVal, NULL);
 }
 
 
-static void doMark(VM *vm)
+static void gcResetRoots(VM *vm)
+{
+    GCCandidates *roots = &vm->pages.roots;
+    gcCandidateReset(roots);
+
+    for (const Ident *ident = vm->idents->first; ident; ident = ident->next)
+        if (ident->isGloballyAllocated && ident->type->isGarbageCollected)
+            gcCandidatePush(roots, ident->ptr, ident->type);
+}
+
+
+static void gcMark(VM *vm)
 {
     HeapPages *pages = &vm->pages;
-    MarkCandidates *candidates = &pages->markCandidates;
+    GCCandidates *candidates = &pages->markCandidates;
 
-    candidateReset(candidates);
-    candidateReset(&pages->escapeSuspects);
+    gcCandidateReset(candidates);
+    gcCandidateReset(&pages->escapeSuspects);
 
     // Roots: all the fibers being executed
     for (const Fiber *fiber = vm->fiber; fiber; fiber = fiber->parent)
-        candidatePush(candidates, (void *)fiber, NULL);
+        gcCandidatePush(candidates, (void *)fiber, NULL);
 
     // Roots: global variables
-    for (const Ident *ident = vm->idents->first; ident; ident = ident->next)
-    {
-        if (ident->isGloballyAllocated)
-            doAddValueMarkCandidate(candidates, ident->ptr, ident->type);
-    }
+    const GCCandidates *roots = &pages->roots;
+    for (int i = 0; i <= roots->top; i++)
+        gcAddValueCandidate(candidates, roots->stack[i].ptr, roots->stack[i].type);
 
     while (candidates->top >= 0)
     {
         void *ptr = NULL;
         const Type *type = NULL;
-        candidatePop(candidates, &ptr, &type);
+        gcCandidatePop(candidates, &ptr, &type);
 
         if (!type)
         {
-            doMarkFiber(pages, (const Fiber *)ptr);
+            gcMarkFiber(pages, (const Fiber *)ptr);
             continue;
         }
 
         switch (type->kind)
         {
-            case TYPE_PTR:      doMarkPtr(pages, ptr, type);                                    break;
+            case TYPE_PTR:
+            {
+                gcMarkPtr(pages, ptr, type);
+                break;
+            }
+
             case TYPE_STR:
-            case TYPE_FIBER:    doMarkPtr(pages, ptr, NULL);                                    break;
-            case TYPE_ARRAY:    doAddArrayItemsMarkCandidates(candidates, ptr, type, type->numItems); break;
+            case TYPE_FIBER:
+            {
+                gcMarkPtr(pages, ptr, NULL);
+                break;
+            }
+
+            case TYPE_ARRAY:
+            {
+                gcAddArrayItemsCandidates(candidates, ptr, type, type->numItems);
+                break;
+            }
+
             case TYPE_STRUCT:
-            case TYPE_CLOSURE:  doAddStructFieldsMarkCandidates(candidates, ptr, type);         break;
+            case TYPE_CLOSURE:
+            {
+                gcAddStructFieldsCandidates(candidates, ptr, type);
+                break;
+            }
 
             case TYPE_DYNARRAY:
             {
                 const DynArray *array = (const DynArray *)ptr;
-                doMarkPtr(pages, array->data, NULL);
+                gcMarkPtr(pages, array->data, NULL);
                 break;
             }
 
             case TYPE_MAP:
             {
                 const Map *map = (const Map *)ptr;
-                candidatePush(candidates, map->root, typeMapNodePtr(type));
+                gcCandidatePush(candidates, map->root, typeMapNodePtr(type));
                 break;
             }
 
@@ -1073,38 +1096,39 @@ static void doMark(VM *vm)
             {
                 const Interface *interface = (const Interface *)ptr;
                 if (interface->self && interface->selfType)
-                    candidatePush(candidates, interface->self, interface->selfType);
+                    gcCandidatePush(candidates, interface->self, interface->selfType);
                 break;
             }
 
-            default: break;
+            default: 
+                break;
         }
     }
 }
 
 
-static bool doPtrIsInLiveFrame(const Fiber *fiber, const void *ptr)
+static bool gcPtrIsInLiveFrame(const Fiber *fiber, const void *ptr)
 {
     return ptr >= (const void *)fiber->top && ptr < (const void *)(fiber->stack + fiber->stackSize);
 }
 
 
 // A pointer to a local variable is legal as long as the frame it points to has not been left yet
-static void doCheckEscapes(VM *vm)
+static void gcCheckEscapes(VM *vm)
 {
     HeapPages *pages = &vm->pages;
-    MarkCandidates *suspects = &pages->escapeSuspects;
+    GCCandidates *suspects = &pages->escapeSuspects;
 
     while (suspects->top >= 0)
     {
         void *ptr = NULL;
         const Type *type = NULL;
-        candidatePop(suspects, &ptr, &type);
+        gcCandidatePop(suspects, &ptr, &type);
 
         bool live = false;
 
         for (const Fiber *fiber = vm->fiber; fiber && !live; fiber = fiber->parent)
-            live = doPtrIsInLiveFrame(fiber, ptr);
+            live = gcPtrIsInLiveFrame(fiber, ptr);
 
         // The frame may also belong to a suspended fiber, which is alive if it has been marked
         for (const HeapPage *page = pages->first; page && !live; page = page->next)
@@ -1112,7 +1136,7 @@ static void doCheckEscapes(VM *vm)
             {
                 const HeapChunk *chunk = (const HeapChunk *)((const char *)page->data + i * page->chunkSize);
                 if (chunk->allocated && chunk->marked && chunk->kind == CHUNK_FIBER)
-                    live = doPtrIsInLiveFrame((const Fiber *)chunk->data, ptr);
+                    live = gcPtrIsInLiveFrame((const Fiber *)chunk->data, ptr);
             }
 
         if (UNLIKELY(!live))
@@ -1121,7 +1145,7 @@ static void doCheckEscapes(VM *vm)
 }
 
 
-static void doSweep(HeapPages *pages)
+static void gcSweep(HeapPages *pages)
 {
     for (HeapPage *page = pages->first; page;)
     {
@@ -1147,13 +1171,13 @@ static void doSweep(HeapPages *pages)
 }
 
 
-static void vmCollect(VM *vm)
+static void vmCollectGarbage(VM *vm)
 {
     HeapPages *pages = &vm->pages;
 
-    doMark(vm);
-    doCheckEscapes(vm);
-    doSweep(pages);
+    gcMark(vm);
+    gcCheckEscapes(vm);
+    gcSweep(pages);
 
     pages->gcThreshold = 2 * pages->occupiedSize;
     if (pages->gcThreshold < MEM_MIN_GC_THRESHOLD)
@@ -2770,7 +2794,7 @@ static FORCE_INLINE void doBuiltinResume(Fiber *fiber, Fiber **newFiber, Error *
 // fn gc()
 static FORCE_INLINE void doBuiltinGc(Fiber *fiber)
 {
-    vmCollect(fiber->vm);
+    vmCollectGarbage(fiber->vm);
 }
 
 
@@ -3642,9 +3666,8 @@ static void vmLoop(VM *vm)
         if (UNLIKELY(fiber->top - fiber->stack < MEM_MIN_FREE_STACK))
             error->runtimeHandler(error->context, ERR_RUNTIME, "Stack overflow");
 
-        // Collect garbage between instructions, when all the live data is reachable from the stacks, the registers and the globals
         if (UNLIKELY(pages->gcRequested))
-            vmCollect(vm);
+            vmCollectGarbage(vm);
 
         switch (fiber->code[fiber->ip].opcode)
         {

@@ -124,15 +124,15 @@ typedef struct
 {
     void *ptr;
     const Type *type;           // If NULL, ptr is a fiber whose stack is to be scanned conservatively
-} MarkCandidate;
+} GCCandidate;
 
 
 typedef struct
 {
-    MarkCandidate *stack;
+    GCCandidate *stack;
     int top, capacity;
     Storage *storage;
-} MarkCandidates;
+} GCCandidates;
 
 
 typedef enum
@@ -172,7 +172,7 @@ typedef struct
     char *lowest, *highest;
     int64_t totalSize, occupiedSize, gcThreshold;
     bool gcRequested;
-    MarkCandidates markCandidates, escapeSuspects;
+    GCCandidates markCandidates, escapeSuspects, roots;
     Error *error;
 } HeapPages;
 
