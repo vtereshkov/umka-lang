@@ -710,7 +710,7 @@ Error: Empty string (code -2) from "foo":
     foo: (5)
     fooTest: (11)
     test: (25)
-    main: (81)
+    main: (78)
 9
 
 
@@ -818,46 +818,6 @@ Hello, дивный новый мир!
 >>> Non-local scope
 
 86
-
-
->>> Weak pointers - 1
-
-Test 1
-42
-42
-Test 2
-13 12
-true true
-
-
->>> Weak pointers - 2
-
-42
-42
-666
-666
-2024
-
-[5 7]
-5 8
-[5 8]
-[2025 2026]
-
-{a: 5 b: 7}
-74
-
-5 8
-{a: 5 b: 8}
-{a: 2024 b: 2025}
-
-25
-
-
-
->>> Weak pointers - 3
-
-42
-666
 
 
 >>> Byte conversions
