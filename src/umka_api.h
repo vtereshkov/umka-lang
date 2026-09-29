@@ -100,7 +100,7 @@ typedef enum
     TYPE_CLOSURE,
     TYPE_FIBER,         // Pointer of a special kind
     TYPE_FN
-} TypeKind;
+} UmkaTypeKind;
 
 
 #define UmkaDynArray(T) struct \
@@ -194,10 +194,10 @@ typedef bool (*UmkaAddClosure)                  (Umka *umka, const char *name, U
 typedef const char *(*UmkaGetFieldName)         (const UmkaType *structType, int index);
 typedef int  (*UmkaGetFieldOffset)              (const UmkaType *structType, const char *fieldName);
 typedef void (*UmkaGetMapKeys)                  (Umka *umka, UmkaMap *map, void *keys);
-typedef void (*UmkaSetMapItem)                  (Umka *umka, UmkaMap *map, UmkaStackSlot key, UmkaStackSlot item);
-typedef TypeKind (*UmkaGetTypeKind)             (const UmkaType *type);
+typedef void (*UmkaSetMapItem)                  (Umka *umka, UmkaMap *map, const UmkaType *mapType, UmkaStackSlot key, UmkaStackSlot item);
+typedef UmkaTypeKind (*UmkaGetTypeKind)         (const UmkaType *type);
 typedef int  (*UmkaGetTypeSize)                 (const UmkaType *type);
-typedef int  (*UmkaGetTypeNumItems)             (const UmkaType *type);
+typedef int  (*UmkaGetTypeLen)                  (const UmkaType *type);
 
 
 typedef struct
@@ -246,7 +246,7 @@ typedef struct
     UmkaSetMapItem      umkaSetMapItem;
     UmkaGetTypeKind     umkaGetTypeKind;
     UmkaGetTypeSize     umkaGetTypeSize;
-    UmkaGetTypeNumItems umkaGetTypeNumItems;
+    UmkaGetTypeLen      umkaGetTypeLen;
 } UmkaAPI;
 
 
@@ -291,10 +291,10 @@ UMKA_API bool umkaAddClosure                (Umka *umka, const char *name, UmkaE
 UMKA_API const char *umkaGetFieldName       (const UmkaType *structType, int index);
 UMKA_API int  umkaGetFieldOffset            (const UmkaType *structType, const char *fieldName);
 UMKA_API void umkaGetMapKeys                (Umka *umka, UmkaMap *map, void *keys);
-UMKA_API void umkaSetMapItem                (Umka *umka, UmkaMap *map, UmkaStackSlot key, UmkaStackSlot item);
-UMKA_API TypeKind umkaGetTypeKind           (const UmkaType *type);
+UMKA_API void umkaSetMapItem                (Umka *umka, UmkaMap *map, const UmkaType *mapType, UmkaStackSlot key, UmkaStackSlot item);
+UMKA_API UmkaTypeKind umkaGetTypeKind       (const UmkaType *type);
 UMKA_API int  umkaGetTypeSize               (const UmkaType *type);
-UMKA_API int  umkaGetTypeNumItems           (const UmkaType *type);
+UMKA_API int  umkaGetTypeLen                (const UmkaType *type);
 
 
 static inline UmkaAPI *umkaGetAPI(Umka *umka)

@@ -63,7 +63,7 @@ static void compilerSetAPI(Umka *umka)
     umka->api.umkaSetMapItem        = umkaSetMapItem;
     umka->api.umkaGetTypeKind       = umkaGetTypeKind;
     umka->api.umkaGetTypeSize       = umkaGetTypeSize;
-    umka->api.umkaGetTypeNumItems   = umkaGetTypeNumItems;
+    umka->api.umkaGetTypeLen        = umkaGetTypeLen;
 }
 
 

@@ -8,7 +8,7 @@
 #include "umka_lexer.h"
 
 
-// TypeKind is defined in umka_api.h
+typedef UmkaTypeKind TypeKind;
 
 
 typedef enum

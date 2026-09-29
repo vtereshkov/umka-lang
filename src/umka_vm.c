@@ -1541,6 +1541,38 @@ static FORCE_INLINE MapNode **doGetMapNode(Map *map, Slot key, bool createMissin
 }
 
 
+static FORCE_INLINE void *doGetMapNodeData(Map *map, Slot key, const Type *mapType, HeapPages *pages, Error *error)
+{
+    if (UNLIKELY(!map))
+        error->runtimeHandler(error->context, ERR_RUNTIME, "Map is null");
+
+    if (!map->root)
+        doAllocMap(pages, map, mapType, error);
+
+    const Type *keyType = typeMapKey(map->type);
+    const Type *itemType = typeMapItem(map->type);
+
+    MapNode *node = *doGetMapNode(map, key, true, pages, error);
+    if (!node->data)
+    {
+        node->priority = (int64_t)rand() + 1;
+
+        // When allocating dynamic arrays, we mark with type the data chunk, not the header chunk
+        node->key  = chunkAlloc(pages, keyType->size,  keyType->kind  == TYPE_DYNARRAY ? NULL : keyType,  NULL, false, error);
+        node->data = chunkAlloc(pages, itemType->size, itemType->kind == TYPE_DYNARRAY ? NULL : itemType, NULL, false, error);
+
+        // Increase key ref count
+        if (keyType->isGarbageCollected)
+            doRefCntImpl(pages, key.ptrVal, keyType, TOK_PLUSPLUS);
+
+        doAssignImpl(node->key, key, keyType->kind, keyType->size, error);
+        map->root->len++;
+    }
+
+    return node->data;
+}
+
+
 static MapNode *doCopyMapNode(Map *map, MapNode *node, Fiber *fiber, HeapPages *pages, Error *error)
 {
     if (!node)
@@ -3677,45 +3709,13 @@ static FORCE_INLINE void doGetDynArrayPtr(Fiber *fiber, bool dereference, Error 
 }
 
 
-static FORCE_INLINE void *doGetMapPtrImpl(Map *map, Slot key, const Type *mapType, HeapPages *pages, Error *error)
-{
-    if (UNLIKELY(!map))
-        error->runtimeHandler(error->context, ERR_RUNTIME, "Map is null");
-
-    if (!map->root)
-        doAllocMap(pages, map, mapType, error);
-
-    const Type *keyType = typeMapKey(map->type);
-    const Type *itemType = typeMapItem(map->type);
-
-    MapNode *node = *doGetMapNode(map, key, true, pages, error);
-    if (!node->data)
-    {
-        node->priority = (int64_t)rand() + 1;
-
-        // When allocating dynamic arrays, we mark with type the data chunk, not the header chunk
-        node->key  = chunkAlloc(pages, keyType->size,  keyType->kind  == TYPE_DYNARRAY ? NULL : keyType,  NULL, false, error);
-        node->data = chunkAlloc(pages, itemType->size, itemType->kind == TYPE_DYNARRAY ? NULL : itemType, NULL, false, error);
-
-        // Increase key ref count
-        if (keyType->isGarbageCollected)
-            doRefCntImpl(pages, key.ptrVal, keyType, TOK_PLUSPLUS);
-
-        doAssignImpl(node->key, key, keyType->kind, keyType->size, error);
-        map->root->len++;
-    }
-
-    return node->data;
-}
-
-
 static FORCE_INLINE void doGetMapPtr(Fiber *fiber, HeapPages *pages, bool dereference, Error *error)
 {
     const Slot key = *fiber->top++;
     Map *map = (fiber->top++)->ptrVal;
     const Type *mapType = fiber->code[fiber->ip].type;
 
-    (--fiber->top)->ptrVal = doGetMapPtrImpl(map, key, mapType, pages, error);
+    (--fiber->top)->ptrVal = doGetMapNodeData(map, key, mapType, pages, error);
 
     if (dereference)
         doDerefImpl(fiber->top, fiber->code[fiber->ip].typeKind, error);    
@@ -4383,6 +4383,35 @@ void *vmGetMapNodeData(VM *vm, Map *map, Slot key)
 }
 
 
+void vmSetMapNodeData(VM *vm, Map *map, const Type *mapType, Slot key, Slot item)
+{
+    if (!map)
+        return;
+
+    if (!map->type)
+        map->type = mapType;
+
+    if (!map->type)
+        return;        
+
+    const Type *itemType = typeMapItem(map->type);
+
+    void *nodeData = doGetMapNodeData(map, key, map->type, &vm->pages, vm->error);
+
+    if (itemType->isGarbageCollected)
+    {
+        // Increase new item ref count, decrease old item ref count
+        doRefCntImpl(&vm->pages, item.ptrVal, itemType, TOK_PLUSPLUS);
+
+        Slot oldItem = {.ptrVal = nodeData};
+        doDerefImpl(&oldItem, itemType->kind, vm->error);
+        doRefCntImpl(&vm->pages, oldItem.ptrVal, itemType, TOK_MINUSMINUS);
+    }
+
+    doAssignImpl(nodeData, item, itemType->kind, itemType->size, vm->error);
+}
+
+
 void vmGetMapKeys(VM *vm, Map *map, const Type *keysType, DynArray *keys)
 {
     doAllocDynArray(&vm->pages, keys, keysType, (map && map->root) ? map->root->len : 0, vm->error);
@@ -4393,29 +4422,6 @@ void vmGetMapKeys(VM *vm, Map *map, const Type *keysType, DynArray *keys)
         const Type staticArrayType = typeMakeDetachedArray(keys->type->base, getDims(keys)->len);
         doRefCntImpl(&vm->pages, keys->data, &staticArrayType, TOK_PLUSPLUS);
     }
-}
-
-
-void vmSetMapItem(VM *vm, Map *map, Slot key, Slot item)
-{
-    if (!map || !map->type)
-        return;
-
-    const Type *itemType = typeMapItem(map->type);
-
-    void *data = doGetMapPtrImpl(map, key, map->type, &vm->pages, vm->error);
-
-    if (itemType->isGarbageCollected)
-    {
-        // Increase new item ref count, decrease old item ref count
-        doRefCntImpl(&vm->pages, item.ptrVal, itemType, TOK_PLUSPLUS);
-
-        Slot oldItem = {.ptrVal = data};
-        doDerefImpl(&oldItem, itemType->kind, vm->error);
-        doRefCntImpl(&vm->pages, oldItem.ptrVal, itemType, TOK_MINUSMINUS);
-    }
-
-    doAssignImpl(data, item, itemType->kind, itemType->size, vm->error);
 }
 
 

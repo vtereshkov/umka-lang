@@ -7,7 +7,7 @@
 
 #include "umka_compiler.h"
 
-#define UMKA_VERSION    "1.5.7"
+#define UMKA_VERSION    "1.6"
 
 
 static void compileWarning(Umka *umka, const DebugInfo *debug, const char *format, ...)
@@ -422,11 +422,11 @@ UMKA_API void umkaGetMapKeys(Umka *umka, UmkaMap *map, void *keys)
 }
 
 
-UMKA_API void umkaSetMapItem(Umka *umka, UmkaMap *map, UmkaStackSlot key, UmkaStackSlot item)
+UMKA_API void umkaSetMapItem(Umka *umka, UmkaMap *map, const UmkaType *mapType, UmkaStackSlot key, UmkaStackSlot item)
 {
     const Slot *keyPtr  = (Slot *)&key;
     const Slot *itemPtr = (Slot *)&item;
-    vmSetMapItem(&umka->vm, (Map *)map, *keyPtr, *itemPtr);
+    vmSetMapNodeData(&umka->vm, (Map *)map, mapType, *keyPtr, *itemPtr);
 }
 
 
@@ -442,7 +442,7 @@ UMKA_API int umkaGetTypeSize(const UmkaType *type)
 }
 
 
-UMKA_API int umkaGetTypeNumItems(const UmkaType *type)
+UMKA_API int umkaGetTypeLen(const UmkaType *type)
 {
     return type->numItems;
 }
