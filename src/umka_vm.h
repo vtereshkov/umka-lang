@@ -225,6 +225,8 @@ void *vmAllocData               (VM *vm, int size, UmkaExternFunc onFree);
 void vmIncRef                   (VM *vm, void *ptr, const Type *type);
 void vmDecRef                   (VM *vm, void *ptr, const Type *type);
 void *vmGetMapNodeData          (VM *vm, Map *map, Slot key);
+void vmGetMapKeys               (VM *vm, Map *map, const Type *keysType, DynArray *keys);
+void vmSetMapItem               (VM *vm, Map *map, Slot key, Slot item);
 char *vmMakeStr                 (VM *vm, const char *str);
 void vmMakeDynArray             (VM *vm, DynArray *array, const Type *type, int len);
 void *vmMakeStruct              (VM *vm, const Type *type);
