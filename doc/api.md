@@ -436,6 +436,40 @@ typedef struct tagType UmkaType;
 Umka data type.
 
 ```
+typedef enum
+{
+    TYPE_NONE,
+    TYPE_FORWARD,
+    TYPE_VOID,
+    TYPE_NULL,
+    TYPE_INT8,
+    TYPE_INT16,
+    TYPE_INT32,
+    TYPE_INT,
+    TYPE_UINT8,
+    TYPE_UINT16,
+    TYPE_UINT32,
+    TYPE_UINT,
+    TYPE_BOOL,
+    TYPE_CHAR,
+    TYPE_REAL32,
+    TYPE_REAL,
+    TYPE_PTR,
+    TYPE_WEAKPTR,
+    TYPE_ARRAY,
+    TYPE_DYNARRAY,
+    TYPE_STR,
+    TYPE_MAP,
+    TYPE_STRUCT,
+    TYPE_INTERFACE,
+    TYPE_CLOSURE,
+    TYPE_FIBER,
+    TYPE_FN
+} UmkaTypeKind;
+```
+Umka data type kind. Returned by `umkaGetTypeKind`.
+
+```
 #define UmkaDynArray(T) struct \
 { \
     const UmkaType *type; \
@@ -452,7 +486,7 @@ typedef struct
     struct tagMapNode *root;
 } UmkaMap;
 ```
-Umka map. Can be accessed by calling `umkaGetMapItem`.
+Umka map. Its items can be accessed by calling `umkaGetMapItem` and its keys enumerated by calling `umkaGetMapKeys`. For an empty map not yet associated with a type, the `type` field may be set explicitly to a map type before adding items.
 
 ```
 typedef struct
@@ -519,6 +553,39 @@ Parameters:
 Returned value: Base type of a pointer type; item type of an array or dynamic array type; `NULL` otherwise.
 
 ```
+UMKA_API UmkaTypeKind umkaGetTypeKind(const UmkaType *type);
+```
+Returns the kind of a type.
+
+Parameters:
+
+* `type`: Any type
+
+Returned value: Type kind.
+
+```
+UMKA_API int umkaGetTypeSize(const UmkaType *type);
+```
+Returns the size of a type, in bytes. Equivalent to `sizeof` applied to a variable of that type in Umka.
+
+Parameters:
+
+* `type`: Any type
+
+Returned value: Type size, in bytes.
+
+```
+UMKA_API int umkaGetTypeLen(const UmkaType *type);
+```
+Returns the number of items of a type: the number of elements for an array type, or the number of fields for a structure type.
+
+Parameters:
+
+* `type`: Array or structure type
+
+Returned value: Number of items; 0 if the type is neither an array nor a structure.
+
+```
 UMKA_API const UmkaType *umkaGetFieldType(const UmkaType *structType, const char *fieldName);
 ```
 Returns structure field type.
@@ -529,6 +596,30 @@ Parameters:
 * `fieldName`: Field name
 
 Returned value: Field type; `NULL` if `structType` is not a structure type or has no field `fieldName`.
+
+```
+UMKA_API const char *umkaGetFieldName(const UmkaType *structType, int index);
+```
+Returns the name of a structure field by its index. All the fields of a structure can be enumerated by increasing `index` from 0 until `NULL` is returned.
+
+Parameters:
+
+* `structType`: Structure type
+* `index`: Field index. The first field is at index 0
+
+Returned value: Field name; `NULL` if `structType` is not a structure type or has no field at `index`.
+
+```
+UMKA_API int umkaGetFieldOffset(const UmkaType *structType, const char *fieldName);
+```
+Returns the offset of a structure field, in bytes, from the beginning of the structure.
+
+Parameters:
+
+* `structType`: Structure type
+* `fieldName`: Field name
+
+Returned value: Field offset, in bytes; `-1` if `structType` is not a structure type or has no field `fieldName`.
 
 ```
 UMKA_API const UmkaType *umkaGetMapKeyType(const UmkaType *mapType);
@@ -644,17 +735,28 @@ Parameters:
 Returned value: Pointer to the created structure or array.
 
 ```
-UMKA_API void *umkaGetMapItem(Umka *umka, UmkaMap *map, UmkaStackSlot key);
+UMKA_API void *umkaGetMapItem(Umka *umka, UmkaMap *map, void *key);
 ```
-Finds the map item by the given key.
+Finds the map item by the given key, inserting a new zero-initialized item if the key is not yet present. Equivalent to indexing `map[key]` in Umka.
+
+Parameters:
+
+* `umka`: Interpreter instance handle
+* `map`: Umka map. Its `type` field must be set
+* `key`: Pointer to the key value. For a key obtained from `umkaGetMapKeys`, this is the address of an array item
+
+Returned value: Pointer to the map item; `NULL` if `map` is `NULL`, its type is not set, or `key` is `NULL`. The host is responsible for filling in the item memory, observing the reference counting rules.
+
+```
+UMKA_API void umkaGetMapKeys(Umka *umka, UmkaMap *map, void *keys);
+```
+Collects all the keys of a map into a dynamic array. Equivalent to `keys = keys(map)` in Umka.
 
 Parameters:
 
 * `umka`: Interpreter instance handle
 * `map`: Umka map
-* `key`: Key value
-
-Returned value: Pointer to the map item, `NULL` if the item does not exist.
+* `keys`: Pointer to the resulting dynamic array, actually of type `UmkaDynArray(KeyType)`. It is overwritten with a newly created array holding the map keys, or an empty array if `map` is `NULL` or its type is not set
 
 ## Accessing Umka API dynamically
 

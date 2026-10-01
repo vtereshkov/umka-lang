@@ -223,10 +223,9 @@ UMKA_API void umkaDecRef(Umka *umka, void *ptr)
 }
 
 
-UMKA_API void *umkaGetMapItem(Umka *umka, UmkaMap *map, UmkaStackSlot key)
+UMKA_API void *umkaGetMapItem(Umka *umka, UmkaMap *map, void *key)
 {
-    const Slot *keyPtr = (Slot *)&key;
-    return vmGetMapNodeData(&umka->vm, (Map *)map, *keyPtr);
+    return vmGetMapNodeData(&umka->vm, (Map *)map, key);
 }
 
 
@@ -419,14 +418,6 @@ UMKA_API void umkaGetMapKeys(Umka *umka, UmkaMap *map, void *keys)
     typeSetBase(keysType, typeMapKey(actualMap->type));
 
     vmGetMapKeys(&umka->vm, actualMap, keysType, result);
-}
-
-
-UMKA_API void umkaSetMapItem(Umka *umka, UmkaMap *map, const UmkaType *mapType, UmkaStackSlot key, UmkaStackSlot item)
-{
-    const Slot *keyPtr  = (Slot *)&key;
-    const Slot *itemPtr = (Slot *)&item;
-    vmSetMapNodeData(&umka->vm, (Map *)map, mapType, *keyPtr, *itemPtr);
 }
 
 

@@ -4373,42 +4373,15 @@ void vmDecRef(VM *vm, void *ptr, const Type *type)
 }
 
 
-void *vmGetMapNodeData(VM *vm, Map *map, Slot key)
+void *vmGetMapNodeData(VM *vm, Map *map, void *key)
 {
-    if (!map || !map->root)
+    if (!map || !map->type || !key)
         return NULL;
 
-    const MapNode *node = *doGetMapNode(map, key, false, NULL, vm->error);
-    return node ? node->data : NULL;
-}
+    Slot keySlot = {.ptrVal = key};
+    doDerefImpl(&keySlot, typeMapKey(map->type)->kind, vm->error);
 
-
-void vmSetMapNodeData(VM *vm, Map *map, const Type *mapType, Slot key, Slot item)
-{
-    if (!map)
-        return;
-
-    if (!map->type)
-        map->type = mapType;
-
-    if (!map->type)
-        return;        
-
-    const Type *itemType = typeMapItem(map->type);
-
-    void *nodeData = doGetMapNodeData(map, key, map->type, &vm->pages, vm->error);
-
-    if (itemType->isGarbageCollected)
-    {
-        // Increase new item ref count, decrease old item ref count
-        doRefCntImpl(&vm->pages, item.ptrVal, itemType, TOK_PLUSPLUS);
-
-        Slot oldItem = {.ptrVal = nodeData};
-        doDerefImpl(&oldItem, itemType->kind, vm->error);
-        doRefCntImpl(&vm->pages, oldItem.ptrVal, itemType, TOK_MINUSMINUS);
-    }
-
-    doAssignImpl(nodeData, item, itemType->kind, itemType->size, vm->error);
+    return doGetMapNodeData(map, keySlot, map->type, &vm->pages, vm->error);
 }
 
 

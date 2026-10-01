@@ -170,7 +170,7 @@ typedef void (*UmkaSetHook)                     (Umka *umka, UmkaHookEvent event
 typedef void *(*UmkaAllocData)                  (Umka *umka, int size, UmkaExternFunc onFree);
 typedef void (*UmkaIncRef)                      (Umka *umka, void *ptr);
 typedef void (*UmkaDecRef)                      (Umka *umka, void *ptr);
-typedef void *(*UmkaGetMapItem)                 (Umka *umka, UmkaMap *map, UmkaStackSlot key);
+typedef void *(*UmkaGetMapItem)                 (Umka *umka, UmkaMap *map, void *key);
 typedef char *(*UmkaMakeStr)                    (Umka *umka, const char *str);
 typedef int  (*UmkaGetStrLen)                   (const char *str);
 typedef void (*UmkaMakeDynArray)                (Umka *umka, void *array, const UmkaType *type, int len);
@@ -194,7 +194,6 @@ typedef bool (*UmkaAddClosure)                  (Umka *umka, const char *name, U
 typedef const char *(*UmkaGetFieldName)         (const UmkaType *structType, int index);
 typedef int  (*UmkaGetFieldOffset)              (const UmkaType *structType, const char *fieldName);
 typedef void (*UmkaGetMapKeys)                  (Umka *umka, UmkaMap *map, void *keys);
-typedef void (*UmkaSetMapItem)                  (Umka *umka, UmkaMap *map, const UmkaType *mapType, UmkaStackSlot key, UmkaStackSlot item);
 typedef UmkaTypeKind (*UmkaGetTypeKind)         (const UmkaType *type);
 typedef int  (*UmkaGetTypeSize)                 (const UmkaType *type);
 typedef int  (*UmkaGetTypeLen)                  (const UmkaType *type);
@@ -243,7 +242,6 @@ typedef struct
     UmkaGetFieldName    umkaGetFieldName;
     UmkaGetFieldOffset  umkaGetFieldOffset;
     UmkaGetMapKeys      umkaGetMapKeys;
-    UmkaSetMapItem      umkaSetMapItem;
     UmkaGetTypeKind     umkaGetTypeKind;
     UmkaGetTypeSize     umkaGetTypeSize;
     UmkaGetTypeLen      umkaGetTypeLen;
@@ -267,7 +265,7 @@ UMKA_API void umkaSetHook                   (Umka *umka, UmkaHookEvent event, Um
 UMKA_API void *umkaAllocData                (Umka *umka, int size, UmkaExternFunc onFree);
 UMKA_API void umkaIncRef                    (Umka *umka, void *ptr);
 UMKA_API void umkaDecRef                    (Umka *umka, void *ptr);
-UMKA_API void *umkaGetMapItem               (Umka *umka, UmkaMap *map, UmkaStackSlot key);
+UMKA_API void *umkaGetMapItem               (Umka *umka, UmkaMap *map, void *key);
 UMKA_API char *umkaMakeStr                  (Umka *umka, const char *str);
 UMKA_API int  umkaGetStrLen                 (const char *str);
 UMKA_API void umkaMakeDynArray              (Umka *umka, void *array, const UmkaType *type, int len);
@@ -291,7 +289,6 @@ UMKA_API bool umkaAddClosure                (Umka *umka, const char *name, UmkaE
 UMKA_API const char *umkaGetFieldName       (const UmkaType *structType, int index);
 UMKA_API int  umkaGetFieldOffset            (const UmkaType *structType, const char *fieldName);
 UMKA_API void umkaGetMapKeys                (Umka *umka, UmkaMap *map, void *keys);
-UMKA_API void umkaSetMapItem                (Umka *umka, UmkaMap *map, const UmkaType *mapType, UmkaStackSlot key, UmkaStackSlot item);
 UMKA_API UmkaTypeKind umkaGetTypeKind       (const UmkaType *type);
 UMKA_API int  umkaGetTypeSize               (const UmkaType *type);
 UMKA_API int  umkaGetTypeLen                (const UmkaType *type);
