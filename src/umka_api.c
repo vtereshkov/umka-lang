@@ -7,7 +7,7 @@
 
 #include "umka_compiler.h"
 
-#define UMKA_VERSION    "1.5.7"
+#define UMKA_VERSION    "1.6"
 
 
 static void compileWarning(Umka *umka, const DebugInfo *debug, const char *format, ...)
@@ -223,10 +223,9 @@ UMKA_API void umkaDecRef(Umka *umka, void *ptr)
 }
 
 
-UMKA_API void *umkaGetMapItem(Umka *umka, UmkaMap *map, UmkaStackSlot key)
+UMKA_API void *umkaGetMapItem(Umka *umka, UmkaMap *map, void *key)
 {
-    const Slot *keyPtr = (Slot *)&key;
-    return vmGetMapNodeData(&umka->vm, (Map *)map, *keyPtr);
+    return vmGetMapNodeData(&umka->vm, (Map *)map, key);
 }
 
 
@@ -381,4 +380,60 @@ UMKA_API const UmkaType *umkaGetMapItemType(const UmkaType *mapType)
 UMKA_API bool umkaAddClosure(Umka *umka, const char *name, UmkaExternFunc func, void *upvalue)
 {
     return compilerAddClosure(umka, name, func, upvalue);
+}
+
+
+UMKA_API const char *umkaGetFieldName(const UmkaType *structType, int index)
+{
+    if (structType->kind == TYPE_STRUCT && index >= 0 && index < structType->numItems)
+        return structType->field[index]->name;
+    return NULL;
+}
+
+
+UMKA_API int umkaGetFieldOffset(const UmkaType *structType, const char *fieldName)
+{
+    if (structType->kind == TYPE_STRUCT)
+    {
+        const Field *field = typeFindField(structType, fieldName, NULL);
+        if (field)
+            return field->offset;
+    }
+    return -1;
+}
+
+
+UMKA_API void umkaGetMapKeys(Umka *umka, UmkaMap *map, void *keys)
+{
+    Map *actualMap = (Map *)map;
+    DynArray *result = (DynArray *)keys;
+
+    if (!actualMap || !actualMap->type)
+    {
+        memset(result, 0, sizeof(DynArray));
+        return;
+    }
+
+    Type *keysType = typeAdd(&umka->types, &umka->blocks, TYPE_DYNARRAY);
+    typeSetBase(keysType, typeMapKey(actualMap->type));
+
+    vmGetMapKeys(&umka->vm, actualMap, keysType, result);
+}
+
+
+UMKA_API TypeKind umkaGetTypeKind(const UmkaType *type)
+{
+    return type->kind;
+}
+
+
+UMKA_API int umkaGetTypeSize(const UmkaType *type)
+{
+    return type->size;
+}
+
+
+UMKA_API int umkaGetTypeLen(const UmkaType *type)
+{
+    return type->numItems;
 }
