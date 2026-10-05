@@ -8,36 +8,7 @@
 #include "umka_lexer.h"
 
 
-typedef enum
-{
-    TYPE_NONE,
-    TYPE_FORWARD,
-    TYPE_VOID,
-    TYPE_NULL,          // Base type for 'null' constant only
-    TYPE_INT8,
-    TYPE_INT16,
-    TYPE_INT32,
-    TYPE_INT,
-    TYPE_UINT8,
-    TYPE_UINT16,
-    TYPE_UINT32,
-    TYPE_UINT,
-    TYPE_BOOL,
-    TYPE_CHAR,
-    TYPE_REAL32,
-    TYPE_REAL,
-    TYPE_PTR,
-    TYPE_WEAKPTR,       // Actually a handle that stores the heap page ID and the offset within the page: (pageId << 32) | pageOffset
-    TYPE_ARRAY,
-    TYPE_DYNARRAY,
-    TYPE_STR,           // Pointer of a special kind that admits assignment of string literals, concatenation and comparison by content
-    TYPE_MAP,
-    TYPE_STRUCT,
-    TYPE_INTERFACE,
-    TYPE_CLOSURE,
-    TYPE_FIBER,         // Pointer of a special kind
-    TYPE_FN
-} TypeKind;
+typedef UmkaTypeKind TypeKind;
 
 
 typedef enum
