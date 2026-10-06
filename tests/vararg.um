@@ -33,7 +33,14 @@ fn (t: ^T) join(strings: ..str): T {
 	return t^
 }
 
+fn foo(x: ..int): [2]int {
+    return {1, 2}
+}
+
 fn test*() {
+    foo(1)
+    foo()
+
     printPrompt("expected ", 12, "Hello World", []bool{true, false, true, true})
     printPrompt("should work with no values")
 

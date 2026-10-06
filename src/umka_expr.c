@@ -1863,7 +1863,7 @@ static void parseActualParamsAndCall(Umka *umka, const Type **type)
 
     if ((*type)->sig->numDefaultParams > 0)
         numDefaultOrVariadicFormalParams = (*type)->sig->numDefaultParams;
-    else if ((*type)->sig->numParams > 0 && (*type)->sig->param[(*type)->sig->numParams - 1]->type->isVariadicParamList)
+    else if ((*type)->sig->numParams > numPreHiddenParams + numPostHiddenParams && (*type)->sig->param[(*type)->sig->numParams - numPostHiddenParams - 1]->type->isVariadicParamList)
         numDefaultOrVariadicFormalParams = 1;
 
     if (numPreHiddenParams + numExplicitParams + numPostHiddenParams < (*type)->sig->numParams - numDefaultOrVariadicFormalParams)
