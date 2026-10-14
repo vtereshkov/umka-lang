@@ -378,6 +378,12 @@ fn clock*(): real {
     return rtlclock()
 }
 
+fn rtlepochclock(): real
+
+fn epochTime*(): real {
+    return rtlepochclock()
+}
+
 fn rtllocaltime(t: int): DateTime
 
 fn localtime*(t: int): DateTime {

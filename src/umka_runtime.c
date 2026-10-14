@@ -4,6 +4,10 @@
 #include <string.h>
 #include <time.h>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #include "umka_common.h"
 #include "umka_runtime.h"
 
@@ -257,16 +261,41 @@ void rtltime(UmkaStackSlot *params, UmkaStackSlot *result)
 }
 
 
-void rtlclock(UmkaStackSlot *params, UmkaStackSlot *result)
+static double rtlClockStart = 0.0;
+
+
+static double rtlMonotonicNow(void)
 {
 #ifdef _WIN32
-    umkaGetResult(params, result)->realVal = (double)clock() / CLOCKS_PER_SEC;
+    LARGE_INTEGER freq, count;
+    QueryPerformanceFrequency(&freq);
+    QueryPerformanceCounter(&count);
+    return (double)count.QuadPart / (double)freq.QuadPart;
 #else
-    // On Linux, clock() measures per-process time and may produce wrong actual time estimates
     struct timespec t;
-    clock_gettime(CLOCK_REALTIME, &t);
-    umkaGetResult(params, result)->realVal = (double)t.tv_sec + (double)t.tv_nsec * 1e-9;
+    clock_gettime(CLOCK_MONOTONIC, &t);
+    return (double)t.tv_sec + (double)t.tv_nsec * 1e-9;
 #endif
+}
+
+
+void rtlClockInit(void)
+{
+    rtlClockStart = rtlMonotonicNow();
+}
+
+
+void rtlclock(UmkaStackSlot *params, UmkaStackSlot *result)
+{
+    umkaGetResult(params, result)->realVal = rtlMonotonicNow() - rtlClockStart;
+}
+
+
+void rtlepochclock(UmkaStackSlot *params, UmkaStackSlot *result)
+{
+    struct timespec t;
+    timespec_get(&t, TIME_UTC);
+    umkaGetResult(params, result)->realVal = (double)t.tv_sec + (double)t.tv_nsec * 1e-9;
 }
 
 

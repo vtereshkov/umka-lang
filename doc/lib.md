@@ -279,7 +279,13 @@ Returns the number of seconds since 00:00, January 1, 1970 UTC.
 fn clock*(): real
 ```
 
-Returns the number of seconds since the start of the program.
+Returns the number of seconds since the start of the program, measured with a monotonic clock, so it is not affected by changes to the system time. Use the difference of two calls to measure elapsed time.
+
+```
+fn epochTime*(): real
+```
+
+Returns the current time as the number of seconds since 00:00, January 1, 1970 UTC, with sub-second precision. Unlike `clock`, this value is not relative to the start of the program and is not guaranteed to be monotonic (it can jump when the system clock is adjusted).
 
 ```
 fn localtime*(t: int): DateTime

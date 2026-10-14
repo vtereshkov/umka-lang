@@ -173,6 +173,7 @@ static void compilerDeclareExternalFuncs(Umka *umka, bool fileSystemEnabled)
     externalAdd(&umka->externals, "rtllocaltime",   &rtllocaltime,                                        NULL, true);
     externalAdd(&umka->externals, "rtlgmtime",      &rtlgmtime,                                           NULL, true);
     externalAdd(&umka->externals, "rtlmktime",      &rtlmktime,                                           NULL, true);
+    externalAdd(&umka->externals, "rtlepochclock",  &rtlepochclock,                                       NULL, true);
     externalAdd(&umka->externals, "rtlgetenv",      fileSystemEnabled ? &rtlgetenv : &rtlgetenvSandbox,   NULL, true);
     externalAdd(&umka->externals, "rtlsystem",      fileSystemEnabled ? &rtlsystem : &rtlsystemSandbox,   NULL, true);
     externalAdd(&umka->externals, "rtltrace",       &rtltrace,                                            NULL, true);
@@ -232,6 +233,7 @@ void compilerInit(Umka *umka, const char *fileName, const char *sourceString, in
     umka->blocks.module = moduleAdd(&umka->modules, "#universe");
 
     compilerDeclareBuiltinIdents(umka);
+    rtlClockInit();
     compilerDeclareExternalFuncs(umka, fileSystemEnabled);
 
     // Command-line-arguments

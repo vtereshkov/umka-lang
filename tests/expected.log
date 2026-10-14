@@ -1098,6 +1098,9 @@ foo: World
 
 0
 2022-10-02 15:13:32
+true
+true
+true
 
 
 >>> Untyped literals

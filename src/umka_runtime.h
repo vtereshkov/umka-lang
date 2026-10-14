@@ -44,6 +44,8 @@ void rtlfeofSandbox     (UmkaStackSlot *params, UmkaStackSlot *result);
 void rtlfflush          (UmkaStackSlot *params, UmkaStackSlot *result);
 void rtltime            (UmkaStackSlot *params, UmkaStackSlot *result);
 void rtlclock           (UmkaStackSlot *params, UmkaStackSlot *result);
+void rtlepochclock      (UmkaStackSlot *params, UmkaStackSlot *result);
+void rtlClockInit       (void);
 void rtllocaltime       (UmkaStackSlot *params, UmkaStackSlot *result);
 void rtlgmtime          (UmkaStackSlot *params, UmkaStackSlot *result);
 void rtlmktime          (UmkaStackSlot *params, UmkaStackSlot *result);
