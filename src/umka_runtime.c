@@ -9,6 +9,7 @@
 #endif
 
 #include "umka_common.h"
+#include "umka_compiler.h"
 #include "umka_runtime.h"
 
 
@@ -261,10 +262,7 @@ void rtltime(UmkaStackSlot *params, UmkaStackSlot *result)
 }
 
 
-static double rtlClockStart = 0.0;
-
-
-static double rtlMonotonicNow(void)
+double rtlMonotonicNow(void)
 {
 #ifdef _WIN32
     LARGE_INTEGER freq, count;
@@ -279,23 +277,28 @@ static double rtlMonotonicNow(void)
 }
 
 
-void rtlClockInit(void)
-{
-    rtlClockStart = rtlMonotonicNow();
-}
-
-
 void rtlclock(UmkaStackSlot *params, UmkaStackSlot *result)
 {
-    umkaGetResult(params, result)->realVal = rtlMonotonicNow() - rtlClockStart;
+    const Umka *umka = umkaGetInstance(result);
+    umkaGetResult(params, result)->realVal = rtlMonotonicNow() - umka->clockStart;
 }
 
 
 void rtlepochclock(UmkaStackSlot *params, UmkaStackSlot *result)
 {
+#ifdef _WIN32
+    FILETIME ft;
+    GetSystemTimeAsFileTime(&ft);
+
+    // FILETIME counts 100 ns intervals since January 1, 1601 UTC
+    const unsigned long long ticks = ((unsigned long long)ft.dwHighDateTime << 32) | ft.dwLowDateTime;
+    const unsigned long long ticksTo1970 = 116444736000000000ULL;
+    umkaGetResult(params, result)->realVal = (double)(ticks - ticksTo1970) * 1e-7;
+#else
     struct timespec t;
-    timespec_get(&t, TIME_UTC);
+    clock_gettime(CLOCK_REALTIME, &t);
     umkaGetResult(params, result)->realVal = (double)t.tv_sec + (double)t.tv_nsec * 1e-9;
+#endif
 }
 
 

@@ -233,7 +233,7 @@ void compilerInit(Umka *umka, const char *fileName, const char *sourceString, in
     umka->blocks.module = moduleAdd(&umka->modules, "#universe");
 
     compilerDeclareBuiltinIdents(umka);
-    rtlClockInit();
+    umka->clockStart = rtlMonotonicNow();
     compilerDeclareExternalFuncs(umka, fileSystemEnabled);
 
     // Command-line-arguments

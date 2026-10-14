@@ -38,6 +38,9 @@ typedef struct tagUmka
 
     // Original codepages (Windows only)
     unsigned int originalInputCodepage, originalOutputCodepage;
+
+    // Monotonic clock reading at initialization, in seconds
+    double clockStart;
 } Umka;
 
 
