@@ -62,7 +62,7 @@ static void doEscapeToHeap(Umka *umka, const Type *ptrType)
     // Copy to heap and use heap pointer
     genDup(&umka->gen);
     genPopReg(&umka->gen, REG_HEAP_COPY);
-    genSwapAssign(&umka->gen, ptrType->base->kind, typeSize(&umka->types, ptrType->base));
+    genSwapAssign(&umka->gen, ptrType->base);
     genPushReg(&umka->gen, REG_HEAP_COPY);
 }
 
@@ -212,7 +212,7 @@ static void doDynArrayToDynArrayConv(Umka *umka, const Type *dest, const Type **
     genDup(&umka->gen);
     genCallBuiltin(&umka->gen, (*src)->kind, BUILTIN_LEN);
     genPushLocalPtr(&umka->gen, lenOffset);
-    genSwapAssign(&umka->gen, TYPE_INT, 0);
+    genSwapAssign(&umka->gen, umka->types.predecl.intType);
 
     // Allocate destination array: destArray = make(dest, length)
     const Ident *destArray = identAllocTempVar(&umka->idents, &umka->types, &umka->modules, &umka->blocks, dest);
@@ -230,7 +230,7 @@ static void doDynArrayToDynArrayConv(Umka *umka, const Type *dest, const Type **
     genPushIntConst(&umka->gen, 1);
     genBinary(&umka->gen, TOK_MINUS, umka->types.predecl.intType);
     genPushLocalPtr(&umka->gen, indexOffset);
-    genSwapAssign(&umka->gen, TYPE_INT, 0);
+    genSwapAssign(&umka->gen, umka->types.predecl.intType);
 
     // Loop condition: index >= 0
     genWhileCondProlog(&umka->gen);
@@ -263,7 +263,7 @@ static void doDynArrayToDynArrayConv(Umka *umka, const Type *dest, const Type **
     genDeref(&umka->gen, dest->kind);
     genPushLocal(&umka->gen, TYPE_INT, indexOffset);
     genGetDynArrayPtr(&umka->gen);
-    genSwapAssign(&umka->gen, dest->base->kind, typeSize(&umka->types, dest->base));
+    genSwapAssign(&umka->gen, dest->base);
 
     genPushLocalPtr(&umka->gen, indexOffset);
     genUnary(&umka->gen, TOK_MINUSMINUS, umka->types.predecl.intType);
@@ -299,14 +299,14 @@ static void doPtrToInterfaceConv(Umka *umka, const Type *dest, const Type **src,
 
         // Assign to #self
         genPushLocalPtr(&umka->gen, destOffset);                                // Push dest.#self pointer
-        genSwapAssign(&umka->gen, TYPE_PTR, 0);                                 // Assign to dest.#self
+        genSwapAssign(&umka->gen, dest->field[0]->type);                        // Assign to dest.#self
 
         // Assign to #selftype (RTTI)
         const Field *selfType = typeAssertFindField(&umka->types, dest, "#selftype", NULL);
 
         genPushGlobalPtr(&umka->gen, (Type *)(*src));                           // Push src type
         genPushLocalPtr(&umka->gen, destOffset + selfType->offset);             // Push dest.#selftype pointer
-        genSwapAssign(&umka->gen, TYPE_PTR, 0);                                 // Assign to dest.#selftype
+        genSwapAssign(&umka->gen, selfType->type);                              // Assign to dest.#selftype
 
         // Assign to methods
         for (int i = 2; i < dest->numItems; i++)
@@ -337,7 +337,7 @@ static void doPtrToInterfaceConv(Umka *umka, const Type *dest, const Type **src,
             }
 
             genPushLocalPtr(&umka->gen, destOffset + dest->field[i]->offset);   // Push dest.method pointer
-            genSwapAssign(&umka->gen, TYPE_FN, 0);                              // Assign to dest.method
+            genSwapAssign(&umka->gen, dest->field[i]->type);                    // Assign to dest.method
         }
 
         genPushLocalPtr(&umka->gen, destOffset);
@@ -358,7 +358,7 @@ static void doInterfaceToInterfaceConv(Umka *umka, const Type *dest, const Type 
     genDup(&umka->gen);                                                     // Duplicate src pointer
     genDeref(&umka->gen, TYPE_PTR);                                         // Get src.#self value
     genPushLocalPtr(&umka->gen, destOffset);                                // Push dest pointer
-    genSwapAssign(&umka->gen, TYPE_PTR, 0);                                 // Assign to dest.#self (NULL means a dynamic type)
+    genSwapAssign(&umka->gen, dest->field[0]->type);                        // Assign to dest.#self (NULL means a dynamic type)
 
     // Assign to #selftype (RTTI)
     const Field *selfType = typeAssertFindField(&umka->types, dest, "#selftype", NULL);
@@ -367,7 +367,7 @@ static void doInterfaceToInterfaceConv(Umka *umka, const Type *dest, const Type 
     genGetFieldPtr(&umka->gen, selfType->offset);                           // Get src.#selftype pointer
     genDeref(&umka->gen, TYPE_PTR);                                         // Get src.#selftype value
     genPushLocalPtr(&umka->gen, destOffset + selfType->offset);             // Push dest.#selftype pointer
-    genSwapAssign(&umka->gen, TYPE_PTR, 0);                                 // Assign to dest.#selftype
+    genSwapAssign(&umka->gen, selfType->type);                              // Assign to dest.#selftype
 
     // Assign to methods
     for (int i = 2; i < dest->numItems; i++)
@@ -390,7 +390,7 @@ static void doInterfaceToInterfaceConv(Umka *umka, const Type *dest, const Type 
         genGetFieldPtr(&umka->gen, srcMethod->offset);                      // Get src.method pointer
         genDeref(&umka->gen, TYPE_FN);                                      // Get src.method value (entry point)
         genPushLocalPtr(&umka->gen, destOffset + dest->field[i]->offset);   // Push dest.method pointer
-        genSwapAssign(&umka->gen, TYPE_FN, 0);                              // Assign to dest.method
+        genSwapAssign(&umka->gen, dest->field[i]->type);                    // Assign to dest.method
     }
 
     genPop(&umka->gen);                                                     // Remove src pointer
@@ -443,7 +443,7 @@ static void doFnToClosureConv(Umka *umka, const Type *dest, const Type **src, Co
     genZero(&umka->gen, typeSize(&umka->types, dest));
 
     genPushLocalPtr(&umka->gen, destOffset + dest->field[0]->offset);   // Push dest.#fn pointer
-    genSwapAssign(&umka->gen, TYPE_FN, 0);                              // Assign to dest.#fn
+    genSwapAssign(&umka->gen, dest->field[0]->type);                    // Assign to dest.#fn
 
     genPushLocalPtr(&umka->gen, destOffset);
     *src = dest;
@@ -469,7 +469,7 @@ static void doExprListToExprListConv(Umka *umka, const Type *dest, const Type **
         doAssertImplicitTypeConv(umka, dest->field[i]->type, &srcFieldType, constant);
 
         genPushLocalPtr(&umka->gen, destList->offset + dest->field[i]->offset); // Push dest.item pointer
-        genSwapAssign(&umka->gen, dest->field[i]->type->kind, typeSize(&umka->types, dest->field[i]->type));   // Assign to dest.item
+        genSwapAssign(&umka->gen, dest->field[i]->type);                        // Assign to dest.item
     }
 
     genPop(&umka->gen);                                                         // Remove src pointer
@@ -870,7 +870,7 @@ static void parseBuiltinNewCall(Umka *umka, const Type **type, Const *constant)
         parseExpr(umka, &exprType, NULL);
         doAssertImplicitTypeConv(umka, *type, &exprType, NULL);
 
-        genAssign(&umka->gen, (*type)->kind, typeSize(&umka->types, *type));
+        genAssign(&umka->gen, *type);
     }
 
     *type = typeAddPtrTo(&umka->types, &umka->blocks, *type);
@@ -980,7 +980,7 @@ static void parseBuiltinAppendCall(Umka *umka, const Type **type, Const *constan
         {
             const int itemOffset = identAllocStack(&umka->idents, &umka->types, &umka->blocks, (*type)->base);
             genPushLocalPtr(&umka->gen, itemOffset);
-            genSwapAssign(&umka->gen, (*type)->base->kind, 0);
+            genSwapAssign(&umka->gen, (*type)->base);
 
             genPushLocalPtr(&umka->gen, itemOffset);
         }
@@ -1026,7 +1026,7 @@ static void parseBuiltinInsertCall(Umka *umka, const Type **type, Const *constan
     {
         const int itemOffset = identAllocStack(&umka->idents, &umka->types, &umka->blocks, (*type)->base);
         genPushLocalPtr(&umka->gen, itemOffset);
-        genSwapAssign(&umka->gen, (*type)->base->kind, 0);
+        genSwapAssign(&umka->gen, (*type)->base);
 
         genPushLocalPtr(&umka->gen, itemOffset);
     }
@@ -1650,7 +1650,7 @@ static void parseVariadicParamList(Umka *umka, const Type **type)
         for (int i = staticArrayType->numItems - 1; i >= 0; i--)
         {
             genPushLocalPtr(&umka->gen, staticArrayOffset + i * itemSize);
-            genSwapAssign(&umka->gen, staticArrayType->base->kind, staticArrayType->base->size);
+            genSwapAssign(&umka->gen, staticArrayType->base);
         }
 
         genPushLocalPtr(&umka->gen, staticArrayOffset);
@@ -1993,7 +1993,7 @@ static void parseArrayOrStructLiteral(Umka *umka, const Type **type, Const *cons
         }
         else
         {
-            genAssign(&umka->gen, expectedItemType->kind, typeSize(&umka->types, expectedItemType));
+            genAssign(&umka->gen, expectedItemType);
         }
 
         numItems++;
@@ -2088,7 +2088,7 @@ static void parseDynArrayLiteral(Umka *umka, const Type **type, Const *constant,
             for (int i = staticArrayType->numItems - 1; i >= 0; i--)
             {
                 genPushLocalPtr(&umka->gen, staticArrayOffset + i * itemSize);
-                genSwapAssign(&umka->gen, staticArrayType->base->kind, staticArrayType->base->size);
+                genSwapAssign(&umka->gen, staticArrayType->base);
             }
 
             genPushLocalPtr(&umka->gen, staticArrayOffset);
@@ -2154,7 +2154,7 @@ static void parseMapLiteral(Umka *umka, const Type **type, Const *constant, cons
         doAssertImplicitTypeConv(umka, typeMapItem(*type), &itemType, NULL);
 
         // Assign to map item
-        genAssign(&umka->gen, typeMapItem(*type)->kind, typeSize(&umka->types, typeMapItem(*type)));
+        genAssign(&umka->gen, typeMapItem(*type));
 
         if (umka->lex.tok.kind != TOK_COMMA)
             break;
@@ -2257,7 +2257,7 @@ static void parseClosureLiteral(Umka *umka, const Type **type, Const *constant, 
                 doPushVarPtr(umka, capturedIdent);
                 genDeref(&umka->gen, capturedIdent->type->kind);
 
-                genAssign(&umka->gen, upvalue->type->kind, typeSize(&umka->types, upvalue->type));
+                genAssign(&umka->gen, upvalue->type);
             }
 
             // Assign closure upvalues
@@ -2271,7 +2271,7 @@ static void parseClosureLiteral(Umka *umka, const Type **type, Const *constant, 
             genDeref(&umka->gen, upvaluesStructIdent->type->kind);
             doAssertImplicitTypeConv(umka, upvalues->type, &upvaluesType, NULL);
 
-            genAssign(&umka->gen, upvalues->type->kind, typeSize(&umka->types, upvalues->type));
+            genAssign(&umka->gen, upvalues->type);
         }
 
         // fnBlock
@@ -2293,7 +2293,7 @@ static void parseClosureLiteral(Umka *umka, const Type **type, Const *constant, 
 
         doPushConst(umka, fn->type, &fnConstant);
 
-        genAssign(&umka->gen, fn->type->kind, typeSize(&umka->types, fn->type));
+        genAssign(&umka->gen, fn->type);
 
         doPushVarPtr(umka, closureIdent);
     }
@@ -3185,7 +3185,7 @@ void parseExprList(Umka *umka, const Type **type, Const *constant)
             else
             {
                 genPushLocalPtr(&umka->gen, exprList->offset + field->offset);
-                genSwapAssign(&umka->gen, field->type->kind, typeSize(&umka->types, field->type));
+                genSwapAssign(&umka->gen, field->type);
             }
         }
 

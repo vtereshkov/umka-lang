@@ -73,7 +73,7 @@ void doResolveExtern(Umka *umka)
                     doPushVarPtr(umka, upvaluesParamIdent);
                     genPushGlobalPtr(&umka->gen, upvalue);
                     genDeref(&umka->gen, TYPE_INTERFACE);
-                    genAssign(&umka->gen, upvaluesParamIdent->type->kind, typeSize(&umka->types, upvaluesParamIdent->type));
+                    genAssign(&umka->gen, upvaluesParamIdent->type);
                 }
                 
                 genCallExtern(&umka->gen, fn);
@@ -174,7 +174,7 @@ static void parseSingleAssignmentStmt(Umka *umka, const Type *type, Const *varPt
     if (varPtrConst)                                // Initialize global variable
         constAssign(&umka->consts, varPtrConst->ptrVal, rightConstant, type->kind, typeSize(&umka->types, type));
     else                                            // Assign to variable
-        genAssign(&umka->gen, type->kind, typeSize(&umka->types, type));
+        genAssign(&umka->gen, type);
 }
 
 
@@ -227,7 +227,7 @@ static void parseListAssignmentStmt(Umka *umka, const Type *type, Const *varPtrC
 
             doAssertImplicitTypeConv(umka, leftType, &rightType, NULL);
 
-            genAssign(&umka->gen, leftType->kind, typeSize(&umka->types, leftType));   // Assign expression to variable
+            genAssign(&umka->gen, leftType);   // Assign expression to variable
             genPushReg(&umka->gen, REG_EXPR_LIST);                          // Restore expression list pointer
         }
     }
@@ -269,7 +269,7 @@ static void parseShortAssignmentStmt(Umka *umka, const Type *type, TokenKind op)
     const TokenKind shortOp = (leftType->kind == TYPE_STR && op == TOK_PLUSEQ) ? op : lexShortAssignment(op);
 
     doApplyOperator(umka, &leftType, &rightType, NULL, NULL, shortOp, true, false);
-    genAssign(&umka->gen, type->kind, typeSize(&umka->types, type));
+    genAssign(&umka->gen, type);
 }
 
 
@@ -290,7 +290,7 @@ static void parseSingleDeclAssignmentStmt(Umka *umka, IdentName name, bool expor
     else                        // Assign to variable
     {
         doPushVarPtr(umka, ident);
-        genSwapAssign(&umka->gen, rightType->kind, typeSize(&umka->types, rightType));
+        genSwapAssign(&umka->gen, rightType);
     }
 }
 
@@ -347,7 +347,7 @@ static void parseListDeclAssignmentStmt(Umka *umka, IdentName *names, const bool
                 doAssertImplicitTypeConv(umka, ident->type, &rightType, NULL);
 
             doPushVarPtr(umka, ident);
-            genSwapAssign(&umka->gen, ident->type->kind, typeSize(&umka->types, ident->type));  // Assign expression to variable
+            genSwapAssign(&umka->gen, ident->type);  // Assign expression to variable
         }
     }
 
@@ -571,7 +571,7 @@ static void parseTypeCase(Umka *umka, const char *concreteVarName, ConstArray *e
         genDeref(&umka->gen, concreteType->kind);
 
     doPushVarPtr(umka, concreteIdent);
-    genSwapAssign(&umka->gen, concreteType->kind, typeSize(&umka->types, concreteType));
+    genSwapAssign(&umka->gen, concreteType);
 
     parseStmtList(umka);
 
@@ -873,7 +873,7 @@ static void parseForInHeader(Umka *umka, ForPostStmt *postStmt)
 
     const Ident *lenIdent = identAllocVar(&umka->idents, &umka->types, &umka->modules, &umka->blocks, "#len", umka->types.predecl.intType, false);
     doPushVarPtr(umka, lenIdent);
-    genSwapAssign(&umka->gen, lenIdent->type->kind, typeSize(&umka->types, lenIdent->type));
+    genSwapAssign(&umka->gen, lenIdent->type);
 
     const Ident *collectionIdent = NULL;
     if (itemName[0] != '\0' || collectionType->kind == TYPE_MAP)
@@ -886,7 +886,7 @@ static void parseForInHeader(Umka *umka, ForPostStmt *postStmt)
         collectionIdent = identAllocVar(&umka->idents, &umka->types, &umka->modules, &umka->blocks, "#collection", collectionIdentType, false);
         doZeroVar(umka, collectionIdent);
         doPushVarPtr(umka, collectionIdent);
-        genSwapAssign(&umka->gen, collectionIdent->type->kind, typeSize(&umka->types, collectionIdent->type));
+        genSwapAssign(&umka->gen, collectionIdent->type);
     }
     else
     {
@@ -927,7 +927,7 @@ static void parseForInHeader(Umka *umka, ForPostStmt *postStmt)
 
         // Assign map keys
         doPushVarPtr(umka, keysIdent);
-        genSwapAssign(&umka->gen, keysType->kind, typeSize(&umka->types, keysType));
+        genSwapAssign(&umka->gen, keysType);
     }
 
     const Ident *itemIdent = NULL;
@@ -971,7 +971,7 @@ static void parseForInHeader(Umka *umka, ForPostStmt *postStmt)
         genDeref(&umka->gen, keyIdent->type->kind);
 
         doPushVarPtr(umka, keyIdent);
-        genSwapAssign(&umka->gen, keyIdent->type->kind, typeSize(&umka->types, keyIdent->type));
+        genSwapAssign(&umka->gen, keyIdent->type);
     }
 
     // Assign collection item
@@ -1008,7 +1008,7 @@ static void parseForInHeader(Umka *umka, ForPostStmt *postStmt)
 
         // Assign collection item to iteration variable
         doPushVarPtr(umka, itemIdent);
-        genSwapAssign(&umka->gen, itemIdent->type->kind, typeSize(&umka->types, itemIdent->type));
+        genSwapAssign(&umka->gen, itemIdent->type);
     }
 }
 
@@ -1134,7 +1134,7 @@ static void parseReturnStmt(Umka *umka)
         doPushVarPtr(umka, result);
         genDeref(&umka->gen, TYPE_PTR);
 
-        genSwapAssign(&umka->gen, sig->resultType->kind, typeSize(&umka->types, sig->resultType));
+        genSwapAssign(&umka->gen, sig->resultType);
 
         doPushVarPtr(umka, result);
         genDeref(&umka->gen, TYPE_PTR);
@@ -1258,7 +1258,7 @@ void parseFnBlock(Umka *umka, Ident *fn, const Type *upvaluesStructType)
             doZeroVar(umka, upvalueIdent);
             doPushVarPtr(umka, upvalueIdent);
 
-            genSwapAssign(&umka->gen, upvalue->type->kind, typeSize(&umka->types, upvalue->type));
+            genSwapAssign(&umka->gen, upvalue->type);
         }
 
         genPop(&umka->gen);

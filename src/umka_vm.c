@@ -3036,14 +3036,12 @@ static FORCE_INLINE void doAssign(Fiber *fiber, HeapPages *pages, bool swap, Err
         lhs = (fiber->top++)->ptrVal;        
     }
 
-    const TypeKind typeKind = fiber->code[fiber->ip].typeKind;
-    const int64_t size = fiber->code[fiber->ip].operand.intVal;
+    const Type *type = fiber->code[fiber->ip].type;
 
-    doAssignImpl(lhs, rhs, typeKind, size, error);
+    doAssignImpl(lhs, rhs, type->kind, type->size, error);
 
-    if ((typeKind == TYPE_PTR || typeKind == TYPE_ARRAY || typeKind == TYPE_STRUCT || typeKind == TYPE_INTERFACE || typeKind == TYPE_CLOSURE) &&
-        (lhs < (void *)fiber->top || lhs >= (void *)fiber->base))
-        doCheckEscapes(fiber, pages, lhs, (typeKind == TYPE_PTR) ? sizeof(void *) : size, error);
+    if (type->isGarbageCollected && (lhs < (void *)fiber->top || lhs >= (void *)fiber->base))
+        doCheckEscapes(fiber, pages, lhs, type->size, error);
 
     fiber->ip++;
 }
@@ -3946,8 +3944,6 @@ int vmAsm(int ip, const Instruction *code, const DebugInfo *debugPerInstr, const
         case OP_PUSH_LOCAL:
         case OP_POP:
         case OP_ZERO:
-        case OP_ASSIGN:
-        case OP_SWAP_ASSIGN:
         case OP_ASSIGN_PARAM:
         case OP_GET_FIELD_PTR:
         case OP_GET_FIELD:

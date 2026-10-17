@@ -162,7 +162,7 @@ static bool optimizePopReg(CodeGen *gen, RegisterIndex regIndex)
 }
 
 
-static bool optimizeSwapAssign(CodeGen *gen, TypeKind typeKind, int structSize)
+static bool optimizeSwapAssign(CodeGen *gen, const Type *type)
 {
     Instruction *prev = getPrevInstr(gen, 1);
 
@@ -170,7 +170,7 @@ static bool optimizeSwapAssign(CodeGen *gen, TypeKind typeKind, int structSize)
     if (prev && prev->opcode == OP_SWAP)
     {
         genRemoveInstr(gen);
-        const Instruction instr = {.opcode = OP_ASSIGN, .tokKind = TOK_NONE, .typeKind = typeKind, .operand.intVal = structSize};
+        const Instruction instr = {.opcode = OP_ASSIGN, .tokKind = TOK_NONE, .type = type};
         genAddInstr(gen, &instr);
         return true;
     }
@@ -596,18 +596,18 @@ void genDeref(CodeGen *gen, TypeKind typeKind)
 }
 
 
-void genAssign(CodeGen *gen, TypeKind typeKind, int structSize)
+void genAssign(CodeGen *gen, const Type *type)
 {
-    const Instruction instr = {.opcode = OP_ASSIGN, .tokKind = TOK_NONE, .typeKind = typeKind, .operand.intVal = structSize};
+    const Instruction instr = {.opcode = OP_ASSIGN, .tokKind = TOK_NONE, .type = type};
     genAddInstr(gen, &instr);
 }
 
 
-void genSwapAssign(CodeGen *gen, TypeKind typeKind, int structSize)
+void genSwapAssign(CodeGen *gen, const Type *type)
 {
-    if (!optimizeSwapAssign(gen, typeKind, structSize))
+    if (!optimizeSwapAssign(gen, type))
     {
-        const Instruction instr = {.opcode = OP_SWAP_ASSIGN, .tokKind = TOK_NONE, .typeKind = typeKind, .operand.intVal = structSize};
+        const Instruction instr = {.opcode = OP_SWAP_ASSIGN, .tokKind = TOK_NONE, .type = type};
         genAddInstr(gen, &instr);
     }
 }
