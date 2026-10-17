@@ -213,13 +213,13 @@ UMKA_API void *umkaAllocData(Umka *umka, int size, UmkaExternFunc onFree)
 
 UMKA_API void umkaIncRef(Umka *umka, void *ptr)
 {
-    // Kept for backward compatibility. The garbage collector needs no reference counts
+    vmIncRef(&umka->vm, ptr);
 }
 
 
 UMKA_API void umkaDecRef(Umka *umka, void *ptr)
 {
-    // Kept for backward compatibility. The garbage collector needs no reference counts
+    vmDecRef(&umka->vm, ptr);
 }
 
 

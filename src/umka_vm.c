@@ -303,6 +303,7 @@ static void pageInit(HeapPages *pages, Storage *storage, Error *error)
     gcCandidateInit(&pages->markCandidates, storage);
     gcCandidateInit(&pages->escapeSuspects, storage);
     gcCandidateInit(&pages->roots, storage);
+    gcCandidateInit(&pages->hostRefs, storage);
     pages->error = error;
 }
 
@@ -1080,6 +1081,10 @@ static void gcMark(VM *vm)
     const GCCandidates *roots = &pages->roots;
     for (int i = 0; i <= roots->top; i++)
         gcAddValueCandidate(candidates, roots->stack[i].ptr, roots->stack[i].type);
+
+    // Roots: chunks referenced by the host
+    for (int i = 0; i <= pages->hostRefs.top; i++)
+        gcMarkPtr(pages, pages->hostRefs.stack[i].ptr, NULL);
 
     while (candidates->top >= 0)
     {
@@ -4008,6 +4013,32 @@ void vmSetHook(VM *vm, UmkaHookEvent event, UmkaHookFunc hook)
 void *vmAllocData(VM *vm, int size, UmkaExternFunc onFree)
 {
     return chunkAlloc(&vm->pages, size, NULL, onFree, vm->error);
+}
+
+
+void vmIncRef(VM *vm, void *ptr)
+{
+    HeapPage *page = pageFind(&vm->pages, ptr);
+    if (page)
+        gcCandidatePush(&vm->pages.hostRefs, pageGetChunk(page, ptr)->data, NULL);
+}
+
+
+void vmDecRef(VM *vm, void *ptr)
+{
+    HeapPage *page = pageFind(&vm->pages, ptr);
+    if (!page)
+        return;
+
+    GCCandidates *hostRefs = &vm->pages.hostRefs;
+    const void *data = pageGetChunk(page, ptr)->data;
+
+    for (int i = hostRefs->top; i >= 0; i--)
+        if (hostRefs->stack[i].ptr == data)
+        {
+            hostRefs->stack[i] = hostRefs->stack[hostRefs->top--];
+            return;
+        }
 }
 
 

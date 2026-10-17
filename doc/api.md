@@ -658,22 +658,22 @@ Returned value: Pointer to the allocated chunk.
 ```
 UMKA_API void umkaIncRef(Umka *umka, void *ptr);
 ```
-Kept for backward compatibility, does nothing. The garbage collector needs no reference counts.
+Increments the number of host references to a memory chunk. While it is positive, the chunk and everything reachable from it are never collected as garbage. Call it before storing a pointer to the chunk where the garbage collector cannot see it, e.g., in a host variable.
 
 Parameters:
 
 * `umka`: Interpreter instance handle
-* `ptr`: Chunk pointer
+* `ptr`: Pointer to the chunk or anywhere inside it
 
 ```
 UMKA_API void umkaDecRef(Umka *umka, void *ptr);
 ```
-Kept for backward compatibility, does nothing. The garbage collector needs no reference counts.
+Decrements the number of host references to a memory chunk previously incremented by `umkaIncRef`. When it reaches zero, the chunk can be collected by the next garbage collection, if not otherwise reachable. Has no effect if the number is already zero.
 
 Parameters:
 
 * `umka`: Interpreter instance handle
-* `ptr`: Chunk pointer
+* `ptr`: Pointer to the chunk or anywhere inside it
 
 ```
 UMKA_API char *umkaMakeStr(Umka *umka, const char *str);

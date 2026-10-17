@@ -342,9 +342,6 @@ void rtltrace(UmkaStackSlot *params, UmkaStackSlot *result)
 
     if (umkaGetCallStack(umka, depth, DEFAULT_STR_LEN + 1, NULL, fileName, fnName, &line))
     {
-        umkaDecRef(umka, pos->fileName);
-        umkaDecRef(umka, pos->fnName);
-
         pos->fileName = umkaMakeStr(umka, fileName);
         pos->fnName   = umkaMakeStr(umka, fnName);
         pos->line     = line;

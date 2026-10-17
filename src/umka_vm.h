@@ -173,6 +173,7 @@ typedef struct
     int64_t totalSize, occupiedSize, gcThreshold;
     bool gcRequested;
     GCCandidates markCandidates, escapeSuspects, roots;
+    GCCandidates hostRefs;      // Chunks kept alive by umkaIncRef(), one entry per reference
     Error *error;
 } HeapPages;
 
@@ -220,6 +221,8 @@ int vmAsm                       (int ip, const Instruction *code, const DebugInf
 bool vmUnwindCallStack          (VM *vm, const Slot **base, int *ip);
 void vmSetHook                  (VM *vm, UmkaHookEvent event, UmkaHookFunc hook);
 void *vmAllocData               (VM *vm, int size, UmkaExternFunc onFree);
+void vmIncRef                   (VM *vm, void *ptr);
+void vmDecRef                   (VM *vm, void *ptr);
 void *vmGetMapNodeData          (VM *vm, Map *map, void *key);
 void vmGetMapKeys               (VM *vm, Map *map, const Type *keysType, DynArray *keys);
 char *vmMakeStr                 (VM *vm, const char *str);
