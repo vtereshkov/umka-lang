@@ -48,7 +48,7 @@ Virtual machine stack layout (64-bit slots):
     ...
     Local variable 0
     Stack frame layout table pointer
-    Reserved slot
+    Stack frame escape suspect count
     Caller's stack frame base pointer                <- Stack frame base pointer
     Return address
     Parameter N                                      <- Parameter array passed to external functions
@@ -250,6 +250,18 @@ static FORCE_INLINE void gcCandidatePop(GCCandidates *candidates, void **ptr, co
     const GCCandidate *candidate = &candidates->stack[candidates->top--];
     *ptr = candidate->ptr;
     *type = candidate->type;
+}
+
+
+static FORCE_INLINE const StackFrameLayout *stackGetFrameLayout(const Slot *base)
+{
+    return base[-2].ptrVal;
+}
+
+
+static FORCE_INLINE int64_t *stackGetFrameNumEscapeSuspects(const Slot *base)
+{
+    return (int64_t *)&base[-1].intVal;
 }
 
 
@@ -819,6 +831,37 @@ static FORCE_INLINE void doAssignImpl(void *lhs, Slot rhs, TypeKind typeKind, in
 }
 
 
+// A pointer to a local stored into an older stack frame escapes; stored into the heap or a global, it is checked when its frame is left
+static void doCheckEscapes(Fiber *fiber, HeapPages *pages, void *dest, int64_t size, Error *error)
+{
+    for (int64_t offset = 0; offset + (int64_t)sizeof(void *) <= size; offset += sizeof(void *))
+    {
+        void *loc = (char *)dest + offset;
+        void *ptr = *(void **)loc;
+
+        if (ptr < (void *)fiber->top || ptr >= (void *)(fiber->stack + fiber->stackSize))
+            continue;
+
+        for (Slot *base = fiber->base; base != fiber->stack + fiber->stackSize - 1; base = base->ptrVal)
+        {
+            const Slot *frameEnd = stackGetFrameParams(base) + getParamLayout(stackGetFrameLayout(base))->numParamSlots;
+            if (ptr >= (void *)frameEnd)
+                continue;
+
+            if (loc < (void *)fiber->top || loc >= (void *)frameEnd)
+            {
+                const HeapPage *page = pageFind(pages, loc);
+                if (UNLIKELY(page && pageGetChunk(page, loc)->kind == CHUNK_STACK))
+                    error->runtimeHandler(error->context, ERR_RUNTIME, "Pointer to a local variable escapes from the function");
+
+                (*stackGetFrameNumEscapeSuspects(base))++;
+            }
+            break;
+        }
+    }
+}
+
+
 static int64_t doCompare(Slot lhs, Slot rhs, const Type *type, Error *error)
 {
     switch (type->kind)
@@ -1325,7 +1368,7 @@ static FORCE_INLINE MapNode **doGetMapNode(Map *map, Slot key, bool createMissin
 }
 
 
-static FORCE_INLINE void *doGetMapNodeData(Map *map, Slot key, const Type *mapType, HeapPages *pages, Error *error)
+static FORCE_INLINE void *doGetMapNodeData(Map *map, Slot key, const Type *mapType, Fiber *fiber, HeapPages *pages, Error *error)
 {
     if (UNLIKELY(!map))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Map is null");
@@ -1345,6 +1388,10 @@ static FORCE_INLINE void *doGetMapNodeData(Map *map, Slot key, const Type *mapTy
         node->data = chunkAlloc(pages, itemType->size, itemType, NULL, error);
 
         doAssignImpl(node->key, key, keyType->kind, keyType->size, error);
+
+        if (keyType->isGarbageCollected)
+            doCheckEscapes(fiber, pages, node->key, keyType->size, error);
+
         map->root->len++;
     }
 
@@ -2059,6 +2106,8 @@ static FORCE_INLINE void doBuiltinMakeFromArr(Fiber *fiber, HeapPages *pages, Er
     doAllocDynArray(pages, dest, destType, len, error);
     memcpy(dest->data, src, getDims(dest)->len * dest->itemSize);
 
+    if (destType->base->isGarbageCollected)
+        doCheckEscapes(fiber, pages, dest->data, getDims(dest)->len * dest->itemSize, error);
 
     (--fiber->top)->ptrVal = dest;
 }
@@ -2275,6 +2324,9 @@ static FORCE_INLINE void doBuiltinAppend(Fiber *fiber, HeapPages *pages, Error *
 
     }
 
+    if (arrayType->base->isGarbageCollected)
+        doCheckEscapes(fiber, pages, (char *)result->data + (newLen - rhsLen) * array->itemSize, rhsLen * array->itemSize, error);
+
     (--fiber->top)->ptrVal = result;
 }
 
@@ -2317,6 +2369,9 @@ static FORCE_INLINE void doBuiltinInsert(Fiber *fiber, HeapPages *pages, Error *
         memmove((char *)result->data + index * result->itemSize, (char *)item, result->itemSize);
 
     }
+
+    if (arrayType->base->isGarbageCollected)
+        doCheckEscapes(fiber, pages, (char *)result->data + index * result->itemSize, result->itemSize, error);
 
     (--fiber->top)->ptrVal = result;
 }
@@ -2965,7 +3020,7 @@ static FORCE_INLINE void doDeref(Fiber *fiber, Error *error)
 }
 
 
-static FORCE_INLINE void doAssign(Fiber *fiber, bool swap, Error *error)
+static FORCE_INLINE void doAssign(Fiber *fiber, HeapPages *pages, bool swap, Error *error)
 {
     Slot rhs;
     void *lhs;
@@ -2981,7 +3036,15 @@ static FORCE_INLINE void doAssign(Fiber *fiber, bool swap, Error *error)
         lhs = (fiber->top++)->ptrVal;        
     }
 
-    doAssignImpl(lhs, rhs, fiber->code[fiber->ip].typeKind, fiber->code[fiber->ip].operand.intVal, error);
+    const TypeKind typeKind = fiber->code[fiber->ip].typeKind;
+    const int64_t size = fiber->code[fiber->ip].operand.intVal;
+
+    doAssignImpl(lhs, rhs, typeKind, size, error);
+
+    if ((typeKind == TYPE_PTR || typeKind == TYPE_ARRAY || typeKind == TYPE_STRUCT || typeKind == TYPE_INTERFACE || typeKind == TYPE_CLOSURE) &&
+        (lhs < (void *)fiber->top || lhs >= (void *)fiber->base))
+        doCheckEscapes(fiber, pages, lhs, (typeKind == TYPE_PTR) ? sizeof(void *) : size, error);
+
     fiber->ip++;
 }
 
@@ -3354,7 +3417,7 @@ static FORCE_INLINE void doGetMapPtr(Fiber *fiber, HeapPages *pages, bool derefe
     Map *map = (fiber->top++)->ptrVal;
     const Type *mapType = fiber->code[fiber->ip].type;
 
-    (--fiber->top)->ptrVal = doGetMapNodeData(map, key, mapType, pages, error);
+    (--fiber->top)->ptrVal = doGetMapNodeData(map, key, mapType, fiber, pages, error);
 
     if (dereference)
         doDerefImpl(fiber->top, fiber->code[fiber->ip].typeKind, error);    
@@ -3585,6 +3648,9 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
 
 static FORCE_INLINE void doReturn(Fiber *fiber, Fiber **newFiber)
 {
+    // fiber->top - 1 is the base of the stack frame just left
+    const bool checkEscapes = *stackGetFrameNumEscapeSuspects(fiber->top - 1) != 0;
+
     // Pop return address
     const int returnOffset = (fiber->top++)->intVal;
 
@@ -3600,6 +3666,9 @@ static FORCE_INLINE void doReturn(Fiber *fiber, Fiber **newFiber)
         fiber->top += fiber->code[fiber->ip].operand.intVal;
         fiber->ip = returnOffset;
     }
+
+    if (UNLIKELY(checkEscapes))
+        vmCollectGarbage(fiber->vm);
 }
 
 
@@ -3616,7 +3685,7 @@ static FORCE_INLINE void doEnterFrame(Fiber *fiber, const UmkaHookFunc *hooks, E
     (--fiber->top)->ptrVal = fiber->base;
     fiber->base = fiber->top;
 
-    // Push a reserved slot to keep the stack frame layout
+    // Push stack frame escape suspect count
     (--fiber->top)->intVal = 0;
 
     // Push stack frame layout table pointer
@@ -3637,6 +3706,18 @@ static FORCE_INLINE void doEnterFrame(Fiber *fiber, const UmkaHookFunc *hooks, E
 
 static FORCE_INLINE void doLeaveFrame(Fiber *fiber, const UmkaHookFunc *hooks, Error *error)
 {
+    const StackFrameLayout *layout = stackGetFrameLayout(fiber->base);
+    const Type *resultType = getParamTypes(layout)->resultType;
+    const Slot result = fiber->reg[REG_RESULT];
+
+    if (UNLIKELY(resultType->kind == TYPE_PTR && result.ptrVal >= (void *)fiber->top && result.ptrVal < (void *)(stackGetFrameParams(fiber->base) + getParamLayout(layout)->numParamSlots)))
+        error->runtimeHandler(error->context, ERR_RUNTIME, "Pointer to a local variable escapes from the function");
+
+    // Stale registers would keep garbage alive
+    memset(fiber->reg, 0, sizeof(fiber->reg));
+    if (resultType->kind != TYPE_VOID)
+        fiber->reg[REG_RESULT] = result;
+
     // Call 'return' hook, if any
     doHook(fiber, hooks, UMKA_HOOK_RETURN);
 
@@ -3691,8 +3772,8 @@ static void vmLoop(VM *vm)
             case OP_SWAP:                           doSwap(fiber);                                break;
             case OP_ZERO:                           doZero(fiber);                                break;
             case OP_DEREF:                          doDeref(fiber, error);                        break;
-            case OP_ASSIGN:                         doAssign(fiber, false, error);                break;
-            case OP_SWAP_ASSIGN:                    doAssign(fiber, true, error);                 break;
+            case OP_ASSIGN:                         doAssign(fiber, pages, false, error);         break;
+            case OP_SWAP_ASSIGN:                    doAssign(fiber, pages, true, error);          break;
             case OP_ASSIGN_PARAM:                   doAssignParam(fiber, error);                  break;
             case OP_UNARY:                          doUnary(fiber, error);                        break;
             case OP_BINARY:                         doBinary(fiber, pages, error);                break;
@@ -3942,7 +4023,7 @@ void *vmGetMapNodeData(VM *vm, Map *map, void *key)
     Slot keySlot = {.ptrVal = key};
     doDerefImpl(&keySlot, typeMapKey(map->type)->kind, vm->error);
 
-    return doGetMapNodeData(map, keySlot, map->type, &vm->pages, vm->error);
+    return doGetMapNodeData(map, keySlot, map->type, vm->fiber, &vm->pages, vm->error);
 }
 
 
