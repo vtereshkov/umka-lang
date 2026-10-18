@@ -754,7 +754,9 @@ static void doApplyStrCat(Umka *umka, Const *constant, const Const *rightConstan
         if (op == TOK_PLUSEQ)
             umka->error.handler(umka->error.context, "Operator is not allowed in constant expressions");
 
-        int len = getStrDims((char *)constant->ptrVal)->len + getStrDims((char *)rightConstant->ptrVal)->len;
+        const int64_t len = getStrDims((char *)constant->ptrVal)->len + getStrDims((char *)rightConstant->ptrVal)->len;
+        if (len < 0 || len > INT_MAX - (int64_t)(sizeof(StorageChunk) + sizeof(StrDimensions) + 1))
+            umka->error.handler(umka->error.context, "String is too long");
         char *buf = storageAddStr(&umka->storage, len);
         strcpy(buf, (char *)constant->ptrVal);
 
