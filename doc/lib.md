@@ -279,7 +279,7 @@ Returns the number of seconds since 00:00, January 1, 1970 UTC.
 fn clock*(): real
 ```
 
-Returns the number of seconds since the start of the program.
+Returns the number of seconds since the beginning of an implementation-defined era.
 
 ```
 fn localtime*(t: int): DateTime
