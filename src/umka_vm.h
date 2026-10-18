@@ -29,7 +29,8 @@ enum    // Memory manager settings
 
 enum
 {
-    MAX_VM_CALL_NESTING = 64
+    MAX_VM_CALL_NESTING = 64,
+    MAX_MAP_DEPTH       = 1000
 };
 
 

@@ -1573,10 +1573,13 @@ static FORCE_INLINE void *doGetMapNodeData(Map *map, Slot key, const Type *mapTy
 }
 
 
-static MapNode *doCopyMapNode(Map *map, MapNode *node, Fiber *fiber, HeapPages *pages, Error *error)
+static MapNode *doCopyMapNode(Map *map, MapNode *node, Fiber *fiber, HeapPages *pages, int depth, Error *error)
 {
     if (!node)
         return NULL;
+
+    if (UNLIKELY(depth > MAX_MAP_DEPTH))
+        error->runtimeHandler(error->context, ERR_RUNTIME, "Map depth limit exceeded");
 
     const Type *nodeType = map->type->base;
     MapNode *result = (MapNode *)chunkAlloc(pages, nodeType->size, nodeType, NULL, false, error);
@@ -1617,19 +1620,22 @@ static MapNode *doCopyMapNode(Map *map, MapNode *node, Fiber *fiber, HeapPages *
     }
 
     if (node->left)
-        result->left = doCopyMapNode(map, node->left, fiber, pages, error);
+        result->left = doCopyMapNode(map, node->left, fiber, pages, depth + 1, error);
 
     if (node->right)
-        result->right = doCopyMapNode(map, node->right, fiber, pages, error);
+        result->right = doCopyMapNode(map, node->right, fiber, pages, depth + 1, error);
 
     return result;
 }
 
 
-static void doGetMapKeysRecursively(const Map *map, const MapNode *node, void *keys, int *numKeys, Error *error)
+static void doGetMapKeysRecursively(const Map *map, const MapNode *node, void *keys, int *numKeys, int depth, Error *error)
 {
+    if (UNLIKELY(depth > MAX_MAP_DEPTH))
+        error->runtimeHandler(error->context, ERR_RUNTIME, "Map depth limit exceeded");
+
     if (node->left)
-        doGetMapKeysRecursively(map, node->left, keys, numKeys, error);
+        doGetMapKeysRecursively(map, node->left, keys, numKeys, depth + 1, error);
 
     if (node->key)
     {
@@ -1644,14 +1650,14 @@ static void doGetMapKeysRecursively(const Map *map, const MapNode *node, void *k
     }
 
     if (node->right)
-        doGetMapKeysRecursively(map, node->right, keys, numKeys, error);
+        doGetMapKeysRecursively(map, node->right, keys, numKeys, depth + 1, error);
 }
 
 
 static FORCE_INLINE void doGetMapKeys(const Map *map, void *keys, Error *error)
 {
     int numKeys = 0;
-    doGetMapKeysRecursively(map, map->root, keys, &numKeys, error);
+    doGetMapKeysRecursively(map, map->root, keys, &numKeys, 0, error);
     if (UNLIKELY(numKeys != map->root->len))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Wrong number of map keys");
 }
@@ -2448,7 +2454,7 @@ static FORCE_INLINE void doBuiltinCopyMap(Fiber *fiber, HeapPages *pages, Error 
     else
     {
         result->type = map->type;
-        result->root = doCopyMapNode(map, map->root, fiber, pages, error);
+        result->root = doCopyMapNode(map, map->root, fiber, pages, 0, error);
     }
 
     (--fiber->top)->ptrVal = result;
