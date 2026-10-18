@@ -3299,13 +3299,13 @@ void parseExprList(Umka *umka, const Type **type, Const *constant)
             if (typeExprListStruct(fieldType))
                 umka->error.handler(umka->error.context, "Nested expression lists are not allowed");
 
-            if (exprListType->numItems >= MAX_IDENTS_IN_LIST)
-                umka->error.handler(umka->error.context, "Too many expressions in list");
-
             typeAddField(&umka->types, exprListType, fieldType, NULL);
 
             if (umka->lex.tok.kind != TOK_COMMA)
                 break;
+
+            if (exprListType->numItems >= MAX_IDENTS_IN_LIST)
+                umka->error.handler(umka->error.context, "Too many expressions in list");
 
             fieldConstant = constant ? &fieldConstantBuf[exprListType->numItems] : NULL;
 
