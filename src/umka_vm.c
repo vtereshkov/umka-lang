@@ -2808,6 +2808,9 @@ static FORCE_INLINE void doBuiltinSort(Fiber *fiber, Error *error)
         CompareContext context = {fiber, compare, compareType};
 
         const int numTempSlots = align(array->itemSize, sizeof(Slot)) / sizeof(Slot);
+        if (UNLIKELY(fiber->top - numTempSlots - fiber->stack < MEM_MIN_FREE_STACK))
+            error->runtimeHandler(error->context, ERR_RUNTIME, "Stack overflow");
+
         fiber->top -= numTempSlots;
 
         qsortEx((char *)array->data, (char *)array->data + array->itemSize * (getDims(array)->len - 1), array->itemSize, qsortCompare, &context, fiber->top);
@@ -2861,6 +2864,9 @@ static FORCE_INLINE void doBuiltinSortFast(Fiber *fiber, Error *error)
         FastCompareContext context = {itemType, offset, ascending, error};
 
         const int numTempSlots = align(array->itemSize, sizeof(Slot)) / sizeof(Slot);
+        if (UNLIKELY(fiber->top - numTempSlots - fiber->stack < MEM_MIN_FREE_STACK))
+            error->runtimeHandler(error->context, ERR_RUNTIME, "Stack overflow");
+
         fiber->top -= numTempSlots;
 
         qsortEx((char *)array->data, (char *)array->data + array->itemSize * (getDims(array)->len - 1), array->itemSize, qsortFastCompare, &context, fiber->top);
