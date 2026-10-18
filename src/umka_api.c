@@ -7,7 +7,7 @@
 
 #include "umka_compiler.h"
 
-#define UMKA_VERSION    "1.6"
+#define UMKA_VERSION    "2.0"
 
 
 static void compileWarning(Umka *umka, const DebugInfo *debug, const char *format, ...)
