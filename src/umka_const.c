@@ -45,7 +45,6 @@ bool constDeref(const Consts *consts, Const *constant, TypeKind typeKind)
         case TYPE_REAL32:       constant->realVal    = *(float          *)constant->ptrVal; break;
         case TYPE_REAL:         constant->realVal    = *(double         *)constant->ptrVal; break;
         case TYPE_PTR:          constant->ptrVal     = *(void *         *)constant->ptrVal; break;
-        case TYPE_WEAKPTR:      constant->weakPtrVal = *(uint64_t       *)constant->ptrVal; break;
         case TYPE_STR:          constant->ptrVal     = *(void *         *)constant->ptrVal; break;
         case TYPE_ARRAY:
         case TYPE_DYNARRAY:
@@ -91,7 +90,6 @@ bool constAssign(const Consts *consts, void *lhs, const Const *rhs, TypeKind typ
         case TYPE_REAL32:       *(float         *)lhs = rhs->realVal;        break;
         case TYPE_REAL:         *(double        *)lhs = rhs->realVal;        break;
         case TYPE_PTR:          *(void *        *)lhs = rhs->ptrVal;         break;
-        case TYPE_WEAKPTR:      *(uint64_t      *)lhs = rhs->weakPtrVal;     break;
         case TYPE_STR:          *(void *        *)lhs = rhs->ptrVal;         break;
         case TYPE_ARRAY:
         case TYPE_DYNARRAY:
@@ -134,7 +132,6 @@ int64_t constCompare(const Consts *consts, const Const *lhs, const Const *rhs, c
             return (diff == 0.0) ? 0 : (diff > 0.0) ? 1 : -1;
         }
         case TYPE_PTR:      return (char *)lhs->ptrVal - (char *)rhs->ptrVal;
-        case TYPE_WEAKPTR:  return lhs->weakPtrVal - rhs->weakPtrVal;
         case TYPE_STR:
         {
             const char *lhsStr = lhs->ptrVal;
@@ -268,20 +265,6 @@ void constBinary(const Consts *consts, Const *lhs, const Const *rhs, TokenKind o
             default:            consts->error->handler(consts->error->context, "Illegal operator"); return;
         }
     }
-    else if (type->kind == TYPE_WEAKPTR)
-    {
-        switch (op)
-        {
-            case TOK_EQEQ:      lhs->intVal = lhs->weakPtrVal == rhs->weakPtrVal; break;
-            case TOK_NOTEQ:     lhs->intVal = lhs->weakPtrVal != rhs->weakPtrVal; break;
-            case TOK_GREATER:   lhs->intVal = lhs->weakPtrVal >  rhs->weakPtrVal; break;
-            case TOK_LESS:      lhs->intVal = lhs->weakPtrVal <  rhs->weakPtrVal; break;
-            case TOK_GREATEREQ: lhs->intVal = lhs->weakPtrVal >= rhs->weakPtrVal; break;
-            case TOK_LESSEQ:    lhs->intVal = lhs->weakPtrVal <= rhs->weakPtrVal; break;             
-            
-            default:            consts->error->handler(consts->error->context, "Illegal operator"); return;
-        }        
-    }    
     else if (type->kind == TYPE_STR)
     {
         switch (op)

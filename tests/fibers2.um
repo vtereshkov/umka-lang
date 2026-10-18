@@ -5,12 +5,12 @@ fn mkfunc(pr: ^int): fiber {
 }
 
 fn test*() {
-    r := 0
+    r := new(int)
 
-    func := mkfunc(&r)
+    func := mkfunc(r)
     resume(func)
 
-    printf("%d\n", r)
+    printf("%d\n", r^)
 }
 
 fn main() {

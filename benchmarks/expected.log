@@ -40,3 +40,8 @@ OK
 >>> Composite literals
 
 OK
+
+
+>>> Sparse pointers
+
+OK

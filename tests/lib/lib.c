@@ -102,8 +102,6 @@ UMKA_EXPORT void sum(UmkaStackSlot *params, UmkaStackSlot *result)
     for (int i = 1; i <= n; i++)
     {
         api->umkaGetParam(callbackContext.params, 0)->intVal = i;
-        api->umkaIncRef(umka, callback->upvalue.data);
-
         api->umkaCall(umka, &callbackContext);
         sum += api->umkaGetResult(callbackContext.params, callbackContext.result)->intVal;
     }

@@ -407,7 +407,7 @@ Parameters:
 ```
 UMKA_API int64_t umkaGetMemUsage(Umka *umka);
 ```
-Returns the allocated heap memory size.
+Returns the allocated heap memory size. The garbage that has not been collected yet is still counted as allocated.
 
 Parameters:
 
@@ -455,7 +455,6 @@ typedef enum
     TYPE_REAL32,
     TYPE_REAL,
     TYPE_PTR,
-    TYPE_WEAKPTR,
     TYPE_ARRAY,
     TYPE_DYNARRAY,
     TYPE_STR,
@@ -652,29 +651,29 @@ Parameters:
 
 * `umka`: Interpreter instance handle
 * `size`: Chunk size in bytes
-* `onFree`: Optional callback function that will be called when the chunk reference count reaches zero. It accepts one parameter, the chunk pointer
+* `onFree`: Optional callback function that will be called when the chunk is collected as garbage. It accepts one parameter, the chunk pointer
 
 Returned value: Pointer to the allocated chunk. 
 
 ```
 UMKA_API void umkaIncRef(Umka *umka, void *ptr);
 ```
-Increments the reference count of a memory chunk.
+Increments the number of host references to a memory chunk. While it is positive, the chunk and everything reachable from it are never collected as garbage. Call it before storing a pointer to the chunk where the garbage collector cannot see it, e.g., in a host variable.
 
 Parameters:
 
 * `umka`: Interpreter instance handle
-* `ptr`: Chunk pointer
+* `ptr`: Pointer to the chunk or anywhere inside it
 
 ```
 UMKA_API void umkaDecRef(Umka *umka, void *ptr);
 ```
-Decrements the reference count of a memory chunk.
+Decrements the number of host references to a memory chunk previously incremented by `umkaIncRef`. When it reaches zero, the chunk can be collected by the next garbage collection, if not otherwise reachable. Has no effect if the number is already zero.
 
 Parameters:
 
 * `umka`: Interpreter instance handle
-* `ptr`: Chunk pointer
+* `ptr`: Pointer to the chunk or anywhere inside it
 
 ```
 UMKA_API char *umkaMakeStr(Umka *umka, const char *str);
@@ -745,7 +744,7 @@ Parameters:
 * `map`: Umka map. Its `type` field must be set
 * `key`: Pointer to the key value. For a key obtained from `umkaGetMapKeys`, this is the address of an array item
 
-Returned value: Pointer to the map item; `NULL` if `map` is `NULL`, its type is not set, or `key` is `NULL`. The host is responsible for filling in the item memory, observing the reference counting rules.
+Returned value: Pointer to the map item; `NULL` if `map` is `NULL`, its type is not set, or `key` is `NULL`. The host is responsible for filling in the item memory.
 
 ```
 UMKA_API void umkaGetMapKeys(Umka *umka, UmkaMap *map, void *keys);

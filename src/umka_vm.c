@@ -48,7 +48,7 @@ Virtual machine stack layout (64-bit slots):
     ...
     Local variable 0
     Stack frame layout table pointer
-    Stack frame ref count
+    Stack frame escape suspects flag
     Caller's stack frame base pointer                <- Stack frame base pointer
     Return address
     Parameter N                                      <- Parameter array passed to external functions
@@ -81,11 +81,6 @@ static const char *opcodeSpelling [] =
     "ASSIGN",
     "SWAP_ASSIGN",
     "ASSIGN_PARAM",
-    "REF_CNT",
-    "REF_CNT_GLOBAL",
-    "REF_CNT_LOCAL",
-    "REF_CNT_ASSIGN",
-    "SWAP_REF_CNT_ASSIGN",
     "UNARY",
     "BINARY",
     "GET_ARRAY_PTR",
@@ -98,8 +93,6 @@ static const char *opcodeSpelling [] =
     "GET_FIELD",
     "ASSERT_TYPE",
     "ASSERT_RANGE",
-    "WEAKEN_PTR",
-    "STRENGTHEN_PTR",
     "GOTO",
     "GOTO_IF",
     "GOTO_IF_NOT",
@@ -162,6 +155,7 @@ static const char *builtinSpelling [] =
     "validkey",
     "keys",
     "resume",
+    "gc",
     "memusage",
     "leaksan",
     "exit"
@@ -222,49 +216,40 @@ static FORCE_INLINE UmkaStackSlot *doGetOnFreeResult(HeapPages *pages)
 }
 
 
-static FORCE_INLINE void candidateInit(RefCntCandidates *candidates, Storage *storage)
+static FORCE_INLINE void gcCandidateInit(GCCandidates *candidates, Storage *storage)
 {
     candidates->storage = storage;
     candidates->capacity = 100;
-    candidates->stack = storageAdd(candidates->storage, candidates->capacity * sizeof(RefCntCandidate));
+    candidates->stack = storageAdd(candidates->storage, candidates->capacity * sizeof(GCCandidate));
     candidates->top = -1;
 }
 
 
-static FORCE_INLINE void candidateReset(RefCntCandidates *candidates)
+static FORCE_INLINE void gcCandidateReset(GCCandidates *candidates)
 {
     candidates->top = -1;
 }
 
 
-static FORCE_INLINE void candidatePush(RefCntCandidates *candidates, void *ptr, const Type *type)
+static FORCE_INLINE void gcCandidatePush(GCCandidates *candidates, void *ptr, const Type *type)
 {
     if (candidates->top >= candidates->capacity - 1)
     {
         candidates->capacity *= 2;
-        candidates->stack = storageRealloc(candidates->storage, candidates->stack, candidates->capacity * sizeof(RefCntCandidate));
+        candidates->stack = storageRealloc(candidates->storage, candidates->stack, candidates->capacity * sizeof(GCCandidate));
     }
 
-    RefCntCandidate *candidate = &candidates->stack[++candidates->top];
+    GCCandidate *candidate = &candidates->stack[++candidates->top];
     candidate->ptr = ptr;
     candidate->type = type;
-    candidate->pageForDeferred = NULL;
 }
 
 
-static FORCE_INLINE void candidatePushDeferred(RefCntCandidates *candidates, void *ptr, const Type *type, HeapPage *page)
+static FORCE_INLINE void gcCandidatePop(GCCandidates *candidates, void **ptr, const Type **type)
 {
-    candidatePush(candidates, ptr, type);
-    candidates->stack[candidates->top].pageForDeferred = page;
-}
-
-
-static FORCE_INLINE void candidatePop(RefCntCandidates *candidates, void **ptr, const Type **type, HeapPage **page)
-{
-    RefCntCandidate *candidate = &candidates->stack[candidates->top--];
+    const GCCandidate *candidate = &candidates->stack[candidates->top--];
     *ptr = candidate->ptr;
     *type = candidate->type;
-    *page = candidate->pageForDeferred;
 }
 
 
@@ -274,9 +259,9 @@ static FORCE_INLINE const StackFrameLayout *stackGetFrameLayout(const Slot *base
 }
 
 
-static FORCE_INLINE int64_t *stackGetFrameRefCnt(const Slot *base)
+static FORCE_INLINE bool *stackGetFrameHasEscapeSuspects(const Slot *base)
 {
-    return (int64_t *)&base[-1].intVal;
+    return (bool *)&base[-1].intVal;
 }
 
 
@@ -289,12 +274,6 @@ static FORCE_INLINE int stackGetFrameReturnOffset(const Slot *base)
 static FORCE_INLINE Slot *stackGetFrameParams(const Slot *base)
 {
     return (Slot *)&base[2];
-}
-
-
-static FORCE_INLINE const Slot *stackGetFrameLocalVars(const Slot *base, const StackFrameLayout *layout)
-{
-    return (const Slot *)(base - 2 - getLocalVarLayout(layout)->localVarSlots);
 }
 
 
@@ -314,112 +293,60 @@ static FORCE_INLINE bool stackUnwind(Fiber *fiber, const Slot **base, int *ip)
 }
 
 
-static FORCE_INLINE void stackUpdateFrameRefCnt(Fiber *fiber, HeapPages *pages, void *ptr, int delta)
+static void pageInit(HeapPages *pages, Storage *storage, Error *error)
 {
-    if (ptr >= (void *)fiber->top && ptr < (void *)(fiber->stack + fiber->stackSize))
-    {
-        if (fiber->base == fiber->stack + fiber->stackSize - 1)
-            return;
-        
-        const Slot *base = fiber->base;
-        const StackFrameLayout *layout = stackGetFrameLayout(base);
-
-        while (ptr >= (void *)(stackGetFrameParams(base) + getParamLayout(layout)->numParamSlots))
-        {
-            if (UNLIKELY(!stackUnwind(fiber, &base, NULL)))
-                pages->error->runtimeHandler(pages->error->context, ERR_RUNTIME, "Illegal stack pointer");
-
-            layout = stackGetFrameLayout(base);
-        }
-
-        *stackGetFrameRefCnt(base) += delta;
-    }
-}
-
-
-static void pageLeakSan(HeapPages *pages, const HeapPage *page, Storage *storage)
-{
-    typedef struct tagLeakLocation
-    {
-        const Type *type;
-        const DebugInfo *debug;
-        const struct tagLeakLocation *next;
-    } LeakLocation;
-    
-    if (pages->leakSanLevel > 0 && pages->fiber && pages->fiber->vm->terminatedNormally)
-    {
-        fprintf(stderr, "LeakSan: Memory leak on page %p (%d refs)\n", page->data, page->refCnt);
-
-        if (pages->leakSanLevel > 1)
-        {
-            // Report each leak location only once
-            const LeakLocation *firstLoc = NULL;
-
-            for (int i = 0; i < page->numOccupiedChunks; i++)
-            {
-                const HeapChunk *chunk = (const HeapChunk *)((char *)page->data + i * page->chunkSize);
-                if (chunk->refCnt == 0)
-                    continue;
-
-                const DebugInfo *debug = &pages->fiber->debugPerInstr[chunk->ip];
-
-                bool reported = false;
-                for (const LeakLocation *loc = firstLoc; loc; loc = loc->next)
-                {
-                    if (chunk->type == loc->type && debug->fileName == loc->debug->fileName && debug->fnName == loc->debug->fnName && debug->line == loc->debug->line)
-                    {
-                        reported = true;
-                        break;
-                    }
-                }
-
-                if (reported)
-                    continue;
-
-                LeakLocation *newLoc = storageAdd(storage, sizeof(LeakLocation));
-                *newLoc = (LeakLocation){.type = chunk->type, .debug = debug, .next = firstLoc};
-                firstLoc = newLoc;
-
-                char typeBuf[DEFAULT_STR_LEN + 1];
-                fprintf(stderr, "LeakSan:    %s in %s: %s (%d)\n", chunk->type ? typeSpelling(chunk->type, typeBuf) : "?", debug->fnName, debug->fileName, debug->line);
-            }                
-        }
-    }
-}
-
-
-static void pageInit(HeapPages *pages, Fiber *fiber, Storage *storage, Error *error)
-{
-    pages->first = pages->firstRecycled = pages->firstBlacklisted = pages->lastAccessed = NULL;
+    pages->first = pages->firstRecycled = pages->lastAccessed = NULL;
     pages->lowest = pages->highest = NULL;
-    pages->freeId = 1;
-    pages->totalSize = pages->blacklistedSize = 0;
-    pages->fiber = fiber;
-    pages->leakSanLevel = 1;
-    candidateInit(&pages->refCntCandidates, storage);
+    pages->totalSize = pages->occupiedSize = 0;
+    pages->gcThreshold = MEM_MIN_GC_THRESHOLD;
+    pages->gcRequested = false;
+    gcCandidateInit(&pages->markCandidates, storage);
+    gcCandidateInit(&pages->escapeSuspects, storage);
+    gcCandidateInit(&pages->roots, storage);
+    gcCandidateInit(&pages->hostRefs, storage);
     pages->error = error;
 }
 
 
-static void pageFree(HeapPages *pages, Storage *storage)
+static FORCE_INLINE HeapChunk *pageGetChunk(const HeapPage *page, void *ptr)
 {
-    // Remove remaining reference-counted pages
+    const int chunkOffset = ((char *)ptr - (char *)page->data) % page->chunkSize;
+    return (HeapChunk *)((char *)ptr - chunkOffset);
+}
+
+
+static FORCE_INLINE HeapChunk *chunkGetHeader(void *data)
+{
+    return (HeapChunk *)((char *)data - sizeof(HeapChunk));
+}
+
+
+static FORCE_INLINE void chunkFree(HeapPages *pages, HeapPage *page, HeapChunk *chunk)
+{
+    if (chunk->onFree)
+        chunk->onFree(doGetOnFreeParams(chunk->data), doGetOnFreeResult(pages));
+
+    chunk->allocated = false;
+    chunk->nextFree = page->firstFree;
+    page->firstFree = chunk;
+
+    page->numAllocatedChunks--;
+    pages->occupiedSize -= chunk->size;
+}
+
+
+static void pageFree(HeapPages *pages)
+{
     for (HeapPage *page = pages->first; page;)
     {
         HeapPage *next = page->next;
 
-        // Report memory leaks
-        pageLeakSan(pages, page, storage);
-
         // Call custom deallocators, if any
-        for (int i = 0; i < page->numOccupiedChunks && page->numChunksWithOnFree > 0; i++)
+        for (int i = 0; i < page->numOccupiedChunks; i++)
         {
             HeapChunk *chunk = (HeapChunk *)((char *)page->data + i * page->chunkSize);
-            if (chunk->refCnt == 0 || !chunk->onFree)
-                continue;
-
-            chunk->onFree(doGetOnFreeParams(chunk->data), doGetOnFreeResult(pages));
-            page->numChunksWithOnFree--;
+            if (chunk->allocated && chunk->onFree)
+                chunk->onFree(doGetOnFreeParams(chunk->data), doGetOnFreeResult(pages));
         }
 
         free(page);
@@ -433,14 +360,6 @@ static void pageFree(HeapPages *pages, Storage *storage)
         free(page);
         page = next;
     }
-
-    // Remove remaining blacklisted pages
-    for (HeapPage *page = pages->firstBlacklisted; page;)
-    {
-        HeapPage *next = page->next;
-        free(page);
-        page = next;
-    }    
 }
 
 
@@ -457,7 +376,7 @@ static FORCE_INLINE HeapPage *pageFindRecycled(HeapPages *pages, int size)
     {
         HeapPage *page = pages->firstRecycled;
         pages->firstRecycled = pages->firstRecycled->next;
-        
+
         const int recycledSize = page->numChunks * page->chunkSize;
         if (recycledSize >= size)
             return page;
@@ -467,91 +386,14 @@ static FORCE_INLINE HeapPage *pageFindRecycled(HeapPages *pages, int size)
         pages->totalSize -= recycledSize;
     }
 
-    return NULL;   
-}
-
-
-static FORCE_INLINE bool pageMayBeReferencedByTemporaries(HeapPages *pages, const HeapPage *page)
-{
-    // Naive Deutsch-Bobrow-style conservative stack scanning for temporaries referencing the page
-    for (Fiber *fiber = pages->fiber; fiber; fiber = fiber->parent)
-    {
-        if (fiber->base == fiber->stack + fiber->stackSize - 1)
-            continue;
-        
-        const Slot *base = fiber->base;
-        const Slot *temporariesTop = fiber->top;
-        do
-        {
-            const StackFrameLayout *layout = stackGetFrameLayout(base);
-            if (!layout)
-                break;
-
-            const Slot *localVarsTop = stackGetFrameLocalVars(base, layout);
-
-            for (const Slot *temporary = temporariesTop; temporary < localVarsTop; temporary++)
-            {
-                // Everything that looks like a pointer into the page may be a pointer
-                if (temporary->ptrVal >= (void *)page->data && temporary->ptrVal < (void *)page->end)
-                    return true;
-            }
-
-            temporariesTop = stackGetFrameParams(base) + getParamLayout(layout)->numParamSlots;
-        } while (stackUnwind(fiber, &base, NULL));    
-    }
-
-    return false;
-}
-
-
-static FORCE_INLINE void pageMoveBlacklistedToRecycled(HeapPages *pages)
-{
-    if (pages->blacklistedSize < MEM_MAX_BLACKLISTED)
-        return;
-    
-    for (HeapPage *page = pages->firstBlacklisted; page;)
-    {
-        HeapPage *next = page->next;
-        if (!pageMayBeReferencedByTemporaries(pages, page))
-        {
-            if (page == pages->firstBlacklisted)
-                pages->firstBlacklisted = page->next;
-
-            if (page->prev)
-                page->prev->next = page->next;
-
-            if (page->next)
-                page->next->prev = page->prev;
-
-            pageMoveToRecycled(pages, page);
-
-            pages->blacklistedSize -= page->numChunks * page->chunkSize;     
-        }
-        page = next; 
-    }
-}
-
-
-static FORCE_INLINE void pageMoveToBlacklisted(HeapPages *pages, HeapPage *page)
-{  
-    pageMoveBlacklistedToRecycled(pages);
-    
-    page->prev = NULL;
-    page->next = pages->firstBlacklisted;
-
-    if (pages->firstBlacklisted)
-        pages->firstBlacklisted->prev = page;
-
-    pages->firstBlacklisted = page;
-
-    pages->blacklistedSize += page->numChunks * page->chunkSize;
+    return NULL;
 }
 
 
 static FORCE_INLINE HeapPage *pageAdd(HeapPages *pages, int numChunks, int chunkSize)
 {
     const int size = numChunks * chunkSize;
-    
+
     // Try finding a recycled page
     HeapPage *page = pageFindRecycled(pages, size);
     if (!page)
@@ -563,14 +405,13 @@ static FORCE_INLINE HeapPage *pageAdd(HeapPages *pages, int numChunks, int chunk
         pages->totalSize += size;
     }
 
-    page->id = pages->freeId++;
-    page->refCnt = 0;
     page->numChunks = numChunks;
     page->numOccupiedChunks = 0;
-    page->numChunksWithOnFree = 0;
+    page->numAllocatedChunks = 0;
     page->chunkSize = chunkSize;
     page->prev = NULL;
     page->next = pages->first;
+    page->firstFree = NULL;
     page->end = (char *)page->data + size;
 
     if (pages->first)
@@ -585,20 +426,12 @@ static FORCE_INLINE HeapPage *pageAdd(HeapPages *pages, int numChunks, int chunk
 
     pages->lastAccessed = page;
 
-#ifdef UMKA_REF_CNT_DEBUG
-    fprintf(stderr, "Add page at %p\n", page->data);
-#endif
-
     return page;
 }
 
 
-static FORCE_INLINE void pageRemove(HeapPages *pages, HeapPage *page, bool blacklist)
+static FORCE_INLINE void pageRemove(HeapPages *pages, HeapPage *page)
 {
-#ifdef UMKA_REF_CNT_DEBUG
-    fprintf(stderr, "Remove page at %p\n", page->data);
-#endif
-
     if (page == pages->first)
         pages->first = page->next;
 
@@ -609,49 +442,29 @@ static FORCE_INLINE void pageRemove(HeapPages *pages, HeapPage *page, bool black
         page->next->prev = page->prev;
 
     if (page == pages->lastAccessed)
-        pages->lastAccessed = pages->first; 
-        
-    if (blacklist)
-        pageMoveToBlacklisted(pages, page);
-    else
-        pageMoveToRecycled(pages, page);
+        pages->lastAccessed = pages->first;
+
+    pageMoveToRecycled(pages, page);
 }
 
 
-static FORCE_INLINE HeapChunk *pageGetChunk(const HeapPage *page, void *ptr)
+static FORCE_INLINE bool pageContainsPtr(const HeapPage *page, void *ptr)
 {
-    const int chunkOffset = ((char *)ptr - (char *)page->data) % page->chunkSize;
-    return (HeapChunk *)((char *)ptr - chunkOffset);
-}
-
-
-static FORCE_INLINE bool pageContainsPtr(HeapPages *pages, const HeapPage *page, void *ptr)
-{
-    if (ptr >= (void *)page->data && ptr < (void *)page->end)
-    {
-        const HeapChunk *chunk = pageGetChunk(page, ptr);
-        if (UNLIKELY(chunk->refCnt <= 0))
-            pages->error->runtimeHandler(pages->error->context, ERR_RUNTIME, "Dangling pointer at %p", ptr);
-        return true;
-    }
-    return false;
+    return ptr >= (void *)page->data && ptr < (void *)page->end;
 }
 
 
 static FORCE_INLINE HeapPage *pageFind(HeapPages *pages, void *ptr)
 {
-    if (pages->lowest && ptr < (void *)pages->lowest)
+    if (ptr < (void *)pages->lowest || ptr >= (void *)pages->highest)
         return NULL;
 
-    if (UNLIKELY(pages->highest && ptr >= (void *)pages->highest))
-        return NULL;
-
-    if (pages->lastAccessed && pageContainsPtr(pages, pages->lastAccessed, ptr))
+    if (pages->lastAccessed && pageContainsPtr(pages->lastAccessed, ptr))
         return pages->lastAccessed;
-        
+
     for (HeapPage *page = pages->first; page; page = page->next)
     {
-        if (page != pages->lastAccessed && pageContainsPtr(pages, page, ptr))
+        if (pageContainsPtr(page, ptr))
         {
             pages->lastAccessed = page;
             return page;
@@ -669,7 +482,7 @@ static FORCE_INLINE HeapPage *pageFindForAlloc(HeapPages *pages, int chunkSize)
 
     for (HeapPage *page = pages->first; page; page = page->next)
     {
-        if (page->numOccupiedChunks < page->numChunks)
+        if (page->firstFree || page->numOccupiedChunks < page->numChunks)
         {
             if (page->chunkSize == chunkSize)
             {
@@ -691,18 +504,7 @@ static FORCE_INLINE HeapPage *pageFindForAlloc(HeapPages *pages, int chunkSize)
 }
 
 
-static FORCE_INLINE HeapPage *pageFindById(HeapPages *pages, int id)
-{
-    for (HeapPage *page = pages->first; page; page = page->next)
-    {
-        if (page->id == id)
-            return page;
-    }
-    return NULL;
-}
-
-
-static FORCE_INLINE void *chunkAlloc(HeapPages *pages, int64_t size, const Type *type, UmkaExternFunc onFree, bool isStack, Error *error)
+static FORCE_INLINE void *chunkAlloc(HeapPages *pages, int64_t size, const Type *type, UmkaExternFunc onFree, Error *error)
 {
     // Page layout: header, data, footer (char), padding, header, data, footer (char), padding...
     const int64_t chunkSize = align(sizeof(HeapChunk) + align(size + 1, sizeof(int64_t)), MEM_MIN_HEAP_CHUNK);
@@ -720,62 +522,25 @@ static FORCE_INLINE void *chunkAlloc(HeapPages *pages, int64_t size, const Type 
         page = pageAdd(pages, numChunks, chunkSize);
     }
 
-    HeapChunk *chunk = (HeapChunk *)((char *)page->data + page->numOccupiedChunks * page->chunkSize);
+    HeapChunk *chunk = page->firstFree;
+    if (chunk)
+        page->firstFree = chunk->nextFree;
+    else
+        chunk = (HeapChunk *)((char *)page->data + page->numOccupiedChunks++ * page->chunkSize);
 
     memset(chunk, 0, page->chunkSize);
-    chunk->refCnt = 1;
     chunk->size = size;
     chunk->type = type;
     chunk->onFree = onFree;
-    chunk->ip = pages->fiber->ip;
-    chunk->isStack = isStack;
+    chunk->allocated = true;
 
-    page->numOccupiedChunks++;
-    if (onFree)
-        page->numChunksWithOnFree++;
+    page->numAllocatedChunks++;
+    pages->occupiedSize += size;
 
-    page->refCnt++;
-
-#ifdef UMKA_REF_CNT_DEBUG
-    fprintf(stderr, "Add chunk at %p\n", chunk->data);
-#endif
+    if (UNLIKELY(pages->occupiedSize > pages->gcThreshold))
+        pages->gcRequested = true;
 
     return chunk->data;
-}
-
-
-static FORCE_INLINE int chunkRefCnt(HeapPages *pages, HeapPage *page, void *ptr, int delta)
-{
-    HeapChunk *chunk = pageGetChunk(page, ptr);
-
-    if (UNLIKELY(chunk->refCnt <= 0 || page->refCnt < chunk->refCnt))
-        pages->error->runtimeHandler(pages->error->context, ERR_RUNTIME, "Wrong reference count for pointer at %p", ptr);
-
-    if (chunk->onFree && chunk->refCnt == 1 && delta == -1)
-    {
-        chunk->onFree(doGetOnFreeParams(ptr), doGetOnFreeResult(pages));
-        page->numChunksWithOnFree--;
-    }
-
-    chunk->refCnt += delta;
-    page->refCnt += delta;
-
-    // Detect escaping refs
-    for (Fiber *fiber = pages->fiber; fiber; fiber = fiber->parent)
-        stackUpdateFrameRefCnt(fiber, pages, ptr, delta);
-
-#ifdef UMKA_REF_CNT_DEBUG
-    fprintf(stderr, "%p: delta: %+d  chunk: %d  page: %d\n", ptr, delta, chunk->refCnt, page->refCnt);
-#endif
-
-    if (page->refCnt == 0)
-    {
-        const bool blacklist = pageMayBeReferencedByTemporaries(pages, page);
-        pageRemove(pages, page, blacklist);
-        return 0;
-    }
-
-    return chunk->refCnt;
 }
 
 
@@ -893,18 +658,23 @@ void qsortEx(char *first, char *last, int itemSize, QSortCompareFn compare, void
 
 // Virtual machine
 
-void vmInit(VM *vm, Storage *storage, int stackSize, bool fileSystemEnabled, Error *error)
+static void gcResetRoots(VM *vm);
+
+
+void vmInit(VM *vm, Storage *storage, const Idents *idents, int stackSize, bool fileSystemEnabled, Error *error)
 {
     vm->storage = storage;
+    vm->idents = idents;
     vm->fiber = vm->mainFiber = storageAdd(vm->storage, sizeof(Fiber));
     vm->fiber->parent = NULL;
     vm->fiber->vm = vm;
     vm->fiber->alive = true;
     vm->fiber->fileSystemEnabled = fileSystemEnabled;
 
-    pageInit(&vm->pages, vm->fiber, vm->storage, error);
+    pageInit(&vm->pages, vm->storage, error);
 
-    vm->fiber->stack = chunkAlloc(&vm->pages, stackSize * sizeof(Slot), NULL, NULL, true, error);
+    vm->fiber->stack = chunkAlloc(&vm->pages, stackSize * sizeof(Slot), NULL, NULL, error);
+    chunkGetHeader(vm->fiber->stack)->kind = CHUNK_STACK;
     vm->fiber->stackSize = stackSize;
 
     memset(&vm->hooks, 0, sizeof(vm->hooks));
@@ -918,18 +688,15 @@ void vmInit(VM *vm, Storage *storage, int stackSize, bool fileSystemEnabled, Err
 
 void vmFree(VM *vm)
 {
-    HeapPage *page = pageFind(&vm->pages, vm->mainFiber->stack);
-    if (UNLIKELY(!page))
-       vm->error->runtimeHandler(vm->error->context, ERR_RUNTIME, "No fiber stack");
-
-    chunkRefCnt(&vm->pages, page, vm->mainFiber->stack, -1);
-    pageFree(&vm->pages, vm->storage);
+    pageFree(&vm->pages);
 }
 
 
 void vmReset(VM *vm, const Instruction *code, const DebugInfo *debugPerInstr)
 {
-    vm->fiber = vm->pages.fiber = vm->mainFiber;
+    gcResetRoots(vm);
+
+    vm->fiber = vm->mainFiber;
     vm->fiber->code = code;
     vm->fiber->debugPerInstr = debugPerInstr;
     vm->fiber->ip = 0;
@@ -995,7 +762,6 @@ static FORCE_INLINE void doDerefImpl(Slot *slot, TypeKind typeKind, Error *error
         case TYPE_REAL32:       slot->realVal    = *(float          *)slot->ptrVal; break;
         case TYPE_REAL:         slot->realVal    = *(double         *)slot->ptrVal; break;
         case TYPE_PTR:          slot->ptrVal     = *(void *         *)slot->ptrVal; break;
-        case TYPE_WEAKPTR:      slot->weakPtrVal = *(uint64_t       *)slot->ptrVal; break;
         case TYPE_STR:
         {
             slot->ptrVal = *(void **)slot->ptrVal;
@@ -1040,7 +806,6 @@ static FORCE_INLINE void doAssignImpl(void *lhs, Slot rhs, TypeKind typeKind, in
         case TYPE_REAL32:       *(float         *)lhs = rhs.realVal; break;
         case TYPE_REAL:         *(double        *)lhs = rhs.realVal; break;
         case TYPE_PTR:          *(void *        *)lhs = rhs.ptrVal;  break;
-        case TYPE_WEAKPTR:      *(uint64_t      *)lhs = rhs.weakPtrVal; break;
         case TYPE_STR:
         {
             doCheckStr((char *)rhs.ptrVal, error);
@@ -1067,6 +832,74 @@ static FORCE_INLINE void doAssignImpl(void *lhs, Slot rhs, TypeKind typeKind, in
 }
 
 
+// A pointer to a local stored into an older stack frame escapes; stored into the heap or a global, it is checked when its frame is left
+static FORCE_INLINE void gcDetectPtrEscapeSuspect(Fiber *fiber, HeapPages *pages, void *loc, Error *error)
+{
+    void *ptr = *(void **)loc;
+
+    if (ptr < (void *)fiber->top || ptr >= (void *)(fiber->stack + fiber->stackSize))
+        return;
+
+    for (Slot *base = fiber->base; base != fiber->stack + fiber->stackSize - 1; base = base->ptrVal)
+    {
+        const Slot *frameEnd = stackGetFrameParams(base) + getParamLayout(stackGetFrameLayout(base))->numParamSlots;
+        if (ptr >= (void *)frameEnd)
+            continue;
+
+        if (loc < (void *)fiber->top || loc >= (void *)frameEnd)
+        {
+            const HeapPage *page = pageFind(pages, loc);
+            if (UNLIKELY(page && pageGetChunk(page, loc)->kind == CHUNK_STACK))
+                error->runtimeHandler(error->context, ERR_RUNTIME, "Pointer to a local variable escapes from the function");
+
+            *stackGetFrameHasEscapeSuspects(base) = true;
+        }
+        break;
+    }
+}
+
+
+// Only pointers and interfaces may point to locals, so the rest of the value is skipped
+static void gcDetectEscapeSuspects(Fiber *fiber, HeapPages *pages, void *dest, const Type *type, Error *error)
+{
+    if (!type->mayPointToStack)
+        return;
+
+    switch (type->kind)
+    {
+        case TYPE_PTR:
+        {
+            gcDetectPtrEscapeSuspect(fiber, pages, dest, error);
+            break;
+        }
+
+        case TYPE_INTERFACE:
+        {
+            gcDetectPtrEscapeSuspect(fiber, pages, &((Interface *)dest)->self, error);
+            break;
+        }
+
+        case TYPE_ARRAY:
+        {
+            for (int i = 0; i < type->numItems; i++)
+                gcDetectEscapeSuspects(fiber, pages, (char *)dest + i * type->base->size, type->base, error);
+            break;
+        }
+
+        case TYPE_STRUCT:
+        case TYPE_CLOSURE:
+        {
+            for (int i = 0; i < type->numItems; i++)
+                gcDetectEscapeSuspects(fiber, pages, (char *)dest + type->field[i]->offset, type->field[i]->type, error);
+            break;
+        }
+
+        default:
+            break;
+    }
+}
+
+
 static int64_t doCompare(Slot lhs, Slot rhs, const Type *type, Error *error)
 {
     switch (type->kind)
@@ -1088,7 +921,6 @@ static int64_t doCompare(Slot lhs, Slot rhs, const Type *type, Error *error)
             return (diff == 0.0) ? 0 : (diff > 0.0) ? 1 : -1;
         }
         case TYPE_PTR:      return (char *)lhs.ptrVal - (char *)rhs.ptrVal;
-        case TYPE_WEAKPTR:  return lhs.weakPtrVal - rhs.weakPtrVal;
         case TYPE_STR:
         {
             const char *lhsStr = lhs.ptrVal;
@@ -1167,240 +999,284 @@ static int64_t doCompare(Slot lhs, Slot rhs, const Type *type, Error *error)
 }
 
 
-static FORCE_INLINE void doAddPtrBaseRefCntCandidate(RefCntCandidates *candidates, void *ptr, const Type *type)
+static FORCE_INLINE void gcAddValueCandidate(GCCandidates *candidates, void *ptr, const Type *type)
 {
-    if (type->base->isGarbageCollected)
+    if (type->isGarbageCollected)
     {
         void *data = ptr;
-        if (type->base->kind == TYPE_PTR || type->base->kind == TYPE_STR || type->base->kind == TYPE_FIBER)
+        if (type->kind == TYPE_PTR || type->kind == TYPE_STR || type->kind == TYPE_FIBER)
             data = *(void **)data;
 
-        candidatePush(candidates, data, type->base);
+        gcCandidatePush(candidates, data, type);
     }
 }
 
 
-static FORCE_INLINE void doAddArrayItemsRefCntCandidates(RefCntCandidates *candidates, void *ptr, const Type *type, int len)
+static FORCE_INLINE void gcAddArrayItemsCandidates(GCCandidates *candidates, void *ptr, const Type *type, int64_t len)
 {
-    if (type->base->isGarbageCollected)
+    char *itemPtr = ptr;
+    for (int64_t i = 0; i < len; i++)
     {
-        char *itemPtr = ptr;
-        const int itemSize = type->base->size;
-
-        for (int i = 0; i < len; i++)
-        {
-            void *item = itemPtr;
-            if (type->base->kind == TYPE_PTR || type->base->kind == TYPE_STR || type->base->kind == TYPE_FIBER)
-                item = *(void **)item;
-
-            candidatePush(candidates, item, type->base);
-            itemPtr += itemSize;
-        }
+        gcAddValueCandidate(candidates, itemPtr, type->base);
+        itemPtr += type->base->size;
     }
 }
 
 
-static FORCE_INLINE void doAddStructFieldsRefCntCandidates(RefCntCandidates *candidates, void *ptr, const Type *type)
+static FORCE_INLINE void gcAddStructFieldsCandidates(GCCandidates *candidates, void *ptr, const Type *type)
 {
     for (int i = 0; i < type->numItems; i++)
-    {
-        if (type->field[i]->type->isGarbageCollected)
-        {
-            void *field = (char *)ptr + type->field[i]->offset;
-            if (type->field[i]->type->kind == TYPE_PTR || type->field[i]->type->kind == TYPE_STR || type->field[i]->type->kind == TYPE_FIBER)
-                field = *(void **)field;
+        gcAddValueCandidate(candidates, (char *)ptr + type->field[i]->offset, type->field[i]->type);
+}
 
-            candidatePush(candidates, field, type->field[i]->type);
+
+static FORCE_INLINE void gcMarkPtr(HeapPages *pages, void *ptr, const Type *ptrType)
+{
+    HeapPage *page = pageFind(pages, ptr);
+    if (!page)
+        return;
+
+    HeapChunk *chunk = pageGetChunk(page, ptr);
+    if (!chunk->allocated)
+        return;
+
+    // Stacks and registers are scanned conservatively
+    if (UNLIKELY(ptrType && chunk->kind == CHUNK_STACK))
+        gcCandidatePush(&pages->escapeSuspects, ptr, NULL);
+
+    if (chunk->marked)
+        return;
+
+    chunk->marked = true;
+
+    GCCandidates *candidates = &pages->markCandidates;
+
+    switch (chunk->kind)
+    {
+        case CHUNK_FIBER:
+            gcCandidatePush(candidates, chunk->data, NULL);
+            break;
+
+        case CHUNK_DYNARRAY_DATA:
+        {
+            const DynArrayDimensions *dims = (DynArrayDimensions *)chunk->data;
+            gcAddArrayItemsCandidates(candidates, (char *)chunk->data + sizeof(DynArrayDimensions), chunk->type, dims->len);
+            break;
+        }
+
+        default:
+        {
+            if (chunk->type)
+                gcAddValueCandidate(candidates, chunk->data, chunk->type);
+            else if (ptrType)
+                gcAddValueCandidate(candidates, ptr, ptrType->base);
+            break;
         }
     }
 }
 
 
-static void doRefCntImpl(HeapPages *pages, void *ptr, const Type *type, TokenKind tokKind)
+static void gcMarkFiber(HeapPages *pages, const Fiber *fiber)
 {
-    // Update ref counts for pointers (including static/dynamic array items and structure/interface fields) if allocated dynamically
-    // All garbage collected composite types are represented by pointers by default
-    // RTTI is required for lists, trees, etc., since the propagation depth for the root ref count is unknown at compile time
+    // The parent fiber is not referenced from the stack, but resume() needs it
+    gcMarkPtr(pages, fiber->parent, NULL);
+    gcMarkPtr(pages, fiber->stack, NULL);
 
-    RefCntCandidates *candidates = &pages->refCntCandidates;
-    candidateReset(candidates);
-    candidatePush(candidates, ptr, type);
+    for (int i = 0; i < NUM_REGS; i++)
+        gcMarkPtr(pages, fiber->reg[i].ptrVal, NULL);
+
+    // The stack carries no type info, so it is scanned conservatively
+    for (const Slot *slot = fiber->top; slot < fiber->stack + fiber->stackSize; slot++)
+        gcMarkPtr(pages, slot->ptrVal, NULL);
+}
+
+
+static void gcResetRoots(VM *vm)
+{
+    GCCandidates *roots = &vm->pages.roots;
+    gcCandidateReset(roots);
+
+    for (const Ident *ident = vm->idents->first; ident; ident = ident->next)
+        if (ident->isGloballyAllocated && ident->type->isGarbageCollected)
+            gcCandidatePush(roots, ident->ptr, ident->type);
+}
+
+
+static void gcMark(VM *vm)
+{
+    HeapPages *pages = &vm->pages;
+    GCCandidates *candidates = &pages->markCandidates;
+
+    gcCandidateReset(candidates);
+    gcCandidateReset(&pages->escapeSuspects);
+
+    // Roots: all the fibers being executed
+    for (const Fiber *fiber = vm->fiber; fiber; fiber = fiber->parent)
+        gcCandidatePush(candidates, (void *)fiber, NULL);
+
+    // Roots: global variables
+    const GCCandidates *roots = &pages->roots;
+    for (int i = 0; i <= roots->top; i++)
+        gcAddValueCandidate(candidates, roots->stack[i].ptr, roots->stack[i].type);
+
+    // Roots: chunks referenced by the host
+    for (int i = 0; i <= pages->hostRefs.top; i++)
+        gcMarkPtr(pages, pages->hostRefs.stack[i].ptr, NULL);
 
     while (candidates->top >= 0)
     {
-        HeapPage *pageForDeferred = NULL;
-        candidatePop(candidates, &ptr, &type, &pageForDeferred);
+        void *ptr = NULL;
+        const Type *type = NULL;
+        gcCandidatePop(candidates, &ptr, &type);
 
-        // Process deferred ref count updates first (the heap page should have been memoized for them)
-        if (pageForDeferred)
+        if (!type)
         {
-            chunkRefCnt(pages, pageForDeferred, ptr, (tokKind == TOK_PLUSPLUS) ? 1 : -1);
+            gcMarkFiber(pages, (const Fiber *)ptr);
             continue;
         }
 
-        // Process all other updates
         switch (type->kind)
         {
             case TYPE_PTR:
             {
-                HeapPage *page = pageFind(pages, ptr);
-                if (!page)
-                    break;
-
-                if (tokKind == TOK_PLUSPLUS)
-                    chunkRefCnt(pages, page, ptr, 1);
-                else
-                {
-                    HeapChunk *chunk = pageGetChunk(page, ptr);
-                    if (chunk->refCnt > 1)
-                    {
-                        chunkRefCnt(pages, page, ptr, -1);
-                        break;
-                    }
-
-                    // Only one ref is left. Defer processing the parent and traverse the children before removing the ref
-                    candidatePushDeferred(candidates, ptr, type, page);
-
-                    // Sometimes the last remaining ref to chunk data is a pointer to a single item of a composite type (interior pointer)
-                    // In this case, we should traverse children as for the actual composite type, rather than for the pointer
-                    if (chunk->type)
-                    {
-                        switch (chunk->type->kind)
-                        {
-                            case TYPE_ARRAY:
-                            case TYPE_MAP:
-                            case TYPE_STRUCT:
-                            case TYPE_INTERFACE:
-                            case TYPE_CLOSURE:
-                            {
-                                candidatePush(candidates, chunk->data, chunk->type);
-                                break;
-                            }
-                            case TYPE_DYNARRAY:
-                            {
-                                // When allocating dynamic arrays, we mark with type the data chunk, not the header chunk
-                                const DynArrayDimensions *dims = (DynArrayDimensions *)chunk->data;
-                                void *data = (char *)chunk->data + sizeof(DynArrayDimensions);
-                                doAddArrayItemsRefCntCandidates(candidates, data, chunk->type, dims->len);
-                                break;
-                            }
-                            default:
-                            {
-                                doAddPtrBaseRefCntCandidate(candidates, ptr, type);
-                                break;
-                            }
-                        }
-                    }
-                    else
-                        doAddPtrBaseRefCntCandidate(candidates, ptr, type);
-                }
+                gcMarkPtr(pages, ptr, type);
                 break;
             }
 
             case TYPE_STR:
+            case TYPE_FIBER:
             {
-                doCheckStr((char *)ptr, pages->error);
-
-                HeapPage *page = pageFind(pages, ptr);
-                if (!page)
-                    break;
-
-                chunkRefCnt(pages, page, ptr, (tokKind == TOK_PLUSPLUS) ? 1 : -1);
+                gcMarkPtr(pages, ptr, NULL);
                 break;
             }
 
             case TYPE_ARRAY:
             {
-                doAddArrayItemsRefCntCandidates(candidates, ptr, type, type->numItems);
+                gcAddArrayItemsCandidates(candidates, ptr, type, type->numItems);
+                break;
+            }
+
+            case TYPE_STRUCT:
+            case TYPE_CLOSURE:
+            {
+                gcAddStructFieldsCandidates(candidates, ptr, type);
                 break;
             }
 
             case TYPE_DYNARRAY:
             {
-                DynArray *array = (DynArray *)ptr;
-                HeapPage *page = pageFind(pages, array->data);
-                if (!page)
-                    break;
-
-                if (tokKind == TOK_PLUSPLUS)
-                    chunkRefCnt(pages, page, array->data, 1);
-                else
-                {
-                    const HeapChunk *chunk = pageGetChunk(page, array->data);
-                    if (chunk->refCnt > 1)
-                    {
-                        chunkRefCnt(pages, page, array->data, -1);
-                        break;
-                    }
-
-                    // Only one ref is left. Defer processing the parent and traverse the children before removing the ref
-                    candidatePushDeferred(candidates, array->data, type, page);
-                    doAddArrayItemsRefCntCandidates(candidates, array->data, type, getDims(array)->len);
-                }
+                const DynArray *array = (const DynArray *)ptr;
+                gcMarkPtr(pages, array->data, NULL);
                 break;
             }
 
             case TYPE_MAP:
             {
-                Map *map = (Map *)ptr;
-                candidatePush(candidates, map->root, typeMapNodePtr(type));
-                break;
-            }
-
-            case TYPE_STRUCT:
-            {
-                doAddStructFieldsRefCntCandidates(candidates, ptr, type);
+                const Map *map = (const Map *)ptr;
+                gcCandidatePush(candidates, map->root, typeMapNodePtr(type));
                 break;
             }
 
             case TYPE_INTERFACE:
             {
-                Interface *interface = (Interface *)ptr;
-                if (interface->self)
-                    candidatePush(candidates, interface->self, interface->selfType);
+                const Interface *interface = (const Interface *)ptr;
+                if (interface->self && interface->selfType)
+                    gcCandidatePush(candidates, interface->self, interface->selfType);
                 break;
             }
 
-            case TYPE_CLOSURE:
-            {
-                doAddStructFieldsRefCntCandidates(candidates, ptr, type);
+            default: 
                 break;
-            }
-
-            case TYPE_FIBER:
-            {
-                HeapPage *page = pageFind(pages, ptr);
-                if (!page)
-                    break;
-
-                if (tokKind == TOK_PLUSPLUS)
-                    chunkRefCnt(pages, page, ptr, 1);
-                else
-                {
-                    const HeapChunk *chunk = pageGetChunk(page, ptr);
-                    if (chunk->refCnt > 1)
-                    {
-                        chunkRefCnt(pages, page, ptr, -1);
-                        break;
-                    }
-
-                    if (UNLIKELY(((Fiber *)ptr)->alive))
-                        pages->error->runtimeHandler(pages->error->context, ERR_RUNTIME, "Cannot destroy a busy fiber");
-
-                    // Only one ref is left. Defer processing the parent and traverse the children before removing the ref
-                    HeapPage *stackPage = pageFind(pages, ((Fiber *)ptr)->stack);
-                    if (UNLIKELY(!stackPage))
-                        pages->error->runtimeHandler(pages->error->context, ERR_RUNTIME, "No fiber stack");
-
-                    chunkRefCnt(pages, stackPage, ((Fiber *)ptr)->stack, -1);
-                    chunkRefCnt(pages, page, ptr, -1);
-                }
-                break;
-            }
-
-            default: break;
         }
     }
+}
+
+
+static bool gcPtrIsInLiveFrame(const Fiber *fiber, const void *ptr)
+{
+    return ptr >= (const void *)fiber->top && ptr < (const void *)(fiber->stack + fiber->stackSize);
+}
+
+
+// A pointer to a local variable is legal as long as the frame it points to has not been left yet and belongs to the running fiber
+static void gcCheckEscapes(VM *vm, bool suspending)
+{
+    HeapPages *pages = &vm->pages;
+    GCCandidates *suspects = &pages->escapeSuspects;
+
+    while (suspects->top >= 0)
+    {
+        void *ptr = NULL;
+        const Type *type = NULL;
+        gcCandidatePop(suspects, &ptr, &type);
+
+        // Suspended fibers cannot be pointed to, as other fibers could copy the pointers to their stacks
+        if (UNLIKELY(suspending))
+            pages->error->runtimeHandler(pages->error->context, ERR_RUNTIME, "Pointer to a local variable escapes from the fiber");
+
+        if (UNLIKELY(!gcPtrIsInLiveFrame(vm->fiber, ptr)))
+            pages->error->runtimeHandler(pages->error->context, ERR_RUNTIME, "Pointer to a local variable escapes from the function");
+    }
+}
+
+
+static void gcSweep(HeapPages *pages)
+{
+    for (HeapPage *page = pages->first; page;)
+    {
+        HeapPage *next = page->next;
+
+        for (int i = 0; i < page->numOccupiedChunks; i++)
+        {
+            HeapChunk *chunk = (HeapChunk *)((char *)page->data + i * page->chunkSize);
+            if (!chunk->allocated)
+                continue;
+
+            if (chunk->marked)
+                chunk->marked = false;
+            else
+                chunkFree(pages, page, chunk);
+        }
+
+        if (page->numAllocatedChunks == 0)
+            pageRemove(pages, page);
+
+        page = next;
+    }
+}
+
+
+static void vmCollectGarbage(VM *vm, bool suspending)
+{
+    HeapPages *pages = &vm->pages;
+
+    gcMark(vm);
+    gcCheckEscapes(vm, suspending);
+    gcSweep(pages);
+
+    pages->gcThreshold = 2 * pages->occupiedSize;
+    if (pages->gcThreshold < MEM_MIN_GC_THRESHOLD)
+        pages->gcThreshold = MEM_MIN_GC_THRESHOLD;
+
+    pages->gcRequested = false;
+}
+
+
+// A fiber cannot be suspended while pointers to its local variables may be stored outside its frames
+static void doCheckSuspendedFiberEscapes(Fiber *fiber)
+{
+    bool suspects = false;
+    for (Slot *base = fiber->base; base != fiber->stack + fiber->stackSize - 1; base = base->ptrVal)
+        suspects |= *stackGetFrameHasEscapeSuspects(base);
+
+    if (!suspects)
+        return;
+
+    vmCollectGarbage(fiber->vm, true);
+
+    // The remaining suspects are unreachable
+    for (Slot *base = fiber->base; base != fiber->stack + fiber->stackSize - 1; base = base->ptrVal)
+        *stackGetFrameHasEscapeSuspects(base) = false;
 }
 
 
@@ -1413,7 +1289,7 @@ static FORCE_INLINE char *doAllocStr(HeapPages *pages, int64_t len, Error *error
     if (dims.capacity < dims.len)
         dims.capacity = dims.len;
 
-    char *dimsAndData = chunkAlloc(pages, sizeof(StrDimensions) + dims.capacity, NULL, NULL, false, error);
+    char *dimsAndData = chunkAlloc(pages, sizeof(StrDimensions) + dims.capacity, NULL, NULL, error);
     *(StrDimensions *)dimsAndData = dims;
 
     char *data = dimsAndData + sizeof(StrDimensions);
@@ -1452,7 +1328,8 @@ static FORCE_INLINE void doAllocDynArray(HeapPages *pages, DynArray *array, cons
     if (dims.capacity < dims.len)
         dims.capacity = dims.len;
 
-    char *dimsAndData = chunkAlloc(pages, sizeof(DynArrayDimensions) + dims.capacity * array->itemSize, array->type, NULL, false, error);
+    char *dimsAndData = chunkAlloc(pages, sizeof(DynArrayDimensions) + dims.capacity * array->itemSize, array->type, NULL, error);
+    chunkGetHeader(dimsAndData)->kind = CHUNK_DYNARRAY_DATA;
     *(DynArrayDimensions *)dimsAndData = dims;
 
     array->data = dimsAndData + sizeof(DynArrayDimensions);
@@ -1472,7 +1349,7 @@ static FORCE_INLINE void doGetEmptyDynArray(DynArray *array, const Type *type)
 static FORCE_INLINE void doAllocMap(HeapPages *pages, Map *map, const Type *type, Error *error)
 {
     map->type      = type;
-    map->root      = chunkAlloc(pages, type->base->size, type->base, NULL, false, error);
+    map->root      = chunkAlloc(pages, type->base->size, type->base, NULL, error);
     map->root->len = 0;
 }
 
@@ -1534,14 +1411,14 @@ static FORCE_INLINE MapNode **doGetMapNode(Map *map, Slot key, bool createMissin
     if (createMissingNodes)
     {
         const Type *nodeType = map->type->base;
-        *node = chunkAlloc(pages, nodeType->size, nodeType, NULL, false, error);
+        *node = chunkAlloc(pages, nodeType->size, nodeType, NULL, error);
     }
 
     return node;
 }
 
 
-static FORCE_INLINE void *doGetMapNodeData(Map *map, Slot key, const Type *mapType, HeapPages *pages, Error *error)
+static FORCE_INLINE void *doGetMapNodeData(Map *map, Slot key, const Type *mapType, Fiber *fiber, HeapPages *pages, Error *error)
 {
     if (UNLIKELY(!map))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Map is null");
@@ -1557,15 +1434,14 @@ static FORCE_INLINE void *doGetMapNodeData(Map *map, Slot key, const Type *mapTy
     {
         node->priority = (int64_t)rand() + 1;
 
-        // When allocating dynamic arrays, we mark with type the data chunk, not the header chunk
-        node->key  = chunkAlloc(pages, keyType->size,  keyType->kind  == TYPE_DYNARRAY ? NULL : keyType,  NULL, false, error);
-        node->data = chunkAlloc(pages, itemType->size, itemType->kind == TYPE_DYNARRAY ? NULL : itemType, NULL, false, error);
-
-        // Increase key ref count
-        if (keyType->isGarbageCollected)
-            doRefCntImpl(pages, key.ptrVal, keyType, TOK_PLUSPLUS);
+        node->key  = chunkAlloc(pages, keyType->size,  keyType,  NULL, error);
+        node->data = chunkAlloc(pages, itemType->size, itemType, NULL, error);
 
         doAssignImpl(node->key, key, keyType->kind, keyType->size, error);
+
+        if (keyType->mayPointToStack)
+            gcDetectEscapeSuspects(fiber, pages, node->key, keyType, error);
+
         map->root->len++;
     }
 
@@ -1579,7 +1455,7 @@ static MapNode *doCopyMapNode(Map *map, MapNode *node, Fiber *fiber, HeapPages *
         return NULL;
 
     const Type *nodeType = map->type->base;
-    MapNode *result = (MapNode *)chunkAlloc(pages, nodeType->size, nodeType, NULL, false, error);
+    MapNode *result = (MapNode *)chunkAlloc(pages, nodeType->size, nodeType, NULL, error);
 
     result->len = node->len;
     result->priority = node->priority;
@@ -1591,11 +1467,7 @@ static MapNode *doCopyMapNode(Map *map, MapNode *node, Fiber *fiber, HeapPages *
         Slot srcKey = {.ptrVal = node->key};
         doDerefImpl(&srcKey, keyType->kind, error);
 
-        // When allocating dynamic arrays, we mark with type the data chunk, not the header chunk
-        result->key = chunkAlloc(pages, keyType->size, keyType->kind == TYPE_DYNARRAY ? NULL : keyType, NULL, false, error);
-
-        if (keyType->isGarbageCollected)
-            doRefCntImpl(pages, srcKey.ptrVal, keyType, TOK_PLUSPLUS);
+        result->key = chunkAlloc(pages, keyType->size, keyType, NULL, error);
 
         doAssignImpl(result->key, srcKey, keyType->kind, keyType->size, error);
     }
@@ -1607,11 +1479,7 @@ static MapNode *doCopyMapNode(Map *map, MapNode *node, Fiber *fiber, HeapPages *
         Slot srcItem = {.ptrVal = node->data};
         doDerefImpl(&srcItem, itemType->kind, error);
 
-        // When allocating dynamic arrays, we mark with type the data chunk, not the header chunk
-        result->data = chunkAlloc(pages, itemType->size, itemType->kind == TYPE_DYNARRAY ? NULL : itemType, NULL, false, error);
-
-        if (itemType->isGarbageCollected)
-            doRefCntImpl(pages, srcItem.ptrVal, itemType, TOK_PLUSPLUS);
+        result->data = chunkAlloc(pages, itemType->size, itemType, NULL, error);
 
         doAssignImpl(result->data, srcItem, itemType->kind, itemType->size, error);
     }
@@ -1663,20 +1531,19 @@ static FORCE_INLINE Fiber *doAllocFiber(Fiber *parent, const Closure *childClosu
         error->runtimeHandler(error->context, ERR_RUNTIME, "Called function is not defined");
 
     // Copy whole fiber context
-    Fiber *child = chunkAlloc(pages, sizeof(Fiber), NULL, NULL, false, error);
+    Fiber *child = chunkAlloc(pages, sizeof(Fiber), NULL, NULL, error);
+    chunkGetHeader(child)->kind = CHUNK_FIBER;
 
     *child = *parent;
-    child->stack = chunkAlloc(pages, child->stackSize * sizeof(Slot), NULL, NULL, true, error);
+    child->stack = chunkAlloc(pages, child->stackSize * sizeof(Slot), NULL, NULL, error);
+    chunkGetHeader(child->stack)->kind = CHUNK_STACK;
     child->top = child->base = child->stack + child->stackSize - 1;
 
     child->parent = parent;
 
-    const Signature *childClosureSig = childClosureType->field[0]->type->sig;
-
     // Push upvalues
     child->top -= sizeof(Interface) / sizeof(Slot);
     *(Interface *)child->top = childClosure->upvalue;
-    doRefCntImpl(pages, child->top, childClosureSig->param[0]->type, TOK_PLUSPLUS);
 
     // Push 'return from fiber' signal instead of return address
     (--child->top)->intVal = RETURN_FROM_FIBER;
@@ -1785,7 +1652,6 @@ static int doFillReprBuf(const Slot *slot, const Type *type, char *buf, int maxL
             }
             break;
         }
-        case TYPE_WEAKPTR:  len += snprintf(nonnull(buf, len), maxLen, "%llx", (unsigned long long int)slot->weakPtrVal);                   break;
         case TYPE_STR:
         {
             doCheckStr((char *)slot->ptrVal, error);
@@ -2113,9 +1979,6 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool is
             memcpy(newString, string, prevLen);
             newString[prevLen] = 0;
 
-            // Decrease old string ref count
-            const Type strType = {.kind = TYPE_STR};
-            doRefCntImpl(pages, string, &strType, TOK_MINUSMINUS);
 
             string = newString;
         }
@@ -2212,9 +2075,6 @@ static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool isC
             char *src = fsscanfString(fiber->vm->storage, file, string, &len);
             char **dest = (char **)value.ptrVal;
 
-            // Decrease old string ref count
-            Type destType = {.kind = TYPE_STR};
-            doRefCntImpl(pages, *dest, &destType, TOK_MINUSMINUS);
 
             // Allocate new string
             *dest = doAllocStr(pages, strlen(src), error);
@@ -2246,8 +2106,7 @@ static FORCE_INLINE void doBuiltinNew(Fiber *fiber, HeapPages *pages, Error *err
 {
     const Type *type = fiber->code[fiber->ip].type;
 
-    // For dynamic arrays, we mark with type the data chunk, not the header chunk
-    (--fiber->top)->ptrVal = chunkAlloc(pages, type->size, (type->kind == TYPE_DYNARRAY ? NULL : type), NULL, false, error); 
+    (--fiber->top)->ptrVal = chunkAlloc(pages, type->size, type, NULL, error);
 }
 
 
@@ -2297,9 +2156,9 @@ static FORCE_INLINE void doBuiltinMakeFromArr(Fiber *fiber, HeapPages *pages, Er
     doAllocDynArray(pages, dest, destType, len, error);
     memcpy(dest->data, src, getDims(dest)->len * dest->itemSize);
 
-    // Increase result items' ref counts, as if they have been assigned one by one
-    const Type staticArrayType = typeMakeDetachedArray(dest->type->base, getDims(dest)->len);
-    doRefCntImpl(pages, dest->data, &staticArrayType, TOK_PLUSPLUS);
+    if (destType->base->mayPointToStack)
+        for (int64_t i = 0; i < getDims(dest)->len; i++)
+            gcDetectEscapeSuspects(fiber, pages, (char *)dest->data + i * dest->itemSize, destType->base, error);
 
     (--fiber->top)->ptrVal = dest;
 }
@@ -2343,8 +2202,6 @@ static FORCE_INLINE void doBuiltinMakeArr(Fiber *fiber, HeapPages *pages, Error 
 
         memcpy(dest, src->data, getDims(src)->len * src->itemSize);
 
-        // Increase result items' ref counts, as if they have been assigned one by one
-        doRefCntImpl(pages, dest, destType, TOK_PLUSPLUS);
     }
 
     (--fiber->top)->ptrVal = dest;
@@ -2425,9 +2282,6 @@ static FORCE_INLINE void doBuiltinCopyDynArray(Fiber *fiber, HeapPages *pages, E
         doAllocDynArray(pages, result, array->type, getDims(array)->len, error);
         memmove((char *)result->data, (char *)array->data, getDims(array)->len * array->itemSize);
 
-        // Increase result items' ref counts, as if they have been assigned one by one
-        const Type staticArrayType = typeMakeDetachedArray(result->type->base, getDims(result)->len);
-        doRefCntImpl(pages, result->data, &staticArrayType, TOK_PLUSPLUS);
     }
 
     (--fiber->top)->ptrVal = result;
@@ -2505,14 +2359,10 @@ static FORCE_INLINE void doBuiltinAppend(Fiber *fiber, HeapPages *pages, Error *
 
     if (newLen <= getDims(array)->capacity)
     {
-        doRefCntImpl(pages, array, array->type, TOK_PLUSPLUS);
         *result = *array;
 
         memmove((char *)result->data + getDims(array)->len * array->itemSize, (char *)rhs, rhsLen * array->itemSize);
 
-        // Increase result items' ref counts, as if they have been assigned one by one
-        const Type staticArrayType = typeMakeDetachedArray(result->type->base, rhsLen);
-        doRefCntImpl(pages, (char *)result->data + getDims(array)->len * array->itemSize, &staticArrayType, TOK_PLUSPLUS);
 
         getDims(result)->len = newLen;
     }
@@ -2523,10 +2373,11 @@ static FORCE_INLINE void doBuiltinAppend(Fiber *fiber, HeapPages *pages, Error *
         memmove((char *)result->data, (char *)array->data, getDims(array)->len * array->itemSize);
         memmove((char *)result->data + getDims(array)->len * array->itemSize, (char *)rhs, rhsLen * array->itemSize);
 
-        // Increase result items' ref counts, as if they have been assigned one by one
-        const Type staticArrayType = typeMakeDetachedArray(result->type->base, newLen);
-        doRefCntImpl(pages, result->data, &staticArrayType, TOK_PLUSPLUS);
     }
+
+    if (arrayType->base->mayPointToStack)
+        for (int64_t i = newLen - rhsLen; i < newLen; i++)
+            gcDetectEscapeSuspects(fiber, pages, (char *)result->data + i * array->itemSize, arrayType->base, error);
 
     (--fiber->top)->ptrVal = result;
 }
@@ -2553,15 +2404,11 @@ static FORCE_INLINE void doBuiltinInsert(Fiber *fiber, HeapPages *pages, Error *
 
     if (getDims(array)->len + 1 <= getDims(array)->capacity)
     {
-        doRefCntImpl(pages, array, array->type, TOK_PLUSPLUS);
         *result = *array;
 
         memmove((char *)result->data + (index + 1) * result->itemSize, (char *)result->data + index * result->itemSize, (getDims(array)->len - index) * result->itemSize);
         memmove((char *)result->data + index * result->itemSize, (char *)item, result->itemSize);
 
-        // Increase result items' ref counts, as if they have been assigned one by one
-        const Type staticArrayType = typeMakeDetachedArray(result->type->base, 1);
-        doRefCntImpl(pages, (char *)result->data + index * result->itemSize, &staticArrayType, TOK_PLUSPLUS);
 
         getDims(result)->len++;
     }
@@ -2573,10 +2420,10 @@ static FORCE_INLINE void doBuiltinInsert(Fiber *fiber, HeapPages *pages, Error *
         memmove((char *)result->data + (index + 1) * result->itemSize, (char *)array->data + index * result->itemSize, (getDims(array)->len - index) * result->itemSize);
         memmove((char *)result->data + index * result->itemSize, (char *)item, result->itemSize);
 
-        // Increase result items' ref counts, as if they have been assigned one by one
-        const Type staticArrayType = typeMakeDetachedArray(result->type->base, getDims(result)->len);
-        doRefCntImpl(pages, result->data, &staticArrayType, TOK_PLUSPLUS);
     }
+
+    if (arrayType->base->mayPointToStack)
+        gcDetectEscapeSuspects(fiber, pages, (char *)result->data + index * result->itemSize, arrayType->base, error);
 
     (--fiber->top)->ptrVal = result;
 }
@@ -2595,12 +2442,8 @@ static FORCE_INLINE void doBuiltinDeleteDynArray(Fiber *fiber, HeapPages *pages,
     if (UNLIKELY(index < 0 || index > getDims(array)->len - 1))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Index %lld is out of range 0...%lld", index, getDims(array)->len - 1);
 
-    doRefCntImpl(pages, array, array->type, TOK_PLUSPLUS);
     *result = *array;
 
-    // Decrease result item's ref count
-    const Type staticArrayType = typeMakeDetachedArray(result->type->base, 1);
-    doRefCntImpl(pages, (char *)result->data + index * result->itemSize, &staticArrayType, TOK_MINUSMINUS);
 
     memmove((char *)result->data + index * result->itemSize, (char *)result->data + (index + 1) * result->itemSize, (getDims(array)->len - index - 1) * result->itemSize);
 
@@ -2649,13 +2492,11 @@ static FORCE_INLINE void doBuiltinDeleteMap(Fiber *fiber, HeapPages *pages, Erro
         node->left = NULL;
         node->right = NULL;
 
-        doRefCntImpl(pages, node, typeMapNodePtr(map->type), TOK_MINUSMINUS);
 
         if (UNLIKELY(--map->root->len < 0))
             error->runtimeHandler(error->context, ERR_RUNTIME, "Map length is negative");
     }
 
-    doRefCntImpl(pages, map->root, typeMapNodePtr(map->type), TOK_PLUSPLUS);
     result->type = map->type;
     result->root = map->root;
 
@@ -2731,9 +2572,6 @@ static FORCE_INLINE void doBuiltinSlice(Fiber *fiber, HeapPages *pages, Error *e
 
         memcpy((char *)result->data, (char *)array->data + startIndex * result->itemSize, getDims(result)->len * result->itemSize);
 
-        // Increase result items' ref counts, as if they have been assigned one by one
-        const Type staticArrayType = typeMakeDetachedArray(result->type->base, getDims(result)->len);
-        doRefCntImpl(pages, result->data, &staticArrayType, TOK_PLUSPLUS);
 
         (--fiber->top)->ptrVal = result;
     }
@@ -2754,7 +2592,6 @@ typedef struct
 {
     Fiber *fiber;
     Closure *compare;
-    const Type *compareType;
 } CompareContext;
 
 
@@ -2762,21 +2599,15 @@ static int qsortCompare(const void *a, const void *b, void *context)
 {
     Fiber *fiber = ((CompareContext *)context)->fiber;
     const Closure *compare  = ((CompareContext *)context)->compare;
-    const Type *compareType = ((CompareContext *)context)->compareType;
-
-    const Signature *compareSig = compareType->field[0]->type->sig;
 
     // Push upvalues
     fiber->top -= sizeof(Interface) / sizeof(Slot);
     *(Interface *)fiber->top = compare->upvalue;
-    doRefCntImpl(&fiber->vm->pages, fiber->top, compareSig->param[0]->type, TOK_PLUSPLUS);
 
     // Push pointers to values to be compared
     (--fiber->top)->ptrVal = (void *)a;
-    doRefCntImpl(&fiber->vm->pages, fiber->top->ptrVal, compareSig->param[1]->type, TOK_PLUSPLUS);
 
     (--fiber->top)->ptrVal = (void *)b;
-    doRefCntImpl(&fiber->vm->pages, fiber->top->ptrVal, compareSig->param[2]->type, TOK_PLUSPLUS);
 
     // Push 'return from VM' signal as return address
     (--fiber->top)->intVal = RETURN_FROM_VM;
@@ -2793,9 +2624,8 @@ static int qsortCompare(const void *a, const void *b, void *context)
 
 static FORCE_INLINE void doBuiltinSort(Fiber *fiber, Error *error)
 {
-    const Type *compareType = (fiber->top++)->ptrVal;
-    Closure *compare = (fiber->top++)->ptrVal;
-    DynArray *array = (fiber->top++)->ptrVal;
+    Closure *compare = fiber->top[1].ptrVal;
+    DynArray *array = fiber->top[2].ptrVal;
 
     if (UNLIKELY(!array))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Dynamic array is null");
@@ -2805,7 +2635,7 @@ static FORCE_INLINE void doBuiltinSort(Fiber *fiber, Error *error)
 
     if (array->data && getDims(array)->len > 0)
     {
-        CompareContext context = {fiber, compare, compareType};
+        CompareContext context = {fiber, compare};
 
         const int numTempSlots = align(array->itemSize, sizeof(Slot)) / sizeof(Slot);
         fiber->top -= numTempSlots;
@@ -2814,6 +2644,8 @@ static FORCE_INLINE void doBuiltinSort(Fiber *fiber, Error *error)
 
         fiber->top += numTempSlots;
     }
+
+    fiber->top += 3;
 }
 
 
@@ -2964,7 +2796,7 @@ static FORCE_INLINE void doBuiltinSelfHasPtr(Fiber *fiber, Error *error)
 
     bool hasPtr = false;
     if (interface->selfType)
-        hasPtr = typeHasPtr(interface->selfType->base, true);
+        hasPtr = typeHasPtr(interface->selfType->base);
 
     fiber->top->intVal = hasPtr;
 }
@@ -3074,9 +2906,6 @@ static FORCE_INLINE void doBuiltinKeys(Fiber *fiber, HeapPages *pages, Error *er
     {
         doGetMapKeys(map, result->data, error);
 
-        // Increase result items' ref counts, as if they have been assigned one by one
-        const Type staticArrayType = typeMakeDetachedArray(result->type->base, getDims(result)->len);
-        doRefCntImpl(pages, result->data, &staticArrayType, TOK_PLUSPLUS);
     }
 
     (--fiber->top)->ptrVal = result;
@@ -3086,27 +2915,40 @@ static FORCE_INLINE void doBuiltinKeys(Fiber *fiber, HeapPages *pages, Error *er
 // fn resume([child: fiber])
 static FORCE_INLINE void doBuiltinResume(Fiber *fiber, Fiber **newFiber, Error *error)
 {
-    Fiber *child = (fiber->top++)->ptrVal;
+    Fiber *child = fiber->top->ptrVal;
     if (child && child->alive)
         *newFiber = child;
     else if (!child && fiber->parent)
         *newFiber = fiber->parent;
     else
         *newFiber = fiber;
+
+    // The child is still on the stack, so the GC keeps it alive
+    if (*newFiber != fiber)
+        doCheckSuspendedFiberEscapes(fiber);
+
+    fiber->top++;
+}
+
+
+// fn gc()
+static FORCE_INLINE void doBuiltinGc(Fiber *fiber)
+{
+    vmCollectGarbage(fiber->vm, false);
 }
 
 
 // fn memusage(): int
 static FORCE_INLINE void doBuiltinMemUsage(Fiber *fiber, HeapPages *pages, Error *error)
 {
-    (--fiber->top)->intVal = pages->totalSize;
+    (--fiber->top)->intVal = pages->occupiedSize;
 }
 
 
 // fn leaksan(level: int)
 static FORCE_INLINE void doBuiltinLeakSan(Fiber *fiber, HeapPages *pages, Error *error)
 {
-    pages->leakSanLevel = (fiber->top++)->intVal;
+    fiber->top++;      // Kept for backward compatibility, ignored
 }
 
 
@@ -3236,7 +3078,7 @@ static FORCE_INLINE void doDeref(Fiber *fiber, Error *error)
 }
 
 
-static FORCE_INLINE void doAssign(Fiber *fiber, bool swap, Error *error)
+static FORCE_INLINE void doAssign(Fiber *fiber, HeapPages *pages, bool swap, Error *error)
 {
     Slot rhs;
     void *lhs;
@@ -3252,7 +3094,13 @@ static FORCE_INLINE void doAssign(Fiber *fiber, bool swap, Error *error)
         lhs = (fiber->top++)->ptrVal;        
     }
 
-    doAssignImpl(lhs, rhs, fiber->code[fiber->ip].typeKind, fiber->code[fiber->ip].operand.intVal, error);
+    const Type *type = fiber->code[fiber->ip].type;
+
+    doAssignImpl(lhs, rhs, type->kind, type->size, error);
+
+    if (type->mayPointToStack && (lhs < (void *)fiber->top || lhs >= (void *)fiber->base))
+        gcDetectEscapeSuspects(fiber, pages, lhs, type, error);
+
     fiber->ip++;
 }
 
@@ -3272,80 +3120,6 @@ static FORCE_INLINE void doAssignParam(Fiber *fiber, Error *error)
     }
 
     doAssignImpl(fiber->top, rhs, fiber->code[fiber->ip].typeKind, paramSize, error);
-    fiber->ip++;
-}
-
-
-static FORCE_INLINE void doRefCnt(Fiber *fiber, HeapPages *pages)
-{
-    void *ptr = fiber->top->ptrVal;
-    const TokenKind tokKind = fiber->code[fiber->ip].tokKind;
-    const Type *type = fiber->code[fiber->ip].type;
-
-    doRefCntImpl(pages, ptr, type, tokKind);
-
-    fiber->ip++;
-}
-
-
-static FORCE_INLINE void doRefCntGlobal(Fiber *fiber, HeapPages *pages, Error *error)
-{
-    const TokenKind tokKind = fiber->code[fiber->ip].tokKind;
-    const Type *type = fiber->code[fiber->ip].type;
-    void *ptr = fiber->code[fiber->ip].operand.ptrVal;
-
-    Slot slot = {.ptrVal = ptr};
-
-    doDerefImpl(&slot, type->kind, error);
-    doRefCntImpl(pages, slot.ptrVal, type, tokKind);
-
-    fiber->ip++;
-}
-
-
-static FORCE_INLINE void doRefCntLocal(Fiber *fiber, HeapPages *pages, Error *error)
-{
-    const TokenKind tokKind = fiber->code[fiber->ip].tokKind;
-    const Type *type = fiber->code[fiber->ip].type;
-    const int offset = fiber->code[fiber->ip].operand.intVal;
-
-    Slot slot = {.ptrVal = (int8_t *)fiber->base + offset};
-
-    doDerefImpl(&slot, type->kind, error);
-    doRefCntImpl(pages, slot.ptrVal, type, tokKind);
-
-    fiber->ip++;
-}
-
-
-static FORCE_INLINE void doRefCntAssign(Fiber *fiber, HeapPages *pages, bool swap, Error *error)
-{
-    Slot rhs;
-    void *lhs;
-
-    if (swap)
-    {
-        lhs = (fiber->top++)->ptrVal;
-        rhs = *fiber->top++; 
-    }
-    else
-    {
-        rhs = *fiber->top++;
-        lhs = (fiber->top++)->ptrVal;        
-    }
-
-    const Type *type = fiber->code[fiber->ip].type;
-
-    // Increase right-hand side ref count
-    if (fiber->code[fiber->ip].tokKind != TOK_MINUSMINUS)      // "--" means that the right-hand side ref count should not be increased
-        doRefCntImpl(pages, rhs.ptrVal, type, TOK_PLUSPLUS);
-
-    // Decrease left-hand side ref count
-    Slot lhsDeref = {.ptrVal = lhs};
-    doDerefImpl(&lhsDeref, type->kind, error);
-    doRefCntImpl(pages, lhsDeref.ptrVal, type, TOK_MINUSMINUS);
-
-    doAssignImpl(lhs, rhs, type->kind, type->size, error);
     fiber->ip++;
 }
 
@@ -3455,20 +3229,6 @@ static FORCE_INLINE void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
             default:            error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal instruction"); return;
         }
     }
-    else if (type->kind == TYPE_WEAKPTR)
-    {
-        switch (op)
-        {
-            case TOK_EQEQ:      lhs->intVal = lhs->weakPtrVal == rhs.weakPtrVal; break;
-            case TOK_NOTEQ:     lhs->intVal = lhs->weakPtrVal != rhs.weakPtrVal; break;
-            case TOK_GREATER:   lhs->intVal = lhs->weakPtrVal >  rhs.weakPtrVal; break;
-            case TOK_LESS:      lhs->intVal = lhs->weakPtrVal <  rhs.weakPtrVal; break;
-            case TOK_GREATEREQ: lhs->intVal = lhs->weakPtrVal >= rhs.weakPtrVal; break;
-            case TOK_LESSEQ:    lhs->intVal = lhs->weakPtrVal <= rhs.weakPtrVal; break;             
-            
-            default:            error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal instruction"); return;
-        }        
-    }
     else if (type->kind == TYPE_STR)
     {
         char *lhsStr = (char *)lhs->ptrVal;
@@ -3496,8 +3256,6 @@ static FORCE_INLINE void doBinary(Fiber *fiber, HeapPages *pages, Error *error)
                 if (inPlace)
                 {
                     buf = lhsStr;
-                    const Type strType = {.kind = TYPE_STR};
-                    doRefCntImpl(pages, buf, &strType, TOK_PLUSPLUS);
                 }
                 else
                 {
@@ -3715,7 +3473,7 @@ static FORCE_INLINE void doGetMapPtr(Fiber *fiber, HeapPages *pages, bool derefe
     Map *map = (fiber->top++)->ptrVal;
     const Type *mapType = fiber->code[fiber->ip].type;
 
-    (--fiber->top)->ptrVal = doGetMapNodeData(map, key, mapType, pages, error);
+    (--fiber->top)->ptrVal = doGetMapNodeData(map, key, mapType, fiber, pages, error);
 
     if (dereference)
         doDerefImpl(fiber->top, fiber->code[fiber->ip].typeKind, error);    
@@ -3764,63 +3522,6 @@ static FORCE_INLINE void doAssertRange(Fiber *fiber, Error *error)
     if (UNLIKELY(typeConvOverflow(destTypeKind, srcType->kind, arg)))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Overflow of %s", typeKindSpelling(destTypeKind));
 
-    fiber->ip++;
-}
-
-
-static FORCE_INLINE void doWeakenPtr(Fiber *fiber, HeapPages *pages)
-{
-    void *ptr = fiber->top->ptrVal;
-    uint64_t weakPtr = 0;
-
-    const HeapPage *page = pageFind(pages, ptr);
-    if (page)
-    {
-        const HeapChunk *chunk = pageGetChunk(page, ptr);
-        if (UNLIKELY(chunk->isStack))
-            pages->error->runtimeHandler(pages->error->context, ERR_RUNTIME, "Pointer to a local variable cannot be weak");
-
-        const bool isHeapPtr = true;
-        const int pageId = page->id;
-        const int pageOffset = (char *)ptr - (char *)page->data;
-
-        weakPtr = ((uint64_t)isHeapPtr << 63) | ((uint64_t)pageId << 32) | pageOffset;
-    }
-    else
-        weakPtr = (uint64_t)(uintptr_t)ptr;
-
-    fiber->top->weakPtrVal = weakPtr;
-    fiber->ip++;
-}
-
-
-static FORCE_INLINE void doStrengthenPtr(Fiber *fiber, HeapPages *pages)
-{
-    const uint64_t weakPtr = fiber->top->weakPtrVal;
-    void *ptr = NULL;
-
-    const bool isHeapPtr = (weakPtr >> 63) & 1;
-    if (isHeapPtr)
-    {
-        const int pageId = (weakPtr >> 32) & 0x7FFFFFFF;
-        HeapPage *page = pageFindById(pages, pageId);
-        if (page)
-        {
-            const int pageOffset = weakPtr & 0x7FFFFFFF;
-            ptr = (char *)page->data + pageOffset;
-
-            const HeapChunk *chunk = pageGetChunk(page, ptr);
-            if (UNLIKELY(chunk->isStack))
-                pages->error->runtimeHandler(pages->error->context, ERR_RUNTIME, "Pointer to a local variable cannot be weak");
-
-            if (chunk->refCnt == 0)
-                ptr = NULL;
-        }
-    }
-    else
-        ptr = (void *)(uintptr_t)weakPtr;
-
-    fiber->top->ptrVal = ptr;
     fiber->ip++;
 }
 
@@ -3990,6 +3691,7 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         case BUILTIN_RESUME:        doBuiltinResume(fiber, newFiber, error); break;
 
         // Misc
+        case BUILTIN_GC:            doBuiltinGc(fiber);                    break;
         case BUILTIN_MEMUSAGE:      doBuiltinMemUsage(fiber, pages, error); break;
         case BUILTIN_LEAKSAN:       doBuiltinLeakSan(fiber, pages, error); break;
         case BUILTIN_EXIT:          doBuiltinExit(fiber, error); return;
@@ -4002,6 +3704,9 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
 
 static FORCE_INLINE void doReturn(Fiber *fiber, Fiber **newFiber)
 {
+    // fiber->top - 1 is the base of the stack frame just left
+    const bool checkEscapes = *stackGetFrameHasEscapeSuspects(fiber->top - 1);
+
     // Pop return address
     const int returnOffset = (fiber->top++)->intVal;
 
@@ -4017,6 +3722,9 @@ static FORCE_INLINE void doReturn(Fiber *fiber, Fiber **newFiber)
         fiber->top += fiber->code[fiber->ip].operand.intVal;
         fiber->ip = returnOffset;
     }
+
+    if (UNLIKELY(checkEscapes))
+        vmCollectGarbage(fiber->vm, false);
 }
 
 
@@ -4033,7 +3741,7 @@ static FORCE_INLINE void doEnterFrame(Fiber *fiber, const UmkaHookFunc *hooks, E
     (--fiber->top)->ptrVal = fiber->base;
     fiber->base = fiber->top;
 
-    // Push stack frame ref count
+    // Push stack frame escape suspects flag
     (--fiber->top)->intVal = 0;
 
     // Push stack frame layout table pointer
@@ -4054,9 +3762,17 @@ static FORCE_INLINE void doEnterFrame(Fiber *fiber, const UmkaHookFunc *hooks, E
 
 static FORCE_INLINE void doLeaveFrame(Fiber *fiber, const UmkaHookFunc *hooks, Error *error)
 {
-    // Check stack frame ref count
-    if (UNLIKELY(*stackGetFrameRefCnt(fiber->base) != 0))
+    const StackFrameLayout *layout = stackGetFrameLayout(fiber->base);
+    const Type *resultType = getParamTypes(layout)->resultType;
+    const Slot result = fiber->reg[REG_RESULT];
+
+    if (UNLIKELY(resultType->kind == TYPE_PTR && result.ptrVal >= (void *)fiber->top && result.ptrVal < (void *)(stackGetFrameParams(fiber->base) + getParamLayout(layout)->numParamSlots)))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Pointer to a local variable escapes from the function");
+
+    // Stale registers would keep garbage alive
+    memset(fiber->reg, 0, sizeof(fiber->reg));
+    if (resultType->kind != TYPE_VOID)
+        fiber->reg[REG_RESULT] = result;
 
     // Call 'return' hook, if any
     doHook(fiber, hooks, UMKA_HOOK_RETURN);
@@ -4093,6 +3809,9 @@ static void vmLoop(VM *vm)
         if (UNLIKELY(fiber->top - fiber->stack < MEM_MIN_FREE_STACK))
             error->runtimeHandler(error->context, ERR_RUNTIME, "Stack overflow");
 
+        if (UNLIKELY(pages->gcRequested))
+            vmCollectGarbage(vm, false);
+
         switch (fiber->code[fiber->ip].opcode)
         {
             case OP_PUSH:                           doPush(fiber, error);                         break;
@@ -4109,14 +3828,9 @@ static void vmLoop(VM *vm)
             case OP_SWAP:                           doSwap(fiber);                                break;
             case OP_ZERO:                           doZero(fiber);                                break;
             case OP_DEREF:                          doDeref(fiber, error);                        break;
-            case OP_ASSIGN:                         doAssign(fiber, false, error);                break;
-            case OP_SWAP_ASSIGN:                    doAssign(fiber, true, error);                 break;
+            case OP_ASSIGN:                         doAssign(fiber, pages, false, error);         break;
+            case OP_SWAP_ASSIGN:                    doAssign(fiber, pages, true, error);          break;
             case OP_ASSIGN_PARAM:                   doAssignParam(fiber, error);                  break;
-            case OP_REF_CNT:                        doRefCnt(fiber, pages);                       break;
-            case OP_REF_CNT_GLOBAL:                 doRefCntGlobal(fiber, pages, error);          break;
-            case OP_REF_CNT_LOCAL:                  doRefCntLocal(fiber, pages, error);           break;
-            case OP_REF_CNT_ASSIGN:                 doRefCntAssign(fiber, pages, false, error);   break;
-            case OP_SWAP_REF_CNT_ASSIGN:            doRefCntAssign(fiber, pages, true, error);    break;
             case OP_UNARY:                          doUnary(fiber, error);                        break;
             case OP_BINARY:                         doBinary(fiber, pages, error);                break;
             case OP_GET_ARRAY_PTR:                  doGetArrayPtr(fiber, false, error);           break;
@@ -4129,8 +3843,6 @@ static void vmLoop(VM *vm)
             case OP_GET_FIELD:                      doGetFieldPtr(fiber, true, error);            break;
             case OP_ASSERT_TYPE:                    doAssertType(fiber);                          break;
             case OP_ASSERT_RANGE:                   doAssertRange(fiber, error);                  break;
-            case OP_WEAKEN_PTR:                     doWeakenPtr(fiber, pages);                    break;
-            case OP_STRENGTHEN_PTR:                 doStrengthenPtr(fiber, pages);                break;
             case OP_GOTO:                           doGoto(fiber);                                break;
             case OP_GOTO_IF:                        doGotoIf(fiber);                              break;
             case OP_GOTO_IF_NOT:                    doGotoIfNot(fiber);                           break;
@@ -4146,7 +3858,7 @@ static void vmLoop(VM *vm)
                     goto end;
 
                 if (newFiber)
-                    fiber = vm->fiber = vm->pages.fiber = newFiber;
+                    fiber = vm->fiber = newFiber;
 
                 break;
             }
@@ -4156,7 +3868,7 @@ static void vmLoop(VM *vm)
                 doReturn(fiber, &newFiber);
 
                 if (newFiber)
-                    fiber = vm->fiber = vm->pages.fiber = newFiber;
+                    fiber = vm->fiber = newFiber;
 
                 if (!fiber->alive || fiber->ip == RETURN_FROM_VM)
                     goto end;
@@ -4290,10 +4002,7 @@ int vmAsm(int ip, const Instruction *code, const DebugInfo *debugPerInstr, const
         case OP_PUSH_LOCAL:
         case OP_POP:
         case OP_ZERO:
-        case OP_ASSIGN:
-        case OP_SWAP_ASSIGN:
         case OP_ASSIGN_PARAM:
-        case OP_REF_CNT_LOCAL:
         case OP_GET_FIELD_PTR:
         case OP_GET_FIELD:
         case OP_GOTO:
@@ -4319,7 +4028,6 @@ int vmAsm(int ip, const Instruction *code, const DebugInfo *debugPerInstr, const
             break;
         }
         case OP_PUSH_GLOBAL:       
-        case OP_REF_CNT_GLOBAL:
         {
             chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %s", identSpellingByPtr(idents, instr->operand.ptrVal, varBuf)); 
             break;
@@ -4357,19 +4065,33 @@ void vmSetHook(VM *vm, UmkaHookEvent event, UmkaHookFunc hook)
 
 void *vmAllocData(VM *vm, int size, UmkaExternFunc onFree)
 {
-    return chunkAlloc(&vm->pages, size, NULL, onFree, false, vm->error);
+    return chunkAlloc(&vm->pages, size, NULL, onFree, vm->error);
 }
 
 
-void vmIncRef(VM *vm, void *ptr, const Type *type)
+void vmIncRef(VM *vm, void *ptr)
 {
-    doRefCntImpl(&vm->pages, ptr, type, TOK_PLUSPLUS);
+    HeapPage *page = pageFind(&vm->pages, ptr);
+    if (page)
+        gcCandidatePush(&vm->pages.hostRefs, pageGetChunk(page, ptr)->data, NULL);
 }
 
 
-void vmDecRef(VM *vm, void *ptr, const Type *type)
+void vmDecRef(VM *vm, void *ptr)
 {
-    doRefCntImpl(&vm->pages, ptr, type, TOK_MINUSMINUS);
+    HeapPage *page = pageFind(&vm->pages, ptr);
+    if (!page)
+        return;
+
+    GCCandidates *hostRefs = &vm->pages.hostRefs;
+    const void *data = pageGetChunk(page, ptr)->data;
+
+    for (int i = hostRefs->top; i >= 0; i--)
+        if (hostRefs->stack[i].ptr == data)
+        {
+            hostRefs->stack[i] = hostRefs->stack[hostRefs->top--];
+            return;
+        }
 }
 
 
@@ -4381,7 +4103,7 @@ void *vmGetMapNodeData(VM *vm, Map *map, void *key)
     Slot keySlot = {.ptrVal = key};
     doDerefImpl(&keySlot, typeMapKey(map->type)->kind, vm->error);
 
-    return doGetMapNodeData(map, keySlot, map->type, &vm->pages, vm->error);
+    return doGetMapNodeData(map, keySlot, map->type, vm->fiber, &vm->pages, vm->error);
 }
 
 
@@ -4390,11 +4112,7 @@ void vmGetMapKeys(VM *vm, Map *map, const Type *keysType, DynArray *keys)
     doAllocDynArray(&vm->pages, keys, keysType, (map && map->root) ? map->root->len : 0, vm->error);
 
     if (map && map->root)
-    {
         doGetMapKeys(map, keys->data, vm->error);
-        const Type staticArrayType = typeMakeDetachedArray(keys->type->base, getDims(keys)->len);
-        doRefCntImpl(&vm->pages, keys->data, &staticArrayType, TOK_PLUSPLUS);
-    }
 }
 
 
@@ -4414,20 +4132,19 @@ void vmMakeDynArray(VM *vm, DynArray *array, const Type *type, int len)
     if (!array)
         return;
 
-    doRefCntImpl(&vm->pages, array, type, TOK_MINUSMINUS);
     doAllocDynArray(&vm->pages, array, type, len, vm->error);
 }
 
 
 void *vmMakeStruct(VM *vm, const Type *type)
 {
-    return chunkAlloc(&vm->pages, type->size, type, NULL, false, vm->error);
+    return chunkAlloc(&vm->pages, type->size, type, NULL, vm->error);
 }
 
 
 int64_t vmGetMemUsage(VM *vm)
 {
-    return vm->pages.totalSize;
+    return vm->pages.occupiedSize;
 }
 
 

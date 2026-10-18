@@ -21,7 +21,7 @@ typedef struct tagIdent
     IdentName name;
     const Type *type;
     int module, block;                  // Place of definition (global identifiers are in block 0)
-    bool isExported, isGloballyAllocated, isUsed, isTemporary, isGarbageCollected;
+    bool isExported, isGloballyAllocated, isUsed, isTemporary;
     int prototypeOffset;                // For function prototypes
     union
     {
@@ -39,7 +39,6 @@ typedef struct tagIdent
 typedef struct tagIdents
 {
     Ident *first;
-    Ident *lastTempVarForResult;
     int tempVarNameSuffix;
     Storage *storage;
     DebugInfo *debug;
@@ -49,8 +48,6 @@ typedef struct tagIdents
 
 void identInit(Idents *idents, Storage *storage, DebugInfo *debug, Error *error);
 void identFree(Idents *idents, int block);
-
-void identMoveBefore(Idents *idents, const Ident *next);
 
 const Ident *identFind            (const Idents *idents, const Modules *modules, const Blocks *blocks, int module, const char *name, const Type *rcvType, bool markAsUsed);
 const Ident *identAssertFind      (const Idents *idents, const Modules *modules, const Blocks *blocks, int module, const char *name, const Type *rcvType);
@@ -69,7 +66,7 @@ Ident *identAddModule     (Idents *idents, const Modules *modules, const Blocks 
 
 int    identAllocStack    (Idents *idents, const Types *types, Blocks *blocks, const Type *type);
 Ident *identAllocVar      (Idents *idents, const Types *types, const Modules *modules, Blocks *blocks, const char *name, const Type *type, bool exported);
-Ident *identAllocTempVar  (Idents *idents, const Types *types, const Modules *modules, Blocks *blocks, const Type *type, bool isFuncResult);
+Ident *identAllocTempVar  (Idents *idents, const Types *types, const Modules *modules, Blocks *blocks, const Type *type);
 Ident *identAllocParam    (Idents *idents, const Types *types, const Modules *modules, const Blocks *blocks, const Signature *sig, int index);
 
 const char *identMethodNameWithRcv(const Idents *idents, const Ident *method);
