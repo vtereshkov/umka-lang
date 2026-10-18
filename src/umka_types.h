@@ -128,6 +128,7 @@ typedef struct tagType
     bool isVariadicParamList;                   // For dynamic arrays that represent variadic parameter lists
     bool isEnum;                                // For enumerations
     bool isGarbageCollected;
+    bool mayPointToStack;                       // For types that may hold pointers to local variables
     bool resolveByStructured;                   // For forward types that should be resolved by a structured type (used for function results)   
     const struct tagIdent *typeIdent;           // For types that have identifiers
     const struct tagType *sameAs;               // For types declared as type T = ...
@@ -393,6 +394,8 @@ static inline void typeSetBase(Type *type, const Type *base)
         type->base = base;
         if (type->kind == TYPE_ARRAY && base->isGarbageCollected)
             type->isGarbageCollected = true;
+        if (type->kind == TYPE_ARRAY && base->mayPointToStack)
+            type->mayPointToStack = true;
     }
 }
 

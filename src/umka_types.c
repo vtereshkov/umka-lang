@@ -117,6 +117,7 @@ Type *typeAdd(Types *types, const Blocks *blocks, TypeKind kind)
     type->kind  = kind;
     type->block = blocks->item[blocks->top].block;
     type->isGarbageCollected = typeHasPtr(type);
+    type->mayPointToStack = type->kind == TYPE_PTR || type->kind == TYPE_INTERFACE;
     type->sameAs = type;
 
     if (type->kind == TYPE_FN)
@@ -713,6 +714,9 @@ const Field *typeAddField(const Types *types, Type *structType, const Type *fiel
 
     if (fieldType->isGarbageCollected)
         structType->isGarbageCollected = true;
+
+    if (fieldType->mayPointToStack)
+        structType->mayPointToStack = true;
 
     return field;
 }

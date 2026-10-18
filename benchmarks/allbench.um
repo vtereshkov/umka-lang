@@ -6,6 +6,7 @@ import (
     "matrices.um"
     "maps.um"
     "literals.um"
+    "padding.um"
 )
 
 fn benchmark(f: fn ()) {
@@ -23,4 +24,5 @@ fn main() {
     printf("\n\n>>> Maps (descending keys)\n\n");   benchmark({maps::test(1000000, .Descending)})
     printf("\n\n>>> Maps (randomized keys)\n\n");   benchmark({maps::test(1000000, .Random)})
     printf("\n\n>>> Composite literals\n\n");       benchmark({literals::test()})
+    printf("\n\n>>> Sparse pointers\n\n");          benchmark({padding::test(50000)})
 }

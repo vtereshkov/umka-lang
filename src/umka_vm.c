@@ -833,32 +833,69 @@ static FORCE_INLINE void doAssignImpl(void *lhs, Slot rhs, TypeKind typeKind, in
 
 
 // A pointer to a local stored into an older stack frame escapes; stored into the heap or a global, it is checked when its frame is left
-static void doCheckEscapes(Fiber *fiber, HeapPages *pages, void *dest, int64_t size, Error *error)
+static FORCE_INLINE void doCheckPtrEscape(Fiber *fiber, HeapPages *pages, void *loc, Error *error)
 {
-    for (int64_t offset = 0; offset + (int64_t)sizeof(void *) <= size; offset += sizeof(void *))
-    {
-        void *loc = (char *)dest + offset;
-        void *ptr = *(void **)loc;
+    void *ptr = *(void **)loc;
 
-        if (ptr < (void *)fiber->top || ptr >= (void *)(fiber->stack + fiber->stackSize))
+    if (ptr < (void *)fiber->top || ptr >= (void *)(fiber->stack + fiber->stackSize))
+        return;
+
+    for (Slot *base = fiber->base; base != fiber->stack + fiber->stackSize - 1; base = base->ptrVal)
+    {
+        const Slot *frameEnd = stackGetFrameParams(base) + getParamLayout(stackGetFrameLayout(base))->numParamSlots;
+        if (ptr >= (void *)frameEnd)
             continue;
 
-        for (Slot *base = fiber->base; base != fiber->stack + fiber->stackSize - 1; base = base->ptrVal)
+        if (loc < (void *)fiber->top || loc >= (void *)frameEnd)
         {
-            const Slot *frameEnd = stackGetFrameParams(base) + getParamLayout(stackGetFrameLayout(base))->numParamSlots;
-            if (ptr >= (void *)frameEnd)
-                continue;
+            const HeapPage *page = pageFind(pages, loc);
+            if (UNLIKELY(page && pageGetChunk(page, loc)->kind == CHUNK_STACK))
+                error->runtimeHandler(error->context, ERR_RUNTIME, "Pointer to a local variable escapes from the function");
 
-            if (loc < (void *)fiber->top || loc >= (void *)frameEnd)
-            {
-                const HeapPage *page = pageFind(pages, loc);
-                if (UNLIKELY(page && pageGetChunk(page, loc)->kind == CHUNK_STACK))
-                    error->runtimeHandler(error->context, ERR_RUNTIME, "Pointer to a local variable escapes from the function");
+            (*stackGetFrameNumEscapeSuspects(base))++;
+        }
+        break;
+    }
+}
 
-                (*stackGetFrameNumEscapeSuspects(base))++;
-            }
+
+// Only pointers and interfaces may point to locals, so the rest of the value is skipped
+static void doCheckEscapes(Fiber *fiber, HeapPages *pages, void *dest, const Type *type, Error *error)
+{
+    if (!type->mayPointToStack)
+        return;
+
+    switch (type->kind)
+    {
+        case TYPE_PTR:
+        {
+            doCheckPtrEscape(fiber, pages, dest, error);
             break;
         }
+
+        case TYPE_INTERFACE:
+        {
+            doCheckPtrEscape(fiber, pages, &((Interface *)dest)->self, error);
+            break;
+        }
+
+        case TYPE_ARRAY:
+        {
+            for (int i = 0; i < type->numItems; i++)
+                doCheckEscapes(fiber, pages, (char *)dest + i * type->base->size, type->base, error);
+            break;
+        }
+
+        case TYPE_STRUCT:
+        case TYPE_CLOSURE:
+        {
+            for (int i = 0; i < type->numItems; i++)
+                doCheckEscapes(fiber, pages, (char *)dest + type->field[i]->offset, type->field[i]->type, error);
+            break;
+        }
+
+        default:
+            break;
     }
 }
 
@@ -1394,8 +1431,8 @@ static FORCE_INLINE void *doGetMapNodeData(Map *map, Slot key, const Type *mapTy
 
         doAssignImpl(node->key, key, keyType->kind, keyType->size, error);
 
-        if (keyType->isGarbageCollected)
-            doCheckEscapes(fiber, pages, node->key, keyType->size, error);
+        if (keyType->mayPointToStack)
+            doCheckEscapes(fiber, pages, node->key, keyType, error);
 
         map->root->len++;
     }
@@ -2111,8 +2148,9 @@ static FORCE_INLINE void doBuiltinMakeFromArr(Fiber *fiber, HeapPages *pages, Er
     doAllocDynArray(pages, dest, destType, len, error);
     memcpy(dest->data, src, getDims(dest)->len * dest->itemSize);
 
-    if (destType->base->isGarbageCollected)
-        doCheckEscapes(fiber, pages, dest->data, getDims(dest)->len * dest->itemSize, error);
+    if (destType->base->mayPointToStack)
+        for (int64_t i = 0; i < getDims(dest)->len; i++)
+            doCheckEscapes(fiber, pages, (char *)dest->data + i * dest->itemSize, destType->base, error);
 
     (--fiber->top)->ptrVal = dest;
 }
@@ -2329,8 +2367,9 @@ static FORCE_INLINE void doBuiltinAppend(Fiber *fiber, HeapPages *pages, Error *
 
     }
 
-    if (arrayType->base->isGarbageCollected)
-        doCheckEscapes(fiber, pages, (char *)result->data + (newLen - rhsLen) * array->itemSize, rhsLen * array->itemSize, error);
+    if (arrayType->base->mayPointToStack)
+        for (int64_t i = newLen - rhsLen; i < newLen; i++)
+            doCheckEscapes(fiber, pages, (char *)result->data + i * array->itemSize, arrayType->base, error);
 
     (--fiber->top)->ptrVal = result;
 }
@@ -2375,8 +2414,8 @@ static FORCE_INLINE void doBuiltinInsert(Fiber *fiber, HeapPages *pages, Error *
 
     }
 
-    if (arrayType->base->isGarbageCollected)
-        doCheckEscapes(fiber, pages, (char *)result->data + index * result->itemSize, result->itemSize, error);
+    if (arrayType->base->mayPointToStack)
+        doCheckEscapes(fiber, pages, (char *)result->data + index * result->itemSize, arrayType->base, error);
 
     (--fiber->top)->ptrVal = result;
 }
@@ -3045,8 +3084,8 @@ static FORCE_INLINE void doAssign(Fiber *fiber, HeapPages *pages, bool swap, Err
 
     doAssignImpl(lhs, rhs, type->kind, type->size, error);
 
-    if (type->isGarbageCollected && (lhs < (void *)fiber->top || lhs >= (void *)fiber->base))
-        doCheckEscapes(fiber, pages, lhs, type->size, error);
+    if (type->mayPointToStack && (lhs < (void *)fiber->top || lhs >= (void *)fiber->base))
+        doCheckEscapes(fiber, pages, lhs, type, error);
 
     fiber->ip++;
 }
