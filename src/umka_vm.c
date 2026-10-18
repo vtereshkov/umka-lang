@@ -881,13 +881,21 @@ FORCE_INLINE char *qsortPartition(char *first, char *last, int itemSize, QSortCo
 
 void qsortEx(char *first, char *last, int itemSize, QSortCompareFn compare, void *context, void *temp)
 {
-    if (first >= last)
-        return;
+    while (first < last)
+    {
+        char *partition = qsortPartition(first, last, itemSize, compare, context, temp);
 
-    char *partition = qsortPartition(first, last, itemSize, compare, context, temp);
-
-    qsortEx(first, partition - itemSize, itemSize, compare, context, temp);
-    qsortEx(partition + itemSize, last, itemSize, compare, context, temp);
+        if (partition - first < last - partition)
+        {
+            qsortEx(first, partition - itemSize, itemSize, compare, context, temp);
+            first = partition + itemSize;
+        }
+        else
+        {
+            qsortEx(partition + itemSize, last, itemSize, compare, context, temp);
+            last = partition - itemSize;
+        }
+    }
 }
 
 
