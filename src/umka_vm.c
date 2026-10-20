@@ -3710,9 +3710,6 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
 
 static FORCE_INLINE void doReturn(Fiber *fiber, Fiber **newFiber)
 {
-    // fiber->top - 1 is the base of the stack frame just left
-    const bool checkEscapes = *stackGetFrameHasEscapeSuspects(fiber->top - 1);
-
     // Pop return address
     const int returnOffset = (fiber->top++)->intVal;
 
@@ -3728,9 +3725,6 @@ static FORCE_INLINE void doReturn(Fiber *fiber, Fiber **newFiber)
         fiber->top += fiber->code[fiber->ip].operand.intVal;
         fiber->ip = returnOffset;
     }
-
-    if (UNLIKELY(checkEscapes))
-        vmCollectGarbage(fiber->vm, false);
 }
 
 
@@ -3782,6 +3776,13 @@ static FORCE_INLINE void doLeaveFrame(Fiber *fiber, const UmkaHookFunc *hooks, E
 
     // Call 'return' hook, if any
     doHook(fiber, hooks, UMKA_HOOK_RETURN);
+
+    // Check escapes while the frame can still be reported, but its local variables and parameters are already considered dead
+    if (UNLIKELY(*stackGetFrameHasEscapeSuspects(fiber->base)))
+    {
+        fiber->top = stackGetFrameParams(fiber->base) + getParamLayout(layout)->numParamSlots;
+        vmCollectGarbage(fiber->vm, false);
+    }
 
     // Restore stack top
     fiber->top = fiber->base;
