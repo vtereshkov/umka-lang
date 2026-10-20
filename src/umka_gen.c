@@ -1056,16 +1056,16 @@ int genAsm(CodeGen *gen, const Idents *idents, char *buf, int size)
     do
     {
         if (ip == 0 || gen->debugPerInstr[ip].fileName != gen->debugPerInstr[ip - 1].fileName)
-            chars += snprintf(nonnull(buf, chars), nonneg(size - chars), "\nModule: %s\n\n", gen->debugPerInstr[ip].fileName);
+            chars += snprintf(nonnull(buf, chars), sizeLeft(buf, size, chars), "\nModule: %s\n\n", gen->debugPerInstr[ip].fileName);
 
         if (gen->code[ip].opcode == OP_ENTER_FRAME)
-            chars += snprintf(nonnull(buf, chars), nonneg(size - chars), "\nFunction: %s\n\n", gen->debugPerInstr[ip].fnName);
+            chars += snprintf(nonnull(buf, chars), sizeLeft(buf, size, chars), "\nFunction: %s\n\n", gen->debugPerInstr[ip].fnName);
 
-        chars += vmAsm(ip, gen->code, gen->debugPerInstr, idents, nonnull(buf, chars), nonneg(size - chars));
-        chars += snprintf(nonnull(buf, chars), nonneg(size - chars), "\n");
+        chars += vmAsm(ip, gen->code, gen->debugPerInstr, idents, nonnull(buf, chars), sizeLeft(buf, size, chars));
+        chars += snprintf(nonnull(buf, chars), sizeLeft(buf, size, chars), "\n");
 
         if (gen->code[ip].opcode == OP_RETURN || jumpFrom[ip] || jumpTo[ip + 1])
-            chars += snprintf(nonnull(buf, chars), nonneg(size - chars), "\n");
+            chars += snprintf(nonnull(buf, chars), sizeLeft(buf, size, chars), "\n");
 
     } while (gen->code[ip++].opcode != OP_HALT);
 

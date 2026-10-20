@@ -559,7 +559,7 @@ static int fsnprintf(FILE *file, char *string, int size, const char *format, ...
     va_list args;
     va_start(args, format);
 
-    const int res = string ? vsnprintf(string, size, format, args) : vfprintf(file, format, args);
+    const int res = file ? vfprintf(file, format, args) : vsnprintf(string, size, format, args);
 
     va_end(args);
     return res;
@@ -1567,9 +1567,9 @@ static FORCE_INLINE int doPrintIndented(char *buf, int maxLen, int depth, bool p
         case '[':
         case '{':
         {
-            len += snprintf(nonnull(buf, len), maxLen, "%c", ch);
+            len += snprintf(nonnull(buf, len), sizeLeft(buf, maxLen, len), "%c", ch);
             if (pretty)
-                len += snprintf(nonnull(buf, len), maxLen, "\n%*c", INDENT_WIDTH * (depth + 1), ' ');
+                len += snprintf(nonnull(buf, len), sizeLeft(buf, maxLen, len), "\n%*c", INDENT_WIDTH * (depth + 1), ' ');
             break;
         }
 
@@ -1580,20 +1580,20 @@ static FORCE_INLINE int doPrintIndented(char *buf, int maxLen, int depth, bool p
             if (pretty)
             {
                 if (depth > 0)
-                    len += snprintf(nonnull(buf, len), maxLen, "\n%*c", INDENT_WIDTH * depth, ' ');
+                    len += snprintf(nonnull(buf, len), sizeLeft(buf, maxLen, len), "\n%*c", INDENT_WIDTH * depth, ' ');
                 else
-                    len += snprintf(nonnull(buf, len), maxLen, "\n");
+                    len += snprintf(nonnull(buf, len), sizeLeft(buf, maxLen, len), "\n");
             }
-            len += snprintf(nonnull(buf, len), maxLen, "%c", ch);
+            len += snprintf(nonnull(buf, len), sizeLeft(buf, maxLen, len), "%c", ch);
             break;
         }
 
         case ' ':
         {
             if (pretty)
-                len += snprintf(nonnull(buf, len), maxLen, "\n%*c", INDENT_WIDTH * (depth + 1), ' ');
+                len += snprintf(nonnull(buf, len), sizeLeft(buf, maxLen, len), "\n%*c", INDENT_WIDTH * (depth + 1), ' ');
             else
-                len += snprintf(nonnull(buf, len), maxLen, " ");
+                len += snprintf(nonnull(buf, len), sizeLeft(buf, maxLen, len), " ");
             break;
         }
 
@@ -1612,55 +1612,55 @@ static int doFillReprBuf(const Slot *slot, const Type *type, char *buf, int maxL
 
     if (depth == MAX_DEPTH)
     {
-        len += snprintf(nonnull(buf, len), maxLen, "...");
+        len += snprintf(nonnull(buf, len), sizeLeft(buf, maxLen, len), "...");
         return len;
     }
 
     switch (type->kind)
     {
-        case TYPE_VOID:     len += snprintf(nonnull(buf, len), maxLen, "void");                                                             break;
+        case TYPE_VOID:     len += snprintf(nonnull(buf, len), sizeLeft(buf, maxLen, len), "void");                                                             break;
         case TYPE_INT8:
         case TYPE_INT16:
         case TYPE_INT32:
         case TYPE_INT:
         case TYPE_UINT8:
         case TYPE_UINT16:
-        case TYPE_UINT32:   len += snprintf(nonnull(buf, len), maxLen, "%lld", (long long int)slot->intVal);                                break;
-        case TYPE_UINT:     len += snprintf(nonnull(buf, len), maxLen, "%llu", (unsigned long long int)slot->uintVal);                      break;
-        case TYPE_BOOL:     len += snprintf(nonnull(buf, len), maxLen, slot->intVal ? "true" : "false");                                    break;
+        case TYPE_UINT32:   len += snprintf(nonnull(buf, len), sizeLeft(buf, maxLen, len), "%lld", (long long int)slot->intVal);                                break;
+        case TYPE_UINT:     len += snprintf(nonnull(buf, len), sizeLeft(buf, maxLen, len), "%llu", (unsigned long long int)slot->uintVal);                      break;
+        case TYPE_BOOL:     len += snprintf(nonnull(buf, len), sizeLeft(buf, maxLen, len), slot->intVal ? "true" : "false");                                    break;
         case TYPE_CHAR:
         {
             const char *format = (unsigned char)slot->intVal >= ' ' ? "'%c'" : "0x%02X";
-            len += snprintf(nonnull(buf, len), maxLen, format, (unsigned char)slot->intVal);
+            len += snprintf(nonnull(buf, len), sizeLeft(buf, maxLen, len), format, (unsigned char)slot->intVal);
             break;
         }
         case TYPE_REAL32:
-        case TYPE_REAL:     len += snprintf(nonnull(buf, len), maxLen, "%lg", slot->realVal);                                               break;
+        case TYPE_REAL:     len += snprintf(nonnull(buf, len), sizeLeft(buf, maxLen, len), "%lg", slot->realVal);                                               break;
         case TYPE_PTR:
         {
-            len += snprintf(nonnull(buf, len), maxLen, "%p", slot->ptrVal);
+            len += snprintf(nonnull(buf, len), sizeLeft(buf, maxLen, len), "%p", slot->ptrVal);
 
             if (dereferenced && slot->ptrVal && type->base->kind != TYPE_VOID)
             {
                 Slot dataSlot = {.ptrVal = slot->ptrVal};
                 doDerefImpl(&dataSlot, type->base->kind, error);
 
-                len += snprintf(nonnull(buf, len), maxLen, " -> ");
-                len += doPrintIndented(nonnull(buf, len), maxLen, depth, pretty, '(');
-                len += doFillReprBuf(&dataSlot, type->base, nonnull(buf, len), maxLen, depth + 1, pretty, dereferenced, storage, error);
-                len += doPrintIndented(nonnull(buf, len), maxLen, depth, pretty, ')');
+                len += snprintf(nonnull(buf, len), sizeLeft(buf, maxLen, len), " -> ");
+                len += doPrintIndented(nonnull(buf, len), sizeLeft(buf, maxLen, len), depth, pretty, '(');
+                len += doFillReprBuf(&dataSlot, type->base, nonnull(buf, len), sizeLeft(buf, maxLen, len), depth + 1, pretty, dereferenced, storage, error);
+                len += doPrintIndented(nonnull(buf, len), sizeLeft(buf, maxLen, len), depth, pretty, ')');
             }
             break;
         }
         case TYPE_STR:
         {
             doCheckStr((char *)slot->ptrVal, error);
-            len += snprintf(nonnull(buf, len), maxLen, "\"%s\"", slot->ptrVal ? (char *)slot->ptrVal : "");
+            len += snprintf(nonnull(buf, len), sizeLeft(buf, maxLen, len), "\"%s\"", slot->ptrVal ? (char *)slot->ptrVal : "");
             break;
         }
         case TYPE_ARRAY:
         {
-            len += doPrintIndented(nonnull(buf, len), maxLen, depth, pretty, '[');
+            len += doPrintIndented(nonnull(buf, len), sizeLeft(buf, maxLen, len), depth, pretty, '[');
 
             char *itemPtr = slot->ptrVal;
             const int itemSize = type->base->size;
@@ -1669,21 +1669,21 @@ static int doFillReprBuf(const Slot *slot, const Type *type, char *buf, int maxL
             {
                 Slot itemSlot = {.ptrVal = itemPtr};
                 doDerefImpl(&itemSlot, type->base->kind, error);
-                len += doFillReprBuf(&itemSlot, type->base, nonnull(buf, len), maxLen, depth + 1, pretty, dereferenced, storage, error);
+                len += doFillReprBuf(&itemSlot, type->base, nonnull(buf, len), sizeLeft(buf, maxLen, len), depth + 1, pretty, dereferenced, storage, error);
 
                 if (i < type->numItems - 1)
-                    len += doPrintIndented(nonnull(buf, len), maxLen, depth, pretty, ' ');
+                    len += doPrintIndented(nonnull(buf, len), sizeLeft(buf, maxLen, len), depth, pretty, ' ');
 
                 itemPtr += itemSize;
             }
 
-            len += doPrintIndented(nonnull(buf, len), maxLen, depth, pretty, ']');
+            len += doPrintIndented(nonnull(buf, len), sizeLeft(buf, maxLen, len), depth, pretty, ']');
             break;
         }
 
         case TYPE_DYNARRAY:
         {
-            len += doPrintIndented(nonnull(buf, len), maxLen, depth, pretty, '[');
+            len += doPrintIndented(nonnull(buf, len), sizeLeft(buf, maxLen, len), depth, pretty, '[');
 
             const DynArray *array = slot->ptrVal;
             if (array && array->data)
@@ -1693,22 +1693,22 @@ static int doFillReprBuf(const Slot *slot, const Type *type, char *buf, int maxL
                 {
                     Slot itemSlot = {.ptrVal = itemPtr};
                     doDerefImpl(&itemSlot, type->base->kind, error);
-                    len += doFillReprBuf(&itemSlot, type->base, nonnull(buf, len), maxLen, depth + 1, pretty, dereferenced, storage, error);
+                    len += doFillReprBuf(&itemSlot, type->base, nonnull(buf, len), sizeLeft(buf, maxLen, len), depth + 1, pretty, dereferenced, storage, error);
 
                     if (i < getDims(array)->len - 1)
-                        len += doPrintIndented(nonnull(buf, len), maxLen, depth, pretty, ' ');
+                        len += doPrintIndented(nonnull(buf, len), sizeLeft(buf, maxLen, len), depth, pretty, ' ');
 
                     itemPtr += array->itemSize;
                 }
             }
 
-            len += doPrintIndented(nonnull(buf, len), maxLen, depth, pretty, ']');
+            len += doPrintIndented(nonnull(buf, len), sizeLeft(buf, maxLen, len), depth, pretty, ']');
             break;
         }
 
         case TYPE_MAP:
         {
-            len += doPrintIndented(nonnull(buf, len), maxLen, depth, pretty, '{');
+            len += doPrintIndented(nonnull(buf, len), sizeLeft(buf, maxLen, len), depth, pretty, '{');
 
             Map *map = slot->ptrVal;
             if (map && map->root)
@@ -1725,9 +1725,9 @@ static int doFillReprBuf(const Slot *slot, const Type *type, char *buf, int maxL
                 {
                     Slot keySlot = {.ptrVal = keyPtr};
                     doDerefImpl(&keySlot, keyType->kind, error);
-                    len += doFillReprBuf(&keySlot, keyType, nonnull(buf, len), maxLen, depth + 1, pretty, dereferenced, storage, error);
+                    len += doFillReprBuf(&keySlot, keyType, nonnull(buf, len), sizeLeft(buf, maxLen, len), depth + 1, pretty, dereferenced, storage, error);
 
-                    len += snprintf(nonnull(buf, len), maxLen, ": ");
+                    len += snprintf(nonnull(buf, len), sizeLeft(buf, maxLen, len), ": ");
 
                     const MapNode *node = *doGetMapNode(map, keySlot, false, NULL, error);
                     if (UNLIKELY(!node))
@@ -1735,10 +1735,10 @@ static int doFillReprBuf(const Slot *slot, const Type *type, char *buf, int maxL
 
                     Slot itemSlot = {.ptrVal = node->data};
                     doDerefImpl(&itemSlot, itemType->kind, error);
-                    len += doFillReprBuf(&itemSlot, itemType, nonnull(buf, len), maxLen, depth + 1, pretty, dereferenced, storage, error);
+                    len += doFillReprBuf(&itemSlot, itemType, nonnull(buf, len), sizeLeft(buf, maxLen, len), depth + 1, pretty, dereferenced, storage, error);
 
                     if (i < map->root->len - 1)
-                        len += doPrintIndented(nonnull(buf, len), maxLen, depth, pretty, ' ');
+                        len += doPrintIndented(nonnull(buf, len), sizeLeft(buf, maxLen, len), depth, pretty, ' ');
 
                     keyPtr += keyType->size;
                 }
@@ -1746,7 +1746,7 @@ static int doFillReprBuf(const Slot *slot, const Type *type, char *buf, int maxL
                 storageRemove(storage, keys);
             }
 
-            len += doPrintIndented(nonnull(buf, len), maxLen, depth, pretty, '}');
+            len += doPrintIndented(nonnull(buf, len), sizeLeft(buf, maxLen, len), depth, pretty, '}');
             break;
         }
 
@@ -1754,7 +1754,7 @@ static int doFillReprBuf(const Slot *slot, const Type *type, char *buf, int maxL
         case TYPE_STRUCT:
         case TYPE_CLOSURE:
         {
-            len += doPrintIndented(nonnull(buf, len), maxLen, depth, pretty, '{');
+            len += doPrintIndented(nonnull(buf, len), sizeLeft(buf, maxLen, len), depth, pretty, '{');
 
             bool skipNames = typeExprListStruct(type);
 
@@ -1763,14 +1763,14 @@ static int doFillReprBuf(const Slot *slot, const Type *type, char *buf, int maxL
                 Slot fieldSlot = {.ptrVal = (char *)slot->ptrVal + type->field[i]->offset};
                 doDerefImpl(&fieldSlot, type->field[i]->type->kind, error);
                 if (!skipNames)
-                    len += snprintf(nonnull(buf, len), maxLen, "%s: ", type->field[i]->name);
-                len += doFillReprBuf(&fieldSlot, type->field[i]->type, nonnull(buf, len), maxLen, depth + 1, pretty, dereferenced, storage, error);
+                    len += snprintf(nonnull(buf, len), sizeLeft(buf, maxLen, len), "%s: ", type->field[i]->name);
+                len += doFillReprBuf(&fieldSlot, type->field[i]->type, nonnull(buf, len), sizeLeft(buf, maxLen, len), depth + 1, pretty, dereferenced, storage, error);
 
                 if (i < type->numItems - 1)
-                    len += doPrintIndented(nonnull(buf, len), maxLen, depth, pretty, ' ');
+                    len += doPrintIndented(nonnull(buf, len), sizeLeft(buf, maxLen, len), depth, pretty, ' ');
             }
 
-            len += doPrintIndented(nonnull(buf, len), maxLen, depth, pretty, '}');
+            len += doPrintIndented(nonnull(buf, len), sizeLeft(buf, maxLen, len), depth, pretty, '}');
             break;
         }
 
@@ -1785,22 +1785,22 @@ static int doFillReprBuf(const Slot *slot, const Type *type, char *buf, int maxL
                 if (pretty)
                 {
                     char selfTypeBuf[DEFAULT_STR_LEN + 1];
-                    len += snprintf(nonnull(buf, len), maxLen, "%s", typeSpelling(interface->selfType->base, selfTypeBuf));
-                    len += doPrintIndented(nonnull(buf, len), maxLen, depth, pretty, '(');
+                    len += snprintf(nonnull(buf, len), sizeLeft(buf, maxLen, len), "%s", typeSpelling(interface->selfType->base, selfTypeBuf));
+                    len += doPrintIndented(nonnull(buf, len), sizeLeft(buf, maxLen, len), depth, pretty, '(');
                 }
 
-                len += doFillReprBuf(&selfSlot, interface->selfType->base, nonnull(buf, len), maxLen, depth + 1, pretty, dereferenced, storage, error);
+                len += doFillReprBuf(&selfSlot, interface->selfType->base, nonnull(buf, len), sizeLeft(buf, maxLen, len), depth + 1, pretty, dereferenced, storage, error);
 
                 if (pretty)
-                    len += doPrintIndented(nonnull(buf, len), maxLen, depth, pretty, ')');
+                    len += doPrintIndented(nonnull(buf, len), sizeLeft(buf, maxLen, len), depth, pretty, ')');
             }
             else
-                len += snprintf(nonnull(buf, len), maxLen, "null");
+                len += snprintf(nonnull(buf, len), sizeLeft(buf, maxLen, len), "null");
             break;
         }
 
-        case TYPE_FIBER:    len += snprintf(nonnull(buf, len), maxLen, "fiber @ %p", slot->ptrVal);                break;
-        case TYPE_FN:       len += snprintf(nonnull(buf, len), maxLen, "fn @ %lld", (long long int)slot->intVal);  break;
+        case TYPE_FIBER:    len += snprintf(nonnull(buf, len), sizeLeft(buf, maxLen, len), "fiber @ %p", slot->ptrVal);                break;
+        case TYPE_FN:       len += snprintf(nonnull(buf, len), sizeLeft(buf, maxLen, len), "fn @ %lld", (long long int)slot->intVal);  break;
         default:            break;
     }
 
@@ -3973,16 +3973,16 @@ int vmAsm(int ip, const Instruction *code, const DebugInfo *debugPerInstr, const
     int chars = snprintf(buf, size, "%09d %6d %28s", ip, debug->line, opcodeBuf);
 
     if (instr->tokKind != TOK_NONE)
-        chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %s", lexSpelling(instr->tokKind));
+        chars += snprintf(nonnull(buf, chars), sizeLeft(buf, size, chars), " %s", lexSpelling(instr->tokKind));
 
     if (instr->type)
     {
         char typeBuf[DEFAULT_STR_LEN + 1];
-        chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %s", typeSpelling(instr->type, typeBuf));
+        chars += snprintf(nonnull(buf, chars), sizeLeft(buf, size, chars), " %s", typeSpelling(instr->type, typeBuf));
     }
 
     if (instr->typeKind != TYPE_NONE && (!instr->type || instr->opcode == OP_ASSERT_RANGE || instr->opcode == OP_GET_MAP))
-        chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %s", typeKindSpelling(instr->typeKind));
+        chars += snprintf(nonnull(buf, chars), sizeLeft(buf, size, chars), " %s", typeKindSpelling(instr->typeKind));
 
     char varBuf[DEFAULT_STR_LEN + 1];
     
@@ -3991,17 +3991,17 @@ int vmAsm(int ip, const Instruction *code, const DebugInfo *debugPerInstr, const
         case OP_PUSH:
         {
             if (instr->typeKind == TYPE_PTR)
-                chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %s", identSpellingByPtr(idents, instr->operand.ptrVal, varBuf));
+                chars += snprintf(nonnull(buf, chars), sizeLeft(buf, size, chars), " %s", identSpellingByPtr(idents, instr->operand.ptrVal, varBuf));
             else if (instr->typeKind == TYPE_REAL)
-                chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %lg", instr->operand.realVal);
+                chars += snprintf(nonnull(buf, chars), sizeLeft(buf, size, chars), " %lg", instr->operand.realVal);
             else
-                chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %lld", (long long int)instr->operand.intVal);
+                chars += snprintf(nonnull(buf, chars), sizeLeft(buf, size, chars), " %lld", (long long int)instr->operand.intVal);
             break;
         }
         case OP_PUSH_REG:
         case OP_POP_REG:
         {
-            chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %s", regSpelling[instr->operand.intVal]); 
+            chars += snprintf(nonnull(buf, chars), sizeLeft(buf, size, chars), " %s", regSpelling[instr->operand.intVal]); 
             break;
         }
         case OP_PUSH_ZERO:
@@ -4018,36 +4018,36 @@ int vmAsm(int ip, const Instruction *code, const DebugInfo *debugPerInstr, const
         case OP_CALL_INDIRECT:
         case OP_RETURN:                 
         {
-            chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %lld", (long long int)instr->operand.intVal); 
+            chars += snprintf(nonnull(buf, chars), sizeLeft(buf, size, chars), " %lld", (long long int)instr->operand.intVal); 
             break;
         }
         case OP_CALL:
         {
             const char *fnName = debugPerInstr[instr->operand.intVal].fnName;
-            chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %s (%lld)", fnName, (long long int)instr->operand.intVal);
+            chars += snprintf(nonnull(buf, chars), sizeLeft(buf, size, chars), " %s (%lld)", fnName, (long long int)instr->operand.intVal);
             break;
         }
         case OP_PUSH_LOCAL_PTR_ZERO:
         case OP_GET_ARRAY_PTR:
         case OP_GET_ARRAY:              
         {
-            chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %d %d", (int)instr->operand.int32Val[0], (int)instr->operand.int32Val[1]); 
+            chars += snprintf(nonnull(buf, chars), sizeLeft(buf, size, chars), " %d %d", (int)instr->operand.int32Val[0], (int)instr->operand.int32Val[1]); 
             break;
         }
         case OP_PUSH_GLOBAL:       
         {
-            chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %s", identSpellingByPtr(idents, instr->operand.ptrVal, varBuf)); 
+            chars += snprintf(nonnull(buf, chars), sizeLeft(buf, size, chars), " %s", identSpellingByPtr(idents, instr->operand.ptrVal, varBuf)); 
             break;
         }
         case OP_ENTER_FRAME:
         case OP_CALL_EXTERN:            
         {
-            chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %p",instr->operand.ptrVal); 
+            chars += snprintf(nonnull(buf, chars), sizeLeft(buf, size, chars), " %p",instr->operand.ptrVal); 
             break;
         }
         case OP_CALL_BUILTIN:
         {
-            chars += snprintf(nonnull(buf, chars), nonneg(size - chars), " %s", builtinSpelling[instr->operand.builtinVal]); 
+            chars += snprintf(nonnull(buf, chars), sizeLeft(buf, size, chars), " %s", builtinSpelling[instr->operand.builtinVal]); 
             break;
         }
         default: 

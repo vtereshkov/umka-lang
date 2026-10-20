@@ -879,26 +879,26 @@ static char *typeSpellingRecursive(const Type *type, char *buf, int size, int de
 
         if (type->kind == TYPE_ARRAY)
         {
-            len += snprintf(buf + len, nonneg(size - len), "[%d]", type->numItems);
+            len += snprintf(buf + len, sizeLeft(buf, size, len), "[%d]", type->numItems);
         }
         else if (typeEnum(type))
         {
-            len += snprintf(buf + len, nonneg(size - len), "enum(%s)", typeKindSpelling(type->kind));
+            len += snprintf(buf + len, sizeLeft(buf, size, len), "enum(%s)", typeKindSpelling(type->kind));
         }
         else if (type->kind == TYPE_MAP)
         {
             char keyBuf[DEFAULT_STR_LEN + 1];
-            len += snprintf(buf + len, nonneg(size - len), "map[%s]", typeSpellingRecursive(typeMapKey(type), keyBuf, DEFAULT_STR_LEN + 1, depth - 1));
+            len += snprintf(buf + len, sizeLeft(buf, size, len), "map[%s]", typeSpellingRecursive(typeMapKey(type), keyBuf, DEFAULT_STR_LEN + 1, depth - 1));
         }
         else if (typeExprListStruct(type))
         {
-            len += snprintf(buf + len, nonneg(size - len), "{ ");
+            len += snprintf(buf + len, sizeLeft(buf, size, len), "{ ");
             for (int i = 0; i < type->numItems; i++)
             {
                 char fieldBuf[DEFAULT_STR_LEN + 1];
-                len += snprintf(buf + len, nonneg(size - len), "%s ", typeSpellingRecursive(type->field[i]->type, fieldBuf, DEFAULT_STR_LEN + 1, depth - 1));
+                len += snprintf(buf + len, sizeLeft(buf, size, len), "%s ", typeSpellingRecursive(type->field[i]->type, fieldBuf, DEFAULT_STR_LEN + 1, depth - 1));
             }
-            len += snprintf(buf + len, nonneg(size - len), "}");
+            len += snprintf(buf + len, sizeLeft(buf, size, len), "}");
         }
         else if (type->kind == TYPE_FN || type->kind == TYPE_CLOSURE)
         {
@@ -906,12 +906,12 @@ static char *typeSpellingRecursive(const Type *type, char *buf, int size, int de
             if (isClosure)
                 type = type->field[0]->type;
 
-            len += snprintf(buf + len, nonneg(size - len), "fn (");
+            len += snprintf(buf + len, sizeLeft(buf, size, len), "fn (");
 
             if (type->sig->isMethod)
             {
                 char paramBuf[DEFAULT_STR_LEN + 1];
-                len += snprintf(buf + len, nonneg(size - len), "%s) (", typeSpellingRecursive(type->sig->param[0]->type, paramBuf, DEFAULT_STR_LEN + 1, depth - 1));
+                len += snprintf(buf + len, sizeLeft(buf, size, len), "%s) (", typeSpellingRecursive(type->sig->param[0]->type, paramBuf, DEFAULT_STR_LEN + 1, depth - 1));
             }
 
             const int numPreHiddenParams = 1;                                                 // #self or #upvalues
@@ -920,26 +920,26 @@ static char *typeSpellingRecursive(const Type *type, char *buf, int size, int de
             for (int i = numPreHiddenParams; i < type->sig->numParams - numPostHiddenParams; i++)
             {
                 if (i > numPreHiddenParams)
-                    len += snprintf(buf + len, nonneg(size - len), ", ");
+                    len += snprintf(buf + len, sizeLeft(buf, size, len), ", ");
 
                 char paramBuf[DEFAULT_STR_LEN + 1];
-                len += snprintf(buf + len, nonneg(size - len), "%s", typeSpellingRecursive(type->sig->param[i]->type, paramBuf, DEFAULT_STR_LEN + 1, depth - 1));
+                len += snprintf(buf + len, sizeLeft(buf, size, len), "%s", typeSpellingRecursive(type->sig->param[i]->type, paramBuf, DEFAULT_STR_LEN + 1, depth - 1));
             }
 
-            len += snprintf(buf + len, nonneg(size - len), ")");
+            len += snprintf(buf + len, sizeLeft(buf, size, len), ")");
 
             if (type->sig->resultType->kind != TYPE_VOID)
             {
                 char resultBuf[DEFAULT_STR_LEN + 1];
-                len += snprintf(buf + len, nonneg(size - len), ": %s", typeSpellingRecursive(type->sig->resultType, resultBuf, DEFAULT_STR_LEN + 1, depth - 1));
+                len += snprintf(buf + len, sizeLeft(buf, size, len), ": %s", typeSpellingRecursive(type->sig->resultType, resultBuf, DEFAULT_STR_LEN + 1, depth - 1));
             }
 
             if (isClosure)
-                len += snprintf(buf + len, nonneg(size - len), " |...|");
+                len += snprintf(buf + len, sizeLeft(buf, size, len), " |...|");
         }
         else
         {
-            snprintf(buf + len, nonneg(size - len), "%s", spelling[type->kind]);
+            snprintf(buf + len, sizeLeft(buf, size, len), "%s", spelling[type->kind]);
         }
 
         if (type->kind == TYPE_PTR || type->kind == TYPE_ARRAY || type->kind == TYPE_DYNARRAY || type->kind == TYPE_MAP)
@@ -948,9 +948,9 @@ static char *typeSpellingRecursive(const Type *type, char *buf, int size, int de
 
             char itemBuf[DEFAULT_STR_LEN + 1];
             if (depth > 0)
-                strncat(buf, typeSpellingRecursive(itemType, itemBuf, DEFAULT_STR_LEN + 1, depth - 1), nonneg(size - len - 1));
+                strncat(buf, typeSpellingRecursive(itemType, itemBuf, DEFAULT_STR_LEN + 1, depth - 1), sizeLeft(buf, size, len + 1));
             else
-                strncat(buf, "...", nonneg(size - len - 1));
+                strncat(buf, "...", sizeLeft(buf, size, len + 1));
         }
     }
     return buf;

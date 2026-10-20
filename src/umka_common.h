@@ -259,15 +259,16 @@ External *externalFind  (const Externals *externals, const char *name);
 External *externalAdd   (Externals *externals, const char *name, void *entry, void *upvalue, bool resolveInTrusted);
 
 
-static inline int64_t nonneg(int64_t size)
-{
-    return (size > 0) ? size : 0;
-}
-
-
 static inline char *nonnull(char *buf, int64_t offset)
 {
     return buf ? buf + offset : NULL;
+}
+
+
+// Space left in the buffer, which is zero if there is no buffer and only the length of the output is needed
+static inline int64_t sizeLeft(const char *buf, int64_t size, int64_t offset)
+{
+    return (buf && size > offset) ? size - offset : 0;
 }
 
 
