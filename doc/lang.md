@@ -219,7 +219,7 @@ A variable that stores a memory address of another variable has a pointer type. 
 
 Umka performs automatic memory management using a mark-and-sweep garbage collector. The collector runs between instructions, so the exact moment at which unreachable memory is deallocated is not specified. The `weak` keyword is deprecated. It is accepted for backward compatibility but ignored.
 
-A pointer to a local variable must not outlive the function whose variable it points to. Such an escaping pointer is reported as a runtime error when the garbage is collected, i.e. possibly later than the escape itself.
+A pointer to a local variable must not outlive the function whose variable it points to. It can be stored in the local variables of this function and passed to the functions it calls, but storing it in a global variable or on the heap (e.g., in a dynamic array, a map, a value converted to an interface, or a closure's captured variables) or returning it from the function is a runtime error, reported immediately. Variadic parameter lists are stored on the caller's stack, so pointers to local variables can be passed as variadic parameters.
 
 Syntax:
 

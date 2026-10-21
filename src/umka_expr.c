@@ -1643,8 +1643,13 @@ static void parseVariadicParamList(Umka *umka, const Type **type)
 
     if (staticArrayType->numItems > 0)
     {
-        // Allocate array
-        const int staticArrayOffset = identAllocStack(&umka->idents, &umka->types, &umka->blocks, staticArrayType);
+        // Allocate dynamic array on the stack: header, dimensions and items adjacent to each other
+        Type *listType = typeAdd(&umka->types, &umka->blocks, TYPE_STRUCT);
+        typeAddField(&umka->types, listType, umka->types.predecl.dynArrayHeaderAndDimsType, "#headerAndDims");
+        const Field *items = typeAddField(&umka->types, listType, staticArrayType, "#items");
+
+        const int listOffset = identAllocStack(&umka->idents, &umka->types, &umka->blocks, listType);
+        const int staticArrayOffset = listOffset + items->offset;
 
         // Assign items
         for (int i = staticArrayType->numItems - 1; i >= 0; i--)
@@ -1653,10 +1658,26 @@ static void parseVariadicParamList(Umka *umka, const Type **type)
             genSwapAssign(&umka->gen, staticArrayType->base);
         }
 
-        genPushLocalPtr(&umka->gen, staticArrayOffset);
+        // Assign header and dimensions known at compile time
+        char *headerAndDims = storageAdd(&umka->storage, typeSize(&umka->types, umka->types.predecl.dynArrayHeaderAndDimsType));
 
-        // Convert to dynamic array
-        doAssertImplicitTypeConv(umka, *type, (const Type **)&staticArrayType, NULL);        
+        DynArray *header = (DynArray *)headerAndDims;
+        header->type = *type;
+        header->itemSize = itemSize;
+
+        DynArrayDimensions *dims = (DynArrayDimensions *)(headerAndDims + sizeof(DynArray));
+        dims->len = dims->capacity = staticArrayType->numItems;
+
+        genPushLocalPtr(&umka->gen, listOffset);
+        genPushGlobalPtr(&umka->gen, headerAndDims);
+        genAssign(&umka->gen, umka->types.predecl.dynArrayHeaderAndDimsType);
+
+        // Point header to items
+        genPushLocalPtr(&umka->gen, listOffset + offsetof(DynArray, data));
+        genPushLocalPtr(&umka->gen, staticArrayOffset);
+        genAssign(&umka->gen, umka->types.predecl.ptrVoidType);
+
+        genPushLocalPtr(&umka->gen, listOffset);
     }
     else
     {

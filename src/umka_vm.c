@@ -48,7 +48,7 @@ Virtual machine stack layout (64-bit slots):
     ...
     Local variable 0
     Stack frame layout table pointer
-    Stack frame escape suspects flag
+    Reserved
     Caller's stack frame base pointer                <- Stack frame base pointer
     Return address
     Parameter N                                      <- Parameter array passed to external functions
@@ -259,12 +259,6 @@ static FORCE_INLINE const StackFrameLayout *stackGetFrameLayout(const Slot *base
 }
 
 
-static FORCE_INLINE bool *stackGetFrameHasEscapeSuspects(const Slot *base)
-{
-    return (bool *)&base[-1].intVal;
-}
-
-
 static FORCE_INLINE int stackGetFrameReturnOffset(const Slot *base)
 {
     return base[1].intVal;
@@ -301,7 +295,6 @@ static void pageInit(HeapPages *pages, Storage *storage, Error *error)
     pages->gcThreshold = MEM_MIN_GC_THRESHOLD;
     pages->gcRequested = false;
     gcCandidateInit(&pages->markCandidates, storage);
-    gcCandidateInit(&pages->escapeSuspects, storage);
     gcCandidateInit(&pages->roots, storage);
     gcCandidateInit(&pages->hostRefs, storage);
     pages->error = error;
@@ -832,8 +825,8 @@ static FORCE_INLINE void doAssignImpl(void *lhs, Slot rhs, TypeKind typeKind, in
 }
 
 
-// A pointer to a local stored into an older stack frame escapes; stored into the heap or a global, it is checked when its frame is left
-static FORCE_INLINE void gcDetectPtrEscapeSuspect(Fiber *fiber, HeapPages *pages, void *loc, Error *error)
+// A pointer to a local can only be stored into its own stack frame or a younger one, never into an older frame, another fiber's stack, the heap or a global
+static FORCE_INLINE void doCheckPtrEscape(Fiber *fiber, void *loc, Error *error)
 {
     void *ptr = *(void **)loc;
 
@@ -846,21 +839,15 @@ static FORCE_INLINE void gcDetectPtrEscapeSuspect(Fiber *fiber, HeapPages *pages
         if (ptr >= (void *)frameEnd)
             continue;
 
-        if (loc < (void *)fiber->top || loc >= (void *)frameEnd)
-        {
-            const HeapPage *page = pageFind(pages, loc);
-            if (UNLIKELY(page && pageGetChunk(page, loc)->kind == CHUNK_STACK))
-                error->runtimeHandler(error->context, ERR_RUNTIME, "Pointer to a local variable escapes from the function");
-
-            *stackGetFrameHasEscapeSuspects(base) = true;
-        }
+        if (UNLIKELY(loc < (void *)fiber->top || loc >= (void *)frameEnd))
+            error->runtimeHandler(error->context, ERR_RUNTIME, "Pointer to a local variable escapes from the function");
         break;
     }
 }
 
 
-// Only pointers and interfaces may point to locals, so the rest of the value is skipped
-static void gcDetectEscapeSuspects(Fiber *fiber, HeapPages *pages, void *dest, const Type *type, Error *error)
+// Only pointers, interfaces and dynamic arrays (variadic parameter lists are stored on the stack) may point to locals, so the rest of the value is skipped
+static void doCheckEscapes(Fiber *fiber, void *dest, const Type *type, Error *error)
 {
     if (!type->mayPointToStack)
         return;
@@ -869,20 +856,26 @@ static void gcDetectEscapeSuspects(Fiber *fiber, HeapPages *pages, void *dest, c
     {
         case TYPE_PTR:
         {
-            gcDetectPtrEscapeSuspect(fiber, pages, dest, error);
+            doCheckPtrEscape(fiber, dest, error);
             break;
         }
 
         case TYPE_INTERFACE:
         {
-            gcDetectPtrEscapeSuspect(fiber, pages, &((Interface *)dest)->self, error);
+            doCheckPtrEscape(fiber, &((Interface *)dest)->self, error);
+            break;
+        }
+
+        case TYPE_DYNARRAY:
+        {
+            doCheckPtrEscape(fiber, &((DynArray *)dest)->data, error);
             break;
         }
 
         case TYPE_ARRAY:
         {
             for (int i = 0; i < type->numItems; i++)
-                gcDetectEscapeSuspects(fiber, pages, (char *)dest + i * type->base->size, type->base, error);
+                doCheckEscapes(fiber, (char *)dest + i * type->base->size, type->base, error);
             break;
         }
 
@@ -890,13 +883,24 @@ static void gcDetectEscapeSuspects(Fiber *fiber, HeapPages *pages, void *dest, c
         case TYPE_CLOSURE:
         {
             for (int i = 0; i < type->numItems; i++)
-                gcDetectEscapeSuspects(fiber, pages, (char *)dest + type->field[i]->offset, type->field[i]->type, error);
+                doCheckEscapes(fiber, (char *)dest + type->field[i]->offset, type->field[i]->type, error);
             break;
         }
 
         default:
             break;
     }
+}
+
+
+// Items copied to the heap from a variadic parameter list on the stack may point to locals
+static void doCheckCopiedItemEscapes(Fiber *fiber, const void *srcItems, void *destItems, const Type *itemType, int64_t len, Error *error)
+{
+    if (!itemType->mayPointToStack || srcItems < (void *)fiber->top || srcItems >= (void *)(fiber->stack + fiber->stackSize))
+        return;
+
+    for (int64_t i = 0; i < len; i++)
+        doCheckEscapes(fiber, (char *)destItems + i * itemType->size, itemType, error);
 }
 
 
@@ -1040,10 +1044,6 @@ static FORCE_INLINE void gcMarkPtr(HeapPages *pages, void *ptr, const Type *ptrT
     if (!chunk->allocated)
         return;
 
-    // Stacks and registers are scanned conservatively
-    if (UNLIKELY(ptrType && chunk->kind == CHUNK_STACK))
-        gcCandidatePush(&pages->escapeSuspects, ptr, NULL);
-
     if (chunk->marked)
         return;
 
@@ -1108,7 +1108,6 @@ static void gcMark(VM *vm)
     GCCandidates *candidates = &pages->markCandidates;
 
     gcCandidateReset(candidates);
-    gcCandidateReset(&pages->escapeSuspects);
 
     // Roots: all the fibers being executed
     for (const Fiber *fiber = vm->fiber; fiber; fiber = fiber->parent)
@@ -1192,34 +1191,6 @@ static void gcMark(VM *vm)
 }
 
 
-static bool gcPtrIsInLiveFrame(const Fiber *fiber, const void *ptr)
-{
-    return ptr >= (const void *)fiber->top && ptr < (const void *)(fiber->stack + fiber->stackSize);
-}
-
-
-// A pointer to a local variable is legal as long as the frame it points to has not been left yet and belongs to the running fiber
-static void gcCheckEscapes(VM *vm, bool suspending)
-{
-    HeapPages *pages = &vm->pages;
-    GCCandidates *suspects = &pages->escapeSuspects;
-
-    while (suspects->top >= 0)
-    {
-        void *ptr = NULL;
-        const Type *type = NULL;
-        gcCandidatePop(suspects, &ptr, &type);
-
-        // Suspended fibers cannot be pointed to, as other fibers could copy the pointers to their stacks
-        if (UNLIKELY(suspending))
-            pages->error->runtimeHandler(pages->error->context, ERR_RUNTIME, "Pointer to a local variable escapes from the fiber");
-
-        if (UNLIKELY(!gcPtrIsInLiveFrame(vm->fiber, ptr)))
-            pages->error->runtimeHandler(pages->error->context, ERR_RUNTIME, "Pointer to a local variable escapes from the function");
-    }
-}
-
-
 static void gcSweep(HeapPages *pages)
 {
     for (HeapPage *page = pages->first; page;)
@@ -1246,12 +1217,11 @@ static void gcSweep(HeapPages *pages)
 }
 
 
-static void vmCollectGarbage(VM *vm, bool suspending)
+static void vmCollectGarbage(VM *vm)
 {
     HeapPages *pages = &vm->pages;
 
     gcMark(vm);
-    gcCheckEscapes(vm, suspending);
     gcSweep(pages);
 
     pages->gcThreshold = 2 * pages->occupiedSize;
@@ -1259,24 +1229,6 @@ static void vmCollectGarbage(VM *vm, bool suspending)
         pages->gcThreshold = MEM_MIN_GC_THRESHOLD;
 
     pages->gcRequested = false;
-}
-
-
-// A fiber cannot be suspended while pointers to its local variables may be stored outside its frames
-static void doCheckSuspendedFiberEscapes(Fiber *fiber)
-{
-    bool suspects = false;
-    for (Slot *base = fiber->base; base != fiber->stack + fiber->stackSize - 1; base = base->ptrVal)
-        suspects |= *stackGetFrameHasEscapeSuspects(base);
-
-    if (!suspects)
-        return;
-
-    vmCollectGarbage(fiber->vm, true);
-
-    // The remaining suspects are unreachable
-    for (Slot *base = fiber->base; base != fiber->stack + fiber->stackSize - 1; base = base->ptrVal)
-        *stackGetFrameHasEscapeSuspects(base) = false;
 }
 
 
@@ -1440,7 +1392,7 @@ static FORCE_INLINE void *doGetMapNodeData(Map *map, Slot key, const Type *mapTy
         doAssignImpl(node->key, key, keyType->kind, keyType->size, error);
 
         if (keyType->mayPointToStack)
-            gcDetectEscapeSuspects(fiber, pages, node->key, keyType, error);
+            doCheckEscapes(fiber, node->key, keyType, error);
 
         map->root->len++;
     }
@@ -2158,7 +2110,7 @@ static FORCE_INLINE void doBuiltinMakeFromArr(Fiber *fiber, HeapPages *pages, Er
 
     if (destType->base->mayPointToStack)
         for (int64_t i = 0; i < getDims(dest)->len; i++)
-            gcDetectEscapeSuspects(fiber, pages, (char *)dest->data + i * dest->itemSize, destType->base, error);
+            doCheckEscapes(fiber, (char *)dest->data + i * dest->itemSize, destType->base, error);
 
     (--fiber->top)->ptrVal = dest;
 }
@@ -2281,6 +2233,7 @@ static FORCE_INLINE void doBuiltinCopyDynArray(Fiber *fiber, HeapPages *pages, E
     {
         doAllocDynArray(pages, result, array->type, getDims(array)->len, error);
         memmove((char *)result->data, (char *)array->data, getDims(array)->len * array->itemSize);
+        doCheckCopiedItemEscapes(fiber, array->data, result->data, array->type->base, getDims(array)->len, error);
 
     }
 
@@ -2363,7 +2316,6 @@ static FORCE_INLINE void doBuiltinAppend(Fiber *fiber, HeapPages *pages, Error *
 
         memmove((char *)result->data + getDims(array)->len * array->itemSize, (char *)rhs, rhsLen * array->itemSize);
 
-
         getDims(result)->len = newLen;
     }
     else
@@ -2373,11 +2325,12 @@ static FORCE_INLINE void doBuiltinAppend(Fiber *fiber, HeapPages *pages, Error *
         memmove((char *)result->data, (char *)array->data, getDims(array)->len * array->itemSize);
         memmove((char *)result->data + getDims(array)->len * array->itemSize, (char *)rhs, rhsLen * array->itemSize);
 
+        doCheckCopiedItemEscapes(fiber, array->data, result->data, arrayType->base, getDims(array)->len, error);
     }
 
     if (arrayType->base->mayPointToStack)
         for (int64_t i = newLen - rhsLen; i < newLen; i++)
-            gcDetectEscapeSuspects(fiber, pages, (char *)result->data + i * array->itemSize, arrayType->base, error);
+            doCheckEscapes(fiber, (char *)result->data + i * array->itemSize, arrayType->base, error);
 
     (--fiber->top)->ptrVal = result;
 }
@@ -2409,7 +2362,6 @@ static FORCE_INLINE void doBuiltinInsert(Fiber *fiber, HeapPages *pages, Error *
         memmove((char *)result->data + (index + 1) * result->itemSize, (char *)result->data + index * result->itemSize, (getDims(array)->len - index) * result->itemSize);
         memmove((char *)result->data + index * result->itemSize, (char *)item, result->itemSize);
 
-
         getDims(result)->len++;
     }
     else
@@ -2420,10 +2372,11 @@ static FORCE_INLINE void doBuiltinInsert(Fiber *fiber, HeapPages *pages, Error *
         memmove((char *)result->data + (index + 1) * result->itemSize, (char *)array->data + index * result->itemSize, (getDims(array)->len - index) * result->itemSize);
         memmove((char *)result->data + index * result->itemSize, (char *)item, result->itemSize);
 
+        doCheckCopiedItemEscapes(fiber, array->data, result->data, arrayType->base, getDims(array)->len + 1, error);
     }
 
     if (arrayType->base->mayPointToStack)
-        gcDetectEscapeSuspects(fiber, pages, (char *)result->data + index * result->itemSize, arrayType->base, error);
+        doCheckEscapes(fiber, (char *)result->data + index * result->itemSize, arrayType->base, error);
 
     (--fiber->top)->ptrVal = result;
 }
@@ -2571,7 +2524,7 @@ static FORCE_INLINE void doBuiltinSlice(Fiber *fiber, HeapPages *pages, Error *e
         doAllocDynArray(pages, result, array->type, endIndex - startIndex, error);
 
         memcpy((char *)result->data, (char *)array->data + startIndex * result->itemSize, getDims(result)->len * result->itemSize);
-
+        doCheckCopiedItemEscapes(fiber, array->data, result->data, array->type->base, getDims(result)->len, error);
 
         (--fiber->top)->ptrVal = result;
     }
@@ -2921,26 +2874,20 @@ static FORCE_INLINE void doBuiltinKeys(Fiber *fiber, HeapPages *pages, Error *er
 // fn resume([child: fiber])
 static FORCE_INLINE void doBuiltinResume(Fiber *fiber, Fiber **newFiber, Error *error)
 {
-    Fiber *child = fiber->top->ptrVal;
+    Fiber *child = (fiber->top++)->ptrVal;
     if (child && child->alive)
         *newFiber = child;
     else if (!child && fiber->parent)
         *newFiber = fiber->parent;
     else
         *newFiber = fiber;
-
-    // The child is still on the stack, so the GC keeps it alive
-    if (*newFiber != fiber)
-        doCheckSuspendedFiberEscapes(fiber);
-
-    fiber->top++;
 }
 
 
 // fn gc()
 static FORCE_INLINE void doBuiltinGc(Fiber *fiber)
 {
-    vmCollectGarbage(fiber->vm, false);
+    vmCollectGarbage(fiber->vm);
 }
 
 
@@ -3105,7 +3052,7 @@ static FORCE_INLINE void doAssign(Fiber *fiber, HeapPages *pages, bool swap, Err
     doAssignImpl(lhs, rhs, type->kind, type->size, error);
 
     if (type->mayPointToStack && (lhs < (void *)fiber->top || lhs >= (void *)fiber->base))
-        gcDetectEscapeSuspects(fiber, pages, lhs, type, error);
+        doCheckEscapes(fiber, lhs, type, error);
 
     fiber->ip++;
 }
@@ -3668,8 +3615,7 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         // Memory
         case BUILTIN_NEW:           doBuiltinNew(fiber, pages, error); break;
         case BUILTIN_MAKE:          doBuiltinMake(fiber, pages, error); break;
-        case BUILTIN_MAKEFROMARR:   doBuiltinMakeFromArr(fiber, pages, error); break;
-        case BUILTIN_MAKEFROMSTR:   doBuiltinMakeFromStr(fiber, pages, error); break;
+        case BUILTIN_MAKEFROMARR:   doBuiltinMakeFromArr(fiber, pages, error); break;        case BUILTIN_MAKEFROMSTR:   doBuiltinMakeFromStr(fiber, pages, error); break;
         case BUILTIN_MAKEARR:       doBuiltinMakeArr(fiber, pages, error); break;
         case BUILTIN_MAKESTR:       doBuiltinMakeStr(fiber, pages, error); break;
         case BUILTIN_COPY:          doBuiltinCopy(fiber, pages, error); break;
@@ -3741,7 +3687,7 @@ static FORCE_INLINE void doEnterFrame(Fiber *fiber, const UmkaHookFunc *hooks, E
     (--fiber->top)->ptrVal = fiber->base;
     fiber->base = fiber->top;
 
-    // Push stack frame escape suspects flag
+    // Push reserved slot
     (--fiber->top)->intVal = 0;
 
     // Push stack frame layout table pointer
@@ -3777,13 +3723,6 @@ static FORCE_INLINE void doLeaveFrame(Fiber *fiber, const UmkaHookFunc *hooks, E
     // Call 'return' hook, if any
     doHook(fiber, hooks, UMKA_HOOK_RETURN);
 
-    // Check escapes while the frame can still be reported, but its local variables and parameters are already considered dead
-    if (UNLIKELY(*stackGetFrameHasEscapeSuspects(fiber->base)))
-    {
-        fiber->top = stackGetFrameParams(fiber->base) + getParamLayout(layout)->numParamSlots;
-        vmCollectGarbage(fiber->vm, false);
-    }
-
     // Restore stack top
     fiber->top = fiber->base;
 
@@ -3817,7 +3756,7 @@ static void vmLoop(VM *vm)
             error->runtimeHandler(error->context, ERR_RUNTIME, "Stack overflow");
 
         if (UNLIKELY(pages->gcRequested))
-            vmCollectGarbage(vm, false);
+            vmCollectGarbage(vm);
 
         switch (fiber->code[fiber->ip].opcode)
         {

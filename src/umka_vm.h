@@ -172,7 +172,7 @@ typedef struct
     char *lowest, *highest;
     int64_t totalSize, occupiedSize, gcThreshold;
     bool gcRequested;
-    GCCandidates markCandidates, escapeSuspects, roots;
+    GCCandidates markCandidates, roots;
     GCCandidates hostRefs;      // Chunks kept alive by umkaIncRef(), one entry per reference
     Error *error;
 } HeapPages;

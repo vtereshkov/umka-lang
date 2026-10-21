@@ -80,18 +80,20 @@ fn test2() {
 fn test3() {
     printf("\nTest 3\n")
 
-    a := 42
-    b := 43
+    a := new(int)
+    b := new(int)
+    a^ = 42
+    b^ = 43
 
     pointers := make(map[^int]int)
 
-    pointers[&a] = a
-    pointers[&b] = b
+    pointers[a] = a^
+    pointers[b] = b^
 
-    a1 := pointers[&a]
-    b1 := pointers[&b]
+    a1 := pointers[a]
+    b1 := pointers[b]
 
-    if a1 != a || b1 != b {
+    if a1 != a^ || b1 != b^ {
         exit(1, "Test failed")
     }
 

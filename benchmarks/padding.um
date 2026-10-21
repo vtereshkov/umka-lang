@@ -8,13 +8,14 @@ type T = struct {
 var g: [100]T
 
 fn test*(n: int) {
-    x := 42
+    x := new(int)
+    x^ = 42
     var a: [100]T
 
-    // Half of the pointers point to a local, half to the heap
+    // Half of the pointers are shared, half are separate
     for i := 0; i < len(a); i++ {
         if i % 2 == 0 {
-            a[i].p = &x
+            a[i].p = x
         } else {
             a[i].p = new(int)
             a[i].p^ = i
@@ -28,10 +29,6 @@ fn test*(n: int) {
     }
 
     std::assert(g[0].p^ == 42 && g[1].p^ == 1)
-
-    // Must not hold pointers to locals when leaving the function
-    var empty: [100]T
-    g = empty
 
     printf("OK\n")
 }

@@ -96,6 +96,16 @@ static void typeInitPredeclared(Types *types, const Blocks *blocks)
     typeAddField(types, fileDataType, types->predecl.ptrVoidType, "#stream");
 
     types->predecl.fileType = typeAddPtrTo(types, blocks, fileDataType);
+
+    // Dynamic array header followed by its dimensions, for dynamic arrays allocated on the stack
+    Type *dynArrayHeaderAndDimsType = typeAdd(types, blocks, TYPE_STRUCT);
+    typeAddField(types, dynArrayHeaderAndDimsType, types->predecl.ptrVoidType, "#type");
+    typeAddField(types, dynArrayHeaderAndDimsType, types->predecl.intType, "#itemSize");
+    typeAddField(types, dynArrayHeaderAndDimsType, types->predecl.ptrVoidType, "#data");
+    typeAddField(types, dynArrayHeaderAndDimsType, types->predecl.intType, "#len");
+    typeAddField(types, dynArrayHeaderAndDimsType, types->predecl.intType, "#capacity");
+
+    types->predecl.dynArrayHeaderAndDimsType = dynArrayHeaderAndDimsType;
 }
 
 
@@ -117,7 +127,7 @@ Type *typeAdd(Types *types, const Blocks *blocks, TypeKind kind)
     type->kind  = kind;
     type->block = blocks->item[blocks->top].block;
     type->isGarbageCollected = typeHasPtr(type);
-    type->mayPointToStack = type->kind == TYPE_PTR || type->kind == TYPE_INTERFACE;
+    type->mayPointToStack = type->kind == TYPE_PTR || type->kind == TYPE_INTERFACE || type->kind == TYPE_DYNARRAY;
     type->sameAs = type;
 
     if (type->kind == TYPE_FN)

@@ -173,7 +173,8 @@ typedef struct
         *fiberType,
         *ptrVoidType, *ptrNullType,
         *anyType,
-        *fileType;
+        *fileType,
+        *dynArrayHeaderAndDimsType;
 } PredeclaredTypes;
 
 
