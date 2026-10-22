@@ -926,7 +926,7 @@ static int parseModule(Umka *umka)
 // program = module.
 void parseProgram(Umka *umka)
 {
-    genNop(&umka->gen);                                 // Cleanup code jump stub
+    genNop(&umka->gen);                                 // Reserved, so that 0 is never a valid entry point
 
     lexNext(&umka->lex);
     const int mainModule = parseModule(umka);
@@ -940,6 +940,5 @@ void parseProgram(Umka *umka)
         compilerMakeFuncContext(umka, mainIdent->type, mainIdent->offset, &umka->mainFn);
     }
 
-    genEntryPoint(&umka->gen, JUMP_TO_CLEANUP);         // Cleanup code jump
-    genHalt(&umka->gen);
+    genHalt(&umka->gen);                                // End of code
 }

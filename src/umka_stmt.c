@@ -53,11 +53,11 @@ void doResolveExtern(Umka *umka)
                 if (!fn)
                     umka->error.handler(umka->error.context, "Unresolved prototype of %s", ident->name);
 
-                blocksEnterFn(&umka->blocks, ident, false);
+                blocksEnterFn(&umka->blocks, ident);
                 genEntryPoint(&umka->gen, ident->prototypeOffset);
                 genEnterFrameStub(&umka->gen);
 
-                // All parameters must be declared since they may require garbage collection
+                // All parameters must be declared, since #upvalues may need to be assigned
                 for (int i = 0; i < ident->type->sig->numParams; i++)
                     identAllocParam(&umka->idents, &umka->types, &umka->modules, &umka->blocks, ident->type->sig, i);
 
@@ -77,7 +77,6 @@ void doResolveExtern(Umka *umka)
                 }
                 
                 genCallExtern(&umka->gen, fn);
-
 
                 const StackFrameLayout *layout = typeMakeStackFrameLayout(&umka->types, ident->type->sig, 0);
                 
@@ -565,7 +564,6 @@ static void parseTypeCase(Umka *umka, const char *concreteVarName, ConstArray *e
     // Allocate and initialize concrete-type variable
     const Ident *concreteIdent = identAllocVar(&umka->idents, &umka->types, &umka->modules, &umka->blocks, concreteVarName, concreteType, false);
     identSetUsed(concreteIdent);                     // Do not warn about unused concrete variable
-    doZeroVar(umka, concreteIdent);
 
     if (concreteType->kind != TYPE_PTR)
         genDeref(&umka->gen, concreteType->kind);
@@ -743,17 +741,10 @@ static void parseForHeader(Umka *umka, ForPostStmt *postStmt)
 
     genForCondProlog(&umka->gen);
 
-    // Additional scope embracing expr (needed for timely garbage collection in expr, since it is computed at each iteration)
-    blocksEnter(&umka->blocks);
-
     // expr
     const Type *type = umka->types.predecl.boolType;
     parseExpr(umka, &type, NULL);
     typeAssertCompatible(&umka->types, umka->types.predecl.boolType, type);
-
-    // Additional scope embracing expr
-    identFree(&umka->idents, blocksCurrent(&umka->blocks));
-    blocksLeave(&umka->blocks);
 
     // [";" simpleStmt]
     if (umka->lex.tok.kind == TOK_SEMICOLON || umka->lex.tok.kind == TOK_IMPLICIT_SEMICOLON)
@@ -786,7 +777,7 @@ static void parseForHeader(Umka *umka, ForPostStmt *postStmt)
             // General case
             genForCondEpilog(&umka->gen);
             
-            // Additional scope embracing simpleStmt (needed for timely garbage collection in simpleStmt, since it is executed at each iteration)
+            // Additional scope embracing simpleStmt (prevents a shortVarDecl in simpleStmt from being visible in the statement body)
             blocksEnter(&umka->blocks);
 
             parseSimpleStmt(umka);
@@ -884,7 +875,6 @@ static void parseForInHeader(Umka *umka, ForPostStmt *postStmt)
             collectionIdentType = typeAddPtrTo(&umka->types, &umka->blocks, collectionType);    // Avoid copying the whole static array - use a pointer instead
 
         collectionIdent = identAllocVar(&umka->idents, &umka->types, &umka->modules, &umka->blocks, "#collection", collectionIdentType, false);
-        doZeroVar(umka, collectionIdent);
         doPushVarPtr(umka, collectionIdent);
         genSwapAssign(&umka->gen, collectionIdent->type);
     }
@@ -917,7 +907,6 @@ static void parseForInHeader(Umka *umka, ForPostStmt *postStmt)
         typeSetBase(keysType, typeMapKey(collectionType));
 
         keysIdent = identAllocVar(&umka->idents, &umka->types, &umka->modules, &umka->blocks, "#keys", keysType, false);
-        doZeroVar(umka, keysIdent);
 
         // Call keys()
         const int resultOffset = identAllocStack(&umka->idents, &umka->types, &umka->blocks, keysType);
@@ -1208,7 +1197,7 @@ static void parseBlock(Umka *umka)
 void parseFnBlock(Umka *umka, Ident *fn, const Type *upvaluesStructType)
 {
     lexEat(&umka->lex, TOK_LBRACE);
-    blocksEnterFn(&umka->blocks, fn, upvaluesStructType != NULL);
+    blocksEnterFn(&umka->blocks, fn);
 
     const char *prevDebugFnName = umka->lex.debug->fnName;
 
@@ -1255,7 +1244,6 @@ void parseFnBlock(Umka *umka, Ident *fn, const Type *upvaluesStructType)
             genDeref(&umka->gen, upvalue->type->kind);
 
             const Ident *upvalueIdent = identAllocVar(&umka->idents, &umka->types, &umka->modules, &umka->blocks, upvalue->name, upvalue->type, false);
-            doZeroVar(umka, upvalueIdent);
             doPushVarPtr(umka, upvalueIdent);
 
             genSwapAssign(&umka->gen, upvalue->type);

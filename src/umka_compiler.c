@@ -264,9 +264,6 @@ void compilerInit(Umka *umka, const char *fileName, const char *sourceString, in
 
 void compilerFree(Umka *umka)
 {
-    if (vmAlive(&umka->vm))
-        vmCleanup(&umka->vm);
-
     vmFree      (&umka->vm);
     moduleFree  (&umka->modules);
     storageFree (&umka->storage);
@@ -356,7 +353,7 @@ void compilerMakeFuncContext(Umka *umka, const Type *fnType, int entryOffset, Um
     fn->entryOffset = entryOffset;
 
     const int paramSlots = typeParamSizeTotal(&umka->types, fnType->sig) / sizeof(Slot);
-    fn->params = (UmkaStackSlot *)storageAdd(&umka->storage, (paramSlots + 4) * sizeof(Slot)) + 4;          // + 4 slots for compatibility with umkaGetParam()
+    fn->params = (UmkaStackSlot *)storageAdd(&umka->storage, (paramSlots + STACK_FRAME_HEADER_SLOTS) * sizeof(Slot)) + STACK_FRAME_HEADER_SLOTS;    // Header slots for compatibility with umkaGetParam()
 
     *vmGetStackFrameLayout(fn->params) = typeMakeStackFrameLayout(&umka->types, fnType->sig, 0);
 

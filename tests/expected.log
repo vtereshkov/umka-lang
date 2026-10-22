@@ -290,6 +290,7 @@ Parent: i=9 b=12
 >>> Fibers - 2
 
 42
+Unreferenced fiber is alive
 
 
 >>> Functional tools

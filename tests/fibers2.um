@@ -10,11 +10,24 @@ fn foo(cnt: ^int) {
     }
 }
 
+fn unreferenced() {
+    // The running fiber is not referenced from anywhere, but must not be collected
+    resume(make(fiber, fn() {
+        gc()
+        for i := 0; i < 10000; i++ {
+            p := new([16]int)
+            p[0] = i
+        }
+        printf("Unreferenced fiber is alive\n")
+    }))
+}
+
 fn test*() {
     cnt := new(int)
     foo(cnt)
     gc()
     printf("%v\n", cnt^)
+    unreferenced()
 }
 
 fn main() {

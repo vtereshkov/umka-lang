@@ -141,7 +141,6 @@ typedef struct
     const struct tagIdent *fn;
     int localVarSize;           // For function blocks only
     bool hasReturn;
-    bool hasUpvalues;
 } BlockStackSlot;
 
 
@@ -248,9 +247,8 @@ bool  moduleRegularizePath      (const Modules *modules, const char *path, const
 void  moduleAssertRegularizePath(const Modules *modules, const char *path, const char *curFolder, char *regularizedPath, int size);
 
 void blocksInit   (Blocks *blocks, Error *error);
-void blocksEnterFn(Blocks *blocks, const struct tagIdent *fn, bool hasUpvalues);
+void blocksEnterFn(Blocks *blocks, const struct tagIdent *fn);
 void blocksEnter  (Blocks *blocks);
-void blocksReenter(Blocks *blocks);
 void blocksLeave  (Blocks *blocks);
 int  blocksCurrent(const Blocks *blocks);
 

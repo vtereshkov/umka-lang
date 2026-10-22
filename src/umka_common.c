@@ -525,7 +525,7 @@ void blocksInit(Blocks *blocks, Error *error)
 }
 
 
-void blocksEnterFn(Blocks *blocks, const struct tagIdent *fn, bool hasUpvalues)
+void blocksEnterFn(Blocks *blocks, const struct tagIdent *fn)
 {
     blocks->top++;
     if (blocks->top >= MAX_BLOCK_NESTING)
@@ -535,13 +535,12 @@ void blocksEnterFn(Blocks *blocks, const struct tagIdent *fn, bool hasUpvalues)
     blocks->item[blocks->top].fn = fn;
     blocks->item[blocks->top].localVarSize = 0;
     blocks->item[blocks->top].hasReturn = false;
-    blocks->item[blocks->top].hasUpvalues = hasUpvalues;
 }
 
 
 void blocksEnter(Blocks *blocks)
 {
-    blocksEnterFn(blocks, NULL, false);
+    blocksEnterFn(blocks, NULL);
 }
 
 
@@ -550,12 +549,6 @@ void blocksLeave(Blocks *blocks)
     if (blocks->top <= 0)
         blocks->error->handler(blocks->error->context, "No block to leave");
     blocks->top--;
-}
-
-
-void blocksReenter(Blocks *blocks)
-{
-    blocks->top++;
 }
 
 

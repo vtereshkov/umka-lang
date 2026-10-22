@@ -2,7 +2,6 @@
 
 //#define UMKA_VM_DEBUG
 //#define UMKA_STR_DEBUG
-//#define UMKA_REF_CNT_DEBUG
 
 #ifdef UMKA_VM_DEBUG
     #define FORCE_INLINE
@@ -175,30 +174,34 @@ static const char *regSpelling [] =
 // Memory management
 
 static FORCE_INLINE UmkaStackSlot *doGetOnFreeParams(void *ptr)
-{  
-    static char layoutBuf[STACK_FRAME_LAYOUT_SIZE(2)];
-    StackFrameLayout *layout = (StackFrameLayout *)&layoutBuf;
+{
+    static UmkaStackSlot paramsBuf[STACK_FRAME_HEADER_SLOTS + 1] = {0};
+    UmkaStackSlot *params = paramsBuf + STACK_FRAME_HEADER_SLOTS;
 
-    ParamLayout *paramLayout = (ParamLayout *)getParamLayout(layout);
-    paramLayout->numParams = 2;
-    paramLayout->numParamSlots = 1;
-    paramLayout->numResultParams = 0;
-    paramLayout->firstSlotIndex[0] = 0;     // No upvalues
-    paramLayout->firstSlotIndex[1] = 0;     // Pointer to data to deallocate
+    // The layout is the same for all calls, so it is built once
+    if (!*vmGetStackFrameLayout(params))
+    {
+        static char layoutBuf[STACK_FRAME_LAYOUT_SIZE(2)];
+        StackFrameLayout *layout = (StackFrameLayout *)&layoutBuf;
 
-    ParamTypes *paramTypes = (ParamTypes *)getParamTypes(layout);
-    paramTypes->resultType = NULL;
-    paramTypes->paramType[0] = NULL;
-    paramTypes->paramType[1] = NULL; 
-    
-    LocalVarLayout *localVarLayout = (LocalVarLayout *)getLocalVarLayout(layout);
-    localVarLayout->localVarSlots = 0;
+        ParamLayout *paramLayout = (ParamLayout *)getParamLayout(layout);
+        paramLayout->numParams = 2;
+        paramLayout->numParamSlots = 1;
+        paramLayout->numResultParams = 0;
+        paramLayout->firstSlotIndex[0] = 0;     // No upvalues
+        paramLayout->firstSlotIndex[1] = 0;     // Pointer to data to deallocate
 
-    static UmkaStackSlot paramsBuf[4 + 1] = {0};
-    UmkaStackSlot *params = paramsBuf + 4;
+        ParamTypes *paramTypes = (ParamTypes *)getParamTypes(layout);
+        paramTypes->resultType = NULL;
+        paramTypes->paramType[0] = NULL;
+        paramTypes->paramType[1] = NULL;
 
-    *vmGetStackFrameLayout(params) = layout;
-    
+        LocalVarLayout *localVarLayout = (LocalVarLayout *)getLocalVarLayout(layout);
+        localVarLayout->localVarSlots = 0;
+
+        *vmGetStackFrameLayout(params) = layout;
+    }
+
     params[0].ptrVal = ptr;
 
     return params;
@@ -671,7 +674,6 @@ void vmInit(VM *vm, Storage *storage, const Idents *idents, int stackSize, bool 
     vm->fiber->stackSize = stackSize;
 
     memset(&vm->hooks, 0, sizeof(vm->hooks));
-    vm->terminatedNormally = false;
     vm->callNesting = 0;
     vm->error = error;
 
@@ -1111,7 +1113,14 @@ static void gcMark(VM *vm)
 
     // Roots: all the fibers being executed
     for (const Fiber *fiber = vm->fiber; fiber; fiber = fiber->parent)
+    {
         gcCandidatePush(candidates, (void *)fiber, NULL);
+
+        // A running fiber may be referenced from nowhere else, so its own chunk (if any - the main fiber is not on the heap) must be kept alive
+        HeapPage *page = pageFind(pages, (void *)fiber);
+        if (page)
+            pageGetChunk(page, (void *)fiber)->marked = true;
+    }
 
     // Roots: global variables
     const GCCandidates *roots = &pages->roots;
@@ -1256,7 +1265,7 @@ static FORCE_INLINE char *doGetEmptyStr(void)
     StrDimensions dims = {.len = 0, .capacity = 1};
 
     static char dimsAndData[sizeof(StrDimensions) + 1];
-    *(DynArrayDimensions *)dimsAndData = dims;
+    *(StrDimensions *)dimsAndData = dims;
 
     char *data = dimsAndData + sizeof(StrDimensions);
     data[0] = 0;
@@ -1401,7 +1410,7 @@ static FORCE_INLINE void *doGetMapNodeData(Map *map, Slot key, const Type *mapTy
 }
 
 
-static MapNode *doCopyMapNode(Map *map, MapNode *node, Fiber *fiber, HeapPages *pages, Error *error)
+static MapNode *doCopyMapNode(Map *map, MapNode *node, HeapPages *pages, Error *error)
 {
     if (!node)
         return NULL;
@@ -1437,10 +1446,10 @@ static MapNode *doCopyMapNode(Map *map, MapNode *node, Fiber *fiber, HeapPages *
     }
 
     if (node->left)
-        result->left = doCopyMapNode(map, node->left, fiber, pages, error);
+        result->left = doCopyMapNode(map, node->left, pages, error);
 
     if (node->right)
-        result->right = doCopyMapNode(map, node->right, fiber, pages, error);
+        result->right = doCopyMapNode(map, node->right, pages, error);
 
     return result;
 }
@@ -1477,7 +1486,7 @@ static FORCE_INLINE void doGetMapKeys(const Map *map, void *keys, Error *error)
 }
 
 
-static FORCE_INLINE Fiber *doAllocFiber(Fiber *parent, const Closure *childClosure, const Type *childClosureType, HeapPages *pages, Error *error)
+static FORCE_INLINE Fiber *doAllocFiber(Fiber *parent, const Closure *childClosure, HeapPages *pages, Error *error)
 {
     if (UNLIKELY(!childClosure || childClosure->entryOffset <= 0))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Called function is not defined");
@@ -1931,7 +1940,6 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool is
             memcpy(newString, string, prevLen);
             newString[prevLen] = 0;
 
-
             string = newString;
         }
 
@@ -2027,7 +2035,6 @@ static FORCE_INLINE void doBuiltinScanf(Fiber *fiber, HeapPages *pages, bool isC
             char *src = fsscanfString(fiber->vm->storage, file, string, &len);
             char **dest = (char **)value.ptrVal;
 
-
             // Allocate new string
             *dest = doAllocStr(pages, strlen(src), error);
             strcpy(*dest, src);
@@ -2088,7 +2095,7 @@ static FORCE_INLINE void doBuiltinMake(Fiber *fiber, HeapPages *pages, Error *er
     {
         const Closure *childClosure = (fiber->top++)->ptrVal;
 
-        Fiber *result = doAllocFiber(fiber, childClosure, type->base, pages, error);
+        Fiber *result = doAllocFiber(fiber, childClosure, pages, error);
         (--fiber->top)->ptrVal = result;
     }
     else
@@ -2135,7 +2142,7 @@ static FORCE_INLINE void doBuiltinMakeFromStr(Fiber *fiber, HeapPages *pages, Er
 
 
 // fn makearr(src: []ItemType): [...]ItemType
-static FORCE_INLINE void doBuiltinMakeArr(Fiber *fiber, HeapPages *pages, Error *error)
+static FORCE_INLINE void doBuiltinMakeArr(Fiber *fiber, Error *error)
 {
     void *dest = (fiber->top++)->ptrVal;
     const DynArray *src = (fiber->top++)->ptrVal;
@@ -2153,7 +2160,6 @@ static FORCE_INLINE void doBuiltinMakeArr(Fiber *fiber, HeapPages *pages, Error 
             error->runtimeHandler(error->context, ERR_RUNTIME, "Dynamic array is too long");
 
         memcpy(dest, src->data, getDims(src)->len * src->itemSize);
-
     }
 
     (--fiber->top)->ptrVal = dest;
@@ -2234,7 +2240,6 @@ static FORCE_INLINE void doBuiltinCopyDynArray(Fiber *fiber, HeapPages *pages, E
         doAllocDynArray(pages, result, array->type, getDims(array)->len, error);
         memmove((char *)result->data, (char *)array->data, getDims(array)->len * array->itemSize);
         doCheckCopiedItemEscapes(fiber, array->data, result->data, array->type->base, getDims(array)->len, error);
-
     }
 
     (--fiber->top)->ptrVal = result;
@@ -2255,7 +2260,7 @@ static FORCE_INLINE void doBuiltinCopyMap(Fiber *fiber, HeapPages *pages, Error 
     else
     {
         result->type = map->type;
-        result->root = doCopyMapNode(map, map->root, fiber, pages, error);
+        result->root = doCopyMapNode(map, map->root, pages, error);
     }
 
     (--fiber->top)->ptrVal = result;
@@ -2383,7 +2388,7 @@ static FORCE_INLINE void doBuiltinInsert(Fiber *fiber, HeapPages *pages, Error *
 
 
 // fn delete(array: [] type, index: int): [] type
-static FORCE_INLINE void doBuiltinDeleteDynArray(Fiber *fiber, HeapPages *pages, Error *error)
+static FORCE_INLINE void doBuiltinDeleteDynArray(Fiber *fiber, Error *error)
 {
     DynArray *result = (DynArray *)(fiber->top++)->ptrVal;
     int64_t index    =             (fiber->top++)->intVal;
@@ -2397,7 +2402,6 @@ static FORCE_INLINE void doBuiltinDeleteDynArray(Fiber *fiber, HeapPages *pages,
 
     *result = *array;
 
-
     memmove((char *)result->data + index * result->itemSize, (char *)result->data + (index + 1) * result->itemSize, (getDims(array)->len - index - 1) * result->itemSize);
 
     getDims(result)->len--;
@@ -2407,7 +2411,7 @@ static FORCE_INLINE void doBuiltinDeleteDynArray(Fiber *fiber, HeapPages *pages,
 
 
 // fn delete(m: map [keyType] type, key: keyType): map [keyType] type
-static FORCE_INLINE void doBuiltinDeleteMap(Fiber *fiber, HeapPages *pages, Error *error)
+static FORCE_INLINE void doBuiltinDeleteMap(Fiber *fiber, Error *error)
 {
     Map *result = (Map *)(fiber->top++)->ptrVal;
     Slot key    = *fiber->top++;
@@ -2416,7 +2420,7 @@ static FORCE_INLINE void doBuiltinDeleteMap(Fiber *fiber, HeapPages *pages, Erro
     if (!map || !map->root)
         error->runtimeHandler(error->context, ERR_RUNTIME, "Map is null");
 
-    MapNode **nodeInParent = doGetMapNode(map, key, false, pages, error);
+    MapNode **nodeInParent = doGetMapNode(map, key, false, NULL, error);
     MapNode *node = *nodeInParent;
 
     if (node)
@@ -2445,7 +2449,6 @@ static FORCE_INLINE void doBuiltinDeleteMap(Fiber *fiber, HeapPages *pages, Erro
         node->left = NULL;
         node->right = NULL;
 
-
         if (UNLIKELY(--map->root->len < 0))
             error->runtimeHandler(error->context, ERR_RUNTIME, "Map length is negative");
     }
@@ -2457,13 +2460,13 @@ static FORCE_INLINE void doBuiltinDeleteMap(Fiber *fiber, HeapPages *pages, Erro
 }
 
 
-static FORCE_INLINE void doBuiltinDelete(Fiber *fiber, HeapPages *pages, Error *error)
+static FORCE_INLINE void doBuiltinDelete(Fiber *fiber, Error *error)
 {
     const Type *type  = fiber->code[fiber->ip].type;
     if (type->kind == TYPE_DYNARRAY)
-        doBuiltinDeleteDynArray(fiber, pages, error);
+        doBuiltinDeleteDynArray(fiber, error);
     else
-        doBuiltinDeleteMap(fiber, pages, error);
+        doBuiltinDeleteMap(fiber, error);
 }
 
 
@@ -2828,7 +2831,7 @@ static FORCE_INLINE void doBuiltinValid(Fiber *fiber, Error *error)
 
 
 // fn validkey(m: map [keyType] type, key: keyType): bool
-static FORCE_INLINE void doBuiltinValidKey(Fiber *fiber, HeapPages *pages, Error *error)
+static FORCE_INLINE void doBuiltinValidKey(Fiber *fiber, Error *error)
 {
     Slot key  = *fiber->top++;
     Map *map  = (fiber->top++)->ptrVal;
@@ -2840,7 +2843,7 @@ static FORCE_INLINE void doBuiltinValidKey(Fiber *fiber, HeapPages *pages, Error
 
     if (map->root)
     {
-        const MapNode *node = *doGetMapNode(map, key, false, pages, error);
+        const MapNode *node = *doGetMapNode(map, key, false, NULL, error);
         isValid = node && node->data;
     }
 
@@ -2862,10 +2865,7 @@ static FORCE_INLINE void doBuiltinKeys(Fiber *fiber, HeapPages *pages, Error *er
     doAllocDynArray(pages, result, resultType, map->root ? map->root->len : 0, error);
 
     if (map->root)
-    {
         doGetMapKeys(map, result->data, error);
-
-    }
 
     (--fiber->top)->ptrVal = result;
 }
@@ -2892,14 +2892,14 @@ static FORCE_INLINE void doBuiltinGc(Fiber *fiber)
 
 
 // fn memusage(): int
-static FORCE_INLINE void doBuiltinMemUsage(Fiber *fiber, HeapPages *pages, Error *error)
+static FORCE_INLINE void doBuiltinMemUsage(Fiber *fiber, HeapPages *pages)
 {
     (--fiber->top)->intVal = pages->occupiedSize;
 }
 
 
 // fn leaksan(level: int)
-static FORCE_INLINE void doBuiltinLeakSan(Fiber *fiber, HeapPages *pages, Error *error)
+static FORCE_INLINE void doBuiltinLeakSan(Fiber *fiber)
 {
     fiber->top++;      // Kept for backward compatibility, ignored
 }
@@ -3031,7 +3031,7 @@ static FORCE_INLINE void doDeref(Fiber *fiber, Error *error)
 }
 
 
-static FORCE_INLINE void doAssign(Fiber *fiber, HeapPages *pages, bool swap, Error *error)
+static FORCE_INLINE void doAssign(Fiber *fiber, bool swap, Error *error)
 {
     Slot rhs;
     void *lhs;
@@ -3615,13 +3615,14 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         // Memory
         case BUILTIN_NEW:           doBuiltinNew(fiber, pages, error); break;
         case BUILTIN_MAKE:          doBuiltinMake(fiber, pages, error); break;
-        case BUILTIN_MAKEFROMARR:   doBuiltinMakeFromArr(fiber, pages, error); break;        case BUILTIN_MAKEFROMSTR:   doBuiltinMakeFromStr(fiber, pages, error); break;
-        case BUILTIN_MAKEARR:       doBuiltinMakeArr(fiber, pages, error); break;
+        case BUILTIN_MAKEFROMARR:   doBuiltinMakeFromArr(fiber, pages, error); break;
+        case BUILTIN_MAKEFROMSTR:   doBuiltinMakeFromStr(fiber, pages, error); break;
+        case BUILTIN_MAKEARR:       doBuiltinMakeArr(fiber, error); break;
         case BUILTIN_MAKESTR:       doBuiltinMakeStr(fiber, pages, error); break;
         case BUILTIN_COPY:          doBuiltinCopy(fiber, pages, error); break;
         case BUILTIN_APPEND:        doBuiltinAppend(fiber, pages, error); break;
         case BUILTIN_INSERT:        doBuiltinInsert(fiber, pages, error); break;
-        case BUILTIN_DELETE:        doBuiltinDelete(fiber, pages, error); break;
+        case BUILTIN_DELETE:        doBuiltinDelete(fiber, error); break;
         case BUILTIN_SLICE:         doBuiltinSlice(fiber, pages, error); break;
         case BUILTIN_SORT:          doBuiltinSort(fiber, error); break;
         case BUILTIN_SORTFAST:      doBuiltinSortFast(fiber, error); break;
@@ -3636,7 +3637,7 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         case BUILTIN_VALID:         doBuiltinValid(fiber, error); break;
 
         // Maps
-        case BUILTIN_VALIDKEY:      doBuiltinValidKey(fiber, pages, error); break;
+        case BUILTIN_VALIDKEY:      doBuiltinValidKey(fiber, error); break;
         case BUILTIN_KEYS:          doBuiltinKeys(fiber, pages, error); break;
 
         // Fibers
@@ -3644,8 +3645,8 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
 
         // Misc
         case BUILTIN_GC:            doBuiltinGc(fiber);                    break;
-        case BUILTIN_MEMUSAGE:      doBuiltinMemUsage(fiber, pages, error); break;
-        case BUILTIN_LEAKSAN:       doBuiltinLeakSan(fiber, pages, error); break;
+        case BUILTIN_MEMUSAGE:      doBuiltinMemUsage(fiber, pages);       break;
+        case BUILTIN_LEAKSAN:       doBuiltinLeakSan(fiber);               break;
         case BUILTIN_EXIT:          doBuiltinExit(fiber, error); return;
     }
 
@@ -3735,7 +3736,6 @@ static FORCE_INLINE void doLeaveFrame(Fiber *fiber, const UmkaHookFunc *hooks, E
 
 static FORCE_INLINE void doHalt(VM *vm)
 {
-    vm->terminatedNormally = true;
     vm->fiber->alive = false;
 }
 
@@ -3774,8 +3774,8 @@ static void vmLoop(VM *vm)
             case OP_SWAP:                           doSwap(fiber);                                break;
             case OP_ZERO:                           doZero(fiber);                                break;
             case OP_DEREF:                          doDeref(fiber, error);                        break;
-            case OP_ASSIGN:                         doAssign(fiber, pages, false, error);         break;
-            case OP_SWAP_ASSIGN:                    doAssign(fiber, pages, true, error);          break;
+            case OP_ASSIGN:                         doAssign(fiber, false, error);                break;
+            case OP_SWAP_ASSIGN:                    doAssign(fiber, true, error);                 break;
             case OP_ASSIGN_PARAM:                   doAssignParam(fiber, error);                  break;
             case OP_UNARY:                          doUnary(fiber, error);                        break;
             case OP_BINARY:                         doBinary(fiber, pages, error);                break;
@@ -3877,16 +3877,6 @@ void vmCall(VM *vm, UmkaFuncContext *fn)
     // Save result
     if (fn->result)
         *(fn->result) = vm->fiber->reg[REG_RESULT].apiSlot;
-}
-
-
-void vmCleanup(VM *vm)
-{
-    // Go to the entry point
-    vm->fiber->ip = JUMP_TO_CLEANUP;
-
-    // Main loop
-    vmLoop(vm);
 }
 
 

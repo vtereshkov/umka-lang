@@ -33,9 +33,9 @@ enum
 };
 
 
-enum
+enum    // Slots between the stack frame base pointer and the parameters, see the stack layout diagram in umka_vm.c
 {
-    JUMP_TO_CLEANUP = 0
+    STACK_FRAME_HEADER_SLOTS = 4                 // Return address, caller's stack frame base pointer, reserved slot, stack frame layout table pointer
 };
 
 
@@ -123,7 +123,7 @@ typedef struct
 typedef struct
 {
     void *ptr;
-    const Type *type;           // If NULL, ptr is a fiber whose stack is to be scanned conservatively
+    const Type *type;           // If NULL, ptr is a fiber whose stack is to be scanned conservatively (not used for host references)
 } GCCandidate;
 
 
@@ -203,7 +203,6 @@ typedef struct tagVM
     HeapPages pages;
     const Idents *idents;
     UmkaHookFunc hooks[UMKA_NUM_HOOKS];
-    bool terminatedNormally;
     int callNesting;
     Storage *storage;
     Error *error;
@@ -214,7 +213,6 @@ void vmInit                     (VM *vm, Storage *storage, const Idents *idents,
 void vmFree                     (VM *vm);
 void vmReset                    (VM *vm, const Instruction *code, const DebugInfo *debugPerInstr);
 void vmCall                     (VM *vm, UmkaFuncContext *fn);
-void vmCleanup                  (VM *vm);
 bool vmAlive                    (VM *vm);
 void vmKill                     (VM *vm);
 int vmAsm                       (int ip, const Instruction *code, const DebugInfo *debugPerInstr, const Idents *idents, char *buf, int size);
@@ -234,7 +232,7 @@ const char *vmBuiltinSpelling   (BuiltinFunc builtin);
 
 static inline const StackFrameLayout **vmGetStackFrameLayout(UmkaStackSlot *params)
 {
-    return (const StackFrameLayout **)&params[-4].ptrVal;     // For -4, see the stack layout diagram in umka_vm.c
+    return (const StackFrameLayout **)&params[-STACK_FRAME_HEADER_SLOTS].ptrVal;     // The layout table pointer is the header slot farthest from the parameters
 }
 
 #endif // UMKA_VM_H_INCLUDED

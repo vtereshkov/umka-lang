@@ -216,7 +216,6 @@ static void doDynArrayToDynArrayConv(Umka *umka, const Type *dest, const Type **
 
     // Allocate destination array: destArray = make(dest, length)
     const Ident *destArray = identAllocTempVar(&umka->idents, &umka->types, &umka->modules, &umka->blocks, dest);
-    doZeroVar(umka, destArray);
 
     genPushLocal(&umka->gen, TYPE_INT, lenOffset);
     doPushVarPtr(umka, destArray);
@@ -241,9 +240,6 @@ static void doDynArrayToDynArrayConv(Umka *umka, const Type *dest, const Type **
 
     genWhileCondEpilog(&umka->gen);
 
-    // Additional scope embracing temporary variables declaration
-    blocksEnter(&umka->blocks);
-
     // Loop body: destArray[index] = destItemType(srcArray[index]); index--
     genDup(&umka->gen);
     genPushLocal(&umka->gen, TYPE_INT, indexOffset);
@@ -267,10 +263,6 @@ static void doDynArrayToDynArrayConv(Umka *umka, const Type *dest, const Type **
 
     genPushLocalPtr(&umka->gen, indexOffset);
     genUnary(&umka->gen, TOK_MINUSMINUS, umka->types.predecl.intType);
-
-    // Additional scope embracing temporary variables declaration
-    identFree(&umka->idents, blocksCurrent(&umka->blocks));
-    blocksLeave(&umka->blocks);
 
     genWhileEpilog(&umka->gen);
 
@@ -456,7 +448,6 @@ static void doExprListToExprListConv(Umka *umka, const Type *dest, const Type **
         umka->error.handler(umka->error.context, "Conversion to expression list is not allowed in constant expressions");
 
     const Ident *destList = identAllocTempVar(&umka->idents, &umka->types, &umka->modules, &umka->blocks, dest);
-    doZeroVar(umka, destList);
 
     // Assign to fields
     for (int i = 0; i < dest->numItems; i++)
@@ -2149,7 +2140,6 @@ static void parseMapLiteral(Umka *umka, const Type **type, Const *constant, cons
 
     // Allocate map
     const Ident *mapIdent = identAllocTempVar(&umka->idents, &umka->types, &umka->modules, &umka->blocks, *type);
-    doZeroVar(umka, mapIdent);
 
     doPushVarPtr(umka, mapIdent);
     genCallTypedBuiltin(&umka->gen, *type, BUILTIN_MAKE);
@@ -2264,7 +2254,6 @@ static void parseClosureLiteral(Umka *umka, const Type **type, Const *constant, 
 
             // Allocate upvalues structure
             const Ident *upvaluesStructIdent = identAllocTempVar(&umka->idents, &umka->types, &umka->modules, &umka->blocks, upvaluesStructType);
-            doZeroVar(umka, upvaluesStructIdent);
 
             // Assign upvalues structure fields
             for (int i = 0; i < upvaluesStructType->numItems; i++)
@@ -2985,14 +2974,9 @@ static void parseLogicalTerm(Umka *umka, const Type **type, Const *constant, con
         {
             genShortCircuitProlog(&umka->gen);
 
-            blocksEnter(&umka->blocks);
-
             const Type *rightType = *type;
             parseRelation(umka, &rightType, NULL, NULL);
             doApplyOperator(umka, type, &rightType, NULL, NULL, op, false, true);
-
-            identFree(&umka->idents, blocksCurrent(&umka->blocks));
-            blocksLeave(&umka->blocks);
 
             genShortCircuitEpilog(&umka->gen, op);
         }
@@ -3031,14 +3015,9 @@ static void parseLogicalExpr(Umka *umka, const Type **type, Const *constant, con
         {
             genShortCircuitProlog(&umka->gen);
 
-            blocksEnter(&umka->blocks);
-
             const Type *rightType = *type;
             parseLogicalTerm(umka, &rightType, NULL, NULL);
             doApplyOperator(umka, type, &rightType, NULL, NULL, op, false, true);
-
-            identFree(&umka->idents, blocksCurrent(&umka->blocks));
-            blocksLeave(&umka->blocks);
 
             genShortCircuitEpilog(&umka->gen, op);
         }
@@ -3085,26 +3064,16 @@ static void parseExprInPlace(Umka *umka, const Type **type, Const *constant, con
             genIfCondEpilog(&umka->gen);
 
             // Left-hand side expression
-            blocksEnter(&umka->blocks);
-
             parseExpr(umka, &leftType, NULL);
-
-            identFree(&umka->idents, blocksCurrent(&umka->blocks));
-            blocksLeave(&umka->blocks);
 
             // ":"
             lexEat(&umka->lex, TOK_COLON);
             genElseProlog(&umka->gen);
 
             // Right-hand side expression
-            blocksEnter(&umka->blocks);
-
             rightType = leftType;
             parseExpr(umka, &rightType, NULL);
             doAssertImplicitTypeConv(umka, leftType, &rightType, NULL);
-
-            identFree(&umka->idents, blocksCurrent(&umka->blocks));
-            blocksLeave(&umka->blocks);
 
             genIfElseEpilog(&umka->gen);
         }
@@ -3190,10 +3159,7 @@ void parseExprList(Umka *umka, const Type **type, Const *constant)
         if (constant)
             constant->ptrVal = storageAdd(&umka->storage, typeSize(&umka->types, *type));
         else
-        {
             exprList = identAllocTempVar(&umka->idents, &umka->types, &umka->modules, &umka->blocks, *type);
-            doZeroVar(umka, exprList);
-        }
 
         // Assign expressions
         for (int i = (*type)->numItems - 1; i >= 0; i--)
