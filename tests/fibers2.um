@@ -1,16 +1,20 @@
-fn mkfunc(pr: ^int): fiber {
-    return make(fiber, |pr| {
-        pr^ = 42
-    })
+fn foo(cnt: ^int) {   
+    f := make(fiber, |cnt| {
+        for true {
+            cnt^++
+            resume()
+        }
+    })    
+    for i := 0; i < 42; i++ {
+        resume(f)    
+    }
 }
 
 fn test*() {
-    r := new(int)
-
-    func := mkfunc(r)
-    resume(func)
-
-    printf("%d\n", r^)
+    cnt := new(int)
+    foo(cnt)
+    gc()
+    printf("%v\n", cnt^)
 }
 
 fn main() {
