@@ -708,9 +708,6 @@ const Ident *parseQualIdent(Umka *umka)
 
 static void parseBuiltinIOCall(Umka *umka, const Type **type, Const *constant, BuiltinFunc builtin)
 {
-    if (constant)
-        umka->error.handler(umka->error.context, "Function is not allowed in constant expressions");
-
     // Parameters: count, stream, format, value
 
     // Count (number of characters for printf(), number of items for scanf())
@@ -842,9 +839,6 @@ static void parseBuiltinMathCall(Umka *umka, const Type **type, Const *constant,
 // fn new(type: Type [, expr: type]): ^type
 static void parseBuiltinNewCall(Umka *umka, const Type **type, Const *constant)
 {
-    if (constant)
-        umka->error.handler(umka->error.context, "Function is not allowed in constant expressions");
-
     // Type
     *type = parseType(umka);
     typeAssertCompatibleBuiltin(&umka->types, *type, BUILTIN_NEW, (*type)->kind != TYPE_VOID && (*type)->kind != TYPE_NULL);
@@ -873,9 +867,6 @@ static void parseBuiltinNewCall(Umka *umka, const Type **type, Const *constant)
 // fn make(type: Type, childFunc: fn()): type
 static void parseBuiltinMakeCall(Umka *umka, const Type **type, Const *constant)
 {
-    if (constant)
-        umka->error.handler(umka->error.context, "Function is not allowed in constant expressions");
-
     *type = parseType(umka);
     typeAssertCompatibleBuiltin(&umka->types, *type, BUILTIN_MAKE, (*type)->kind == TYPE_DYNARRAY || (*type)->kind == TYPE_MAP || (*type)->kind == TYPE_FIBER);
 
@@ -919,9 +910,6 @@ static void parseBuiltinMakeCall(Umka *umka, const Type **type, Const *constant)
 // fn copy(m: map [keyType] type): map [keyType] type
 static void parseBuiltinCopyCall(Umka *umka, const Type **type, Const *constant)
 {
-    if (constant)
-        umka->error.handler(umka->error.context, "Function is not allowed in constant expressions");
-
     *type = NULL;
     parseExpr(umka, type, NULL);
     typeAssertCompatibleBuiltin(&umka->types, *type, BUILTIN_COPY, (*type)->kind == TYPE_STR || (*type)->kind == TYPE_DYNARRAY || (*type)->kind == TYPE_MAP);
@@ -940,9 +928,6 @@ static void parseBuiltinCopyCall(Umka *umka, const Type **type, Const *constant)
 // fn append(array: [] type, item: (^type | [] type), single: bool, type: Type): [] type
 static void parseBuiltinAppendCall(Umka *umka, const Type **type, Const *constant)
 {
-    if (constant)
-        umka->error.handler(umka->error.context, "Function is not allowed in constant expressions");
-
     // Dynamic array
     *type = NULL;
     parseExpr(umka, type, NULL);
@@ -991,9 +976,6 @@ static void parseBuiltinAppendCall(Umka *umka, const Type **type, Const *constan
 // fn insert(array: [] type, index: int, item: type, type: Type): [] type
 static void parseBuiltinInsertCall(Umka *umka, const Type **type, Const *constant)
 {
-    if (constant)
-        umka->error.handler(umka->error.context, "Function is not allowed in constant expressions");
-
     // Dynamic array
     *type = NULL;
     parseExpr(umka, type, NULL);
@@ -1034,9 +1016,6 @@ static void parseBuiltinInsertCall(Umka *umka, const Type **type, Const *constan
 // fn delete(m: map [keyType] type, key: keyType): map [keyType] type
 static void parseBuiltinDeleteCall(Umka *umka, const Type **type, Const *constant)
 {
-    if (constant)
-        umka->error.handler(umka->error.context, "Function is not allowed in constant expressions");
-
     // Dynamic array or map
     *type = NULL;
     parseExpr(umka, type, NULL);
@@ -1062,9 +1041,6 @@ static void parseBuiltinDeleteCall(Umka *umka, const Type **type, Const *constan
 // fn slice(array: [] type | str, startIndex [, endIndex]: int, type: Type): [] type | str
 static void parseBuiltinSliceCall(Umka *umka, const Type **type, Const *constant)
 {
-    if (constant)
-        umka->error.handler(umka->error.context, "Function is not allowed in constant expressions");
-
     // Dynamic array or string
     *type = NULL;
     parseExpr(umka, type, NULL);
@@ -1105,9 +1081,6 @@ static void parseBuiltinSliceCall(Umka *umka, const Type **type, Const *constant
 // fn sort(array: [] type, ascending: bool [, ident])
 static void parseBuiltinSortCall(Umka *umka, const Type **type, Const *constant)
 {
-    if (constant)
-        umka->error.handler(umka->error.context, "Function is not allowed in constant expressions");
-
     // Dynamic array
     *type = NULL;
     parseExpr(umka, type, NULL);
@@ -1308,9 +1281,6 @@ static void parseBuiltinSizeOfCall(Umka *umka, const Type **type, Const *constan
 
 static void parseBuiltinSizeOfSelfCall(Umka *umka, const Type **type, Const *constant)
 {
-    if (constant)
-        umka->error.handler(umka->error.context, "Function is not allowed in constant expressions");
-
     *type = NULL;
     parseExpr(umka, type, constant);
     typeAssertCompatibleBuiltin(&umka->types, *type, BUILTIN_SIZEOFSELF, (*type)->kind == TYPE_INTERFACE);
@@ -1322,9 +1292,6 @@ static void parseBuiltinSizeOfSelfCall(Umka *umka, const Type **type, Const *con
 
 static void parseBuiltinSelfPtrCall(Umka *umka, const Type **type, Const *constant)
 {
-    if (constant)
-        umka->error.handler(umka->error.context, "Function is not allowed in constant expressions");
-
     *type = NULL;
     parseExpr(umka, type, constant);
     typeAssertCompatibleBuiltin(&umka->types, *type, BUILTIN_SELFPTR, (*type)->kind == TYPE_INTERFACE);
@@ -1336,9 +1303,6 @@ static void parseBuiltinSelfPtrCall(Umka *umka, const Type **type, Const *consta
 
 static void parseBuiltinSelfHasPtrCall(Umka *umka, const Type **type, Const *constant)
 {
-    if (constant)
-        umka->error.handler(umka->error.context, "Function is not allowed in constant expressions");
-
     *type = NULL;
     parseExpr(umka, type, constant);
     typeAssertCompatibleBuiltin(&umka->types, *type, BUILTIN_SELFHASPTR, (*type)->kind == TYPE_INTERFACE);
@@ -1350,9 +1314,6 @@ static void parseBuiltinSelfHasPtrCall(Umka *umka, const Type **type, Const *con
 
 static void parseBuiltinSelfTypeEqCall(Umka *umka, const Type **type, Const *constant)
 {
-    if (constant)
-        umka->error.handler(umka->error.context, "Function is not allowed in constant expressions");
-
     // Left interface
     *type = NULL;
     parseExpr(umka, type, constant);
@@ -1387,9 +1348,6 @@ static void parseBuiltinTypePtrCall(Umka *umka, const Type **type, Const *consta
 
 static void parseBuiltinValidCall(Umka *umka, const Type **type, Const *constant)
 {
-    if (constant)
-        umka->error.handler(umka->error.context, "Function is not allowed in constant expressions");
-
     *type = NULL;
     parseExpr(umka, type, constant);
     typeAssertCompatibleBuiltin(&umka->types, *type, BUILTIN_VALID, (*type)->kind == TYPE_DYNARRAY || (*type)->kind == TYPE_MAP || (*type)->kind == TYPE_INTERFACE || (*type)->kind == TYPE_FN || (*type)->kind == TYPE_CLOSURE || (*type)->kind == TYPE_FIBER);
@@ -1402,9 +1360,6 @@ static void parseBuiltinValidCall(Umka *umka, const Type **type, Const *constant
 // fn validkey(m: map [keyType] type, key: keyType): bool
 static void parseBuiltinValidKeyCall(Umka *umka, const Type **type, Const *constant)
 {
-    if (constant)
-        umka->error.handler(umka->error.context, "Function is not allowed in constant expressions");
-
     // Map
     *type = NULL;
     parseExpr(umka, type, constant);
@@ -1425,9 +1380,6 @@ static void parseBuiltinValidKeyCall(Umka *umka, const Type **type, Const *const
 // fn keys(m: map [keyType] type): []keyType
 static void parseBuiltinKeysCall(Umka *umka, const Type **type, Const *constant)
 {
-    if (constant)
-        umka->error.handler(umka->error.context, "Function is not allowed in constant expressions");
-
     // Map
     parseExpr(umka, type, constant);
     typeAssertCompatibleBuiltin(&umka->types, *type, BUILTIN_KEYS, (*type)->kind == TYPE_MAP);
@@ -1448,9 +1400,6 @@ static void parseBuiltinKeysCall(Umka *umka, const Type **type, Const *constant)
 // fn resume([child: fiber])
 static void parseBuiltinResumeCall(Umka *umka, const Type **type, Const *constant)
 {
-    if (constant)
-        umka->error.handler(umka->error.context, "Function is not allowed in constant expressions");
-
     if (umka->lex.tok.kind != TOK_RPAR)
     {
         // Child fiber
@@ -1471,9 +1420,6 @@ static void parseBuiltinResumeCall(Umka *umka, const Type **type, Const *constan
 // fn gc()
 static void parseBuiltinGcCall(Umka *umka, const Type **type, Const *constant)
 {
-    if (constant)
-        umka->error.handler(umka->error.context, "Function is not allowed in constant expressions");
-
     genCallBuiltin(&umka->gen, TYPE_VOID, BUILTIN_GC);
     *type = umka->types.predecl.voidType;
 }
@@ -1482,9 +1428,6 @@ static void parseBuiltinGcCall(Umka *umka, const Type **type, Const *constant)
 // fn memusage(): int
 static void parseBuiltinMemUsageCall(Umka *umka, const Type **type, Const *constant)
 {
-    if (constant)
-        umka->error.handler(umka->error.context, "Function is not allowed in constant expressions");
-
     genCallBuiltin(&umka->gen, TYPE_INT, BUILTIN_MEMUSAGE);
     *type = umka->types.predecl.intType;
 }
@@ -1493,9 +1436,6 @@ static void parseBuiltinMemUsageCall(Umka *umka, const Type **type, Const *const
 // fn leaksan(level: int)
 static void parseBuiltinLeakSanCall(Umka *umka, const Type **type, Const *constant)
 {
-    if (constant)
-        umka->error.handler(umka->error.context, "Function is not allowed in constant expressions");
-
     *type = umka->types.predecl.intType;
     parseExpr(umka, type, constant);
     doAssertImplicitTypeConv(umka, umka->types.predecl.intType, type, constant);        
@@ -1508,9 +1448,6 @@ static void parseBuiltinLeakSanCall(Umka *umka, const Type **type, Const *consta
 // fn exit(code: int, msg: str = "")
 static void parseBuiltinExitCall(Umka *umka, const Type **type, Const *constant)
 {
-    if (constant)
-        umka->error.handler(umka->error.context, "Function is not allowed in constant expressions");
-
     *type = umka->types.predecl.intType;
     parseExpr(umka, type, constant);
     doAssertImplicitTypeConv(umka, umka->types.predecl.intType, type, constant);
@@ -1536,6 +1473,33 @@ static void parseBuiltinExitCall(Umka *umka, const Type **type, Const *constant)
 static void parseBuiltinCall(Umka *umka, const Type **type, Const *constant, BuiltinFunc builtin)
 {
     lexEat(&umka->lex, TOK_LPAR);
+
+    // Only a few built-in functions are allowed in constant expressions (len() and cap() further check the argument type)
+    if (constant)
+    {
+        switch (builtin)
+        {
+            case BUILTIN_ROUND:
+            case BUILTIN_TRUNC:
+            case BUILTIN_CEIL:
+            case BUILTIN_FLOOR:
+            case BUILTIN_ABS:
+            case BUILTIN_FABS:
+            case BUILTIN_SQRT:
+            case BUILTIN_SIN:
+            case BUILTIN_COS:
+            case BUILTIN_ATAN:
+            case BUILTIN_ATAN2:
+            case BUILTIN_EXP:
+            case BUILTIN_LOG:
+            case BUILTIN_LEN:
+            case BUILTIN_CAP:
+            case BUILTIN_SIZEOF:
+            case BUILTIN_TYPEPTR:   break;
+
+            default: umka->error.handler(umka->error.context, "Function is not allowed in constant expressions");
+        }
+    }
 
     switch (builtin)
     {

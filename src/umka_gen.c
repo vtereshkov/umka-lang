@@ -170,7 +170,7 @@ static bool optimizeSwapAssign(CodeGen *gen, const Type *type)
     if (prev && prev->opcode == OP_SWAP)
     {
         genRemoveInstr(gen);
-        const Instruction instr = {.opcode = OP_ASSIGN, .tokKind = TOK_NONE, .type = type};
+        const Instruction instr = {.opcode = OP_ASSIGN, .type = type};
         genAddInstr(gen, &instr);
         return true;
     }
@@ -454,42 +454,42 @@ static bool optimizeCallBuiltin(CodeGen *gen, TypeKind typeKind, BuiltinFunc bui
 
 void genNop(CodeGen *gen)
 {
-    const Instruction instr = {.opcode = OP_NOP, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = 0};
+    const Instruction instr = {.opcode = OP_NOP};
     genAddInstr(gen, &instr);
 }
 
 
 void genPushIntConst(CodeGen *gen, int64_t intVal)
 {
-    const Instruction instr = {.opcode = OP_PUSH, .tokKind = TOK_NONE, .typeKind = TYPE_INT, .operand.intVal = intVal};
+    const Instruction instr = {.opcode = OP_PUSH, .typeKind = TYPE_INT, .operand.intVal = intVal};
     genAddInstr(gen, &instr);
 }
 
 
 void genPushUIntConst(CodeGen *gen, uint64_t uintVal)
 {
-    const Instruction instr = {.opcode = OP_PUSH, .tokKind = TOK_NONE, .typeKind = TYPE_UINT, .operand.uintVal = uintVal};
+    const Instruction instr = {.opcode = OP_PUSH, .typeKind = TYPE_UINT, .operand.uintVal = uintVal};
     genAddInstr(gen, &instr);
 }
 
 
 void genPushRealConst(CodeGen *gen, double realVal)
 {
-    const Instruction instr = {.opcode = OP_PUSH, .tokKind = TOK_NONE, .typeKind = TYPE_REAL, .operand.realVal = realVal};
+    const Instruction instr = {.opcode = OP_PUSH, .typeKind = TYPE_REAL, .operand.realVal = realVal};
     genAddInstr(gen, &instr);
 }
 
 
 void genPushGlobalPtr(CodeGen *gen, void *ptrVal)
 {
-    const Instruction instr = {.opcode = OP_PUSH, .tokKind = TOK_NONE, .typeKind = TYPE_PTR, .operand.ptrVal = ptrVal};
+    const Instruction instr = {.opcode = OP_PUSH, .typeKind = TYPE_PTR, .operand.ptrVal = ptrVal};
     genAddInstr(gen, &instr);
 }
 
 
 void genPushGlobal(CodeGen *gen, TypeKind typeKind, void *ptrVal)
 {
-    const Instruction instr = {.opcode = OP_PUSH_GLOBAL, .tokKind = TOK_NONE, .typeKind = typeKind, .operand.ptrVal = ptrVal};
+    const Instruction instr = {.opcode = OP_PUSH_GLOBAL, .typeKind = typeKind, .operand.ptrVal = ptrVal};
     genAddInstr(gen, &instr);
 }
 
@@ -498,7 +498,7 @@ void genPushLocalPtr(CodeGen *gen, int offset)
 {
     if (!optimizePushLocalPtr(gen, offset))
     {
-        const Instruction instr = {.opcode = OP_PUSH_LOCAL_PTR, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = offset};
+        const Instruction instr = {.opcode = OP_PUSH_LOCAL_PTR, .operand.intVal = offset};
         genAddInstr(gen, &instr);
     }
 }
@@ -506,14 +506,14 @@ void genPushLocalPtr(CodeGen *gen, int offset)
 
 void genPushLocalPtrZero(CodeGen *gen, int offset, int size)
 {
-    const Instruction instr = {.opcode = OP_PUSH_LOCAL_PTR_ZERO, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.int32Val = {offset, size}};
+    const Instruction instr = {.opcode = OP_PUSH_LOCAL_PTR_ZERO, .operand.int32Val = {offset, size}};
     genAddInstr(gen, &instr);
 }
 
 
 void genPushLocal(CodeGen *gen, TypeKind typeKind, int offset)
 {
-    const Instruction instr = {.opcode = OP_PUSH_LOCAL, .tokKind = TOK_NONE, .typeKind = typeKind, .operand.intVal = offset};
+    const Instruction instr = {.opcode = OP_PUSH_LOCAL, .typeKind = typeKind, .operand.intVal = offset};
     genAddInstr(gen, &instr);
 }
 
@@ -522,7 +522,7 @@ void genPushReg(CodeGen *gen, RegisterIndex regIndex)
 {
     if (!optimizePushReg(gen, regIndex))
     {
-        const Instruction instr = {.opcode = OP_PUSH_REG, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = regIndex};
+        const Instruction instr = {.opcode = OP_PUSH_REG, .operand.intVal = regIndex};
         genAddInstr(gen, &instr);
     }
 }
@@ -530,7 +530,7 @@ void genPushReg(CodeGen *gen, RegisterIndex regIndex)
 
 void genPushUpvalue(CodeGen *gen)
 {
-    const Instruction instr = {.opcode = OP_PUSH_UPVALUE, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = 0};
+    const Instruction instr = {.opcode = OP_PUSH_UPVALUE};
     genAddInstr(gen, &instr);
 }
 
@@ -539,7 +539,7 @@ void genPushZero(CodeGen *gen, int slots)
 {
     if (!optimizePushZero(gen, slots))
     {
-        const Instruction instr = {.opcode = OP_PUSH_ZERO, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = slots};
+        const Instruction instr = {.opcode = OP_PUSH_ZERO, .operand.intVal = slots};
         genAddInstr(gen, &instr);
     }
 }
@@ -549,7 +549,7 @@ void genPop(CodeGen *gen)
 {
     if (!optimizePop(gen))
     {
-        const Instruction instr = {.opcode = OP_POP, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = 1};
+        const Instruction instr = {.opcode = OP_POP, .operand.intVal = 1};
         genAddInstr(gen, &instr);
     }
 }
@@ -559,7 +559,7 @@ void genPopReg(CodeGen *gen, RegisterIndex regIndex)
 {
     if (!optimizePopReg(gen, regIndex))
     {
-        const Instruction instr = {.opcode = OP_POP_REG, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = regIndex};
+        const Instruction instr = {.opcode = OP_POP_REG, .operand.intVal = regIndex};
         genAddInstr(gen, &instr);
     }
 }
@@ -567,21 +567,21 @@ void genPopReg(CodeGen *gen, RegisterIndex regIndex)
 
 void genDup(CodeGen *gen)
 {
-    const Instruction instr = {.opcode = OP_DUP, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = 0};
+    const Instruction instr = {.opcode = OP_DUP};
     genAddInstr(gen, &instr);
 }
 
 
 void genSwap(CodeGen *gen)
 {
-    const Instruction instr = {.opcode = OP_SWAP, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = 0};
+    const Instruction instr = {.opcode = OP_SWAP};
     genAddInstr(gen, &instr);
 }
 
 
 void genZero(CodeGen *gen, int size)
 {
-    const Instruction instr = {.opcode = OP_ZERO, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = size};
+    const Instruction instr = {.opcode = OP_ZERO, .operand.intVal = size};
     genAddInstr(gen, &instr);
 }
 
@@ -590,7 +590,7 @@ void genDeref(CodeGen *gen, TypeKind typeKind)
 {
     if (!optimizeDeref(gen, typeKind))
     {
-        const Instruction instr = {.opcode = OP_DEREF, .tokKind = TOK_NONE, .typeKind = typeKind, .operand.intVal = 0};
+        const Instruction instr = {.opcode = OP_DEREF, .typeKind = typeKind};
         genAddInstr(gen, &instr);
     }
 }
@@ -598,7 +598,7 @@ void genDeref(CodeGen *gen, TypeKind typeKind)
 
 void genAssign(CodeGen *gen, const Type *type)
 {
-    const Instruction instr = {.opcode = OP_ASSIGN, .tokKind = TOK_NONE, .type = type};
+    const Instruction instr = {.opcode = OP_ASSIGN, .type = type};
     genAddInstr(gen, &instr);
 }
 
@@ -607,7 +607,7 @@ void genSwapAssign(CodeGen *gen, const Type *type)
 {
     if (!optimizeSwapAssign(gen, type))
     {
-        const Instruction instr = {.opcode = OP_SWAP_ASSIGN, .tokKind = TOK_NONE, .type = type};
+        const Instruction instr = {.opcode = OP_SWAP_ASSIGN, .type = type};
         genAddInstr(gen, &instr);
     }
 }
@@ -615,7 +615,7 @@ void genSwapAssign(CodeGen *gen, const Type *type)
 
 void genAssignParam(CodeGen *gen, TypeKind typeKind, int structSize)
 {
-    const Instruction instr = {.opcode = OP_ASSIGN_PARAM, .tokKind = TOK_NONE, .typeKind = typeKind, .operand.intVal = structSize};
+    const Instruction instr = {.opcode = OP_ASSIGN_PARAM, .typeKind = typeKind, .operand.intVal = structSize};
     genAddInstr(gen, &instr);
 }
 
@@ -644,7 +644,7 @@ void genGetArrayPtr(CodeGen *gen, int itemSize, int len)
 {
     if (!optimizeGetArrayPtr(gen, itemSize, len))
     {
-        const Instruction instr = {.opcode = OP_GET_ARRAY_PTR, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.int32Val = {itemSize, len}};
+        const Instruction instr = {.opcode = OP_GET_ARRAY_PTR, .operand.int32Val = {itemSize, len}};
         genAddInstr(gen, &instr);
     }
 }
@@ -652,14 +652,14 @@ void genGetArrayPtr(CodeGen *gen, int itemSize, int len)
 
 void genGetDynArrayPtr(CodeGen *gen)
 {
-    const Instruction instr = {.opcode = OP_GET_DYNARRAY_PTR, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = 0};
+    const Instruction instr = {.opcode = OP_GET_DYNARRAY_PTR};
     genAddInstr(gen, &instr);
 }
 
 
 void genGetMapPtr(CodeGen *gen, const Type *mapType)
 {
-    const Instruction instr = {.opcode = OP_GET_MAP_PTR, .tokKind = TOK_NONE, .type = mapType};
+    const Instruction instr = {.opcode = OP_GET_MAP_PTR, .type = mapType};
     genAddInstr(gen, &instr);
 }
 
@@ -668,7 +668,7 @@ void genGetFieldPtr(CodeGen *gen, int fieldOffset)
 {
     if (!optimizeGetFieldPtr(gen, fieldOffset))
     {
-        const Instruction instr = {.opcode = OP_GET_FIELD_PTR, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = fieldOffset};
+        const Instruction instr = {.opcode = OP_GET_FIELD_PTR, .operand.intVal = fieldOffset};
         genAddInstr(gen, &instr);
     }
 }
@@ -676,14 +676,14 @@ void genGetFieldPtr(CodeGen *gen, int fieldOffset)
 
 void genAssertType(CodeGen *gen, const Type *type)
 {
-    const Instruction instr = {.opcode = OP_ASSERT_TYPE, .tokKind = TOK_NONE, .type = type};
+    const Instruction instr = {.opcode = OP_ASSERT_TYPE, .type = type};
     genAddInstr(gen, &instr);
 }
 
 
 void genAssertRange(CodeGen *gen, TypeKind destTypeKind, const Type *srcType)
 {
-    const Instruction instr = {.opcode = OP_ASSERT_RANGE, .tokKind = TOK_NONE, .typeKind = destTypeKind, .type = srcType, .operand.intVal = 0};
+    const Instruction instr = {.opcode = OP_ASSERT_RANGE, .typeKind = destTypeKind, .type = srcType};
     genAddInstr(gen, &instr);
 }
 
@@ -693,7 +693,7 @@ void genGoto(CodeGen *gen, int dest)
     genUpdateLastJump(gen, gen->ip);
     genUpdateLastJump(gen, dest);
 
-    const Instruction instr = {.opcode = OP_GOTO, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = dest};
+    const Instruction instr = {.opcode = OP_GOTO, .operand.intVal = dest};
     genAddInstr(gen, &instr);
 }
 
@@ -703,7 +703,7 @@ void genGotoIf(CodeGen *gen, int dest)
     genUpdateLastJump(gen, gen->ip);
     genUpdateLastJump(gen, dest);
 
-    const Instruction instr = {.opcode = OP_GOTO_IF, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = dest};
+    const Instruction instr = {.opcode = OP_GOTO_IF, .operand.intVal = dest};
     genAddInstr(gen, &instr);
 }
 
@@ -713,28 +713,28 @@ void genGotoIfNot(CodeGen *gen, int dest)
     genUpdateLastJump(gen, gen->ip);
     genUpdateLastJump(gen, dest);
 
-    const Instruction instr = {.opcode = OP_GOTO_IF_NOT, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = dest};
+    const Instruction instr = {.opcode = OP_GOTO_IF_NOT, .operand.intVal = dest};
     genAddInstr(gen, &instr);
 }
 
 
 void genCall(CodeGen *gen, int entry)
 {
-    const Instruction instr = {.opcode = OP_CALL, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = entry};
+    const Instruction instr = {.opcode = OP_CALL, .operand.intVal = entry};
     genAddInstr(gen, &instr);
 }
 
 
 void genCallIndirect(CodeGen *gen, int paramSlots)
 {
-    const Instruction instr = {.opcode = OP_CALL_INDIRECT, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = paramSlots};
+    const Instruction instr = {.opcode = OP_CALL_INDIRECT, .operand.intVal = paramSlots};
     genAddInstr(gen, &instr);
 }
 
 
 void genCallExtern(CodeGen *gen, void *entry)
 {
-    const Instruction instr = {.opcode = OP_CALL_EXTERN, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.ptrVal = entry};
+    const Instruction instr = {.opcode = OP_CALL_EXTERN, .operand.ptrVal = entry};
     genAddInstr(gen, &instr);
 }
 
@@ -743,7 +743,7 @@ void genCallBuiltin(CodeGen *gen, TypeKind typeKind, BuiltinFunc builtin)
 {
     if (!optimizeCallBuiltin(gen, typeKind, builtin))
     {
-        const Instruction instr = {.opcode = OP_CALL_BUILTIN, .tokKind = TOK_NONE, .typeKind = typeKind, .operand.builtinVal = builtin};
+        const Instruction instr = {.opcode = OP_CALL_BUILTIN, .typeKind = typeKind, .operand.builtinVal = builtin};
         genAddInstr(gen, &instr);
     }
 }
@@ -753,7 +753,7 @@ void genCallTypedBuiltin(CodeGen *gen, const Type *type, BuiltinFunc builtin)
 {
     if (!optimizeCallBuiltin(gen, type->kind, builtin))
     {
-        const Instruction instr = {.opcode = OP_CALL_BUILTIN, .tokKind = TOK_NONE, .type = type, .operand.builtinVal = builtin};
+        const Instruction instr = {.opcode = OP_CALL_BUILTIN, .type = type, .operand.builtinVal = builtin};
         genAddInstr(gen, &instr);
     }
 }
@@ -761,28 +761,28 @@ void genCallTypedBuiltin(CodeGen *gen, const Type *type, BuiltinFunc builtin)
 
 void genReturn(CodeGen *gen, int paramSlots)
 {
-    const Instruction instr = {.opcode = OP_RETURN, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = paramSlots};
+    const Instruction instr = {.opcode = OP_RETURN, .operand.intVal = paramSlots};
     genAddInstr(gen, &instr);
 }
 
 
 void genEnterFrame(CodeGen *gen, const StackFrameLayout *layout)
 {
-    const Instruction instr = {.opcode = OP_ENTER_FRAME, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.ptrVal = (StackFrameLayout *)layout};
+    const Instruction instr = {.opcode = OP_ENTER_FRAME, .operand.ptrVal = (StackFrameLayout *)layout};
     genAddInstr(gen, &instr);
 }
 
 
 void genLeaveFrame(CodeGen *gen)
 {
-    const Instruction instr = {.opcode = OP_LEAVE_FRAME, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = 0};
+    const Instruction instr = {.opcode = OP_LEAVE_FRAME};
     genAddInstr(gen, &instr);
 }
 
 
 void genHalt(CodeGen *gen)
 {
-    const Instruction instr = {.opcode = OP_HALT, .tokKind = TOK_NONE, .typeKind = TYPE_NONE, .operand.intVal = 0};
+    const Instruction instr = {.opcode = OP_HALT};
     genAddInstr(gen, &instr);
 }
 

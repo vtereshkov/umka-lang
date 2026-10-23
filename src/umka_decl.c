@@ -110,11 +110,12 @@ static void parseTypedParamList(Umka *umka, IdentName *names, bool *exported, in
 static void parseRcvSignature(Umka *umka, Signature *sig)
 {
     lexEat(&umka->lex, TOK_LPAR);
-    lexEat(&umka->lex, TOK_IDENT);
+    lexCheck(&umka->lex, TOK_IDENT);
 
     IdentName rcvName;
     strcpy(rcvName, umka->lex.tok.name);
 
+    lexNext(&umka->lex);
     lexEat(&umka->lex, TOK_COLON);
     const Type *rcvType = parseType(umka);
 
