@@ -81,7 +81,7 @@ void doResolveExtern(Umka *umka)
                 const StackFrameLayout *layout = typeMakeStackFrameLayout(&umka->types, ident->type->sig, 0);
                 
                 genLeaveFrameFixup(&umka->gen, layout);
-                genReturn(&umka->gen, getParamLayout(layout)->numParamSlots);
+                genReturn(&umka->gen, layout->numParamSlots);
 
                 identFree(&umka->idents, blocksCurrent(&umka->blocks));
                 blocksLeave(&umka->blocks);
@@ -1287,7 +1287,7 @@ void parseFnBlock(Umka *umka, Ident *fn, const Type *upvaluesStructType)
     const StackFrameLayout *layout = typeMakeStackFrameLayout(&umka->types, fn->type->sig, localVarSlots);
     
     genLeaveFrameFixup(&umka->gen, layout);
-    genReturn(&umka->gen, getParamLayout(layout)->numParamSlots);
+    genReturn(&umka->gen, layout->numParamSlots);
 
     umka->lex.debug->fnName = prevDebugFnName;
 

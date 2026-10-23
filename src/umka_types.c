@@ -851,24 +851,18 @@ const StackFrameLayout *typeMakeStackFrameLayout(const Types *types, const Signa
 {
     StackFrameLayout *layout = storageAdd(types->storage, STACK_FRAME_LAYOUT_SIZE(sig->numParams));
 
-    ParamLayout *paramLayout = (ParamLayout *)getParamLayout(layout);
-
-    paramLayout->numParams = sig->numParams;
-    paramLayout->numResultParams = typeStructured(sig->resultType) ? 1 : 0;
-    paramLayout->numParamSlots = typeParamSizeTotal(types, sig) / sizeof(Slot);
-
-    for (int i = 0; i < sig->numParams; i++)
-        paramLayout->firstSlotIndex[i] = typeParamOffset(types, sig, i) / sizeof(Slot) - 2;   // - 2 slots for old base pointer and return address
-
-    ParamTypes *layoutTypes = (ParamTypes *)getParamTypes(layout);
-    layoutTypes->resultType = sig->resultType;
+    layout->numParams = sig->numParams;
+    layout->numResultParams = typeStructured(sig->resultType) ? 1 : 0;
+    layout->numParamSlots = typeParamSizeTotal(types, sig) / sizeof(Slot);
+    layout->localVarSlots = localVarSlots;
+    layout->resultType = sig->resultType;
 
     for (int i = 0; i < sig->numParams; i++)
-        layoutTypes->paramType[i] = sig->param[i]->type;
-        
-    LocalVarLayout *localVarLayout = (LocalVarLayout *)getLocalVarLayout(layout);
-    localVarLayout->localVarSlots = localVarSlots;
-    
+    {
+        layout->param[i].firstSlotIndex = typeParamOffset(types, sig, i) / sizeof(Slot) - 2;   // - 2 slots for old base pointer and return address
+        layout->param[i].type = sig->param[i]->type;
+    }
+
     return layout;
 }
 

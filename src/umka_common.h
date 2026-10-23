@@ -170,58 +170,25 @@ typedef struct
 } Externals;
 
 
-typedef struct tagStackFrameLayout StackFrameLayout;   // Actually contains ParamLayout, ParamTypes, LocalVarLayout appended to each other
-
-
 typedef struct
+{
+    int64_t firstSlotIndex;
+    const struct tagType *type;
+} ParamLayout;
+
+
+typedef struct tagStackFrameLayout
 {
     int64_t numParams;
     int64_t numResultParams;
     int64_t numParamSlots;
-    int64_t firstSlotIndex[];
-} ParamLayout;
-
-
-typedef struct      // Appended to the end of ParamLayout
-{
-    const struct tagType *resultType;
-    const struct tagType *paramType[];
-} ParamTypes;
-
-
-typedef struct      // Appended to the end of ParamTypes 
-{
     int64_t localVarSlots;
-} LocalVarLayout;
+    const struct tagType *resultType;
+    ParamLayout param[];
+} StackFrameLayout;
 
 
-#define STACK_FRAME_LAYOUT_SIZE(numParams) \
-( \
-    sizeof(ParamLayout) + (numParams) * sizeof(int64_t) + \
-    sizeof(ParamTypes)  + (numParams) * sizeof(struct tagType *) + \
-    sizeof(LocalVarLayout) \
-)
-
-
-static inline const ParamLayout *getParamLayout(const StackFrameLayout *layout)
-{
-    return (ParamLayout *)layout;
-}
-
-
-static inline const ParamTypes *getParamTypes(const StackFrameLayout *layout)
-{
-    const ParamLayout *paramLayout = getParamLayout(layout);
-    return (const ParamTypes *)(paramLayout->firstSlotIndex + paramLayout->numParams);
-}
-
-
-static inline const LocalVarLayout *getLocalVarLayout(const StackFrameLayout *layout)
-{
-    const ParamLayout *paramLayout = getParamLayout(layout);
-    const ParamTypes *paramTypes = getParamTypes(layout);
-    return (const LocalVarLayout *)(paramTypes->paramType + paramLayout->numParams);
-}
+#define STACK_FRAME_LAYOUT_SIZE(numParams)  (sizeof(StackFrameLayout) + (numParams) * sizeof(ParamLayout))
 
 
 void errorReportInit(UmkaError *report, Storage *storage, const char *fileName, const char *fnName, int line, int pos, int code, const char *format, va_list args);

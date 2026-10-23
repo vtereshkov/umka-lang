@@ -250,10 +250,10 @@ static bool optimizeGetArrayPtr(CodeGen *gen, int itemSize, int len)
     // Optimization: PUSH + GET_ARRAY_PTR -> GET_FIELD_PTR
     if (prev && prev->opcode == OP_PUSH && prev->typeKind == TYPE_INT && len >= 0)
     {
-        int index = prev->operand.intVal;
+        const int64_t index = prev->operand.intVal;
 
         if (index < 0 || index > len - 1)
-            gen->error->handler(gen->error->context, "Index %d is out of range 0...%d", index, len - 1);
+            gen->error->handler(gen->error->context, "Index %lld is out of range 0...%d", index, len - 1);
 
         genRemoveInstr(gen);
         genGetFieldPtr(gen, itemSize * index);

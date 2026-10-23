@@ -283,25 +283,25 @@ UMKA_API void umkaMakeFuncContext(Umka *umka, const UmkaType *closureType, int e
 
 UMKA_API UmkaStackSlot *umkaGetParam(UmkaStackSlot *params, int index)
 {
-    const ParamLayout *paramLayout = getParamLayout(*vmGetStackFrameLayout(params));
-    if (index < 0 || index >= paramLayout->numParams - paramLayout->numResultParams - 1)
+    const StackFrameLayout *layout = *vmGetStackFrameLayout(params);
+    if (index < 0 || index >= layout->numParams - layout->numResultParams - 1)
         return NULL;
-    return params + paramLayout->firstSlotIndex[index + 1];                                                 // + 1 to skip upvalues
+    return params + layout->param[index + 1].firstSlotIndex;                                                 // + 1 to skip upvalues
 }
 
 
 UMKA_API UmkaAny *umkaGetUpvalue(UmkaStackSlot *params)
 {
-    const ParamLayout *paramLayout = getParamLayout(*vmGetStackFrameLayout(params));
-    return (UmkaAny *)(params + paramLayout->firstSlotIndex[0]);
+    const StackFrameLayout *layout = *vmGetStackFrameLayout(params);
+    return (UmkaAny *)(params + layout->param[0].firstSlotIndex);
 }
 
 
 UMKA_API UmkaStackSlot *umkaGetResult(UmkaStackSlot *params, UmkaStackSlot *result)
 {
-    const ParamLayout *paramLayout = getParamLayout(*vmGetStackFrameLayout(params));
-    if (paramLayout->numResultParams == 1)
-        result->ptrVal = params[paramLayout->firstSlotIndex[paramLayout->numParams - 1]].ptrVal;
+    const StackFrameLayout *layout = *vmGetStackFrameLayout(params);
+    if (layout->numResultParams == 1)
+        result->ptrVal = params[layout->param[layout->numParams - 1].firstSlotIndex].ptrVal;
     return result;
 }
 
@@ -335,17 +335,16 @@ UMKA_API const UmkaType *umkaGetBaseType(const UmkaType *type)
 UMKA_API const UmkaType *umkaGetParamType(UmkaStackSlot *params, int index)
 {
     const StackFrameLayout *layout = *vmGetStackFrameLayout(params);
-    const ParamLayout *paramLayout = getParamLayout(layout);
-    if (index < 0 || index >= paramLayout->numParams - paramLayout->numResultParams - 1)
+    if (index < 0 || index >= layout->numParams - layout->numResultParams - 1)
         return NULL;
-    return getParamTypes(layout)->paramType[index + 1]; 
+    return layout->param[index + 1].type;
 }
 
 
 UMKA_API const UmkaType *umkaGetResultType(UmkaStackSlot *params, UmkaStackSlot *result)
 {
     const StackFrameLayout *layout = *vmGetStackFrameLayout(params);
-    return getParamTypes(layout)->resultType;
+    return layout->resultType;
 }
 
 

@@ -181,23 +181,18 @@ static FORCE_INLINE UmkaStackSlot *doGetOnFreeParams(void *ptr)
     // The layout is the same for all calls, so it is built once
     if (!*vmGetStackFrameLayout(params))
     {
-        static char layoutBuf[STACK_FRAME_LAYOUT_SIZE(2)];
+        static int64_t layoutBuf[(STACK_FRAME_LAYOUT_SIZE(2) + sizeof(int64_t) - 1) / sizeof(int64_t)];
         StackFrameLayout *layout = (StackFrameLayout *)&layoutBuf;
 
-        ParamLayout *paramLayout = (ParamLayout *)getParamLayout(layout);
-        paramLayout->numParams = 2;
-        paramLayout->numParamSlots = 1;
-        paramLayout->numResultParams = 0;
-        paramLayout->firstSlotIndex[0] = 0;     // No upvalues
-        paramLayout->firstSlotIndex[1] = 0;     // Pointer to data to deallocate
-
-        ParamTypes *paramTypes = (ParamTypes *)getParamTypes(layout);
-        paramTypes->resultType = NULL;
-        paramTypes->paramType[0] = NULL;
-        paramTypes->paramType[1] = NULL;
-
-        LocalVarLayout *localVarLayout = (LocalVarLayout *)getLocalVarLayout(layout);
-        localVarLayout->localVarSlots = 0;
+        layout->numParams = 2;
+        layout->numParamSlots = 1;
+        layout->numResultParams = 0;
+        layout->localVarSlots = 0;
+        layout->resultType = NULL;
+        layout->param[0].firstSlotIndex = 0;     // No upvalues
+        layout->param[0].type = NULL;
+        layout->param[1].firstSlotIndex = 0;     // Pointer to data to deallocate
+        layout->param[1].type = NULL;
 
         *vmGetStackFrameLayout(params) = layout;
     }
@@ -837,7 +832,7 @@ static FORCE_INLINE void doCheckPtrEscape(Fiber *fiber, void *loc, Error *error)
 
     for (Slot *base = fiber->base; base != fiber->stack + fiber->stackSize - 1; base = base->ptrVal)
     {
-        const Slot *frameEnd = stackGetFrameParams(base) + getParamLayout(stackGetFrameLayout(base))->numParamSlots;
+        const Slot *frameEnd = stackGetFrameParams(base) + stackGetFrameLayout(base)->numParamSlots;
         if (ptr >= (void *)frameEnd)
             continue;
 
@@ -3678,7 +3673,7 @@ static FORCE_INLINE void doReturn(Fiber *fiber, Fiber **newFiber)
 static FORCE_INLINE void doEnterFrame(Fiber *fiber, const UmkaHookFunc *hooks, Error *error)
 {
     const StackFrameLayout *layout = fiber->code[fiber->ip].operand.ptrVal;
-    const int64_t localVarSlots = getLocalVarLayout(layout)->localVarSlots;
+    const int64_t localVarSlots = layout->localVarSlots;
 
     // Allocate stack frame
     if (UNLIKELY(fiber->top - localVarSlots - fiber->stack < MEM_MIN_FREE_STACK))
@@ -3710,10 +3705,10 @@ static FORCE_INLINE void doEnterFrame(Fiber *fiber, const UmkaHookFunc *hooks, E
 static FORCE_INLINE void doLeaveFrame(Fiber *fiber, const UmkaHookFunc *hooks, Error *error)
 {
     const StackFrameLayout *layout = stackGetFrameLayout(fiber->base);
-    const Type *resultType = getParamTypes(layout)->resultType;
+    const Type *resultType = layout->resultType;
     const Slot result = fiber->reg[REG_RESULT];
 
-    if (UNLIKELY(resultType->kind == TYPE_PTR && result.ptrVal >= (void *)fiber->top && result.ptrVal < (void *)(stackGetFrameParams(fiber->base) + getParamLayout(layout)->numParamSlots)))
+    if (UNLIKELY(resultType->kind == TYPE_PTR && result.ptrVal >= (void *)fiber->top && result.ptrVal < (void *)(stackGetFrameParams(fiber->base) + layout->numParamSlots)))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Pointer to a local variable escapes from the function");
 
     // Stale registers would keep garbage alive
@@ -3846,14 +3841,14 @@ void vmCall(VM *vm, UmkaFuncContext *fn)
     int numParamSlots = 0;
     if (fn->params)
     {
-        const ParamLayout *paramLayout = getParamLayout(*vmGetStackFrameLayout(fn->params));
-        numParamSlots = paramLayout->numParamSlots;
+        const StackFrameLayout *layout = *vmGetStackFrameLayout(fn->params);
+        numParamSlots = layout->numParamSlots;
 
-        if (paramLayout->numResultParams > 0)
+        if (layout->numResultParams > 0)
         {
             if (UNLIKELY(!fn->result || !fn->result->ptrVal))
                 vm->error->runtimeHandler(vm->error->context, ERR_RUNTIME, "Storage for structured result is not specified");
-            fn->params[paramLayout->firstSlotIndex[paramLayout->numParams - 1]].ptrVal = fn->result->ptrVal;
+            fn->params[layout->param[layout->numParams - 1].firstSlotIndex].ptrVal = fn->result->ptrVal;
         }
     }
     else
