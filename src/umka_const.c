@@ -447,7 +447,7 @@ void constCallBuiltin(const Consts *consts, Const *arg, const Const *arg2, TypeK
         case BUILTIN_ATAN:      arg->realVal = atan(arg->realVal); break;
         case BUILTIN_ATAN2:
         {
-            if (arg->realVal == 0 || arg2->realVal == 0)
+            if (arg->realVal == 0 && arg2->realVal == 0)
                 consts->error->handler(consts->error->context, "atan2() domain error");
             arg->realVal = atan2(arg->realVal, arg2->realVal);
             break;
