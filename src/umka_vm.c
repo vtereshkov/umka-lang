@@ -1087,9 +1087,9 @@ static void gcMarkFiber(HeapPages *pages, const Fiber *fiber)
     for (int i = 0; i < NUM_REGS; i++)
         gcMarkPtr(pages, fiber->reg[i].ptrVal, NULL);
 
-    // The stack carries no type info, so it is scanned conservatively
-    for (const Slot *slot = fiber->top; slot < fiber->stack + fiber->stackSize; slot++)
-        gcMarkPtr(pages, slot->ptrVal, NULL);
+    // The stack carries no type info, so it is scanned conservatively (any word can be a pointer)
+    for (void **loc = (void **)fiber->top; loc < (void **)(fiber->stack + fiber->stackSize); loc++)
+        gcMarkPtr(pages, *loc, NULL);
 }
 
 
