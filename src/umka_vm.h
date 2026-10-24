@@ -123,7 +123,7 @@ typedef struct
 typedef struct
 {
     void *ptr;
-    const Type *type;           // If NULL, ptr is a fiber whose stack is to be scanned conservatively (not used for host references)
+    const Type *type;           // Not used for host references
 } GCCandidate;
 
 
@@ -138,9 +138,8 @@ typedef struct
 typedef enum
 {
     CHUNK_DATA,             // Data of the type stored in the chunk header, if any
-    CHUNK_DYNARRAY_DATA,    // Dynamic array dimensions followed by the items
-    CHUNK_FIBER,            // Fiber
-    CHUNK_STACK             // Fiber stack
+    CHUNK_DYNARRAY_DATA,    // Dimensions and items of the dynamic array type stored in the chunk header
+    CHUNK_FIBER_DATA        // Context of the fiber type stored in the chunk header
 } ChunkKind;
 
 
@@ -149,7 +148,7 @@ typedef struct tagHeapChunk
     struct tagHeapChunk *nextFree;
     int size;
     unsigned char kind;         // ChunkKind
-    bool allocated, marked;
+    bool allocated, reachable;
     const Type *type;           // Optional type of the data stored in the chunk
     UmkaExternFunc onFree;      // Optional callback called when the chunk is collected
     int64_t data[];
@@ -170,10 +169,10 @@ typedef struct
 {
     HeapPage *first, *firstRecycled, *lastAccessed;
     char *lowest, *highest;
-    int64_t totalSize, occupiedSize, gcThreshold;
+    int64_t totalSize, occupiedSize, occupiedSizeThreshold;
     bool gcRequested;
-    GCCandidates markCandidates, roots;
-    GCCandidates hostRefs;      // Chunks kept alive by umkaIncRef(), one entry per reference
+    GCCandidates reachables;
+    GCCandidates roots, externalRoots;
     Error *error;
 } HeapPages;
 
@@ -201,7 +200,6 @@ typedef struct tagVM
 {
     Fiber *fiber, *mainFiber;
     HeapPages pages;
-    const Idents *idents;
     UmkaHookFunc hooks[UMKA_NUM_HOOKS];
     int callNesting;
     Storage *storage;
@@ -209,9 +207,9 @@ typedef struct tagVM
 } VM;
 
 
-void vmInit                     (VM *vm, Storage *storage, const Idents *idents, int stackSize, bool fileSystemEnabled, Error *error);
+void vmInit                     (VM *vm, Storage *storage, int stackSize, bool fileSystemEnabled, Error *error);
 void vmFree                     (VM *vm);
-void vmReset                    (VM *vm, const Instruction *code, const DebugInfo *debugPerInstr);
+void vmReset                    (VM *vm, const Instruction *code, const DebugInfo *debugPerInstr, const Idents *idents);
 void vmCall                     (VM *vm, UmkaFuncContext *fn);
 bool vmAlive                    (VM *vm);
 void vmKill                     (VM *vm);

@@ -243,6 +243,37 @@ static FORCE_INLINE void gcCandidatePush(GCCandidates *candidates, void *ptr, co
 }
 
 
+static FORCE_INLINE void gcCandidatePushDeref(GCCandidates *candidates, void *ptr, const Type *type)
+{
+    if (type->isGarbageCollected)
+    {
+        void *data = ptr;
+        if (type->kind == TYPE_PTR || type->kind == TYPE_STR || type->kind == TYPE_FIBER)
+            data = *(void **)data;
+
+        gcCandidatePush(candidates, data, type);
+    }
+}
+
+
+static FORCE_INLINE void gcCandidatePushArrayItems(GCCandidates *candidates, void *ptr, const Type *type, int64_t len)
+{
+    char *itemPtr = ptr;
+    for (int64_t i = 0; i < len; i++)
+    {
+        gcCandidatePushDeref(candidates, itemPtr, type->base);
+        itemPtr += type->base->size;
+    }
+}
+
+
+static FORCE_INLINE void gcCandidatePushStructFields(GCCandidates *candidates, void *ptr, const Type *type)
+{
+    for (int i = 0; i < type->numItems; i++)
+        gcCandidatePushDeref(candidates, (char *)ptr + type->field[i]->offset, type->field[i]->type);
+}
+
+
 static FORCE_INLINE void gcCandidatePop(GCCandidates *candidates, void **ptr, const Type **type)
 {
     const GCCandidate *candidate = &candidates->stack[candidates->top--];
@@ -290,11 +321,11 @@ static void pageInit(HeapPages *pages, Storage *storage, Error *error)
     pages->first = pages->firstRecycled = pages->lastAccessed = NULL;
     pages->lowest = pages->highest = NULL;
     pages->totalSize = pages->occupiedSize = 0;
-    pages->gcThreshold = MEM_MIN_GC_THRESHOLD;
+    pages->occupiedSizeThreshold = MEM_MIN_GC_THRESHOLD;
     pages->gcRequested = false;
-    gcCandidateInit(&pages->markCandidates, storage);
+    gcCandidateInit(&pages->reachables, storage);
     gcCandidateInit(&pages->roots, storage);
-    gcCandidateInit(&pages->hostRefs, storage);
+    gcCandidateInit(&pages->externalRoots, storage);
     pages->error = error;
 }
 
@@ -528,7 +559,7 @@ static FORCE_INLINE void *chunkAlloc(HeapPages *pages, int64_t size, const Type 
     page->numAllocatedChunks++;
     pages->occupiedSize += size;
 
-    if (UNLIKELY(pages->occupiedSize > pages->gcThreshold))
+    if (UNLIKELY(pages->occupiedSize > pages->occupiedSizeThreshold))
         pages->gcRequested = true;
 
     return chunk->data;
@@ -649,13 +680,12 @@ void qsortEx(char *first, char *last, int itemSize, QSortCompareFn compare, void
 
 // Virtual machine
 
-static void gcResetRoots(VM *vm);
+static void gcResetRoots(HeapPages *pages, const Idents *idents);
 
 
-void vmInit(VM *vm, Storage *storage, const Idents *idents, int stackSize, bool fileSystemEnabled, Error *error)
+void vmInit(VM *vm, Storage *storage, int stackSize, bool fileSystemEnabled, Error *error)
 {
     vm->storage = storage;
-    vm->idents = idents;
     vm->fiber = vm->mainFiber = storageAdd(vm->storage, sizeof(Fiber));
     vm->fiber->parent = NULL;
     vm->fiber->vm = vm;
@@ -665,7 +695,6 @@ void vmInit(VM *vm, Storage *storage, const Idents *idents, int stackSize, bool 
     pageInit(&vm->pages, vm->storage, error);
 
     vm->fiber->stack = chunkAlloc(&vm->pages, stackSize * sizeof(Slot), NULL, NULL, error);
-    chunkGetHeader(vm->fiber->stack)->kind = CHUNK_STACK;
     vm->fiber->stackSize = stackSize;
 
     memset(&vm->hooks, 0, sizeof(vm->hooks));
@@ -682,9 +711,9 @@ void vmFree(VM *vm)
 }
 
 
-void vmReset(VM *vm, const Instruction *code, const DebugInfo *debugPerInstr)
+void vmReset(VM *vm, const Instruction *code, const DebugInfo *debugPerInstr, const Idents *idents)
 {
-    gcResetRoots(vm);
+    gcResetRoots(&vm->pages, idents);
 
     vm->fiber = vm->mainFiber;
     vm->fiber->code = code;
@@ -1000,80 +1029,69 @@ static int64_t doCompare(Slot lhs, Slot rhs, const Type *type, Error *error)
 }
 
 
-static FORCE_INLINE void gcAddValueCandidate(GCCandidates *candidates, void *ptr, const Type *type)
+static void gcResetRoots(HeapPages *pages, const Idents *idents)
 {
-    if (type->isGarbageCollected)
-    {
-        void *data = ptr;
-        if (type->kind == TYPE_PTR || type->kind == TYPE_STR || type->kind == TYPE_FIBER)
-            data = *(void **)data;
+    gcCandidateReset(&pages->roots);
 
-        gcCandidatePush(candidates, data, type);
-    }
+    for (const Ident *ident = idents->first; ident; ident = ident->next)
+        if (ident->isGloballyAllocated && ident->type->isGarbageCollected)
+            gcCandidatePush(&pages->roots, ident->ptr, ident->type);
 }
 
 
-static FORCE_INLINE void gcAddArrayItemsCandidates(GCCandidates *candidates, void *ptr, const Type *type, int64_t len)
+static FORCE_INLINE HeapChunk *gcFindUnmarkedChunk(HeapPages *pages, void *ptr)
 {
-    char *itemPtr = ptr;
-    for (int64_t i = 0; i < len; i++)
-    {
-        gcAddValueCandidate(candidates, itemPtr, type->base);
-        itemPtr += type->base->size;
-    }
-}
+    HeapPage *page = pageFind(pages, ptr);
+    if (!page)
+        return NULL;
 
+    HeapChunk *chunk = pageGetChunk(page, ptr);
+    if (!chunk->allocated || chunk->reachable)
+        return NULL;
 
-static FORCE_INLINE void gcAddStructFieldsCandidates(GCCandidates *candidates, void *ptr, const Type *type)
-{
-    for (int i = 0; i < type->numItems; i++)
-        gcAddValueCandidate(candidates, (char *)ptr + type->field[i]->offset, type->field[i]->type);
+    return chunk;
 }
 
 
 static FORCE_INLINE void gcMarkPtr(HeapPages *pages, void *ptr, const Type *ptrType)
 {
-    HeapPage *page = pageFind(pages, ptr);
-    if (!page)
+    HeapChunk *chunk = gcFindUnmarkedChunk(pages, ptr);
+    if (!chunk)
         return;
-
-    HeapChunk *chunk = pageGetChunk(page, ptr);
-    if (!chunk->allocated)
-        return;
-
-    if (chunk->marked)
-        return;
-
-    chunk->marked = true;
-
-    GCCandidates *candidates = &pages->markCandidates;
 
     switch (chunk->kind)
     {
-        case CHUNK_FIBER:
-            gcCandidatePush(candidates, chunk->data, NULL);
-            break;
-
-        case CHUNK_DYNARRAY_DATA:
+        case CHUNK_DATA:
         {
-            const DynArrayDimensions *dims = (DynArrayDimensions *)chunk->data;
-            gcAddArrayItemsCandidates(candidates, (char *)chunk->data + sizeof(DynArrayDimensions), chunk->type, dims->len);
+            chunk->reachable = true;
+
+            if (chunk->type)
+                gcCandidatePushDeref(&pages->reachables, chunk->data, chunk->type);
+            else if (ptrType)
+                gcCandidatePushDeref(&pages->reachables, ptr, ptrType->base);
             break;
         }
 
-        default:
+        case CHUNK_DYNARRAY_DATA:
         {
-            if (chunk->type)
-                gcAddValueCandidate(candidates, chunk->data, chunk->type);
-            else if (ptrType)
-                gcAddValueCandidate(candidates, ptr, ptrType->base);
+            chunk->reachable = true;
+
+            const DynArrayDimensions *dims = (DynArrayDimensions *)chunk->data;
+            gcCandidatePushArrayItems(&pages->reachables, (char *)chunk->data + sizeof(DynArrayDimensions), chunk->type, dims->len);
+            break;
+        }
+
+        case CHUNK_FIBER_DATA:
+        {
+            // Marked and scanned when the candidate is popped, just as if the fiber were reached through a fiber variable
+            gcCandidatePush(&pages->reachables, chunk->data, chunk->type);
             break;
         }
     }
 }
 
 
-static void gcMarkFiber(HeapPages *pages, const Fiber *fiber)
+static void gcMarkFiberData(HeapPages *pages, const Fiber *fiber)
 {
     // The parent fiber is not referenced from the stack, but resume() needs it
     gcMarkPtr(pages, fiber->parent, NULL);
@@ -1088,55 +1106,36 @@ static void gcMarkFiber(HeapPages *pages, const Fiber *fiber)
 }
 
 
-static void gcResetRoots(VM *vm)
+static void gcMark(Fiber *fiber, HeapPages *pages)
 {
-    GCCandidates *roots = &vm->pages.roots;
-    gcCandidateReset(roots);
-
-    for (const Ident *ident = vm->idents->first; ident; ident = ident->next)
-        if (ident->isGloballyAllocated && ident->type->isGarbageCollected)
-            gcCandidatePush(roots, ident->ptr, ident->type);
-}
-
-
-static void gcMark(VM *vm)
-{
-    HeapPages *pages = &vm->pages;
-    GCCandidates *candidates = &pages->markCandidates;
-
-    gcCandidateReset(candidates);
+    gcCandidateReset(&pages->reachables);
 
     // Roots: all the fibers being executed
-    for (const Fiber *fiber = vm->fiber; fiber; fiber = fiber->parent)
+    for (const Fiber *parentFiber = fiber; parentFiber; parentFiber = parentFiber->parent)
     {
-        gcCandidatePush(candidates, (void *)fiber, NULL);
-
         // A running fiber may be referenced from nowhere else, so its own chunk (if any - the main fiber is not on the heap) must be kept alive
-        HeapPage *page = pageFind(pages, (void *)fiber);
+        HeapPage *page = pageFind(pages, (void *)parentFiber);
         if (page)
-            pageGetChunk(page, (void *)fiber)->marked = true;
+        {
+            HeapChunk *chunk = pageGetChunk(page, (void *)parentFiber);
+            chunk->reachable = true;
+        }
+        gcMarkFiberData(pages, parentFiber);
     }
 
     // Roots: global variables
-    const GCCandidates *roots = &pages->roots;
-    for (int i = 0; i <= roots->top; i++)
-        gcAddValueCandidate(candidates, roots->stack[i].ptr, roots->stack[i].type);
+    for (int i = 0; i <= pages->roots.top; i++)
+        gcCandidatePushDeref(&pages->reachables, pages->roots.stack[i].ptr, pages->roots.stack[i].type);
 
     // Roots: chunks referenced by the host
-    for (int i = 0; i <= pages->hostRefs.top; i++)
-        gcMarkPtr(pages, pages->hostRefs.stack[i].ptr, NULL);
+    for (int i = 0; i <= pages->externalRoots.top; i++)
+        gcMarkPtr(pages, pages->externalRoots.stack[i].ptr, NULL);
 
-    while (candidates->top >= 0)
+    while (pages->reachables.top >= 0)
     {
         void *ptr = NULL;
         const Type *type = NULL;
-        gcCandidatePop(candidates, &ptr, &type);
-
-        if (!type)
-        {
-            gcMarkFiber(pages, (const Fiber *)ptr);
-            continue;
-        }
+        gcCandidatePop(&pages->reachables, &ptr, &type);
 
         switch (type->kind)
         {
@@ -1147,22 +1146,34 @@ static void gcMark(VM *vm)
             }
 
             case TYPE_STR:
-            case TYPE_FIBER:
             {
                 gcMarkPtr(pages, ptr, NULL);
                 break;
             }
 
+            case TYPE_FIBER:
+            {
+                // A fiber is scanned once, when its chunk gets marked. The main fiber is not on the heap and is scanned as a root
+                HeapChunk *chunk = gcFindUnmarkedChunk(pages, ptr);
+                if (chunk)
+                {
+                    chunk->reachable = true;
+                    const Fiber *fiber = (const Fiber *)chunk->data;
+                    gcMarkFiberData(pages, fiber);
+                }
+                break;
+            }
+
             case TYPE_ARRAY:
             {
-                gcAddArrayItemsCandidates(candidates, ptr, type, type->numItems);
+                gcCandidatePushArrayItems(&pages->reachables, ptr, type, type->numItems);
                 break;
             }
 
             case TYPE_STRUCT:
             case TYPE_CLOSURE:
             {
-                gcAddStructFieldsCandidates(candidates, ptr, type);
+                gcCandidatePushStructFields(&pages->reachables, ptr, type);
                 break;
             }
 
@@ -1176,7 +1187,7 @@ static void gcMark(VM *vm)
             case TYPE_MAP:
             {
                 const Map *map = (const Map *)ptr;
-                gcCandidatePush(candidates, map->root, typeMapNodePtr(type));
+                gcCandidatePush(&pages->reachables, map->root, typeMapNodePtr(type));
                 break;
             }
 
@@ -1184,7 +1195,7 @@ static void gcMark(VM *vm)
             {
                 const Interface *interface = (const Interface *)ptr;
                 if (interface->self && interface->selfType)
-                    gcCandidatePush(candidates, interface->self, interface->selfType);
+                    gcCandidatePush(&pages->reachables, interface->self, interface->selfType);
                 break;
             }
 
@@ -1207,8 +1218,8 @@ static void gcSweep(HeapPages *pages)
             if (!chunk->allocated)
                 continue;
 
-            if (chunk->marked)
-                chunk->marked = false;
+            if (chunk->reachable)
+                chunk->reachable = false;
             else
                 chunkFree(pages, page, chunk);
         }
@@ -1225,12 +1236,12 @@ static void vmCollectGarbage(VM *vm)
 {
     HeapPages *pages = &vm->pages;
 
-    gcMark(vm);
+    gcMark(vm->fiber, &vm->pages);
     gcSweep(pages);
 
-    pages->gcThreshold = 2 * pages->occupiedSize;
-    if (pages->gcThreshold < MEM_MIN_GC_THRESHOLD)
-        pages->gcThreshold = MEM_MIN_GC_THRESHOLD;
+    pages->occupiedSizeThreshold = 2 * pages->occupiedSize;
+    if (pages->occupiedSizeThreshold < MEM_MIN_GC_THRESHOLD)
+        pages->occupiedSizeThreshold = MEM_MIN_GC_THRESHOLD;
 
     pages->gcRequested = false;
 }
@@ -1481,18 +1492,17 @@ static FORCE_INLINE void doGetMapKeys(const Map *map, void *keys, Error *error)
 }
 
 
-static FORCE_INLINE Fiber *doAllocFiber(Fiber *parent, const Closure *childClosure, HeapPages *pages, Error *error)
+static FORCE_INLINE Fiber *doAllocFiber(Fiber *parent, const Closure *childClosure, const Type *fiberType, HeapPages *pages, Error *error)
 {
     if (UNLIKELY(!childClosure || childClosure->entryOffset <= 0))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Called function is not defined");
 
     // Copy whole fiber context
-    Fiber *child = chunkAlloc(pages, sizeof(Fiber), NULL, NULL, error);
-    chunkGetHeader(child)->kind = CHUNK_FIBER;
+    Fiber *child = chunkAlloc(pages, sizeof(Fiber), fiberType, NULL, error);
+    chunkGetHeader(child)->kind = CHUNK_FIBER_DATA;
 
     *child = *parent;
     child->stack = chunkAlloc(pages, child->stackSize * sizeof(Slot), NULL, NULL, error);
-    chunkGetHeader(child->stack)->kind = CHUNK_STACK;
     child->top = child->base = child->stack + child->stackSize - 1;
 
     child->parent = parent;
@@ -2090,7 +2100,7 @@ static FORCE_INLINE void doBuiltinMake(Fiber *fiber, HeapPages *pages, Error *er
     {
         const Closure *childClosure = (fiber->top++)->ptrVal;
 
-        Fiber *result = doAllocFiber(fiber, childClosure, pages, error);
+        Fiber *result = doAllocFiber(fiber, childClosure, type, pages, error);
         (--fiber->top)->ptrVal = result;
     }
     else
@@ -4004,7 +4014,7 @@ void vmIncRef(VM *vm, void *ptr)
 {
     HeapPage *page = pageFind(&vm->pages, ptr);
     if (page)
-        gcCandidatePush(&vm->pages.hostRefs, pageGetChunk(page, ptr)->data, NULL);
+        gcCandidatePush(&vm->pages.externalRoots, pageGetChunk(page, ptr)->data, NULL);
 }
 
 
@@ -4014,13 +4024,13 @@ void vmDecRef(VM *vm, void *ptr)
     if (!page)
         return;
 
-    GCCandidates *hostRefs = &vm->pages.hostRefs;
+    GCCandidates *externalRoots = &vm->pages.externalRoots;
     const void *data = pageGetChunk(page, ptr)->data;
 
-    for (int i = hostRefs->top; i >= 0; i--)
-        if (hostRefs->stack[i].ptr == data)
+    for (int i = externalRoots->top; i >= 0; i--)
+        if (externalRoots->stack[i].ptr == data)
         {
-            hostRefs->stack[i] = hostRefs->stack[hostRefs->top--];
+            externalRoots->stack[i] = externalRoots->stack[externalRoots->top--];
             return;
         }
 }
