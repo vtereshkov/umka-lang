@@ -177,6 +177,9 @@ static void parseSignature(Umka *umka, Signature *sig, int depth)
 
                 if (!typeComparable(paramType) && !typeEquivalent(paramType, umka->types.predecl.anyType))
                     umka->error.handler(umka->error.context, "Parameter must be of comparable or 'any' type to have default value");
+
+                if (typeHasDynArray(paramType->kind == TYPE_DYNARRAY ? paramType->base : paramType))
+                    umka->error.handler(umka->error.context, "Parameter with nested dynamic arrays cannot have default value");
                 
                 lexNext(&umka->lex);
 

@@ -35,9 +35,20 @@ fn check(f: F, i: I) {
     i.bar(f, 2, 6.28, &v, P{42, 43}, {9, 10, 11}, []str{"ah", "oh"})
 }
 
+// A default dynamic array is a constant shared by all calls, so modifying it in one call must not affect the next one
+fn modify(items: []int = {1, 2, 3}) {
+    printf("%v\n", items)
+    items[0] = 99
+    items = append(items, 4)
+}
+
 fn test*() {
     s := S{}
     check(foo, s)
+
+    for i := 0; i < 3; i++ {
+        modify()
+    }
 }
 
 fn main() {

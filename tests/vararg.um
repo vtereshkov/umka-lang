@@ -37,6 +37,12 @@ fn foo(x: ..int): [2]int {
     return {1, 2}
 }
 
+// An omitted variadic list is a constant shared by all calls, so appending to it in one call must not affect the next one
+fn grow(values: ..int) {
+    values = append(values, 7)
+    printf("%v\n", values)
+}
+
 fn test*() {
     foo(1)
     foo()
@@ -48,6 +54,10 @@ fn test*() {
 
     var t: T 
     printMsg("Greeting", t.join(" Hello", " World"), t.join(" Salut le Monde"))
+
+    for i := 0; i < 3; i++ {
+        grow()
+    }
 }
 
 fn main() {

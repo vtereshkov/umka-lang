@@ -276,6 +276,7 @@ static inline bool typeStructured(const Type *type)
 
 
 bool typeHasPtr(const Type *type);
+bool typeHasDynArray(const Type *type);
 
 
 static inline bool typeExprListStruct(const Type *type)

@@ -109,12 +109,8 @@ DynArray *storageAddDynArray(Storage *storage, const struct tagType *type, int64
     array->type     = type;
     array->itemSize = array->type->base->size;
 
-    DynArrayDimensions dims = {.len = len, .capacity = 2 * (len + 1)};
-
-    if (dims.capacity * array->itemSize > INT_MAX - sizeof(DynArrayDimensions))
-        dims.capacity = (INT_MAX - sizeof(DynArrayDimensions)) / array->itemSize;
-    if (dims.capacity < dims.len)
-        dims.capacity = dims.len;
+    // Constant arrays can be shared, so they have no spare capacity, and appending to them always makes a copy
+    DynArrayDimensions dims = {.len = len, .capacity = len};
 
     char *dimsAndData = storageAdd(storage, sizeof(DynArrayDimensions) + dims.capacity * array->itemSize);
     *(DynArrayDimensions *)dimsAndData = dims;

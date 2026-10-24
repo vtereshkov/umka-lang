@@ -24,6 +24,14 @@ static void doPushConst(Umka *umka, const Type *type, const Const *constant)
         genPushGlobalPtr(&umka->gen, constant->ptrVal);
     else
         umka->error.handler(umka->error.context, "Illegal type");
+
+    // Constant arrays can be shared, so a non-empty one is copied before its items can be modified
+    if (type->kind == TYPE_DYNARRAY && getDims((DynArray *)constant->ptrVal)->len > 0)
+    {
+        const int resultOffset = identAllocStack(&umka->idents, &umka->types, &umka->blocks, type);
+        genPushLocalPtr(&umka->gen, resultOffset);                          // Pointer to result (hidden parameter)
+        genCallTypedBuiltin(&umka->gen, type, BUILTIN_COPY);
+    }
 }
 
 

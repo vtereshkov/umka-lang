@@ -313,6 +313,23 @@ bool typeHasPtr(const Type *type)
 }
 
 
+bool typeHasDynArray(const Type *type)
+{
+    if (type->kind == TYPE_DYNARRAY)
+        return true;
+
+    if (type->kind == TYPE_ARRAY)
+        return type->numItems > 0 && typeHasDynArray(type->base);
+
+    if (type->kind == TYPE_STRUCT)
+        for (int i = 0; i < type->numItems; i++)
+            if (typeHasDynArray(type->field[i]->type))
+                return true;
+
+    return false;
+}
+
+
 static bool typeComparableRecursive(const Type *type, const VisitedType *firstVisited)
 {
     // Recursively defined types visited before (need to check first in order to break a possible circular definition)

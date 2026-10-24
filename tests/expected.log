@@ -1041,6 +1041,9 @@ false true
 >> should work with no values 
 Four averages: 5.23333 3.14 0 -1 
 Greeting {data: " Hello World"} {data: " Hello World Salut le Monde"} 
+[7]
+[7]
+[7]
 
 
 >>> Default parameters
@@ -1053,6 +1056,9 @@ foo: World
 2 6.28 false {x: 42 y: 43} [7 8] "foo: Hello" null
 2 6.28 false {x: 42 y: 43} [9 10 11] "foo: Hello" null
 2 6.28 false {x: 42 y: 43} [9 10 11] "foo: Hello" ["ah" "oh"]
+[1 2 3]
+[1 2 3]
+[1 2 3]
 
 
 >>> Date/time
