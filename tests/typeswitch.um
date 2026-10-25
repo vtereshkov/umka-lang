@@ -24,6 +24,32 @@ fn baz(): int {
     return 1 + 2
 }
 
+fn sumInLoops(x: any, n: int): int {
+    s := 0
+
+    // "continue" from a type switch
+    for i := 0; i < n; i++ {
+        switch v := type(x) {
+            case int:
+                s += v
+                continue
+        }
+    }
+
+    // "break" from a type switch
+    for i := 0; i < n; i++ {
+        for true {
+            switch v := type(x) {
+                case int:
+                    s += v
+                    break
+            }
+        }
+    }
+
+    return s
+}
+
 fn test*() {
     a := 42
     b := "42"
@@ -46,6 +72,8 @@ fn test*() {
         default:
             printf("bye\n")
     }    
+
+    printf("%v\n", sumInLoops(1, 2000000))
 }
 
 fn main() {

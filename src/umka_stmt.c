@@ -546,7 +546,7 @@ static void parseTypeCase(Umka *umka, const char *concreteVarName, ConstArray *e
     if (concreteType->kind != TYPE_PTR)
         concretePtrType = typeAddPtrTo(&umka->types, &umka->blocks, concreteType);
 
-    genDup(&umka->gen);                             // Duplicate interface expression
+    genPushReg(&umka->gen, REG_SWITCH_EXPR);        // Get interface expression
     genAssertType(&umka->gen, concretePtrType);
 
     genDup(&umka->gen);                             // Duplicate expression converted to the concrete type
@@ -680,6 +680,8 @@ static void parseTypeSwitchStmt(Umka *umka)
     // ")"
     lexEat(&umka->lex, TOK_RPAR);
 
+    genSwitchCondEpilog(&umka->gen);
+
     // "{" {typeCase} "}"
     lexEat(&umka->lex, TOK_LBRACE);
 
@@ -702,8 +704,6 @@ static void parseTypeSwitchStmt(Umka *umka)
     lexEat(&umka->lex, TOK_RBRACE);
 
     genSwitchEpilog(&umka->gen, numCases);
-
-    genPop(&umka->gen);     // Remove expr
 
     // Additional scope embracing ident and statement body
     identFree(&umka->idents, blocksCurrent(&umka->blocks));
