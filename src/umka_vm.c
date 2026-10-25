@@ -3089,6 +3089,9 @@ static FORCE_INLINE void doUnary(Fiber *fiber, Error *error)
 
     Slot *slot = fiber->top;
 
+    if (UNLIKELY((op == TOK_PLUSPLUS || op == TOK_MINUSMINUS) && !slot->ptrVal))
+        error->runtimeHandler(error->context, ERR_RUNTIME, "Pointer is null");
+
     if (typeReal(type))
     {
         switch (op)
