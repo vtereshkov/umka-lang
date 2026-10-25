@@ -450,6 +450,20 @@ static bool optimizeCallBuiltin(CodeGen *gen, TypeKind typeKind, BuiltinFunc bui
 }
 
 
+static bool optimizeGotosEpilog(CodeGen *gen, Gotos *gotos)
+{
+    // Optimization: GOTO (ip + 1) -> 0
+    if (gotos->numGotos > 0 && gotos->start[gotos->numGotos - 1] == gen->ip - 1 && gen->lastJump < gen->ip)
+    {
+        genRemoveInstr(gen);
+        gotos->numGotos--;
+        return true;
+    }
+
+    return false;
+}
+
+
 // Atomic VM instructions
 
 void genNop(CodeGen *gen)
@@ -1029,6 +1043,8 @@ void genGotosAddStub(CodeGen *gen, Gotos *gotos)
 
 void genGotosEpilog(CodeGen *gen, Gotos *gotos)
 {
+    optimizeGotosEpilog(gen, gotos);
+
     for (int i = 0; i < gotos->numGotos; i++)
         genGoFromTo(gen, gotos->start[i], gen->ip);         // Goto block/function end (fixup)
 }

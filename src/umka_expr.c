@@ -1769,14 +1769,12 @@ static void parseActualParamsAndCall(Umka *umka, const Type **type)
         i++;
     }
 
-    // Push #result pointer
+    // Push #result pointer (no zeroing needed, since the callee always overwrites the whole #result)
+    int resultOffset = 0;
     if (typeStructured((*type)->sig->resultType))
     {
-        const int resultOffset = identAllocStack(&umka->idents, &umka->types, &umka->blocks, (*type)->sig->resultType);
+        resultOffset = identAllocStack(&umka->idents, &umka->types, &umka->blocks, (*type)->sig->resultType);
         
-        genPushLocalPtr(&umka->gen, resultOffset);
-        genZero(&umka->gen, typeSize(&umka->types, (*type)->sig->resultType));
-
         genPushLocalPtr(&umka->gen, resultOffset);
         i++;
     }
@@ -1795,6 +1793,12 @@ static void parseActualParamsAndCall(Umka *umka, const Type **type)
     *type = (*type)->sig->resultType;
 
     lexEat(&umka->lex, TOK_RPAR);
+
+    // Push result (REG_RESULT for scalar types, #result for structured types)
+    if (typeStructured(*type))
+        genPushLocalPtr(&umka->gen, resultOffset);
+    else if ((*type)->kind != TYPE_VOID)
+        genPushReg(&umka->gen, REG_RESULT);
 }
 
 
@@ -2561,10 +2565,6 @@ static void parseCallSelector(Umka *umka, const Type **type, bool *isVar, bool *
         umka->error.handler(umka->error.context, "Function or closure expected");
 
     parseActualParamsAndCall(umka, type);
-
-    // Push result
-    if ((*type)->kind != TYPE_VOID)
-        genPushReg(&umka->gen, REG_RESULT);
 
     *isVar = typeStructured(*type);
     *isCall = true;

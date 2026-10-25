@@ -1115,21 +1115,15 @@ static void parseReturnStmt(Umka *umka)
     if (sig->resultType->kind != type->kind && typeNarrow(sig->resultType))
         genAssertRange(&umka->gen, sig->resultType->kind, type);
 
-    // Copy structure to #result
+    // Save result (to REG_RESULT for scalar types, to #result for structured types)
     if (typeStructured(sig->resultType))
     {
         const Ident *result = identAssertFind(&umka->idents, &umka->modules, &umka->blocks, umka->blocks.module, "#result", NULL);
-
         doPushVarPtr(umka, result);
         genDeref(&umka->gen, TYPE_PTR);
-
         genSwapAssign(&umka->gen, sig->resultType);
-
-        doPushVarPtr(umka, result);
-        genDeref(&umka->gen, TYPE_PTR);
     }
-
-    if (sig->resultType->kind != TYPE_VOID)
+    else if (sig->resultType->kind != TYPE_VOID)
         genPopReg(&umka->gen, REG_RESULT);
 
     genGotosAddStub(&umka->gen, umka->gen.returns);

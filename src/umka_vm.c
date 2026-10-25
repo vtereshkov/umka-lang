@@ -3724,9 +3724,9 @@ static FORCE_INLINE void doLeaveFrame(Fiber *fiber, const UmkaHookFunc *hooks, E
     if (UNLIKELY(resultType->kind == TYPE_PTR && result.ptrVal >= (void *)fiber->top && result.ptrVal < (void *)(stackGetFrameParams(fiber->base) + layout->numParamSlots)))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Pointer to a local variable escapes from the function");
 
-    // Stale registers would keep garbage alive
+    // Stale registers would keep garbage alive (the result register is stale as well if the result is structured)
     memset(fiber->reg, 0, sizeof(fiber->reg));
-    if (resultType->kind != TYPE_VOID)
+    if (resultType->kind != TYPE_VOID && layout->numResultParams == 0)
         fiber->reg[REG_RESULT] = result;
 
     // Call 'return' hook, if any
@@ -3852,6 +3852,7 @@ void vmCall(VM *vm, UmkaFuncContext *fn)
 
     // Push parameters
     int numParamSlots = 0;
+    bool hasStructuredResult = false;
     if (fn->params)
     {
         const StackFrameLayout *layout = *vmGetStackFrameLayout(fn->params);
@@ -3862,6 +3863,7 @@ void vmCall(VM *vm, UmkaFuncContext *fn)
             if (UNLIKELY(!fn->result || !fn->result->ptrVal))
                 vm->error->runtimeHandler(vm->error->context, ERR_RUNTIME, "Storage for structured result is not specified");
             fn->params[layout->param[layout->numParams - 1].firstSlotIndex].ptrVal = fn->result->ptrVal;
+            hasStructuredResult = true;
         }
     }
     else
@@ -3882,8 +3884,8 @@ void vmCall(VM *vm, UmkaFuncContext *fn)
     // Main loop
     vmLoop(vm);
 
-    // Save result
-    if (fn->result)
+    // Save result, unless it is structured and has already been copied to fn->result->ptrVal
+    if (fn->result && !hasStructuredResult)
         *(fn->result) = vm->fiber->reg[REG_RESULT].apiSlot;
 }
 
