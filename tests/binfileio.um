@@ -28,9 +28,33 @@ fn test2() {
 	std::assert(f == null)
 }
 
+fn test3() {
+	// fwrite() accepts a variable or a pointer to it, but not data containing pointers
+	name := "fio.bin"
+	x := 12345
+	p := &x
+	f, err := std::fopen(name, "wb")
+	std::exitif(err)
+	n1, _ := std::fwrite(f, x)
+	n2, _ := std::fwrite(f, p)
+	n3, err3 := std::fwrite(f, "hello")
+	std::fclose(f)
+
+	y, z := 0, 0
+	f, err = std::fopen(name, "rb")
+	std::exitif(err)
+	n4, err4 := std::fread(f, &y)
+	n5, err5 := std::fread(f, &z)
+	std::fclose(f)
+	std::remove(name)
+
+	printf("%v %v %v %v | %v %v %v %v | %v %v\n", n1, n2, n3, err3.msg, n4, n5, err4.code, err5.code, y, z)
+}
+
 fn test*() {
 	test1()
 	test2()
+	test3()
 }
 
 fn main() {

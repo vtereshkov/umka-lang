@@ -5,6 +5,7 @@
 #include <time.h>
 
 #include "umka_common.h"
+#include "umka_types.h"
 #include "umka_runtime.h"
 
 
@@ -54,6 +55,37 @@ void rtlmemcpy(UmkaStackSlot *params, UmkaStackSlot *result)
     const int count = umkaGetParam(params, 2)->intVal;
 
     memcpy(dest, src, count);
+}
+
+
+void rtlmemof(UmkaStackSlot *params, UmkaStackSlot *result)
+{
+    const Interface *buf = (const Interface *)umkaGetParam(params, 0);
+
+    RTLMem *res = umkaGetResult(params, result)->ptrVal;
+    *res = (RTLMem){NULL, 0};
+
+    if (!buf->self)
+        return;
+
+    const Type *type = buf->selfType->base;
+
+    if (type->kind == TYPE_DYNARRAY && (type->base->kind == TYPE_INT8 || type->base->kind == TYPE_UINT8 || type->base->kind == TYPE_CHAR))
+    {
+        const DynArray *array = buf->self;
+        res->data = array->data;
+        res->size = umkaGetDynArrayLen(array);
+    }
+    else if (typeHasPtr(type))
+    {
+        res->data = NULL;
+        res->size = -1;
+    }
+    else
+    {
+        res->data = buf->self;
+        res->size = type->size;
+    }
 }
 
 

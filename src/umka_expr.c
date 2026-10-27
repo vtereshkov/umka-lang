@@ -1287,58 +1287,6 @@ static void parseBuiltinSizeOfCall(Umka *umka, const Type **type, Const *constan
 }
 
 
-static void parseBuiltinSizeOfSelfCall(Umka *umka, const Type **type, Const *constant)
-{
-    *type = NULL;
-    parseExpr(umka, type, constant);
-    typeAssertCompatibleBuiltin(&umka->types, *type, BUILTIN_SIZEOFSELF, (*type)->kind == TYPE_INTERFACE);
-
-    genCallBuiltin(&umka->gen, TYPE_INTERFACE, BUILTIN_SIZEOFSELF);
-    *type = umka->types.predecl.intType;
-}
-
-
-static void parseBuiltinSelfPtrCall(Umka *umka, const Type **type, Const *constant)
-{
-    *type = NULL;
-    parseExpr(umka, type, constant);
-    typeAssertCompatibleBuiltin(&umka->types, *type, BUILTIN_SELFPTR, (*type)->kind == TYPE_INTERFACE);
-
-    genCallBuiltin(&umka->gen, TYPE_INTERFACE, BUILTIN_SELFPTR);
-    *type = umka->types.predecl.ptrVoidType;
-}
-
-
-static void parseBuiltinSelfHasPtrCall(Umka *umka, const Type **type, Const *constant)
-{
-    *type = NULL;
-    parseExpr(umka, type, constant);
-    typeAssertCompatibleBuiltin(&umka->types, *type, BUILTIN_SELFHASPTR, (*type)->kind == TYPE_INTERFACE);
-
-    genCallBuiltin(&umka->gen, TYPE_INTERFACE, BUILTIN_SELFHASPTR);
-    *type = umka->types.predecl.boolType;
-}
-
-
-static void parseBuiltinSelfTypeEqCall(Umka *umka, const Type **type, Const *constant)
-{
-    // Left interface
-    *type = NULL;
-    parseExpr(umka, type, constant);
-    typeAssertCompatibleBuiltin(&umka->types, *type, BUILTIN_SELFTYPEEQ, (*type)->kind == TYPE_INTERFACE);
-
-    lexEat(&umka->lex, TOK_COMMA);
-
-    // Right interface
-    *type = NULL;
-    parseExpr(umka, type, constant);
-    typeAssertCompatibleBuiltin(&umka->types, *type, BUILTIN_SELFTYPEEQ, (*type)->kind == TYPE_INTERFACE);
-
-    genCallBuiltin(&umka->gen, TYPE_INTERFACE, BUILTIN_SELFTYPEEQ);
-    *type = umka->types.predecl.boolType;
-}
-
-
 // fn typeptr(T): ^void
 static void parseBuiltinTypePtrCall(Umka *umka, const Type **type, Const *constant)
 {
@@ -1546,10 +1494,6 @@ static void parseBuiltinCall(Umka *umka, const Type **type, Const *constant, Bui
         case BUILTIN_LEN:           parseBuiltinLenCall(umka, type, constant);              break;
         case BUILTIN_CAP:           parseBuiltinCapCall(umka, type, constant);              break;
         case BUILTIN_SIZEOF:        parseBuiltinSizeOfCall(umka, type, constant);           break;
-        case BUILTIN_SIZEOFSELF:    parseBuiltinSizeOfSelfCall(umka, type, constant);       break;
-        case BUILTIN_SELFPTR:       parseBuiltinSelfPtrCall(umka, type, constant);          break;
-        case BUILTIN_SELFHASPTR:    parseBuiltinSelfHasPtrCall(umka, type, constant);       break;
-        case BUILTIN_SELFTYPEEQ:    parseBuiltinSelfTypeEqCall(umka, type, constant);       break;
         case BUILTIN_TYPEPTR:       parseBuiltinTypePtrCall(umka, type, constant);          break;
         case BUILTIN_VALID:         parseBuiltinValidCall(umka, type, constant);            break;
 

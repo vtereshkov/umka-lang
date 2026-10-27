@@ -145,10 +145,6 @@ static const char *builtinSpelling [] =
     "len",
     "cap",
     "sizeof",
-    "sizeofself",
-    "selfptr",
-    "selfhasptr",
-    "selftypeeq",
     "typeptr",
     "valid",
     "validkey",
@@ -2731,60 +2727,6 @@ static FORCE_INLINE void doBuiltinCap(Fiber *fiber, Error *error)
 }
 
 
-static FORCE_INLINE void doBuiltinSizeOfSelf(Fiber *fiber, Error *error)
-{
-    const Interface *interface = fiber->top->ptrVal;
-    if (UNLIKELY(!interface))
-        error->runtimeHandler(error->context, ERR_RUNTIME, "Interface is null");
-
-    int size = 0;
-    if (interface->selfType)
-        size = interface->selfType->base->size;
-
-    fiber->top->intVal = size;
-}
-
-
-static FORCE_INLINE void doBuiltinSelfPtr(Fiber *fiber, Error *error)
-{
-    Interface *interface = fiber->top->ptrVal;
-    if (UNLIKELY(!interface))
-        error->runtimeHandler(error->context, ERR_RUNTIME, "Interface is null");
-
-    fiber->top->ptrVal = interface->self;
-}
-
-
-static FORCE_INLINE void doBuiltinSelfHasPtr(Fiber *fiber, Error *error)
-{
-    const Interface *interface = fiber->top->ptrVal;
-    if (UNLIKELY(!interface))
-        error->runtimeHandler(error->context, ERR_RUNTIME, "Interface is null");
-
-    bool hasPtr = false;
-    if (interface->selfType)
-        hasPtr = typeHasPtr(interface->selfType->base);
-
-    fiber->top->intVal = hasPtr;
-}
-
-
-static FORCE_INLINE void doBuiltinSelfTypeEq(Fiber *fiber, Error *error)
-{
-    const Interface *right = (fiber->top++)->ptrVal;
-    const Interface *left  = (fiber->top++)->ptrVal;
-
-    if (UNLIKELY(!left || !right))
-        error->runtimeHandler(error->context, ERR_RUNTIME, "Interface is null");
-
-    bool typesEq = false;
-    if (left->selfType && right->selfType)
-        typesEq = typeEquivalent(left->selfType->base, right->selfType->base);
-
-    (--fiber->top)->intVal = typesEq;
-}
-
-
 static FORCE_INLINE void doBuiltinValid(Fiber *fiber, Error *error)
 {
     bool isValid = true;
@@ -3637,10 +3579,6 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         case BUILTIN_LEN:           doBuiltinLen(fiber, error); break;
         case BUILTIN_CAP:           doBuiltinCap(fiber, error); break;
         case BUILTIN_SIZEOF:        error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal instruction"); return;       // Done at compile time
-        case BUILTIN_SIZEOFSELF:    doBuiltinSizeOfSelf(fiber, error); break;
-        case BUILTIN_SELFPTR:       doBuiltinSelfPtr(fiber, error); break;
-        case BUILTIN_SELFHASPTR:    doBuiltinSelfHasPtr(fiber, error); break;
-        case BUILTIN_SELFTYPEEQ:    doBuiltinSelfTypeEq(fiber, error); break;
         case BUILTIN_TYPEPTR:       error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal instruction"); return;       // Done at compile time
         case BUILTIN_VALID:         doBuiltinValid(fiber, error); break;
 

@@ -13,6 +13,9 @@ fn test*() {
 	
 	std::frombytes(&p, bytes)
 	printf("%v\n", p)
+
+	// A variable is converted as is, a byte dynamic array as its items, a value containing pointers is not converted
+	printf("%v %v %v\n", std::tobytes(p), std::tobytes([]char("hi")), len(std::tobytes("hi")))
 }
 
 fn main() {

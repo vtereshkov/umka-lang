@@ -132,10 +132,6 @@ static void compilerDeclareBuiltinIdents(Umka *umka)
     identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "len",        umka->types.predecl.intType,     BUILTIN_LEN);
     identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "cap",        umka->types.predecl.intType,     BUILTIN_CAP);
     identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "sizeof",     umka->types.predecl.intType,     BUILTIN_SIZEOF);
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "sizeofself", umka->types.predecl.intType,     BUILTIN_SIZEOFSELF);
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "selfptr",    umka->types.predecl.ptrVoidType, BUILTIN_SELFPTR);
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "selfhasptr", umka->types.predecl.boolType,    BUILTIN_SELFHASPTR);
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "selftypeeq", umka->types.predecl.boolType,    BUILTIN_SELFTYPEEQ);
     identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "typeptr",    umka->types.predecl.ptrVoidType, BUILTIN_TYPEPTR);        // Deprecated
     identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "valid",      umka->types.predecl.boolType,    BUILTIN_VALID);
 
@@ -157,6 +153,7 @@ static void compilerDeclareBuiltinIdents(Umka *umka)
 static void compilerDeclareExternalFuncs(Umka *umka, bool fileSystemEnabled)
 {
     externalAdd(&umka->externals, "rtlmemcpy",      &rtlmemcpy,                                           NULL, true);
+    externalAdd(&umka->externals, "rtlmemof",       &rtlmemof,                                            NULL, true);
     externalAdd(&umka->externals, "rtlstdin",       &rtlstdin,                                            NULL, true);
     externalAdd(&umka->externals, "rtlstdout",      &rtlstdout,                                           NULL, true);
     externalAdd(&umka->externals, "rtlstderr",      &rtlstderr,                                           NULL, true);

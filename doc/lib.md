@@ -70,13 +70,13 @@ If `cond` is `false`, terminates the program, prints the error message `msg` and
 fn tobytes*(buf: any): []uint8
 ```
 
-Copies the bytes of `buf` to a byte array.
+Copies the bytes of `buf` to a byte array. If `buf` is a pointer, copies the bytes of the variable it points to. The data can be of any type that doesn't contain pointers, strings, dynamic arrays, interfaces, closures or fibers, except for `[]int8`, `[]uint8`, `[]char`, whose items are copied. If unsuccessful, returns an empty array.
 
 ```
 fn frombytes*(buf: any, bytes: []uint8): Err
 ```
 
-Copies the `bytes` array to `buf`. If unsuccessful, returns `StdErr.buffer` or `StdErr.ptr` in `Err`.
+Copies the `bytes` array to the variable pointed to by `buf`. The variable can be of any type that doesn't contain pointers, strings, dynamic arrays, interfaces, closures or fibers, except for `[]int8`, `[]uint8`, `[]char`, whose items are copied. If unsuccessful, returns `StdErr.buffer` or `StdErr.ptr` in `Err`.
 
 ### Input/output
 
@@ -173,7 +173,7 @@ Flushes the buffer for the file `f`. If unsuccessful, returns `StdErr.nullf` or 
 fn fread*(f: File, buf: any): (int, Err)
 ```
 
-Reads the `buf` variable from the file `f`. `buf` can be of any type that doesn't contain pointers, strings, dynamic arrays, interfaces, closures or fibers, except for `^[]int8`, `^[]uint8`, `^[]char`. Returns the number of bytes read. If unsuccessful, returns `StdErr.ptr`, `StdErr.nullf` or `StdErr.eof` in `Err`.
+Reads the variable pointed to by `buf` from the file `f`. The variable can be of any type that doesn't contain pointers, strings, dynamic arrays, interfaces, closures or fibers, except for `[]int8`, `[]uint8`, `[]char`, whose items are read. Returns the number of bytes read. If unsuccessful, returns `StdErr.ptr`, `StdErr.nullf` or `StdErr.eof` in `Err`.
 
 ```
 fn freadall*(f: File): ([]char, Err)
@@ -185,7 +185,7 @@ Reads all the contents of the file `f` to a dynamic array of `char` and returns 
 fn fwrite*(f: File, buf: any): (int, Err)
 ```
 
-Writes the `buf` variable to the file `f`. `buf` can be of any type that doesn't contain pointers, strings, dynamic arrays, interfaces, closures or fibers, except for `^[]int8`, `^[]uint8`, `^[]char`. Returns the number of bytes written. If unsuccessful, returns `StdErr.ptr`, `StdErr.nullf` or `StdErr.eof` in `Err`.
+Writes `buf` to the file `f`. If `buf` is a pointer, writes the variable it points to. The data can be of any type that doesn't contain pointers, strings, dynamic arrays, interfaces, closures or fibers, except for `[]int8`, `[]uint8`, `[]char`, whose items are written. Returns the number of bytes written. If unsuccessful, returns `StdErr.ptr`, `StdErr.nullf` or `StdErr.eof` in `Err`.
 
 ```
 fn println*(s: str): int

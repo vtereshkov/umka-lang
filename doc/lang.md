@@ -816,30 +816,6 @@ fn sizeof(T | a: T): int
 Returns the size of type `T ` in bytes.
 
 ```
-fn sizeofself(a: interface{...}): int
-```
-
-Returns the size in bytes of the variable that has been converted to the interface `a`.
-
-```
-fn selfptr(a: interface{...}): ^void
-```
-
-Returns the pointer to the variable that has been converted to the interface `a`.
-
-```
-fn selfhasptr(a: interface{...}): bool
-```
-
-Checks whether the type of the variable that has been converted to the interface`a` is a pointer, string, dynamic array, interface or fiber, or has one of these types as its item type or field type.
-
-```
-fn selftypeeq(a, b: interface{...}): bool
-```
-
-Checks whether the types of the variables that have been converted to the interfaces `a`  and `b` are equivalent.
-
-```
 fn typeptr(T): ^void
 ```
 

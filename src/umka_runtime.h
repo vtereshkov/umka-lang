@@ -21,7 +21,15 @@ typedef struct
 } RTLErrPos;
 
 
+typedef struct
+{
+    void *data;
+    int64_t size;
+} RTLMem;
+
+
 void rtlmemcpy          (UmkaStackSlot *params, UmkaStackSlot *result);
+void rtlmemof           (UmkaStackSlot *params, UmkaStackSlot *result);
 void rtlstdin           (UmkaStackSlot *params, UmkaStackSlot *result);
 void rtlstdout          (UmkaStackSlot *params, UmkaStackSlot *result);
 void rtlstderr          (UmkaStackSlot *params, UmkaStackSlot *result);

@@ -76,25 +76,38 @@ fn assert*(cond: bool, msg: str = "") {
 // Memory
 
 fn rtlmemcpy(dest, src: ^void, count: int)
+fn rtlmemof(buf: any): (^void, int)
+
+fn memof(buf: any): (^void, int, Err) {
+    data, size := rtlmemof(buf)
+    if size < 0 {
+        return null, 0, stderror(.ptr)
+    }
+    return data, size, {}
+}
 
 fn tobytes*(buf: any): []uint8 {
-    if !valid(buf) {
+    data, size, err := memof(buf)
+    if err.code != 0 || size == 0 {
         return {}
     }
-    bytes := make([]uint8, sizeofself(buf))
-    rtlmemcpy(&bytes[0], selfptr(buf), sizeofself(buf))
+    bytes := make([]uint8, size)
+    rtlmemcpy(&bytes[0], data, size)
     return bytes
 }
 
 fn frombytes*(buf: any, bytes: []uint8): Err {
-    if !valid(buf) || sizeofself(buf) != len(bytes) {
-        return stderror(.buffer)
-    }    
-    if selfhasptr(buf) {
-        return stderror(.ptr)
+    data, size, err := memof(buf)
+    if err.code != 0 {
+        return err
     }
-    rtlmemcpy(selfptr(buf), &bytes[0], sizeofself(buf))
-    return {}    
+    if !valid(buf) || size != len(bytes) {
+        return stderror(.buffer)
+    }
+    if size > 0 {
+        rtlmemcpy(data, &bytes[0], size)
+    }
+    return {}
 }
 
 // Input/output
@@ -205,23 +218,15 @@ fn freadwrite(f: File, buf: any, reading: bool): (int, Err) {
     if f == null {
         return 0, stderror(.nullf)
     }
-    var data: ^void
-    var length: int 
-    switch bytes := type(buf) {
-        case ^[]int8:  length = len(bytes^); if length > 0 {data = &bytes[0]} 
-        case ^[]uint8: length = len(bytes^); if length > 0 {data = &bytes[0]}
-        case ^[]char:  length = len(bytes^); if length > 0 {data = &bytes[0]}
-        default:
-            if selfhasptr(buf) {
-                return 0, stderror(.ptr)
-            }
-            length, data = sizeofself(buf), selfptr(buf)
+    data, length, err := memof(buf)
+    if err.code != 0 {
+        return 0, err
     }
     if length == 0 || data == null {
         return 0, stderror(.ok)
     }
     size := reading ? rtlfread(data, 1, length, f) : rtlfwrite(data, 1, length, f)
-    err := size == length ? stderror(.ok) : stderror(.eof)
+    err = size == length ? stderror(.ok) : stderror(.eof)
     return size, err
 }
 

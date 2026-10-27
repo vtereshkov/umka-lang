@@ -18,6 +18,7 @@ OK
 >>> Binary file I/O
 
 Hello World
+8 8 0 "Pointers cannot be read or written" | 8 8 0 0 | 12345 12345
 
 
 >>> Dynamic arrays - 1
@@ -827,6 +828,7 @@ Hello, дивный новый мир!
 [23 0 250 255]
 [23 0 251 255]
 {x: 23 y: -5}
+[23 0 251 255] [104 105] 0
 
 
 >>> UTF-8 - 1
