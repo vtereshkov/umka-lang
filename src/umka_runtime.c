@@ -70,11 +70,11 @@ void rtlmemof(UmkaStackSlot *params, UmkaStackSlot *result)
 
     const Type *type = buf->selfType->base;
 
-    if (type->kind == TYPE_DYNARRAY && (type->base->kind == TYPE_INT8 || type->base->kind == TYPE_UINT8 || type->base->kind == TYPE_CHAR))
+    if (type->kind == TYPE_DYNARRAY && !typeHasPtr(type->base))
     {
         const DynArray *array = buf->self;
         res->data = array->data;
-        res->size = umkaGetDynArrayLen(array);
+        res->size = umkaGetDynArrayLen(array) * array->itemSize;
     }
     else if (typeHasPtr(type))
     {

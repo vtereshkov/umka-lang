@@ -51,10 +51,33 @@ fn test3() {
 	printf("%v %v %v %v | %v %v %v %v | %v %v\n", n1, n2, n3, err3.msg, n4, n5, err4.code, err5.code, y, z)
 }
 
+fn test4() {
+	// fwrite() and fread() accept dynamic arrays of items without pointers
+	name := "fio.bin"
+	f, err := std::fopen(name, "wb")
+	std::exitif(err)
+	n1, _ := std::fwrite(f, []int{2, 4, 6})
+	n2, _ := std::fwrite(f, []uint16{7, 8})
+	n3, err3 := std::fwrite(f, []str{"hello"})
+	std::fclose(f)
+
+	a := make([]int, 3)
+	b := make([]uint16, 2)
+	f, err = std::fopen(name, "rb")
+	std::exitif(err)
+	n4, _ := std::fread(f, &a)
+	n5, _ := std::fread(f, &b)
+	std::fclose(f)
+	std::remove(name)
+
+	printf("%v %v %v %v | %v %v | %v %v\n", n1, n2, n3, err3.msg, n4, n5, a, b)
+}
+
 fn test*() {
 	test1()
 	test2()
 	test3()
+	test4()
 }
 
 fn main() {

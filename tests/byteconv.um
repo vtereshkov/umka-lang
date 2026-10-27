@@ -14,8 +14,12 @@ fn test*() {
 	std::frombytes(&p, bytes)
 	printf("%v\n", p)
 
-	// A variable is converted as is, a byte dynamic array as its items, a value containing pointers is not converted
+	// A variable is converted as is, a dynamic array as its items, a value containing pointers is not converted
 	printf("%v %v %v\n", std::tobytes(p), std::tobytes([]char("hi")), len(std::tobytes("hi")))
+
+	q := make([]int16, 2)
+	std::frombytes(&q, std::tobytes([]int16{1, -2}))
+	printf("%v %v %v\n", std::tobytes(q), q, len(std::tobytes([]str{"hi"})))
 }
 
 fn main() {
