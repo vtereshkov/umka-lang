@@ -15,8 +15,6 @@ fn test1() {
 }
 
 fn test2() {
-  leaksan(2)
-  
   var p, tail: ^list
 
   for i := 0; i < 10; i++ {

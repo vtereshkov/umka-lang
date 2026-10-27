@@ -152,7 +152,6 @@ static const char *builtinSpelling [] =
     "resume",
     "gc",
     "memusage",
-    "leaksan",
     "exit"
 };
 
@@ -2845,13 +2844,6 @@ static FORCE_INLINE void doBuiltinMemUsage(Fiber *fiber, HeapPages *pages)
 }
 
 
-// fn leaksan(level: int)
-static FORCE_INLINE void doBuiltinLeakSan(Fiber *fiber)
-{
-    fiber->top++;      // Kept for backward compatibility, ignored
-}
-
-
 // fn exit(code: int, msg: str = "")
 static FORCE_INLINE void doBuiltinExit(Fiber *fiber, Error *error)
 {
@@ -3592,7 +3584,6 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         // Misc
         case BUILTIN_GC:            doBuiltinGc(fiber);                    break;
         case BUILTIN_MEMUSAGE:      doBuiltinMemUsage(fiber, pages);       break;
-        case BUILTIN_LEAKSAN:       doBuiltinLeakSan(fiber);               break;
         case BUILTIN_EXIT:          doBuiltinExit(fiber, error); return;
     }
 

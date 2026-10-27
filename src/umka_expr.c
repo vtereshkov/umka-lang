@@ -1389,18 +1389,6 @@ static void parseBuiltinMemUsageCall(Umka *umka, const Type **type, Const *const
 }
 
 
-// fn leaksan(level: int)
-static void parseBuiltinLeakSanCall(Umka *umka, const Type **type, Const *constant)
-{
-    *type = umka->types.predecl.intType;
-    parseExpr(umka, type, constant);
-    doAssertImplicitTypeConv(umka, umka->types.predecl.intType, type, constant);        
-
-    genCallBuiltin(&umka->gen, TYPE_VOID, BUILTIN_LEAKSAN);
-    *type = umka->types.predecl.voidType;
-}
-
-
 // fn exit(code: int, msg: str = "")
 static void parseBuiltinExitCall(Umka *umka, const Type **type, Const *constant)
 {
@@ -1507,7 +1495,6 @@ static void parseBuiltinCall(Umka *umka, const Type **type, Const *constant, Bui
         // Misc
         case BUILTIN_GC:            parseBuiltinGcCall(umka, type, constant);               break;
         case BUILTIN_MEMUSAGE:      parseBuiltinMemUsageCall(umka, type, constant);         break;
-        case BUILTIN_LEAKSAN:       parseBuiltinLeakSanCall(umka, type, constant);          break;
         case BUILTIN_EXIT:          parseBuiltinExitCall(umka, type, constant);             break;
 
         default: umka->error.handler(umka->error.context, "Illegal built-in function");

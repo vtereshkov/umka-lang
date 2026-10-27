@@ -864,12 +864,6 @@ fn memusage(): int
 Returns the size of the allocated heap memory in bytes. The garbage that has not been collected yet is still counted as allocated, so call `gc()` first to measure the live memory.
 
 ```
-fn leaksan(level: int)
-```
-
-Kept for backward compatibility, does nothing. The garbage collector reclaims unreachable memory, including reference cycles.
-
-```
 fn exit(code: int, msg: str = "")
 ```
 

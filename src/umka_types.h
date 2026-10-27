@@ -68,7 +68,6 @@ typedef enum
     // Misc
     BUILTIN_GC,
     BUILTIN_MEMUSAGE,
-    BUILTIN_LEAKSAN,
     BUILTIN_EXIT
 } BuiltinFunc;
 
