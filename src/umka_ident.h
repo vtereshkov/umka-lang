@@ -53,6 +53,7 @@ const Ident *identFind            (const Idents *idents, const Modules *modules,
 const Ident *identAssertFind      (const Idents *idents, const Modules *modules, const Blocks *blocks, int module, const char *name, const Type *rcvType);
 const Ident *identFindModule      (const Idents *idents, const Modules *modules, const Blocks *blocks, int module, const char *name, bool markAsUsed);
 const Ident *identAssertFindModule(const Idents *idents, const Modules *modules, const Blocks *blocks, int module, const char *name);
+void identFindMethodOrField       (const Idents *idents, Types *types, const Modules *modules, Blocks *blocks, const Type *rcvType, const char *name, const Ident **method, const Field **field);
 
 bool identIsOuterLocalVar (const Blocks *blocks, const Ident *ident);
 

@@ -444,6 +444,10 @@ static bool typeEquivalentRecursive(const Type *left, const Type *right, const V
             if (left->numItems != right->numItems)
                 return false;
 
+            // Embedded structure
+            if (left->hasEmbeddedStruct != right->hasEmbeddedStruct)
+                return false;
+
             // Fields
             for (int i = 0; i < left->numItems; i++)
             {

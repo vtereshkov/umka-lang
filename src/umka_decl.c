@@ -407,13 +407,32 @@ static const Type *parseMapType(Umka *umka, int depth)
 }
 
 
-// structType = "struct" "{" {typedIdentList ";"} "}"
+// structType = "struct" "{" [qualIdent ";"] {typedIdentList ";"} "}"
 static const Type *parseStructType(Umka *umka, int depth)
 {
     lexEat(&umka->lex, TOK_STRUCT);
     lexEat(&umka->lex, TOK_LBRACE);
 
     Type *type = typeAdd(&umka->types, &umka->blocks, TYPE_STRUCT);
+
+    // Embedded structure named after its type
+    if (umka->lex.tok.kind == TOK_IDENT)
+    {
+        Lexer lookaheadLex = umka->lex;
+        lexNext(&lookaheadLex);
+
+        if (lookaheadLex.tok.kind == TOK_COLONCOLON || lookaheadLex.tok.kind == TOK_SEMICOLON || lookaheadLex.tok.kind == TOK_IMPLICIT_SEMICOLON || lookaheadLex.tok.kind == TOK_RBRACE)
+        {
+            const Type *fieldType = parseTypeRecursive(umka, depth + 1);
+            if (fieldType->kind != TYPE_STRUCT && fieldType->kind != TYPE_FORWARD)
+                umka->error.handler(umka->error.context, "Structure type expected");
+
+            typeAddField(&umka->types, type, fieldType, fieldType->typeIdent->name);
+            type->hasEmbeddedStruct = true;
+
+            lexEat(&umka->lex, TOK_SEMICOLON);
+        }
+    }
 
     while (umka->lex.tok.kind == TOK_IDENT)
     {

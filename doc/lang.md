@@ -304,12 +304,12 @@ Map assignment copies the pointer, but not the contents of the map
 
 ### Structure types
 
-A structure is a sequence of named items, called *fields*, that possibly have different types. Each field should have a unique name.
+A structure is a sequence of named items, called *fields*, that possibly have different types. Each field should have a unique name. The first field can be declared by a structure type name alone. Such a field is called *embedded* and named after its type, without the module name. The fields and methods of the embedded structure can be accessed as if they belonged to the structure itself, unless the structure has its own field or method with the same name. Only one structure can be embedded.
 
 Syntax:
 
 ```
-structType = "struct" "{" {typedIdentList ";"} "}".
+structType = "struct" "{" [qualIdent ";"] {typedIdentList ";"} "}".
 ```
 
 Examples:
@@ -320,6 +320,11 @@ struct {x, y, z: int}
 struct {
     q: [4]real
     normalized: bool
+}
+
+struct {
+    Shape
+    w, h: real
 }
 ```
 
@@ -344,7 +349,7 @@ interface {
 }
 ```
 
-The interface does not implement these methods itself. Instead, any type that implements all the methods declared in the interface can be converted to that interface. Since different types can be converted to the same interface, interfaces provide polymorphic behavior in Umka.
+The interface does not implement these methods itself. Instead, any type that implements all the methods declared in the interface can be converted to that interface. A structure also implements the methods of its embedded structure, unless it has its own field or method with the same name. Since different types can be converted to the same interface, interfaces provide polymorphic behavior in Umka.
 
 Let `T` be a non-pointer type. If a pointer of type `^T` is converted to the interface, the interface stores that pointer. If a variable of type `T`  is converted to the interface, the variable is first copied to a new memory location, and the interface stores the pointer to that location. In any case, the interface can be converted back to the type `T` or  `^T`. If a conversion of the interface to some non-pointer type `S` not equivalent to `T` is attempted, a runtime error is triggered. If a conversion of the interface to some pointer type `^S` not equivalent to `^T` is attempted, the result is `null`. 
 
@@ -1008,7 +1013,7 @@ m["Hello"]
 
 #### Field or method selector
 
-The field or method selector `.` accesses a field or method. For accessing a field, it can be applied to a structure that has this field or to a pointer to such a structure. For accessing a method, it can be applied to any declared type `T`  or `^T` such that `^T` is compatible with the type that implements this method. If neither field nor method with the specified name is found, an error is triggered.
+The field or method selector `.` accesses a field or method. For accessing a field, it can be applied to a structure that has this field or to a pointer to such a structure. For accessing a method, it can be applied to any declared type `T`  or `^T` such that `^T` is compatible with the type that implements this method. If the structure has neither field nor method with the specified name, the field or method is searched for in its embedded structure, if any. A method of the embedded structure receives a pointer to the embedded structure as the receiver. If neither field nor method is found, an error is triggered.
 
 As a special case, the field selector can be applied to the result of a function call that returns an expression list. This expression list is treated as if it were a structure with the fields named `item0`, `item1`, etc.    
 
@@ -1524,7 +1529,7 @@ dynArrayType        = "[" "]" type.
 enumType            = "enum" ["(" type ")"] "{" {enumItem ";"} "}".
 enumItem            = ident ["=" expr].
 mapType             = "map" "[" type "]" type.
-structType          = "struct" "{" {typedIdentList ";"} "}".
+structType          = "struct" "{" [qualIdent ";"] {typedIdentList ";"} "}".
 interfaceType       = "interface" "{" {(ident signature | qualIdent) ";"} "}".
 closureType         = "fn" signature.
 block               = "{" StmtList "}".

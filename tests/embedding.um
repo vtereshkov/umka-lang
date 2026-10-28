@@ -1,0 +1,89 @@
+// Struct embedding: the fields and methods of the embedded structure are selected unless the structure has its own ones
+
+import "std.um"
+
+type (
+    Shape = interface {
+        name(): str
+        area(): real
+        describe(): str
+    }
+
+    Base = struct {
+        id: int
+        tags: []str
+    }
+
+    Rect = struct {
+        Base
+        w, h: real
+    }
+
+    Square = struct {
+        Rect
+        label: str
+    }
+
+    Tagged = struct {
+        Base
+        id: str
+    }
+
+    Stamp = struct {
+        std::DateTime
+        note: str
+    }
+)
+
+fn (b: ^Base) name(): str {return "base"}
+fn (b: ^Base) area(): real {return 0}
+fn (b: ^Base) describe(): str {return sprintf("%s #%d %v", b.name(), b.id, b.tags)}     // Always calls Base.name()
+
+fn (r: ^Rect) area(): real {return r.w * r.h}
+
+fn (s: ^Square) name(): str {return s.label}
+
+fn test*() {
+    // Promoted fields and methods
+    r := Rect{Base{1, {"a"}}, 2, 3}
+    printf("%v %v %v %v %v\n", r.id, r.tags, r.name(), r.area(), r.describe())
+
+    s := Square{Rect: Rect{Base: Base{id: 2}, w: 4, h: 4}, label: "sq"}
+    s.id = 7
+    s.tags = append(s.tags, "b")
+    ps := &s
+    ps.w = 5
+    printf("%v %v %v %v\n", s.id, s.name(), ps.area(), ps.describe())
+    printf("%v\n", s)
+
+    // Own fields have priority
+    t := Tagged{Base{3, {}}, "three"}
+    printf("%v %v %v\n", t.id, t.Base.id, t.name())
+
+    // Promoted methods implement interfaces
+    shapes := []Shape{r, s, Tagged{}}
+    for _, shape in shapes {
+        printf("%v %v %v\n", shape.name(), shape.area(), shape.describe())
+    }
+
+    var sp: Shape = ps
+    printf("%v %v %v\n", sp.name(), sp.area(), sp.describe())
+
+    // The heap chunk is scanned as a whole, while the embedded structure's method sees only its part
+    p := new(Square)
+    p.label = "heap"
+    p.tags = []str{"x", "y"}
+    var shape: Shape = p
+    p = null
+    gc()
+    printf("%v %v\n", shape.name(), shape.describe())
+
+    // Anonymous structure, embedded structure from another module
+    a := struct {Base; z: int}{Base{4, {}}, 5}
+    st := Stamp{std::DateTime{year: 2026}, "now"}
+    printf("%v %v %v %v %v\n", a.id, a.z, a.name(), st.year, st.note)
+}
+
+fn main() {
+    test()
+}

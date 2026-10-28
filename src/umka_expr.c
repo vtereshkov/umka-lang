@@ -318,9 +318,9 @@ static void doPtrToInterfaceConv(Umka *umka, const Type *dest, const Type **src,
                 genPushIntConst(&umka->gen, 0);                                 // Allow assigning null to a non-empty interface
             else
             {
-                int rcvTypeModule = rcvType->typeIdent ? rcvType->typeIdent->module : -1;
-
-                const Ident *srcMethod = identFind(&umka->idents, &umka->modules, &umka->blocks, rcvTypeModule, name, *src, true);
+                const Field *srcField = NULL;
+                const Ident *srcMethod = NULL;
+                identFindMethodOrField(&umka->idents, &umka->types, &umka->modules, &umka->blocks, *src, name, &srcMethod, &srcField);
                 if (!srcMethod)
                 {
                     char srcBuf[DEFAULT_STR_LEN + 1], destBuf[DEFAULT_STR_LEN + 1];
@@ -2428,12 +2428,11 @@ static void parseFieldSelector(Umka *umka, const Type **type, bool *isVar, bool 
     lexNext(&umka->lex);
     lexCheck(&umka->lex, TOK_IDENT);
 
-    const Type *rcvType = *type;
-    int rcvTypeModule = rcvType->typeIdent ? rcvType->typeIdent->module : -1;
+    const Type *rcvType = typeAddPtrTo(&umka->types, &umka->blocks, *type);
 
-    rcvType = typeAddPtrTo(&umka->types, &umka->blocks, rcvType);
-
-    const Ident *method = identFind(&umka->idents, &umka->modules, &umka->blocks, rcvTypeModule, umka->lex.tok.name, rcvType, true);
+    const Field *field = NULL;
+    const Ident *method = NULL;
+    identFindMethodOrField(&umka->idents, &umka->types, &umka->modules, &umka->blocks, rcvType, umka->lex.tok.name, &method, &field);
     if (method)
     {
         // Method
@@ -2456,7 +2455,9 @@ static void parseFieldSelector(Umka *umka, const Type **type, bool *isVar, bool 
             umka->error.handler(umka->error.context, "Method %s is not defined for %s", umka->lex.tok.name, typeSpelling(*type, typeBuf));
         }
 
-        const Field *field = typeAssertFindField(&umka->types, *type, umka->lex.tok.name, NULL);
+        if (!field)
+            umka->error.handler(umka->error.context, "Unknown field %s", umka->lex.tok.name);
+
         lexNext(&umka->lex);
 
         // Save interface method's receiver to dedicated register

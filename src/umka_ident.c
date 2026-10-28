@@ -103,6 +103,33 @@ const Ident *identAssertFindModule(const Idents *idents, const Modules *modules,
 }
 
 
+void identFindMethodOrField(const Idents *idents, Types *types, const Modules *modules, Blocks *blocks, const Type *rcvType, const char *name, const Ident **method, const Field **field)
+{
+    *method = NULL;
+    *field = NULL;
+    
+    // Traversing the "structure inheritance" chain
+    while (1)
+    {
+        const Type *type = rcvType->base;
+        const int rcvTypeModule = type->typeIdent ? type->typeIdent->module : -1;
+
+        *method = identFind(idents, modules, blocks, rcvTypeModule, name, rcvType, true);
+        if (*method)
+            return;
+
+        *field = typeFindField(type, name, NULL);
+        if (*field)
+            return;
+
+        if (!type->hasEmbeddedStruct)
+            return;
+            
+        rcvType = typeAddPtrTo(types, blocks, type->field[0]->type);
+    }
+}
+
+
 bool identIsOuterLocalVar(const Blocks *blocks, const Ident *ident)
 {
     if (!ident || ident->kind != IDENT_VAR || ident->block == 0)

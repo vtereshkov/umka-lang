@@ -347,6 +347,20 @@ woof
 {parts: [{min: [3 3] max: [8 8]} {min: [5 5] max: [7 9]}]}
 
 
+>>> Struct embedding
+
+1 ["a"] "base" 6 "base #1 ["a"]"
+7 "sq" 20 "base #7 ["b"]"
+{Rect: {Base: {id: 7 tags: ["b"]} w: 5 h: 4} label: "sq"}
+"three" 3 "base"
+"base" 6 "base #1 ["a"]"
+"sq" 20 "base #7 ["b"]"
+"base" 0 "base #0 []"
+"sq" 20 "base #7 ["b"]"
+"heap" "base #0 ["x" "y"]"
+4 5 "base" 2026 "now"
+
+
 >>> Maps - 1
 
 
@@ -713,7 +727,7 @@ Error: Empty string (code -2) from "foo":
     foo: (5)
     fooTest: (11)
     test: (25)
-    main: (78)
+    main: (80)
 9
 
 

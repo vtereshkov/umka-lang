@@ -120,6 +120,7 @@ typedef struct tagType
     int block;
     int numItems;                               // For arrays, structures and interfaces
     bool isExprList;                            // For structures that represent expression lists
+    bool hasEmbeddedStruct;                     // For structures whose first field is an embedded structure
     bool isVariadicParamList;                   // For dynamic arrays that represent variadic parameter lists
     bool isEnum;                                // For enumerations
     bool isGarbageCollected;
