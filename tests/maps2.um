@@ -194,6 +194,34 @@ fn test9() {
 }
 
 
+fn test10() {
+    printf("\nTest 10\n")
+
+    // The keys are fixed before the first iteration: an added key is not visited, a deleted one is still visited
+    m := map[str]int{"a": 1, "b": 2, "c": 3}
+    for k, v^ in m {
+        if k == "a" {
+            m = delete(m, "c")
+            m["d"] = 4
+        }
+        v^ *= 10
+        printf("[%s %v]", k, v^)
+    }
+    printf("\n%v\n", m)
+
+    // keys() has no spare capacity, so appending to it makes a copy
+    ks := keys(m)
+    ks2 := append(ks, "e")
+
+    var empty: map[str]int
+    for k, v in empty {
+        printf("[%s %v]", k, v)
+    }
+
+    printf("%v %v %v %v\n", ks, ks2, cap(ks) == len(ks), append(keys(empty), "f"))
+}
+
+
 fn test*() {
     test1()
     test2()
@@ -204,6 +232,7 @@ fn test*() {
     test7(10000)
     test8()
     test9()
+    test10()
 }
 
 

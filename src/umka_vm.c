@@ -149,6 +149,7 @@ static const char *builtinSpelling [] =
     "valid",
     "validkey",
     "keys",
+    "keysvals",
     "resume",
     "gc",
     "memusage",
@@ -1275,7 +1276,7 @@ static FORCE_INLINE char *doGetEmptyStr(void)
 }
 
 
-static FORCE_INLINE void doAllocDynArray(HeapPages *pages, DynArray *array, const Type *type, int64_t len, Error *error)
+static FORCE_INLINE void doAllocDynArray(HeapPages *pages, DynArray *array, const Type *type, int64_t len, bool canGrow, Error *error)
 {
     array->type     = type;
     array->itemSize = array->type->base->size;
@@ -1283,7 +1284,7 @@ static FORCE_INLINE void doAllocDynArray(HeapPages *pages, DynArray *array, cons
     if (UNLIKELY(len < 0 || len > INT_MAX))
         error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal array length");    
 
-    DynArrayDimensions dims = {.len = len, .capacity = 2 * (len + 1)};
+    DynArrayDimensions dims = {.len = len, .capacity = canGrow ? 2 * (len + 1) : len};
 
     if (dims.capacity * array->itemSize > INT_MAX - MEM_MIN_FREE_HEAP)
         dims.capacity = (INT_MAX - MEM_MIN_FREE_HEAP) / array->itemSize;
@@ -1487,6 +1488,28 @@ static FORCE_INLINE void doGetMapKeys(const Map *map, void *keys, Error *error)
 }
 
 
+static void doGetMapNodesRecursively(const MapNode *node, const MapNode **nodes, int *numNodes)
+{
+    if (node->left)
+        doGetMapNodesRecursively(node->left, nodes, numNodes);
+
+    if (node->key)
+        nodes[(*numNodes)++] = node;
+
+    if (node->right)
+        doGetMapNodesRecursively(node->right, nodes, numNodes);
+}
+
+
+static FORCE_INLINE void doGetMapNodes(const Map *map, const MapNode **nodes, Error *error)
+{
+    int numNodes = 0;
+    doGetMapNodesRecursively(map->root, nodes, &numNodes);
+    if (UNLIKELY(numNodes != map->root->len))
+        error->runtimeHandler(error->context, ERR_RUNTIME, "Wrong number of map nodes");
+}
+
+
 static FORCE_INLINE Fiber *doAllocFiber(Fiber *parent, const Closure *childClosure, const Type *fiberType, HeapPages *pages, Error *error)
 {
     if (UNLIKELY(!childClosure || childClosure->entryOffset <= 0))
@@ -1677,34 +1700,27 @@ static int doFillReprBuf(const Slot *slot, const Type *type, char *buf, int maxL
                 const Type *keyType = typeMapKey(map->type);
                 const Type *itemType = typeMapItem(map->type);
 
-                void *keys = storageAdd(storage, map->root->len * keyType->size);
+                const MapNode **nodes = storageAdd(storage, map->root->len * sizeof(MapNode *));
 
-                doGetMapKeys(map, keys, error);
+                doGetMapNodes(map, nodes, error);
 
-                char *keyPtr = (char *)keys;
                 for (int i = 0; i < map->root->len; i++)
                 {
-                    Slot keySlot = {.ptrVal = keyPtr};
+                    Slot keySlot = {.ptrVal = nodes[i]->key};
                     doDerefImpl(&keySlot, keyType->kind, error);
                     len += doFillReprBuf(&keySlot, keyType, nonnull(buf, len), sizeLeft(buf, maxLen, len), depth + 1, pretty, dereferenced, storage, error);
 
                     len += snprintf(nonnull(buf, len), sizeLeft(buf, maxLen, len), ": ");
 
-                    const MapNode *node = *doGetMapNode(map, keySlot, false, NULL, error);
-                    if (UNLIKELY(!node))
-                        error->runtimeHandler(error->context, ERR_RUNTIME, "Map node is null");
-
-                    Slot itemSlot = {.ptrVal = node->data};
+                    Slot itemSlot = {.ptrVal = nodes[i]->data};
                     doDerefImpl(&itemSlot, itemType->kind, error);
                     len += doFillReprBuf(&itemSlot, itemType, nonnull(buf, len), sizeLeft(buf, maxLen, len), depth + 1, pretty, dereferenced, storage, error);
 
                     if (i < map->root->len - 1)
                         len += doPrintIndented(nonnull(buf, len), sizeLeft(buf, maxLen, len), depth, pretty, ' ');
-
-                    keyPtr += keyType->size;
                 }
 
-                storageRemove(storage, keys);
+                storageRemove(storage, nodes);
             }
 
             len += doPrintIndented(nonnull(buf, len), sizeLeft(buf, maxLen, len), depth, pretty, '}');
@@ -2081,7 +2097,7 @@ static FORCE_INLINE void doBuiltinMake(Fiber *fiber, HeapPages *pages, Error *er
         DynArray *result = (DynArray *)(fiber->top++)->ptrVal;
         int64_t len = (fiber->top++)->intVal;
 
-        doAllocDynArray(pages, result, type, len, error);
+        doAllocDynArray(pages, result, type, len, true, error);
         (--fiber->top)->ptrVal = result;
     }
     else if (type->kind == TYPE_MAP)
@@ -2112,7 +2128,7 @@ static FORCE_INLINE void doBuiltinMakeFromArr(Fiber *fiber, HeapPages *pages, Er
 
     const Type *destType = fiber->code[fiber->ip].type;
 
-    doAllocDynArray(pages, dest, destType, len, error);
+    doAllocDynArray(pages, dest, destType, len, true, error);
     memcpy(dest->data, src, getDims(dest)->len * dest->itemSize);
 
     if (destType->base->mayPointToStack)
@@ -2134,7 +2150,7 @@ static FORCE_INLINE void doBuiltinMakeFromStr(Fiber *fiber, HeapPages *pages, Er
     if (!src)
         src = doGetEmptyStr();
 
-    doAllocDynArray(pages, dest, destType, getStrDims(src)->len, error);
+    doAllocDynArray(pages, dest, destType, getStrDims(src)->len, true, error);
     memcpy(dest->data, src, getDims(dest)->len);
 
     (--fiber->top)->ptrVal = dest;
@@ -2237,7 +2253,7 @@ static FORCE_INLINE void doBuiltinCopyDynArray(Fiber *fiber, HeapPages *pages, E
 
     if (array->data)
     {
-        doAllocDynArray(pages, result, array->type, getDims(array)->len, error);
+        doAllocDynArray(pages, result, array->type, getDims(array)->len, true, error);
         memmove((char *)result->data, (char *)array->data, getDims(array)->len * array->itemSize);
         doCheckCopiedItemEscapes(fiber, array->data, result->data, array->type->base, getDims(array)->len, error);
     }
@@ -2325,7 +2341,7 @@ static FORCE_INLINE void doBuiltinAppend(Fiber *fiber, HeapPages *pages, Error *
     }
     else
     {
-        doAllocDynArray(pages, result, array->type, newLen, error);
+        doAllocDynArray(pages, result, array->type, newLen, true, error);
 
         memmove((char *)result->data, (char *)array->data, getDims(array)->len * array->itemSize);
         memmove((char *)result->data + getDims(array)->len * array->itemSize, (char *)rhs, rhsLen * array->itemSize);
@@ -2371,7 +2387,7 @@ static FORCE_INLINE void doBuiltinInsert(Fiber *fiber, HeapPages *pages, Error *
     }
     else
     {
-        doAllocDynArray(pages, result, array->type, getDims(array)->len + 1, error);
+        doAllocDynArray(pages, result, array->type, getDims(array)->len + 1, true, error);
 
         memmove((char *)result->data, (char *)array->data, index * result->itemSize);
         memmove((char *)result->data + (index + 1) * result->itemSize, (char *)array->data + index * result->itemSize, (getDims(array)->len - index) * result->itemSize);
@@ -2524,7 +2540,7 @@ static FORCE_INLINE void doBuiltinSlice(Fiber *fiber, HeapPages *pages, Error *e
     if (result)
     {
         // Dynamic array
-        doAllocDynArray(pages, result, array->type, endIndex - startIndex, error);
+        doAllocDynArray(pages, result, array->type, endIndex - startIndex, true, error);
 
         memcpy((char *)result->data, (char *)array->data + startIndex * result->itemSize, getDims(result)->len * result->itemSize);
         doCheckCopiedItemEscapes(fiber, array->data, result->data, array->type->base, getDims(result)->len, error);
@@ -2803,15 +2819,58 @@ static FORCE_INLINE void doBuiltinKeys(Fiber *fiber, HeapPages *pages, Error *er
     DynArray *result = (fiber->top++)->ptrVal;
     const Map *map = (fiber->top++)->ptrVal;
 
+    if (UNLIKELY(!map))
+        error->runtimeHandler(error->context, ERR_RUNTIME, "Map is null");    
+
     const Type *resultType = fiber->code[fiber->ip].type;
 
-    if (UNLIKELY(!map))
-        error->runtimeHandler(error->context, ERR_RUNTIME, "Map is null");
+    const int64_t len = map->root ? map->root->len : 0;
+    doAllocDynArray(pages, result, resultType, len, false, error);
 
-    doAllocDynArray(pages, result, resultType, map->root ? map->root->len : 0, error);
-
-    if (map->root)
+    if (len > 0)
         doGetMapKeys(map, result->data, error);
+
+    (--fiber->top)->ptrVal = result;
+}
+
+
+// fn keysvals(m: map [keyType] type): []struct {#key: keyType; #data: ^type}
+static FORCE_INLINE void doBuiltinKeysVals(Fiber *fiber, HeapPages *pages, Error *error)
+{
+    DynArray *result = (fiber->top++)->ptrVal;
+    const Map *map = (fiber->top++)->ptrVal;
+
+    if (UNLIKELY(!map))
+        error->runtimeHandler(error->context, ERR_RUNTIME, "Map is null");    
+
+    const Type *resultType = fiber->code[fiber->ip].type;
+    const Type *pairType = resultType->base;
+
+    const Field *keyField = pairType->field[0];
+    const Field *dataField = pairType->field[1];
+
+    const int64_t len = map->root ? map->root->len : 0;
+    doAllocDynArray(pages, result, resultType, len, false, error);
+
+    if (len > 0)
+    {
+        const MapNode **nodes = storageAdd(fiber->vm->storage, len * sizeof(MapNode *));
+
+        doGetMapNodes(map, nodes, error);
+
+        for (int i = 0; i < len; i++)
+        {
+            char *pair = (char *)result->data + i * pairType->size;
+
+            Slot keySlot = {.ptrVal = nodes[i]->key};
+            doDerefImpl(&keySlot, keyField->type->kind, error);
+            doAssignImpl(pair + keyField->offset, keySlot, keyField->type->kind, keyField->type->size, error);
+
+            *(void **)(pair + dataField->offset) = nodes[i]->data;
+        }
+
+        storageRemove(fiber->vm->storage, nodes);
+    }
 
     (--fiber->top)->ptrVal = result;
 }
@@ -3577,6 +3636,7 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         // Maps
         case BUILTIN_VALIDKEY:      doBuiltinValidKey(fiber, error); break;
         case BUILTIN_KEYS:          doBuiltinKeys(fiber, pages, error); break;
+        case BUILTIN_KEYSVALS:      doBuiltinKeysVals(fiber, pages, error); break;
 
         // Fibers
         case BUILTIN_RESUME:        doBuiltinResume(fiber, newFiber, error); break;
@@ -3984,7 +4044,7 @@ void *vmGetMapNodeData(VM *vm, Map *map, void *key)
 
 void vmGetMapKeys(VM *vm, Map *map, const Type *keysType, DynArray *keys)
 {
-    doAllocDynArray(&vm->pages, keys, keysType, (map && map->root) ? map->root->len : 0, vm->error);
+    doAllocDynArray(&vm->pages, keys, keysType, (map && map->root) ? map->root->len : 0, false, vm->error);
 
     if (map && map->root)
         doGetMapKeys(map, keys->data, vm->error);
@@ -4007,7 +4067,7 @@ void vmMakeDynArray(VM *vm, DynArray *array, const Type *type, int len)
     if (!array)
         return;
 
-    doAllocDynArray(&vm->pages, array, type, len, vm->error);
+    doAllocDynArray(&vm->pages, array, type, len, true, vm->error);
 }
 
 

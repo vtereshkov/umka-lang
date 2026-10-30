@@ -884,7 +884,7 @@ static void parseForInHeader(Umka *umka, ForPostStmt *postStmt)
         genPop(&umka->gen);
     }
 
-    // Declare variable for the collection index (for maps, it will be used for indexing keys())
+    // Declare variable for the collection index (for maps, it will be used for indexing keys() or keysvals())
     const char *indexName = (collectionType->kind == TYPE_MAP) ? "#index" : indexOrKeyName;
     
     postStmt->indexIdent = identAllocVar(&umka->idents, &umka->types, &umka->modules, &umka->blocks, indexName, umka->types.predecl.intType, false);
@@ -894,7 +894,7 @@ static void parseForInHeader(Umka *umka, ForPostStmt *postStmt)
     identSetUsed(postStmt->indexIdent);                    // Do not warn about unused index
     doZeroVar(umka, postStmt->indexIdent);
 
-    const Ident *keyIdent = NULL, *keysIdent = NULL;
+    const Ident *keyIdent = NULL, *keysValsIdent = NULL;
     if (collectionType->kind == TYPE_MAP)
     {
         // Declare variable for the map key
@@ -902,21 +902,32 @@ static void parseForInHeader(Umka *umka, ForPostStmt *postStmt)
         identSetUsed(keyIdent);                            // Do not warn about unused key
         doZeroVar(umka, keyIdent);
 
-        // Declare variable for the map keys
-        Type *keysType = typeAdd(&umka->types, &umka->blocks, TYPE_DYNARRAY);
-        typeSetBase(keysType, typeMapKey(collectionType));
+        // Declare variable for the map keys, each followed by the item pointer if the item is needed
+        Type *keysValsType = typeAdd(&umka->types, &umka->blocks, TYPE_DYNARRAY);
 
-        keysIdent = identAllocVar(&umka->idents, &umka->types, &umka->modules, &umka->blocks, "#keys", keysType, false);
+        if (itemName[0] != '\0')
+        {
+            Type *pairType = typeAdd(&umka->types, &umka->blocks, TYPE_STRUCT);
+            typeAddField(&umka->types, pairType, typeMapKey(collectionType), "#key");
+            typeAddField(&umka->types, pairType, collectionType->base->field[MAP_NODE_FIELD_DATA]->type, "#data");
+            typeSetBase(keysValsType, pairType);
+        }
+        else
+        {
+            typeSetBase(keysValsType, typeMapKey(collectionType));
+        }
 
-        // Call keys()
-        const int resultOffset = identAllocStack(&umka->idents, &umka->types, &umka->blocks, keysType);
+        keysValsIdent = identAllocVar(&umka->idents, &umka->types, &umka->modules, &umka->blocks, "#keysvals", keysValsType, false);
+
+        // Call keysvals() or keys()
+        const int resultOffset = identAllocStack(&umka->idents, &umka->types, &umka->blocks, keysValsType);
         doPushVarPtr(umka, collectionIdent);        // Map
         genPushLocalPtr(&umka->gen, resultOffset);  // Pointer to result (hidden parameter)
-        genCallTypedBuiltin(&umka->gen, keysType, BUILTIN_KEYS);
+        genCallTypedBuiltin(&umka->gen, keysValsType, (itemName[0] != '\0') ? BUILTIN_KEYSVALS : BUILTIN_KEYS);
 
         // Assign map keys
-        doPushVarPtr(umka, keysIdent);
-        genSwapAssign(&umka->gen, keysType);
+        doPushVarPtr(umka, keysValsIdent);
+        genSwapAssign(&umka->gen, keysValsType);
     }
 
     const Ident *itemIdent = NULL;
@@ -952,8 +963,8 @@ static void parseForInHeader(Umka *umka, ForPostStmt *postStmt)
 
     if (collectionType->kind == TYPE_MAP)
     {
-        // Assign key = #keys[#index]
-        doPushVarPtr(umka, keysIdent);
+        // Assign key = #keysvals[#index], or #keysvals[#index].#key, which is at offset 0
+        doPushVarPtr(umka, keysValsIdent);
         doPushVarPtr(umka, postStmt->indexIdent);
         genDeref(&umka->gen, TYPE_INT);
         genGetDynArrayPtr(&umka->gen);
@@ -966,28 +977,28 @@ static void parseForInHeader(Umka *umka, ForPostStmt *postStmt)
     // Assign collection item
     if (itemIdent)
     {
-        doPushVarPtr(umka, collectionIdent);
-        genDeref(&umka->gen, collectionIdent->type->kind);
+        // For maps, the item is accessed through #keysvals[#index].#data
+        const Ident *itemsIdent = (collectionType->kind == TYPE_MAP) ? keysValsIdent : collectionIdent;
+        doPushVarPtr(umka, itemsIdent);
+        genDeref(&umka->gen, itemsIdent->type->kind);
 
-        if (collectionType->kind == TYPE_MAP)
-        {
-            // Push item key
-            doPushVarPtr(umka, keyIdent);
-            genDeref(&umka->gen, keyIdent->type->kind);
-        }
-        else
-        {
-            // Push item index
-            doPushVarPtr(umka, postStmt->indexIdent);
-            genDeref(&umka->gen, TYPE_INT);
-        }
+        // Push item index
+        doPushVarPtr(umka, postStmt->indexIdent);
+        genDeref(&umka->gen, TYPE_INT);
 
         switch (collectionType->kind)
         {
             case TYPE_ARRAY:     genGetArrayPtr(&umka->gen, typeSize(&umka->types, collectionType->base), collectionType->numItems); break;
             case TYPE_DYNARRAY:  genGetDynArrayPtr(&umka->gen);                                                                      break;
             case TYPE_STR:       genGetArrayPtr(&umka->gen, typeSize(&umka->types, umka->types.predecl.charType), INT_MAX);                        break; // No range checking
-            case TYPE_MAP:       genGetMapPtr(&umka->gen, collectionType);                                                           break;
+            case TYPE_MAP:
+            {
+                const Field *dataField = typeAssertFindField(&umka->types, keysValsIdent->type->base, "#data", NULL);
+                genGetDynArrayPtr(&umka->gen);
+                genGetFieldPtr(&umka->gen, dataField->offset);
+                genDeref(&umka->gen, TYPE_PTR);
+                break;
+            }
             default:             break;
         }
 

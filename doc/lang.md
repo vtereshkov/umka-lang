@@ -1364,7 +1364,7 @@ for k := 1; k <= 128; k *= 2 {
 
 #### The `for...in` statement
 
-Iterates through all items of an array, a dynamic array, a map or a string. Before each iteration, the index (or key) and the value of the next item are evaluated and assigned to the corresponding variables declared via an implicit short variable declaration in the statement header. 
+Iterates through all items of an array, a dynamic array, a map or a string. Before each iteration, the index (or key) and the value of the next item are evaluated and assigned to the corresponding variables declared via an implicit short variable declaration in the statement header. For maps, the keys to iterate through are fixed before the first iteration: the keys added to the map within the loop are not visited, and the keys deleted from the map within the loop are still visited, along with their last item values.
 
 Let the item type be `T`. If the item variable in the statement header is followed by a `^`, then its type is `^T` and its value is the pointer to the original item. Otherwise, its type is `T` and its value is the copy of the original item. Strings admit only the latter form.  
 

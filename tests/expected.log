@@ -694,6 +694,11 @@ Test 8
 Test 9
 {0: "hello" 18446744073709551615: "world"}
 
+Test 10
+[a 10][b 20][c 30]
+{"a": 10 "b": 20 "d": 4}
+["a" "b" "d"] ["a" "b" "d" "e"] true ["f"]
+
 
 >>> Multiple returns
 

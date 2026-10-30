@@ -61,6 +61,7 @@ typedef enum
     // Maps
     BUILTIN_VALIDKEY,
     BUILTIN_KEYS,
+    BUILTIN_KEYSVALS,       // Map to dynamic array of keys and item pointers - implicit calls only
 
     // Fibers
     BUILTIN_RESUME,
