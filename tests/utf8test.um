@@ -20,6 +20,9 @@ fn testStr(s: str) {
 }
 
 fn test*() {
+	chars := []char("aПр")
+	printf("%x %x %x\n", utf8::decodeRune(chars), utf8::decodeRune(chars, 1), utf8::decodeRune(chars, 3))
+
 	testStr("▀€$¢")
 	testStr("Привет, мир!")
 	testStr("Hello, 世界")

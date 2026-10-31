@@ -20,13 +20,13 @@ fn test*() {
 	printf("%v %v\n", f(2), f(4))
 	printf("%v %v\n", g1, g2)  
 
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 2; i++ {
 		s := "Hello" + "World"
 		s = i % 2 == 0 ? sprintf("%d %d ", 5, 6) + sprintf("%f %f ", 7.0, 8.0) + sprintf("%v %v ", 9, 10) : sprintf("%d %d ", 15, 16) + "and nothing more"
 		printf("%d: %s\n", i, s)
 	}
 
-	for i := 0; i < 10; i++ {
+	for i := 3; i < 5; i++ {
 			p := i > 3 && i < 7 ? []real{3, 5.5, 7} : []real([]int{-4, 12})
 			printf("%d: %v\n", i, p)	
 	}

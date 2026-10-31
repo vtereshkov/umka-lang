@@ -1,3 +1,5 @@
+// Regression tests for peephole optimizations across basic block boundaries (#462, #463, #467)
+
 fn g(): bool {
 	return false
 }

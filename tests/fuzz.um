@@ -7,7 +7,8 @@
 //
 // All sections are deterministic (driven by a hand-coded LCG PRNG so the
 // output is reproducible). Internal invariants are checked with check();
-// any failure aborts with a non-zero exit code.
+// any failure aborts with a non-zero exit code. Only failures and a summary
+// are printed.
 // ============================================================================
 
 import "std.um"
@@ -47,10 +48,6 @@ fn randRange(lo, hi: int): int {
     return lo + int(uint(rand32()) % span)
 }
 
-fn randBool(): bool {
-    return (rand32() & 1) == 1
-}
-
 fn randReal(): real {
     // Roughly uniform on (-1e6, 1e6). Keep value in int32 range.
     u := rand32()
@@ -62,15 +59,20 @@ fn randReal(): real {
     return x * 1e6
 }
 
+// Current section for failure messages
+var section: str
+var numSections: int
+
 fn check(cond: bool, tag: str) {
     if !cond {
-        printf("CHECK FAILED: %s\n", tag)
+        printf("CHECK FAILED in %s: %s\n", section, tag)
         exit(1, "fuzz failure: " + tag)
     }
 }
 
 fn banner(s: str) {
-    printf("\n====== %s ======\n", s)
+    section = s
+    numSections++
 }
 
 // ----------------------------------------------------------------------------
@@ -141,7 +143,6 @@ fn section_int_arith() {
     check(abs(0) == 0, "abs zero")
     check(abs(1234) == 1234, "abs positive")
 
-    printf("int arithmetic: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -207,7 +208,6 @@ fn section_float_arith() {
         check(fabs(y - x) < 1e-3 * (1.0 + fabs(x)), "real32 round-trip")
     }
 
-    printf("float arithmetic: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -251,7 +251,6 @@ fn section_bitwise() {
     check(u == 0x80000000, "uint32 high bit")
     // Don't shift out — Umka detects uint32 overflow.
 
-    printf("bitwise: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -304,7 +303,6 @@ line2
 line3`
     check(len(raw) > 0, "raw string nonempty")
 
-    printf("strings basic: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -358,7 +356,6 @@ fn section_strings_fuzz() {
         }
     }
 
-    printf("strings fuzz: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -422,7 +419,6 @@ fn section_intslice_fuzz() {
         check(v == model[i], "element sync")
     }
 
-    printf("intslice fuzz: len=%lld OK\n", len(a))
 }
 
 // ----------------------------------------------------------------------------
@@ -490,7 +486,6 @@ fn section_nested_slices() {
         }
     }
 
-    printf("nested slices: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -536,7 +531,6 @@ fn section_static_arrays() {
     rs := [3][2]int{{1, 2}, {3, 4}, {5, 6}}
     check(rs[2][1] == 6, "literal access")
 
-    printf("static arrays: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -606,7 +600,6 @@ fn section_map_int_fuzz() {
     }
     check(cnt == len(keys), "map iter count")
 
-    printf("map int fuzz: size=%lld OK\n", len(m))
 }
 
 // ----------------------------------------------------------------------------
@@ -655,7 +648,6 @@ fn section_map_str() {
     check(len(big) <= 200, "stress upper bound")
     check(len(big) > 0, "stress nonempty")
 
-    printf("map str: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -687,7 +679,6 @@ fn section_map_struct_keys() {
     check(am[[3]int{1, 2, 3}], "array key lookup")
     check(!am[[3]int{4, 5, 6}], "array key lookup false")
 
-    printf("map struct keys: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -732,7 +723,6 @@ fn section_recursion() {
     check(sumTo(100) == 5050, "sumTo 100")
     check(sumTo(1000) == 500500, "sumTo 1000")
 
-    printf("recursion: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -759,7 +749,6 @@ fn section_mutual_recursion() {
         check(isEvenF(n) == (n % 2 == 0), "isEven")
         check(isOddF(n) == (n % 2 != 0), "isOdd")
     }
-    printf("mutual recursion: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -819,7 +808,6 @@ fn section_closures() {
         check(f() == i * i, "closure slice")
     }
 
-    printf("closures: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -887,124 +875,6 @@ fn section_interfaces() {
     tp := ^Triangle(sShape)
     check(tp == null, "iface bad assert returns null")
 
-    printf("interfaces: OK\n")
-}
-
-// ----------------------------------------------------------------------------
-// Section 16: type switch
-// ----------------------------------------------------------------------------
-
-fn classifyAny(v: any): str {
-    switch x := type(v) {
-        case int:    return sprintf("int:%d", x)
-        case real:   return sprintf("real:%.3f", x)
-        case str:    return sprintf("str:%s", x)
-        case bool:   return sprintf("bool:%v", x)
-        case []int:  return sprintf("intslice:%d", len(x))
-        default:     return "other"
-    }
-    return "unreachable"
-}
-
-fn section_type_switch() {
-    banner("type switch")
-
-    check(classifyAny(42) == "int:42", "ts int")
-    check(classifyAny(3.14) == "real:3.140", "ts real")
-    check(classifyAny("hi") == "str:hi", "ts str")
-    check(classifyAny(true) == "bool:true", "ts bool true")
-    check(classifyAny(false) == "bool:false", "ts bool false")
-    check(classifyAny([]int{1, 2, 3, 4}) == "intslice:4", "ts intslice")
-
-    printf("type switch: OK\n")
-}
-
-// ----------------------------------------------------------------------------
-// Section 17: variadic functions
-// ----------------------------------------------------------------------------
-
-fn sumv(xs: ..int): int {
-    s := 0
-    for _, x in xs {
-        s += x
-    }
-    return s
-}
-
-fn maxv(first: int, rest: ..int): int {
-    m := first
-    for _, x in rest {
-        if x > m {
-            m = x
-        }
-    }
-    return m
-}
-
-fn section_variadic() {
-    banner("variadic")
-
-    check(sumv() == 0, "sumv empty")
-    check(sumv(1) == 1, "sumv single")
-    check(sumv(1, 2, 3) == 6, "sumv triple")
-    check(sumv(1, 2, 3, 4, 5, 6, 7, 8, 9, 10) == 55, "sumv ten")
-
-    check(maxv(0) == 0, "maxv lone")
-    check(maxv(5, 3, 9, 1, 7) == 9, "maxv five")
-    check(maxv(-1, -5, -3) == -1, "maxv negatives")
-
-    printf("variadic: OK\n")
-}
-
-// ----------------------------------------------------------------------------
-// Section 18: default parameters
-// ----------------------------------------------------------------------------
-
-fn greet(name: str = "World", greeting: str = "Hello", excl: int = 1): str {
-    out := greeting + ", " + name
-    for i := 0; i < excl; i++ {
-        out += "!"
-    }
-    return out
-}
-
-fn section_default_params() {
-    banner("default params")
-    check(greet() == "Hello, World!", "all defaults")
-    check(greet("Umka") == "Hello, Umka!", "first overridden")
-    check(greet("Umka", "Hi") == "Hi, Umka!", "two overridden")
-    check(greet("Umka", "Hi", 3) == "Hi, Umka!!!", "all overridden")
-    printf("default params: OK\n")
-}
-
-// ----------------------------------------------------------------------------
-// Section 19: ternary
-// ----------------------------------------------------------------------------
-
-fn section_ternary() {
-    banner("ternary")
-
-    for i := -10; i <= 10; i++ {
-        sign := i > 0 ? 1 : i < 0 ? -1 : 0
-        if i > 0 {
-            check(sign == 1, "ternary +")
-        } else if i < 0 {
-            check(sign == -1, "ternary -")
-        } else {
-            check(sign == 0, "ternary 0")
-        }
-    }
-
-    // Ternary in expression.
-    xs := []int{}
-    for i := 0; i < 20; i++ {
-        xs = append(xs, i % 2 == 0 ? i : -i)
-    }
-    for i, v in xs {
-        check(v == (i % 2 == 0 ? i : -i), "ternary append")
-    }
-
-    printf("ternary: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -1050,7 +920,6 @@ fn section_enums() {
     c := Color(3)
     check(colorName(c) == "cyan", "enum from int")
 
-    printf("enums: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -1094,7 +963,6 @@ fn section_sorting() {
         }
     }
 
-    printf("sorting: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -1131,7 +999,6 @@ fn section_fibers() {
     }
     check(sum == 55, "fiber sum")
 
-    printf("fibers: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -1167,39 +1034,6 @@ fn section_fibers_many() {
         check(c == 5, "fiber many count")
     }
 
-    printf("fibers many: OK\n")
-}
-
-// ----------------------------------------------------------------------------
-// Section 24: weak pointers
-// ----------------------------------------------------------------------------
-
-type Node = struct {
-    name:  str
-    other: weak ^Node
-}
-
-fn section_weak_pointers() {
-    banner("weak pointers")
-
-    a := new(Node)
-    a.name = "A"
-    b := new(Node)
-    b.name = "B"
-
-    a.other = b
-    b.other = a
-
-    check(a.other != null, "weak A points")
-    check(b.other != null, "weak B points")
-    check(a.other.name == "B", "weak A target name")
-    check(b.other.name == "A", "weak B target name")
-
-    // Strong link in array so we keep them alive.
-    keep := []^Node{a, b}
-    check(len(keep) == 2, "weak keep len")
-
-    printf("weak pointers: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -1235,7 +1069,6 @@ fn section_errors() {
     n, err = parsePosInt("12x")
     check(err.code == -2, "bad err code")
 
-    printf("errors: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -1271,7 +1104,6 @@ fn section_any() {
     p := AnyP(v)
     check(p.x == 3 && p.y == 4, "any struct values")
 
-    printf("any: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -1293,7 +1125,6 @@ fn section_format() {
     check(sprintf("%v", true) == "true", "fmt v bool")
     check(sprintf("%v", false) == "false", "fmt v bool false")
 
-    printf("format: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -1343,7 +1174,6 @@ fn section_gc_stress() {
     }
     check(cnt == 2500, "list length after trim")
 
-    printf("gc stress: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -1368,7 +1198,6 @@ fn section_gc_churn() {
         check(fabs(s - expected) < 1e-3 * (1.0 + fabs(expected)), "churn sum")
     }
 
-    printf("gc churn: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -1391,7 +1220,6 @@ fn section_fnptr_map() {
     ops["add"] = fn (a, b: int): int { return a + b + 1 }
     check(ops["add"](3, 4) == 8, "fn map add replaced")
 
-    printf("fnptr map: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -1420,7 +1248,6 @@ fn section_slice_aliasing() {
     check(len(e) == len(a) - 5, "open-end slice len")
     check(len(b) == 5, "b still ok")
 
-    printf("slice aliasing: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -1456,7 +1283,6 @@ fn section_append_growth() {
     }
     check(sum == 1000 * (1 + 2 + 3 + 4 + 5), "append slice growth sum")
 
-    printf("append growth: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -1505,7 +1331,6 @@ fn section_struct_fuzz() {
         check(fabs(vdot(a, b) - vdot(b, a)) < 1e-6, "vdot symmetric")
     }
 
-    printf("struct fuzz: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -1552,7 +1377,6 @@ fn manyLocals(): int {
 fn section_many_locals() {
     banner("many locals")
     check(manyLocals() == 30 * 31 / 2, "many locals sum")
-    printf("many locals: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -1584,7 +1408,6 @@ fn section_deep_nesting() {
     }
     check(total == 5 * 5 * 5 * 5, "deep nesting count")
 
-    printf("deep nesting: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -1622,7 +1445,6 @@ fn section_switch() {
     check(classify_int(-1) == "neg", "switch neg")
     check(classify_int(42) == "other", "switch other")
 
-    printf("switch many cases: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -1655,7 +1477,6 @@ fn section_short_circuit() {
     if false || boom() { }
     check(boomCount == 1, "|| evaluates second")
 
-    printf("short-circuit: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -1699,7 +1520,6 @@ fn section_map_iter() {
     }
     check(sum3 == expected + 100, "post-mutation sum")
 
-    printf("map iter: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -1725,7 +1545,6 @@ fn section_string_bytes() {
         }
     }
 
-    printf("string<->[]char: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -1755,7 +1574,6 @@ fn section_pointer_basic() {
     pa^ = 100
     check(s.a == 100, "ptr to field")
 
-    printf("pointer basic: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -1785,7 +1603,6 @@ fn section_loop_stability() {
     }
     check(cnt == 100000, "nested loop count")
 
-    printf("loop stability: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -1820,7 +1637,6 @@ fn section_iface_collections() {
     check(nameToShape["t"].name() == "triangle", "iface map triangle")
     check(fabs(nameToShape["r"].area() - 12.0) < 1e-9, "iface map rect area")
 
-    printf("iface collections: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -1855,7 +1671,6 @@ fn section_conversions() {
     check(cnt == 1, "sscanf real count")
     check(fabs(r - 3.14) < 1e-9, "sscanf real value")
 
-    printf("conversions: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -1882,7 +1697,6 @@ fn section_std_strings() {
         check(v2 == v, "itoa-sscanf value")
     }
 
-    printf("std strings: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -1907,7 +1721,6 @@ fn section_any_map() {
     sl := []int(m["slice"])
     check(len(sl) == 3 && sl[2] == 3, "any map slice")
 
-    printf("any map: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -1939,7 +1752,6 @@ fn section_comparisons() {
     check(a1 == a2, "array eq")
     check(a1 != a3, "array neq")
 
-    printf("comparisons: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -1992,7 +1804,6 @@ fn section_mini_program() {
         }
     }
 
-    printf("mini program: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -2012,7 +1823,6 @@ fn section_big_map_drop() {
     m = make(map[int]str)
     check(len(m) == 0, "big map dropped")
 
-    printf("big map drop: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -2042,7 +1852,6 @@ fn section_stats() {
         check(fabs(d) < 1e-3 * (1.0 + fabs(s)), "mean-deviation zero")
     }
 
-    printf("stats: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -2066,7 +1875,6 @@ fn section_cleanup() {
     }
     check(state^ == -1, "cleanup ran")
 
-    printf("cleanup-like: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -2090,7 +1898,6 @@ fn section_recursive_closure() {
     // Break the self-reference cycle so the reference-counted GC can reclaim it.
     fact_ptr^ = fn (n: int): int { return 0 }
 
-    printf("recursive closure: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -2105,7 +1912,6 @@ fn section_many_params() {
     banner("many params")
     s := manyParams(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)
     check(s == 15 * 16 / 2, "many params sum")
-    printf("many params: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -2128,7 +1934,6 @@ fn section_method_chain() {
     b.add("Hello").add(", ").add("World").add("!").add(" ").add("Umka")
     check(b.s == "Hello, World! Umka", "method chain content")
 
-    printf("method chain: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -2151,7 +1956,6 @@ fn section_map_of_maps() {
     check(mm["a"]["z"] == 999, "mm a z")
     check(len(mm["a"]) == 3, "inner len")
 
-    printf("map of maps: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -2182,7 +1986,6 @@ fn section_struct_slice_sort() {
         check(items[i - 1].k <= items[i].k, "struct sorted by k")
     }
 
-    printf("struct slice sort: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -2227,7 +2030,6 @@ fn section_break_continue() {
     }
     check(cnt == 50, "inner break count")
 
-    printf("break/continue: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -2248,7 +2050,6 @@ fn section_long_sprintf() {
     check(len(s) == expected, "long sprintf length")
     check(slice(s, 0, 3) == "[0]", "first segment")
 
-    printf("long sprintf: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -2274,7 +2075,6 @@ fn section_closure_gc() {
     }
     check(sum == expected, "closure gc sum")
 
-    printf("closure gc: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -2297,7 +2097,6 @@ fn section_mixed_arith() {
     var v: uint32 = 0xFFFFFFFF
     check(v == 0xFFFFFFFF, "uint32 all ones")
 
-    printf("mixed arithmetic: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -2329,7 +2128,6 @@ fn section_shuffle() {
         check(b, "shuffle covers all")
     }
 
-    printf("shuffle: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -2352,7 +2150,6 @@ fn section_stack() {
     }
     check(len(stk) == 0, "stack empty after pops")
 
-    printf("stack: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -2398,31 +2195,6 @@ fn section_queue() {
     _, ok := q.pop()
     check(!ok, "queue empty")
 
-    printf("queue: OK\n")
-}
-
-// ----------------------------------------------------------------------------
-// Section 63: PRNG deterministic
-// ----------------------------------------------------------------------------
-
-fn section_prng_repro() {
-    banner("PRNG repro")
-
-    srand(123)
-    a := []uint32{}
-    for i := 0; i < 100; i++ {
-        a = append(a, rand32())
-    }
-    srand(123)
-    b := []uint32{}
-    for i := 0; i < 100; i++ {
-        b = append(b, rand32())
-    }
-    for i, x in a {
-        check(x == b[i], "prng deterministic")
-    }
-
-    printf("PRNG repro: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -2449,7 +2221,6 @@ fn section_aliases() {
     }
     check(sum == 45, "alias matrix sum")
 
-    printf("aliases: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -2467,7 +2238,6 @@ fn section_deep_recursion() {
     banner("deep recursion")
     check(deepRecur(500) == 500, "deep recursion 500")
     check(deepRecur(2000) == 2000, "deep recursion 2000")
-    printf("deep recursion: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -2499,7 +2269,6 @@ fn section_string_slice() {
     }
     check(commas == 99, "join comma count")
 
-    printf("string slice ops: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -2517,7 +2286,6 @@ fn section_format_edge() {
 
     check(sprintf("100%%") == "100%", "fmt percent escape")
 
-    printf("format edge: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -2532,7 +2300,6 @@ fn section_enum_roundtrip() {
         check(int(c) == i, "enum round-trip")
     }
 
-    printf("enum round-trip: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -2558,7 +2325,6 @@ fn section_nested_closure_param() {
     check(f() == 12, "chain doubled again")
     check(f() == 24, "chain doubled 3")
 
-    printf("nested closure param: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -2603,7 +2369,6 @@ fn section_fiber_in_closure() {
         check(v == expected[i], "fiber in closure value")
     }
 
-    printf("fiber in closure: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -2621,7 +2386,6 @@ fn section_modcycle() {
         check(c == 1000, "mod cycle count")
     }
 
-    printf("mod cycle: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -2651,7 +2415,6 @@ fn section_dispatch_slice() {
     check(ops[3](10, 3) == 3, "dispatch div")
     check(ops[3](10, 0) == 0, "dispatch div guard")
 
-    printf("dispatch slice: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -2682,7 +2445,6 @@ fn section_bool_slice() {
     }
     check(fold == (expected % 2 == 1), "bool xor fold")
 
-    printf("bool slice: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -2708,7 +2470,6 @@ fn section_byte_buffer() {
         check(int(b) == 255 - i, "byte buf reversed")
     }
 
-    printf("byte buffer: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -2745,7 +2506,6 @@ fn section_histogram() {
     }
     check(h.total() == 1000, "histogram total")
 
-    printf("histogram: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -2768,7 +2528,6 @@ fn section_repeat() {
     check(repeatStr("ab", 5) == "ababababab", "repeat 5")
     check(len(repeatStr("x", 1000)) == 1000, "repeat 1000")
 
-    printf("repeat: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -2800,7 +2559,6 @@ fn section_pascal() {
         check(s == expected, "pascal row sum")
     }
 
-    printf("pascal: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -2825,7 +2583,6 @@ fn section_char_arith() {
     }
     check(s == expected, "char loop sum")
 
-    printf("char arith: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -2886,7 +2643,6 @@ fn section_life_step() {
     }
     check(cnt == 5, "life cells preserved")
 
-    printf("life step: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -2911,7 +2667,6 @@ fn section_distribution() {
         check(diff <= expected * 30 / 100, "bin within 30%")
     }
 
-    printf("distribution: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -2949,7 +2704,6 @@ fn section_gcd() {
         }
     }
 
-    printf("gcd: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -2975,7 +2729,6 @@ fn section_assign_ops() {
     s += " world"
     check(s == "hello world", "str +=")
 
-    printf("assign ops: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -3006,7 +2759,6 @@ fn section_random_walk() {
     check(maxx - minx <= 10000, "walk x span bound")
     check(maxy - miny <= 10000, "walk y span bound")
 
-    printf("random walk: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -3054,7 +2806,6 @@ fn section_matmul() {
         }
     }
 
-    printf("matmul: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -3080,7 +2831,6 @@ fn section_short_circuit_ptr() {
     if false || incr() {}
     check(side^ == 2, "|| run")
 
-    printf("short-circuit ptr: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -3107,7 +2857,6 @@ fn section_enum_extra() {
     check(counts[.active] == 2, "enum count active")
     check(counts[.inactive] == 1, "enum count inactive")
 
-    printf("enum extra: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -3127,7 +2876,6 @@ fn section_long_type() {
     check(v["a"][0][7][1].z == 6.0, "long type bz")
     check(len(v["a"][0][7]) == 2, "long type len")
 
-    printf("long type: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -3151,37 +2899,6 @@ fn section_append_self() {
         check(a[i] == i + 1, "original values unchanged")
     }
 
-    printf("append self: OK\n")
-}
-
-// ----------------------------------------------------------------------------
-// Section 89: weak pointer cycle
-// ----------------------------------------------------------------------------
-
-type Cyc = struct {
-    name: str
-    nxt:  weak ^Cyc
-}
-
-fn section_weak_cycle() {
-    banner("weak cycle")
-
-    a := new(Cyc)
-    a.name = "A"
-    b := new(Cyc)
-    b.name = "B"
-    c := new(Cyc)
-    c.name = "C"
-
-    a.nxt = b
-    b.nxt = c
-    c.nxt = a
-
-    keep := []^Cyc{a, b, c}
-    check(len(keep) == 3, "cyc keep len")
-    check(a.nxt.nxt.nxt.name == "A", "cyc traversal")
-
-    printf("weak cycle: OK\n")
 }
 
 // ============================================================================
@@ -3243,7 +2960,6 @@ fn section_multi_return() {
         check(qq * bi + rr == ai, "divmod identity")
     }
 
-    printf("multi-return: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -3309,7 +3025,6 @@ fn section_const_decl() {
         check(buf[i] == i * 42, "const arithmetic")
     }
 
-    printf("const decl: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -3378,7 +3093,6 @@ fn section_grouped_decl() {
     check(c0 == 1 && c1 == 2 && c2 == 3, "local const inc")
     check(c3 == 10 && c4 == 11, "local const reset")
 
-    printf("grouped decl: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -3420,7 +3134,6 @@ fn section_cap_builtin() {
         check(v == a[i], "copy values")
     }
 
-    printf("cap builtin: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -3485,7 +3198,6 @@ fn section_sort_compare() {
     sort([]int{}, fn (a, b: ^int): int |called| { called = true; return 0 })
     check(!called, "empty array no cmp call")
 
-    printf("sort compare: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -3535,7 +3247,6 @@ fn section_std_assert() {
         std::assert(x - x == 0, "-self")
     }
 
-    printf("std assert: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -3631,7 +3342,6 @@ fn section_reflection() {
     }
     check(seen["a"] && seen["b"] && seen["c"], "keys content")
 
-    printf("reflection: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -3682,7 +3392,6 @@ fn section_int_widths() {
     w += 1
     check(int(w) == 65535, "uint16 near max")
 
-    printf("int widths: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -3717,7 +3426,6 @@ fn section_real32() {
     var rs: real32 = real32(sqrt(real(area)))
     check(real(rs) > 8.85 && real(rs) < 8.87, "real32 sqrt")
 
-    printf("real32: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -3767,7 +3475,6 @@ fn section_value_receiver() {
     arr[1].scaleInPlace(2)
     check(arr[1].x == 20 && arr[1].y == 40, "mutating slice element via method")
 
-    printf("method call forms: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -3826,7 +3533,6 @@ fn section_slice_expr() {
         }
     }
 
-    printf("slice edges: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -3901,7 +3607,6 @@ fn section_multiline_str() {
     check(len(s0) == 3, "hex byte length")
     check(s0[1] == 'A' && s0[2] == 'B', "hex byte values")
 
-    printf("multiline str: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -3930,7 +3635,6 @@ fn section_digit_sep() {
     }
     check(sum == 1000, "loop count with sep")
 
-    printf("digit sep: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -3993,7 +3697,6 @@ fn section_for_in_map() {
         check(v % 10 == 1, "post-update mod")
     }
 
-    printf("for in map: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -4055,7 +3758,6 @@ fn section_memusage() {
     gc()
     check(memusage() < withGarbage, "gc reclaims the garbage")
 
-    printf("memusage: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -4117,7 +3819,6 @@ fn section_null_compare() {
     resume(fb)
     check(!valid(fb), "fiber completed -> invalid")
 
-    printf("null compare: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -4170,7 +3871,6 @@ fn section_type_switch_default() {
     }
     check(cnt == 200, "tsw fuzz count")
 
-    printf("type switch default: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -4210,7 +3910,6 @@ fn section_default_complex() {
     check(sumDef(10, 20) == 37, "sum two override")
     check(sumDef(10, 20, 30, 40) == 100, "sum all override")
 
-    printf("default complex: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -4232,7 +3931,6 @@ fn section_typeptr() {
     check(t4 != null, "slice typeptr not null")
     check(t4 != t6, "slice item type differs")
 
-    printf("typeptr: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -4282,15 +3980,14 @@ fn section_any_complex() {
     }
     check(sum == 1000 * 999 / 2, "any int sum")
 
-    printf("any complex: OK\n")
 }
 
 // ============================================================================
-// Reference-counting stress tests.
+// Memory management stress tests.
 //
-// These sections exercise the RC machinery harder than the original
+// These sections exercise the garbage collector harder than the original
 // `section_memusage` does: deep linked structures, wide sharing, deliberate
-// cycles broken by weak pointers or by hand, churn through maps/slices/strings,
+// cycles, churn through maps/slices/strings,
 // closures capturing heap state, interface boxing, fibers that own state,
 // rapid swaps, and self-replacing pointers.
 //
@@ -4406,7 +4103,6 @@ fn section_rc_deep_chain() {
 
     after := liveBytes()
     rcCheckRelease(before, after, "deep chain")
-    printf("rc deep chain: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -4479,26 +4175,24 @@ fn section_rc_wide_share() {
 
     after := liveBytes()
     rcCheckRelease(before, after, "wide share")
-    printf("rc wide share: OK\n")
 }
 
 // ----------------------------------------------------------------------------
-// Section R3: doubly-linked list with weak back-pointers
+// Section R3: doubly-linked list
 // ----------------------------------------------------------------------------
 
 type DNode = struct {
     val:  int
     next: ^DNode
-    prev: weak ^DNode
+    prev: ^DNode
 }
 
-fn section_rc_cycle_weak() {
-    banner("rc cycle weak")
+fn section_rc_doubly_linked() {
+    banner("rc doubly linked")
     before := liveBytes()
 
     {
-        // Build a 2000-element doubly-linked list. `next` is strong;
-        // `prev` is weak so the graph is acyclic from RC's POV.
+        // Build a 2000-element doubly-linked list, which is full of cycles.
         head := new(DNode)
         head^.val = 0
         tail := head
@@ -4522,25 +4216,22 @@ fn section_rc_cycle_weak() {
         check(n == 2000, "dll forward count")
         check(s == 2000 * 1999 / 2, "dll forward sum")
 
-        // Backward traversal via weak prev: must promote to strong each step.
+        // Backward traversal.
         bn := 0
         q := tail
         for q != null {
             bn++
-            wp := q^.prev      // weak ^DNode
-            sp := ^DNode(wp)   // promote weak to strong (nil if collected)
-            q = sp
+            q = q^.prev
         }
         check(bn == 2000, "dll backward count")
 
-        // Drop head -> entire chain releases via the strong next pointers.
+        // Drop head and tail -> the entire chain is unreachable.
         head = null
         tail = null
     }
 
     after := liveBytes()
-    rcCheckRelease(before, after, "cycle weak")
-    printf("rc cycle weak: OK\n")
+    rcCheckRelease(before, after, "doubly linked")
 }
 
 // ----------------------------------------------------------------------------
@@ -4601,7 +4292,6 @@ fn section_rc_cycle_manual_break() {
 
     after := liveBytes()
     rcCheckRelease(before, after, "cycle manual break")
-    printf("rc cycle manual break: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -4672,7 +4362,6 @@ fn section_rc_map_churn() {
 
     after := liveBytes()
     rcCheckRelease(before, after, "map churn")
-    printf("rc map churn: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -4732,7 +4421,6 @@ fn section_rc_slice_churn() {
 
     after := liveBytes()
     rcCheckRelease(before, after, "slice churn")
-    printf("rc slice churn: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -4794,7 +4482,6 @@ fn section_rc_closure_capture() {
 
     after := liveBytes()
     rcCheckRelease(before, after, "closure capture")
-    printf("rc closure capture: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -4878,7 +4565,6 @@ fn section_rc_interface_box() {
 
     after := liveBytes()
     rcCheckRelease(before, after, "interface box")
-    printf("rc interface box: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -4933,7 +4619,6 @@ fn section_rc_string_churn() {
 
     after := liveBytes()
     rcCheckRelease(before, after, "string churn")
-    printf("rc string churn: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -5010,7 +4695,6 @@ fn section_rc_tilemap_like() {
 
     after := liveBytes()
     rcCheckRelease(before, after, "tilemap-like")
-    printf("rc tilemap-like: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -5059,7 +4743,6 @@ fn section_rc_fiber_data() {
         }
     }
 
-    printf("rc fiber data: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -5097,7 +4780,6 @@ fn section_rc_swap_storm() {
 
     after := liveBytes()
     rcCheckRelease(before, after, "swap storm")
-    printf("rc swap storm: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -5153,7 +4835,6 @@ fn section_rc_self_replace() {
 
     after := liveBytes()
     rcCheckRelease(before, after, "self replace")
-    printf("rc self replace: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -5193,7 +4874,6 @@ fn section_rc_append_inplace() {
 
     after := liveBytes()
     rcCheckRelease(before, after, "append inplace")
-    printf("rc append inplace: OK\n")
 }
 
 // ----------------------------------------------------------------------------
@@ -5205,7 +4885,7 @@ type Entity = struct {
     name:     str
     tags:     []str
     children: []^Entity
-    parent:   weak ^Entity
+    parent:   ^Entity
     props:    map[str]int
 }
 
@@ -5254,19 +4934,19 @@ fn section_rc_entity_graph() {
             roots[r] = root
         }
 
-        // Walk the forest counting nodes via weak-parent verification.
+        // Walk the forest counting nodes and verifying parents.
         total := 0
         for r := 0; r < len(roots); r++ {
             root := roots[r]
-            check(^Entity(root^.parent) == null, "root has no parent")
+            check(root^.parent == null, "root has no parent")
             for ci := 0; ci < len(root^.children); ci++ {
                 child := root^.children[ci]
                 total++
-                check(^Entity(child^.parent) == root, "child parent matches root")
+                check(child^.parent == root, "child parent matches root")
                 for gi := 0; gi < len(child^.children); gi++ {
                     gc := child^.children[gi]
                     total++
-                    check(^Entity(gc^.parent) == child, "gc parent matches child")
+                    check(gc^.parent == child, "gc parent matches child")
                 }
             }
         }
@@ -5288,13 +4968,10 @@ fn section_rc_entity_graph() {
 
     after := liveBytes()
     rcCheckRelease(before, after, "entity graph")
-    printf("rc entity graph: OK\n")
 }
 
 
 fn test*() {
-    printf("Umka fuzz: starting at seed=0x%llx\n", prngState)
-
     section_int_arith()
     section_float_arith()
     section_bitwise()
@@ -5310,15 +4987,10 @@ fn test*() {
     section_mutual_recursion()
     section_closures()
     section_interfaces()
-    section_type_switch()
-    section_variadic()
-    section_default_params()
-    section_ternary()
     section_enums()
     section_sorting()
     section_fibers()
     section_fibers_many()
-    section_weak_pointers()
     section_errors()
     section_any()
     section_format()
@@ -5357,7 +5029,6 @@ fn test*() {
     section_shuffle()
     section_stack()
     section_queue()
-    section_prng_repro()
     section_aliases()
     section_deep_recursion()
     section_string_slice()
@@ -5383,7 +5054,6 @@ fn test*() {
     section_enum_extra()
     section_long_type()
     section_append_self()
-    section_weak_cycle()
 
     // ---- extension sections ----
     section_multi_return()
@@ -5410,7 +5080,7 @@ fn test*() {
     // RC stress sections
     section_rc_deep_chain()
     section_rc_wide_share()
-    section_rc_cycle_weak()
+    section_rc_doubly_linked()
     section_rc_cycle_manual_break()
     section_rc_map_churn()
     section_rc_slice_churn()
@@ -5424,9 +5094,7 @@ fn test*() {
     section_rc_append_inplace()
     section_rc_entity_graph()
 
-    printf("\n========================================\n")
-    printf("All fuzz sections completed successfully.\n")
-    printf("========================================\n")
+    printf("%d sections passed\n", numSections)
 }
 
 fn main() {

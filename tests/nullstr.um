@@ -57,8 +57,9 @@ fn testStr() {
 	var s8: str 
 	for i := 0; i < 20; i++ {
 		s8 += "x"
-		printf("%3d %3d %s\n", len(s8), cap(s8), s8)
+		std::assert(len(s8) == i + 1 && cap(s8) > len(s8))
 	}
+	printf("%v %s\n", len(s8), s8)
 
 	testRealloc()
 }
@@ -68,7 +69,7 @@ fn checkArr(a: []str) {
 	for i, x in a {
 		printf("    Item #%v = %v\n", i, x)
 	}
-	printf("len = %d  cap = %d\n", len(a), cap(a))
+	printf("len = %d\n", len(a))
 }
 
 fn testArr() {

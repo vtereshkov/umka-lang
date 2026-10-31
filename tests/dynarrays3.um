@@ -62,7 +62,7 @@ fn test*() {
     foo("Vasiliy")
     foo("Umka", {"Meow", "Purr", "Meow"})
 
-    dummy := &get()
+    std::assert(&get() != null)
 }
 
 fn foo(name: str, words: []str = {"Hello", "World"}) {

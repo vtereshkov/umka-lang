@@ -8,6 +8,7 @@ cd ..
 
 ../umka_linux/umka -warn all.um > actual.log
 ../umka_linux/umka -warn compare.um actual.log expected.log
+../umka_linux/umka -warn negative.um ../umka_linux/umka
 cd .. 
 
 cd benchmarks

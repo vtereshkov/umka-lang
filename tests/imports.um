@@ -1,11 +1,15 @@
 import (
         "lib1/lib1.um"
         "lib2/lib2.um"
+        utils1 = "lib1/utils.um"
+        utils2 = "lib2/utils.um"
 )
 
 fn test*() {
         lib1::f()
         lib2::f()
+        utils1::f()
+        utils2::f()
 }
 
 fn main() {

@@ -27,7 +27,7 @@ fn test*() {
     printf("%v %v %v\n", a, b, c)
 
     var x, y, z: any = a, b, c
-    printf("%v %v %v\n", a, b, c)
+    printf("%v %v %v\n", x, y, z)
 
     s, t := "Hello", "World"
     printf(s + " " + t + "\n")

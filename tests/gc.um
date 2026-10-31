@@ -1,88 +1,76 @@
-import "std.um"
+// Data reachable in various ways survives garbage collections
 
-fn g(q: ^int) {}   
- 
-fn f(p: ^int) {
-    q := p
-    g(q)
+type Node = struct {
+    value: int
+    next: ^Node
 }
 
-type st = struct {
-    x: int
-    p: ^int
-    y: int
-    q: ^int
-}    
+var global: ^Node
 
-fn h(s: st) {
-    s.y = 5
-    s.q = new(int)
-}
-
-fn f2() {
-    d := new([1000] int)
-    for i := 0; i < 10; i++ {
-        a := new([1000] int)
-        if i > 5 {return}
+// Allocates and drops enough data to trigger collections and reuse the freed memory
+fn churn() {
+    for i := 0; i < 1000; i++ {
+        a := new([1000]int)
+        a[i] = i
     }
+    gc()
 }
 
-fn g2(): ^int {a := new(int); return a}
-
-fn h2(): ^st {
-    d := new(int)
-    return &st{x: 7, p: d, y: 5, q: d}
+// A pointer to an array item keeps the whole array alive
+fn itemPtr(): ^int {
+    a := new([1000]int)
+    a[999] = 7
+    return &a[999]
 }
 
-fn foo(): int { 
-    var p: ^int
-    {
-        a := new([2]int)
-        a[1] = 7
-        p = &a[1]
+fn test1() {
+    p := itemPtr()
+    churn()
+    printf("Item pointer: %v\n", p^)
+}
+
+// Heap data reachable through a struct copy, a closure, a map, an interface and a global variable
+fn test2() {
+    s := Node{1, new(Node)}
+    s.next.value = 2
+
+    q := new(Node)
+    q.value = 3
+    f := fn (): int |q| {return q.value}
+
+    m := map[str]^Node{"x": new(Node)}
+    m["x"].value = 4
+
+    var i: any = Node{5, null}
+
+    global = new(Node)
+    global.value = 6
+
+    churn()
+    printf("Struct copy: %v, closure: %v, map: %v, interface: %v, global: %v\n", s.next.value, f(), m["x"].value, Node(i).value, global.value)
+}
+
+// A long list reachable only from its head
+fn test3() {
+    var head: ^Node
+    for i := 0; i < 100000; i++ {
+        head = &Node{i, head}
     }
-    return p^
+
+    churn()
+
+    n, sum := 0, 0
+    for p := head; p != null; p = p.next {
+        n++
+        sum += p.value
+    }
+    printf("List: %v nodes, sum %v\n", n, sum)
 }
 
 fn test*() {
-    r := foo()
- 
-    a := new([1000] int)
-    b := a
-    c := &a[10]
-    b = new([1000] int)
-    f(&a[6])
-    e := new([3]real)
-    e[2] = 7
-    x := e[2]
-    
-    s := st {x: 2, p: new(int), y: 3, q: &a[11]}
-    h(s)
-    
-    for i := 0; i < 1000; i++ {
-        a := new([1000] int)
-        a[2] = 7
-        b := new(int)
-        if i > 10 {break}
-    }
-    
-    a = new([1000] int)
-    i := 0
-    for p := new([1000] int); i < 1000; i++ {
-        r := new([1000] int)
-        if i > 5 {continue}
-    }
-
-    f2()
-    
-    h2res := h2()
-    h2res.p^ = 17
-    
-    g2res := g2()
-    
-    new([1000000] int)
-
-    std::println("See any memory leak warnings?")
+    test1()
+    test2()
+    test3()
 }
 
 fn main() {

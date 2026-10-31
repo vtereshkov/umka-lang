@@ -6,6 +6,7 @@ cd ..
 
 ..\umka_windows_mingw\umka -warn all.um > actual.log
 ..\umka_windows_mingw\umka -warn compare.um actual.log expected.log
+..\umka_windows_mingw\umka -warn negative.um ..\umka_windows_mingw\umka
 cd ..
 
 cd benchmarks

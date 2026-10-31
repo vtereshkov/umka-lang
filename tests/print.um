@@ -20,6 +20,7 @@ fn test*() {
 		std::exitif(err)
 		std::fclose(f)
 		printf("%s", str(chars))
+		std::remove("test.txt")
 	}
 
 	a, b := '\xD0', '\xBF'

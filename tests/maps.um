@@ -25,8 +25,18 @@ fn test1() {
     populations["Russia"] = 146.748    
     russia2020 := populations["Russia"]
 
-    printf("Population of Russia was %.2f million. Now it is %.2f million\n\n", russia2019, russia2020)
-    printf("%llv\n", populations)
+    printf("Population of Russia was %.2f million. Now it is %.2f million\n", russia2019, russia2020)
+
+    // The whole table in the iteration order, without printing it
+    count := 0
+    hash := uint(14695981039346656037)
+    for country, pop in populations {
+        count++
+        for _, c in sprintf("%s %.3f\n", country, pop) {
+            hash = (hash ~ uint(c)) * 1099511628211
+        }
+    }
+    printf("%v countries and regions, FNV-1a hash %v\n", count, hash)
 
     printf("\nCountries and regions more populous than Russia:\n")
     for country, pop in populations {

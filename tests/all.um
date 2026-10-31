@@ -31,7 +31,6 @@ import (
     "utf8test.um"
     "utf8test2.um"
     "imports.um"
-    "imports2.um"
     "imports3.um"
     "imports4.um"
     "closures.um"
@@ -52,6 +51,8 @@ import (
     "optim.um"
     "extlib.um"
     "fuzz.um"
+    "stdlib.um"
+    "vecmat.um"
 )
 
 fn main() {
@@ -87,9 +88,8 @@ fn main() {
     printf("\n\n>>> UTF-8 - 1\n\n");                utf8test::test()
     printf("\n\n>>> UTF-8 - 2\n\n");                utf8test2::test()
     printf("\n\n>>> Imports - 1\n\n");              imports::test()
-    printf("\n\n>>> Imports - 2\n\n");              imports2::test()
-    printf("\n\n>>> Imports - 3\n\n");              imports3::test()
-    printf("\n\n>>> Imports - 4\n\n");              imports4::test()    
+    printf("\n\n>>> Imports - 2\n\n");              imports3::test()
+    printf("\n\n>>> Imports - 3\n\n");              imports4::test()    
     printf("\n\n>>> Closures - 1\n\n");             closures::test()
     printf("\n\n>>> Closures - 2\n\n");             closures2::test()
     printf("\n\n>>> Closures - 3\n\n");             closures3::test()
@@ -108,4 +108,6 @@ fn main() {
     printf("\n\n>>> Peephole optimizations\n\n");   optim::test()
     printf("\n\n>>> External libraries\n\n");       extlib::test()
     printf("\n\n>>> Fuzz\n\n");                     fuzz::test()
+    printf("\n\n>>> Standard library\n\n");         stdlib::test()
+    printf("\n\n>>> Vectors and matrices\n\n");     vecmat::test()
 }

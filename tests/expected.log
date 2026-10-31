@@ -24,122 +24,22 @@ Hello World
 
 >>> Dynamic arrays - 1
 
-a: 0 0
-a: 5 7
-a: 10 14
-a: 15 21
-a: 20 28
-a: 25 35
-a: 30 42
-a: 35 49
-a: 40 56
-a: 45 63
-Appending...
-a: 0 0
-a: 5 7
-a: 10 14
-a: 15 21
-a: 20 28
-a: 25 35
-a: 30 42
-a: 35 49
-a: 40 56
-a: 45 63
-a: 666 777
-b: 0 0
-b: 5 7
-b: 10 14
-b: 15 21
-b: 20 28
-b: 25 35
-b: 30 42
-b: 35 49
-b: 40 56
-b: 45 63
-b: 666 777
-Appending...
-e: 0 0
-e: 5 7
-e: 10 14
-e: 15 21
-e: 20 28
-e: 25 35
-e: 30 42
-e: 35 49
-e: 40 56
-e: 45 63
-e: 666 777
-e: 876 765
-Deleting #4...
-e: 0 0
-e: 5 7
-e: 10 14
-e: 15 21
-e: 25 35
-e: 30 42
-e: 35 49
-e: 40 56
-e: 45 63
-e: 666 777
-e: 876 765
-f: 0 0
-f: 5 7
-f: 10 14
-f: 15 21
-f: 20 28
-f: 25 35
-f: 30 42
-f: 35 49
-f: 40 56
-f: 45 63
-f: 666 777
-f: 876 765
-c: [3 4 5]
-Appending...
+a: 0/0 5/7 10/14 15/21 20/28 25/35 30/42 35/49 40/56 45/63
+a: 0/0 5/7 10/14 15/21 20/28 25/35 30/42 35/49 40/56 45/63 666/777
+b: 0/0 5/7 10/14 15/21 20/28 25/35 30/42 35/49 40/56 45/63 666/777
+e: 0/0 5/7 10/14 15/21 20/28 25/35 30/42 35/49 40/56 45/63 666/777 876/765
+e: 0/0 5/7 10/14 15/21 25/35 30/42 35/49 40/56 45/63 666/777 876/765
+saved: 0/0 5/7 10/14 15/21 20/28 25/35 30/42 35/49 40/56 45/63 666/777 876/765
 c: [3 4 5 6 7]
-d: [[666 777] [888 999]]
-Appending...
 d: [[666 777] [888 999] [444 555]]
-Inserting...
 ["Hello " "World"]
 ["Hello " "My Wonderful" "World"]
 ["Hello " ", " "My Wonderful" "World"]
 ["Oh, " "Hello " ", " "My Wonderful" "World"]
 ["Oh, " "Hello " ", " "My Wonderful" "World" "!"]
 [42 43]
-Slicing...
-["Hello World" "Hallo Welt" "Salut le Monde" "Privet Mir"]
-["Hello World" "Hallo Welt" "Salut le Monde"]
-["Hello World" "Hallo Welt"]
-["Hello World"]
-[]
-
-["Hallo Welt" "Salut le Monde" "Privet Mir"]
-["Salut le Monde" "Privet Mir"]
-["Privet Mir"]
-[]
-
-["Hallo Welt"]
-["Hallo Welt" "Salut le Monde"]
-["Hallo Welt" "Salut le Monde" "Privet Mir"]
-
-["Salut le Monde"]
-["Salut le Monde" "Privet Mir"]
-
-["Hallo Welt" "Salut le Monde"]
-["Hallo Welt"]
-[]
-
-["Hello World" "Hallo Welt" "Salut le Monde" "Privet Mir"]
-["Hallo Welt" "Salut le Monde" "Privet Mir"]
-["Salut le Monde" "Privet Mir"]
-["Privet Mir"]
-[]
-
-[]
-Copying...
+["Hallo Welt" "Salut le Monde"] ["Salut le Monde" "Privet Mir"] ["Hallo Welt" "Salut le Monde"] []
 [[5 7] [10 12]] [[5 7] [9 11]]
-Conversions...
 [1 2]
 [1 2]
 
@@ -214,79 +114,16 @@ World\n
 
 >>> Fibers
 
-Parent: i=0 b=0
-    Child: i=0 a=0 d=0
-        Grandchild: i=0 a=0 c=0
-    Child: i=0 a=0 d=0
-        Grandchild: i=1 a=0 c=19
-    Child: i=0 a=0 d=11
-        Grandchild: i=2 a=0 c=38
-    Child: i=0 a=0 d=22
-        Grandchild: i=3 a=0 c=57
-    Child: i=0 a=0 d=33
-        Grandchild: i=4 a=0 c=76
-    Child: i=0 a=0 d=44
-        Grandchild: i=5 a=0 c=95
-    Child: i=0 a=0 d=55
-        Grandchild: i=6 a=0 c=114
-    Child: i=0 a=0 d=66
-        Grandchild: i=7 a=0 c=133
-    Child: i=0 a=0 d=77
-        Grandchild: i=8 a=0 c=152
-    Child: i=0 a=0 d=88
-        Grandchild: i=9 a=0 c=171
-Parent: i=1 b=0
-    Child: i=1 a=7 d=99
-        Grandchild: i=10 a=7 c=0
-    Child: i=1 a=7 d=110
-        Grandchild: i=11 a=7 c=19
-    Child: i=1 a=7 d=121
-        Grandchild: i=12 a=7 c=38
-    Child: i=1 a=7 d=132
-    Child: i=1 a=7 d=132
-    Child: i=1 a=7 d=132
-    Child: i=1 a=7 d=132
-    Child: i=1 a=7 d=132
-    Child: i=1 a=7 d=132
-    Child: i=1 a=7 d=132
-Parent: i=2 b=3
-    Child: i=2 a=14 d=132
-    Child: i=2 a=14 d=132
-    Child: i=2 a=14 d=132
-    Child: i=2 a=14 d=132
-    Child: i=2 a=14 d=132
-    Child: i=2 a=14 d=132
-    Child: i=2 a=14 d=132
-    Child: i=2 a=14 d=132
-    Child: i=2 a=14 d=132
-    Child: i=2 a=14 d=132
-Parent: i=3 b=6
-    Child: i=3 a=21 d=132
-    Child: i=3 a=21 d=132
-    Child: i=3 a=21 d=132
-    Child: i=3 a=21 d=132
-    Child: i=3 a=21 d=132
-    Child: i=3 a=21 d=132
-    Child: i=3 a=21 d=132
-    Child: i=3 a=21 d=132
-    Child: i=3 a=21 d=132
-    Child: i=3 a=21 d=132
-Parent: i=4 b=9
-    Child: i=4 a=28 d=132
-    Child: i=4 a=28 d=132
-    Child: i=4 a=28 d=132
-    Child: i=4 a=28 d=132
-    Child: i=4 a=28 d=132
-    Child: i=4 a=28 d=132
-    Child: i=4 a=28 d=132
-    Child: i=4 a=28 d=132
-    Child: i=4 a=28 d=132
-    Child: i=4 a=28 d=132
-Parent: i=5 b=12
-Parent: i=6 b=12
-Parent: i=7 b=12
-Parent: i=8 b=12
-Parent: i=9 b=12
+P0:0 C0:0,0 G0:0,0 C0:0,0 G1:0,19 C0:0,11 G2:0,38 C0:0,22 G3:0,57 C0:0,33 G4:0,76 C0:0,44 G5:0,95 C0:0,55 G6:0,114 C0:0,66 G7:0,133 C0:0,77 G8:0,152 C0:0,88 G9:0,171
+P1:0 C1:7,99 G10:7,0 C1:7,110 G11:7,19 C1:7,121 G12:7,38 C1:7,132 C1:7,132 C1:7,132 C1:7,132 C1:7,132 C1:7,132 C1:7,132
+P2:3 C2:14,132 C2:14,132 C2:14,132 C2:14,132 C2:14,132 C2:14,132 C2:14,132 C2:14,132 C2:14,132 C2:14,132
+P3:6 C3:21,132 C3:21,132 C3:21,132 C3:21,132 C3:21,132 C3:21,132 C3:21,132 C3:21,132 C3:21,132 C3:21,132
+P4:9 C4:28,132 C4:28,132 C4:28,132 C4:28,132 C4:28,132 C4:28,132 C4:28,132 C4:28,132 C4:28,132 C4:28,132
+P5:12
+P6:12
+P7:12
+P8:12
+P9:12
 
 
 >>> Fibers - 2
@@ -303,12 +140,20 @@ Sum of all squares less than 30 = 55
 
 >>> Garbage collection - 1
 
-See any memory leak warnings?
+Item pointer: 7
+Struct copy: 2, closure: 3, map: 4, interface: 5, global: 6
+List: 100000 nodes, sum 4999950000
 
 
 >>> Garbage collection - 2
 
-Ok
+999999
+List: freed
+99999
+Cycle: freed
+11000
+Recursion: freed
+
 
 >>> Interfaces - 1
 
@@ -329,16 +174,16 @@ proc_fooable:
 
 >>> Interfaces - 3
 
-woof
-meow
-meow
-woof
-meow
-meow
-woof
-meow
-meow
-woof
+woof {woof_count: 2}
+meow {meow_count: 2}
+meow {meow_count: 2}
+woof {woof_count: 2}
+meow {meow_count: 2}
+meow {meow_count: 2}
+woof {woof_count: 2}
+meow {meow_count: 2}
+meow {meow_count: 2}
+woof {woof_count: 2}
 
 
 >>> Interfaces - 4
@@ -366,243 +211,7 @@ woof
 
 Test 1
 Population of Russia was 146.73 million. Now it is 146.75 million
-
-{
-    "AFRICA": 1337.92
-    "ASIA": 4625.93
-    "Afghanistan": 38.928
-    "Albania": 2.838
-    "Algeria": 44.357
-    "Andorra": 0.082
-    "Angola": 32.522
-    "Antigua-and-Barbuda": 0.098
-    "Argentina": 45.377
-    "Armenia": 2.956
-    "Australia": 25.754
-    "Austria": 8.914
-    "Azerbaijan": 10.108
-    "Bahamas": 0.393
-    "Bahrain": 1.465
-    "Bangladesh": 169.809
-    "Barbados": 0.287
-    "Belarus": 9.375
-    "Belgium": 11.515
-    "Belize": 0.419
-    "Benin": 12.209
-    "Bhutan": 0.73
-    "Bolivia": 11.633
-    "Bosnia-Herzegovina": 3.281
-    "Botswana": 2.317
-    "Brazil": 211.812
-    "Brunei": 0.469
-    "Bulgaria": 6.927
-    "Burkina-Faso": 20.903
-    "Burundi": 11.866
-    "CARIBBEAN": 43.233
-    "CENTRAL-AMERICA": 178.611
-    "CENTRAL-ASIA": 74.961
-    "Cambodia": 15.497
-    "Cameroon": 26.598
-    "Canada": 38.19
-    "Cape-Verde": 0.556
-    "Central-African-Republic": 4.83
-    "Chad": 16.877
-    "Channel-Islands": 0.172
-    "Chile": 19.47
-    "China": 1402.38
-    "China-Hong-Kong-SAR": 7.494
-    "China-Macao-SAR": 0.686
-    "Colombia": 49.444
-    "Comoros": 0.87
-    "Congo": 5.518
-    "Congo-Dem.-Rep.": 89.568
-    "Costa-Rica": 5.111
-    "Cote-d'Ivoire": 26.175
-    "Croatia": 4.02
-    "Cuba": 11.281
-    "Curacao": 0.155
-    "Cyprus": 1.207
-    "Czechia": 10.716
-    "Denmark": 5.829
-    "Djibouti": 0.988
-    "Dominica": 0.072
-    "Dominican-Republic": 10.5
-    "EAST-ASIA": 1641.06
-    "EASTERN-AFRICA": 444.97
-    "EASTERN-EUROPE": 291.902
-    "EUROPE": 746.622
-    "Ecuador": 17.511
-    "Egypt": 100.803
-    "El-Salvador": 6.481
-    "Equatorial-Guinea": 1.403
-    "Eritrea": 3.546
-    "Estonia": 1.331
-    "Ethiopia": 114.916
-    "Federated-States-of-Micronesia": 0.106
-    "Fiji": 0.896
-    "Finland": 5.529
-    "France": 64.94
-    "French-Guiana": 0.294
-    "French-Polynesia": 0.28
-    "Gabon": 2.231
-    "Gambia": 2.417
-    "Georgia": 3.715
-    "Germany": 83.3
-    "Ghana": 31.073
-    "Greece": 10.7
-    "Grenada": 0.113
-    "Guadeloupe": 0.375
-    "Guam": 0.175
-    "Guatemala": 18.066
-    "Guinea": 12.56
-    "Guinea-Bissau": 1.927
-    "Guyana": 0.787
-    "Haiti": 11.403
-    "Honduras": 9.864
-    "Hungary": 9.767
-    "Iceland": 0.368
-    "India": 1400.1
-    "Indonesia": 271.739
-    "Iran": 84.15
-    "Iraq": 39.725
-    "Ireland": 5.003
-    "Israel": 9.216
-    "Italy": 60.296
-    "Jamaica": 2.809
-    "Japan": 125.967
-    "Jordan": 10.679
-    "Kazakhstan": 18.732
-    "Kenya": 53.528
-    "Kiribati": 0.125
-    "Korea-North": 25.779
-    "Korea-South": 51.781
-    "Kosovo": 1.791
-    "Kuwait": 4.691
-    "Kyrgyzstan": 6.594
-    "LATIN-AMERICA-AND-THE-CARIBBEAN": 651.036
-    "Laos": 7.242
-    "Latvia": 1.902
-    "Lebanon": 6.825
-    "Lesotho": 2.142
-    "Liberia": 5.058
-    "Libya": 6.891
-    "Liechtenstein": 0.039
-    "Lithuania": 2.794
-    "Luxembourg": 0.632
-    "MIDDLE-AFRICA": 179.757
-    "Madagascar": 27.691
-    "Malawi": 19.13
-    "Malaysia": 32.781
-    "Maldives": 0.541
-    "Mali": 20.251
-    "Malta": 0.522
-    "Marshall-Islands": 0.057
-    "Martinique": 0.356
-    "Mauritania": 4.65
-    "Mauritius": 1.265
-    "Mayotte": 0.284
-    "Mexico": 127.792
-    "Moldova": 3.535
-    "Monaco": 0.038
-    "Mongolia": 3.361
-    "Montenegro": 0.622
-    "Morocco": 35.952
-    "Mozambique": 31.166
-    "Myanmar": 54.704
-    "NORTHERN-AFRICA": 244.344
-    "NORTHERN-AMERICA": 368.193
-    "NORTHERN-EUROPE": 105.99
-    "Namibia": 2.541
-    "Nauru": 0.011
-    "Nepal": 29.996
-    "Netherlands": 17.467
-    "New-Caledonia": 0.295
-    "New-Zealand": 4.987
-    "Nicaragua": 6.596
-    "Niger": 24.189
-    "Nigeria": 206.14
-    "North-Macedonia": 2.08
-    "Norway": 5.387
-    "OCEANIA": 43.155
-    "Oman": 4.713
-    "Pakistan": 220.94
-    "Palau": 0.018
-    "Palestinian-Territory": 5.008
-    "Panama": 4.283
-    "Papua-New-Guinea": 8.95
-    "Paraguay": 7.255
-    "Peru": 32.824
-    "Philippines": 109.581
-    "Poland": 38.368
-    "Portugal": 10.255
-    "Puerto-Rico": 3.189
-    "Qatar": 2.839
-    "Reunion": 0.861
-    "Romania": 19.241
-    "Russia": 146.748
-    "Rwanda": 12.952
-    "SOUTH-AMERICA": 429.191
-    "SOUTH-ASIA": 1967.13
-    "SOUTHEAST-ASIA": 661.845
-    "SOUTHERN-AFRICA": 67.732
-    "SOUTHERN-EUROPE": 153.251
-    "Saint-Lucia": 0.182
-    "Samoa": 0.2
-    "San-Marino": 0.034
-    "Sao-Tome-and-Principe": 0.21
-    "Saudi-Arabia": 35.041
-    "Senegal": 16.744
-    "Serbia": 6.957
-    "Seychelles": 0.098
-    "Sierra-Leone": 7.977
-    "Singapore": 5.769
-    "Slovakia": 5.462
-    "Slovenia": 2.103
-    "Solomon-Islands": 0.715
-    "Somalia": 15.893
-    "South-Africa": 59.628
-    "South-Sudan": 11.194
-    "Spain": 47.635
-    "Sri-Lanka": 21.937
-    "St.-Kitts-Nevis": 0.054
-    "St.-Vincent-and-the-Grenadines": 0.111
-    "Sudan": 43.849
-    "Suriname": 0.605
-    "Sweden": 10.377
-    "Switzerland": 8.634
-    "Syria": 19.398
-    "Taiwan": 23.61
-    "Tajikistan": 9.429
-    "Tanzania": 59.734
-    "Thailand": 66.534
-    "Timor-Leste": 1.318
-    "Togo": 8.279
-    "Tonga": 0.099
-    "Trinidad-and-Tobago": 1.369
-    "Tunisia": 11.896
-    "Turkey": 83.737
-    "Turkmenistan": 6.031
-    "Tuvalu": 0.01
-    "Uganda": 45.741
-    "Ukraine": 41.778
-    "United-Arab-Emirates": 9.778
-    "United-Kingdom": 67.16
-    "United-States": 329.878
-    "Uruguay": 3.531
-    "Uzbekistan": 34.174
-    "Vanuatu": 0.321
-    "Venezuela": 28.645
-    "Vietnam": 96.209
-    "WESTERN-AFRICA": 401.115
-    "WESTERN-ASIA": 280.927
-    "WESTERN-EUROPE": 195.479
-    "WORLD": 7772.85
-    "Western-Sahara": 0.597
-    "Yemen": 29.826
-    "Zambia": 18.384
-    "Zimbabwe": 14.863
-    "eSwatini": 1.104
-}
+234 countries and regions, FNV-1a hash 11177778866114781203
 
 Countries and regions more populous than Russia:
                                   AFRICA: 1337.92
@@ -732,7 +341,7 @@ Error: Empty string (code -2) from "foo":
     foo: (5)
     fooTest: (11)
     test: (25)
-    main: (80)
+    main: (81)
 9
 
 
@@ -752,6 +361,7 @@ Got 42
 len = 4
 4.680
 Arr: [0.5 0.7 0.9]
+Code 42
 Parent: i=0 buf=0
 Child : i=0 buf=0
 Parent: i=1 buf=0
@@ -780,6 +390,7 @@ String representation:
 {"Hello Umka": 3.14}
 {q: [1 0 0 0] normalized: true}
 4.68
+0.57735
 'a'
 [0.5 0.7 0.9]
 
@@ -855,6 +466,7 @@ Hello, дивный новый мир!
 
 >>> UTF-8 - 1
 
+61 41f 440
 string: ▀€$¢
 bytes: 9
 characters: 4
@@ -906,20 +518,16 @@ Test passed
 
 Utils from lib 1
 Utils from lib 2
-
-
->>> Imports - 2
-
 Utils from lib 1
 Utils from lib 2
 
 
->>> Imports - 3
+>>> Imports - 2
 
 42 43 1 "Hello" [1 2 3] 0.693147
 
 
->>> Imports - 4
+>>> Imports - 3
 
 A name: a.um
 
@@ -986,57 +594,38 @@ true false true
 "!!!" "" "Hello ???" "Hello "
 false true false
 false true false
-  1   4 x
-  2   4 xx
-  3   4 xxx
-  4  10 xxxx
-  5  10 xxxxx
-  6  10 xxxxxx
-  7  10 xxxxxxx
-  8  10 xxxxxxxx
-  9  10 xxxxxxxxx
- 10  22 xxxxxxxxxx
- 11  22 xxxxxxxxxxx
- 12  22 xxxxxxxxxxxx
- 13  22 xxxxxxxxxxxxx
- 14  22 xxxxxxxxxxxxxx
- 15  22 xxxxxxxxxxxxxxx
- 16  22 xxxxxxxxxxxxxxxx
- 17  22 xxxxxxxxxxxxxxxxx
- 18  22 xxxxxxxxxxxxxxxxxx
- 19  22 xxxxxxxxxxxxxxxxxxx
- 20  22 xxxxxxxxxxxxxxxxxxxx
+20 xxxxxxxxxxxxxxxxxxxx
 
 []
-len = 0  cap = 0
+len = 0
 
 []
-len = 0  cap = 0
+len = 0
 
 ["Hello" "World"]
     Item #0 = "Hello"
     Item #1 = "World"
-len = 2  cap = 6
+len = 2
 
 []
-len = 0  cap = 0
+len = 0
 
 ["Hello" "World"]
     Item #0 = "Hello"
     Item #1 = "World"
-len = 2  cap = 6
+len = 2
 
 ["Hello" "World"]
     Item #0 = "Hello"
     Item #1 = "World"
-len = 2  cap = 6
+len = 2
 
 ["World"]
     Item #0 = "World"
-len = 1  cap = 2
+len = 1
 
 []
-len = 0  cap = 2
+len = 0
 
 ["" ""] ["Hello" "World"]
 ""
@@ -1116,24 +705,8 @@ true
 42 17
 0: 5 6 7.000000 8.000000 9 10 
 1: 15 16 and nothing more
-2: 5 6 7.000000 8.000000 9 10 
-3: 15 16 and nothing more
-4: 5 6 7.000000 8.000000 9 10 
-5: 15 16 and nothing more
-6: 5 6 7.000000 8.000000 9 10 
-7: 15 16 and nothing more
-8: 5 6 7.000000 8.000000 9 10 
-9: 15 16 and nothing more
-0: [-4 12]
-1: [-4 12]
-2: [-4 12]
 3: [-4 12]
 4: [3 5.5 7]
-5: [3 5.5 7]
-6: [3 5.5 7]
-7: [-4 12]
-8: [-4 12]
-9: [-4 12]
 train! train!
 
 
@@ -1413,380 +986,26 @@ true
 
 >>> Fuzz
 
-Umka fuzz: starting at seed=0xdeadbeefcafebabe
+117 sections passed
 
-====== int arithmetic ======
-int arithmetic: OK
 
-====== float arithmetic ======
-float arithmetic: OK
+>>> Standard library
 
-====== bitwise ======
-bitwise: OK
+12 12 ['W' 'o' 'r' 'l' 'd'] 11 'e' false true
+Written to stdout
+42 -17 0 0
+3.25 -1000 0
+-12345 0.6667 -2.72
+[788777573 1468134577 1794505496 1759631086 1176399555]
+1970-01-01 00:00:00 5 1
+2023-11-14 22:13:20 3 318
 
-====== strings basic ======
-strings basic: OK
 
-====== strings fuzz ======
-strings fuzz: OK
+>>> Vectors and matrices
 
-====== intslice fuzz ======
-intslice fuzz: len=423 OK
-
-====== nested slices ======
-nested slices: OK
-
-====== static arrays ======
-static arrays: OK
-
-====== map int fuzz ======
-map int fuzz: size=7 OK
-
-====== map str ======
-map str: OK
-
-====== map struct keys ======
-map struct keys: OK
-
-====== recursion ======
-recursion: OK
-
-====== mutual recursion ======
-mutual recursion: OK
-
-====== closures ======
-closures: OK
-
-====== interfaces ======
-interfaces: OK
-
-====== type switch ======
-type switch: OK
-
-====== variadic ======
-variadic: OK
-
-====== default params ======
-default params: OK
-
-====== ternary ======
-ternary: OK
-
-====== enums ======
-enums: OK
-
-====== sorting ======
-sorting: OK
-
-====== fibers ======
-fibers: OK
-
-====== fibers many ======
-fibers many: OK
-
-====== weak pointers ======
-weak pointers: OK
-
-====== errors ======
-errors: OK
-
-====== any ======
-any: OK
-
-====== format ======
-format: OK
-
-====== gc stress ======
-gc stress: OK
-
-====== gc churn ======
-gc churn: OK
-
-====== fnptr map ======
-fnptr map: OK
-
-====== slice aliasing ======
-slice aliasing: OK
-
-====== append growth ======
-append growth: OK
-
-====== struct fuzz ======
-struct fuzz: OK
-
-====== many locals ======
-many locals: OK
-
-====== deep nesting ======
-deep nesting: OK
-
-====== switch many cases ======
-switch many cases: OK
-
-====== short-circuit ======
-short-circuit: OK
-
-====== map iter ======
-map iter: OK
-
-====== string<->[]char ======
-string<->[]char: OK
-
-====== pointer basic ======
-pointer basic: OK
-
-====== loop stability ======
-loop stability: OK
-
-====== iface collections ======
-iface collections: OK
-
-====== conversions ======
-conversions: OK
-
-====== std strings ======
-std strings: OK
-
-====== any map ======
-any map: OK
-
-====== comparisons ======
-comparisons: OK
-
-====== mini program (nearest-neighbor) ======
-mini program: OK
-
-====== big map drop ======
-big map drop: OK
-
-====== stats ======
-stats: OK
-
-====== cleanup-like ======
-cleanup-like: OK
-
-====== recursive closure ======
-recursive closure: OK
-
-====== many params ======
-many params: OK
-
-====== method chain ======
-method chain: OK
-
-====== map of maps ======
-map of maps: OK
-
-====== struct slice sort ======
-struct slice sort: OK
-
-====== break/continue ======
-break/continue: OK
-
-====== long sprintf ======
-long sprintf: OK
-
-====== closure gc ======
-closure gc: OK
-
-====== mixed arithmetic ======
-mixed arithmetic: OK
-
-====== shuffle ======
-shuffle: OK
-
-====== stack ======
-stack: OK
-
-====== queue ======
-queue: OK
-
-====== PRNG repro ======
-PRNG repro: OK
-
-====== aliases ======
-aliases: OK
-
-====== deep recursion ======
-deep recursion: OK
-
-====== string slice ops ======
-string slice ops: OK
-
-====== format edge ======
-format edge: OK
-
-====== enum round-trip ======
-enum round-trip: OK
-
-====== nested closure param ======
-nested closure param: OK
-
-====== fiber in closure ======
-fiber in closure: OK
-
-====== mod cycle ======
-mod cycle: OK
-
-====== dispatch slice ======
-dispatch slice: OK
-
-====== bool slice ======
-bool slice: OK
-
-====== byte buffer ======
-byte buffer: OK
-
-====== histogram ======
-histogram: OK
-
-====== repeat ======
-repeat: OK
-
-====== pascal ======
-pascal: OK
-
-====== char arith ======
-char arith: OK
-
-====== life step ======
-life step: OK
-
-====== distribution ======
-distribution: OK
-
-====== gcd ======
-gcd: OK
-
-====== assign ops ======
-assign ops: OK
-
-====== random walk ======
-random walk: OK
-
-====== matmul ======
-matmul: OK
-
-====== short-circuit ptr ======
-short-circuit ptr: OK
-
-====== enum extra ======
-enum extra: OK
-
-====== long type ======
-long type: OK
-
-====== append self ======
-append self: OK
-
-====== weak cycle ======
-weak cycle: OK
-
-====== multi-return ======
-multi-return: OK
-
-====== const decl ======
-const decl: OK
-
-====== grouped decl ======
-grouped decl: OK
-
-====== cap builtin ======
-cap builtin: OK
-
-====== sort compare ======
-sort compare: OK
-
-====== std assert ======
-std assert: OK
-
-====== reflection ======
-reflection: OK
-
-====== int widths ======
-int widths: OK
-
-====== real32 ======
-real32: OK
-
-====== method call forms ======
-method call forms: OK
-
-====== slice edges ======
-slice edges: OK
-
-====== multiline str ======
-multiline str: OK
-
-====== digit sep ======
-digit sep: OK
-
-====== for in map ======
-for in map: OK
-
-====== memusage ======
-memusage: OK
-
-====== null compare ======
-null compare: OK
-
-====== type switch default ======
-type switch default: OK
-
-====== default complex ======
-default complex: OK
-
-====== typeptr ======
-typeptr: OK
-
-====== any complex ======
-any complex: OK
-
-====== rc deep chain ======
-rc deep chain: OK
-
-====== rc wide share ======
-rc wide share: OK
-
-====== rc cycle weak ======
-rc cycle weak: OK
-
-====== rc cycle manual break ======
-rc cycle manual break: OK
-
-====== rc map churn ======
-rc map churn: OK
-
-====== rc slice churn ======
-rc slice churn: OK
-
-====== rc closure capture ======
-rc closure capture: OK
-
-====== rc interface box ======
-rc interface box: OK
-
-====== rc string churn ======
-rc string churn: OK
-
-====== rc tilemap-like ======
-rc tilemap-like: OK
-
-====== rc fiber data ======
-rc fiber data: OK
-
-====== rc swap storm ======
-rc swap storm: OK
-
-====== rc self replace ======
-rc self replace: OK
-
-====== rc append inplace ======
-rc append inplace: OK
-
-====== rc entity graph ======
-rc entity graph: OK
-
-========================================
-All fuzz sections completed successfully.
-========================================
+[5 -3 9] [-3 7 -3] [2 4 6] [0.5 1 1.5]
+12 [27 6 -13] [4 -10 18] 3.741657
+[[1 0 4] [2 1 0] [0 3 1]] [5 11 7]
+[[0 -2 0] [0 0 -3] [-4 0 0]] [[0.5 2 3] [6 0.5 3] [4 4 0.5]]
+[[0 -2 -1] [2 0 -0.5] [1 0.5 0]]
+0.785398

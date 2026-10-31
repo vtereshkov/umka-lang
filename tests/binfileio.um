@@ -25,7 +25,7 @@ fn test1() {
 
 fn test2() {
 	f, err := std::fopen("galjkgaklgjkajg", "jgksjgksjgksjg")
-	std::assert(f == null)
+	std::assert(f == null && err.code != 0)
 }
 
 fn test3() {

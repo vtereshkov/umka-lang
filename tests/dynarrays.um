@@ -1,49 +1,50 @@
 import "std.um"
 
-fn f(b: [11][2]^int) {
-    for _, x in b {
-        std::println("b: " + std::itoa(x[0]^) + " " + std::itoa(x[1]^))
+// Values pointed to by the items
+fn values(a: [][2]^int): str {
+    s := ""
+    for _, x in a {
+        s += sprintf(" %v/%v", x[0]^, x[1]^)
     }
-} 
+    return s
+}
+
+fn f(b: [11][2]^int) {
+    s := ""
+    for _, x in b {
+        s += sprintf(" %v/%v", x[0]^, x[1]^)
+    }
+    printf("b:%s\n", s)
+}
 
 fn slices() {
     a := []str{"Hello " + "World", "Hallo " + "Welt", "Salut " + "le Monde", "Privet " + "Mir"}
 
-    printf("%v\n", slice(a, 0, 4))
-    printf("%v\n", slice(a, 0, 3))
-    printf("%v\n", slice(a, 0, 2))
-    printf("%v\n", slice(a, 0, 1))
-    printf("%v\n\n", slice(a, 0, 0))
+    // All ranges, with the end index counted from the start or, if negative, from the end
+    for start := 0; start <= len(a); start++ {
+        std::assert(slice(a, start) == slice(a, start, len(a)))
 
-    printf("%v\n", slice(a, 1, 4))
-    printf("%v\n", slice(a, 2, 4))
-    printf("%v\n", slice(a, 3, 4))
-    printf("%v\n\n", slice(a, 4, 4))
+        for end := start; end <= len(a); end++ {
+            s := slice(a, start, end)
+            std::assert(len(s) == end - start)
 
-    printf("%v\n", slice(a, 1, 2))
-    printf("%v\n", slice(a, 1, 3))
-    printf("%v\n\n", slice(a, 1, 4))
+            for i, x in s {
+                std::assert(x == a[start + i])
+            }
 
-    printf("%v\n", slice(a, 2, 3))
-    printf("%v\n\n", slice(a, 2, 4))
+            if end < len(a) {
+                std::assert(slice(a, start, end - len(a)) == s)
+            }
+        }
+    }
 
-    printf("%v\n", slice(a, 1, -1))
-    printf("%v\n", slice(a, 1, -2))
-    printf("%v\n\n", slice(a, 1, -3))
-
-    printf("%v\n", slice(a, 0))
-    printf("%v\n", slice(a, 1))
-    printf("%v\n", slice(a, 2))
-    printf("%v\n", slice(a, 3))
-    printf("%v\n\n", slice(a, 4))
-
-    printf("%v\n", slice(a, 2, -2))
+    printf("%v %v %v %v\n", slice(a, 1, 3), slice(a, 2), slice(a, 1, -1), slice(a, 4, 4))
 }
 
 fn insertions() {
     a := []str{"Hello" + ' ', "World"}
     b := insert(copy(a), 1, "My " + "Wonderful")
-    c := insert(copy(b), 1, ", ") 
+    c := insert(copy(b), 1, ", ")
     d := insert(copy(c), 0, "Oh" + ',' + " ")
     e := insert(copy(d), len(d), "!")
 
@@ -54,7 +55,7 @@ fn insertions() {
     printf("%v\n", e)
 
     printf("%v\n", insert(insert([]int{}, 0, 42), 1, 43))
-} 
+}
 
 fn copies() {
     a := [][]int{[]int{5, 7}, []int{9, 11}}
@@ -82,80 +83,47 @@ fn conv2() {
 fn conv() {
     conv1()
     conv2()
-}     
+}
 
-fn test*() {    
+fn test*() {
     a := make([][2]^int, 10)
-    
+
     for i in a {
         a[i] = [2]^int {new(int), new(int)}
         a[i][0]^ = 5 * i
         a[i][1]^ = 7 * i
-    } 
-    
-    for _, x in a {
-        std::println("a: " + std::itoa(x[0]^) + " " + std::itoa(x[1]^))
     }
-       
-    std::println("Appending...")
+    printf("a:%s\n", values(a))
+
     a = append(a, [2]^int {new(int), new(int)})
     a[len(a) - 1][0]^ = 666
-    a[len(a) - 1][1]^ = 777    
-
-    for _, x in a {
-        std::println("a: " + std::itoa(x[0]^) + " " + std::itoa(x[1]^))
-    }   
+    a[len(a) - 1][1]^ = 777
+    printf("a:%s\n", values(a))
 
     f(a)
-        
-    std::println("Appending...")
+
     e := append(copy(a), [2]^int {new(int), new(int)})
     e[len(e) - 1][0]^ = 876
     e[len(e) - 1][1]^ = 765
+    printf("e:%s\n", values(e))
 
-    for _, x in e {
-        std::println("e: " + std::itoa(x[0]^) + " " + std::itoa(x[1]^))
-    } 
+    saved := copy(e)
+    e = delete(e, 4)
+    printf("e:%s\n", values(e))
+    printf("saved:%s\n", values(saved))
 
-    f := copy(e)
-    
-    del := 4
-    std::println("Deleting #" + std::itoa(del) + "...")
-    e = delete(e, del)
-    
-    for _, x in e {
-        std::println("e: " + std::itoa(x[0]^) + " " + std::itoa(x[1]^))
-    } 
-
-    for _, x in f {
-        std::println("f: " + std::itoa(x[0]^) + " " + std::itoa(x[1]^))
-    }       
-    
     c := []int{3, 4, 5}
-    printf("c: %v\n", c)
-    
-    std::println("Appending...")
     c = append(c, []int{6, 7})
     printf("c: %v\n", c)
 
     d := [][]int{[]int{666, 777}, [2]int{888, 999}}
-    printf("d: %v\n", d)   
-    
-    std::println("Appending...")    
     d = append(d, [2]int {444, 555})
     printf("d: %v\n", d)
 
-    std::println("Inserting...") 
-    insertions()       
-
-    std::println("Slicing...") 
+    insertions()
     slices()
-
-    std::println("Copying...") 
     copies()
-
-    std::println("Conversions...") 
-    conv()              
+    conv()
 }
 
 fn main() {

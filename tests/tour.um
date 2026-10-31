@@ -108,6 +108,15 @@ fn test*() {
     var printable: Printable = Arr{0.5, 0.7, 0.9}
     printable.print()
     
+    // Pointers
+    u := uint16(6)
+    var ptr: IntPtr = &u
+    ptr^ *= 7
+
+    // Closures
+    var report: ErrFn = fn (code: int) {printf("Code %v\n", code)}
+    report(u)
+
     // Fibers
     fibers()
 
@@ -124,6 +133,7 @@ fn test*() {
     printf("%v\n", m)
     printf("%v\n", q)
     printf("%v\n", sum)
+    printf("%v\n", y)
     printf("%v\n", 'a')
     printf("%v\n", printable)
     
