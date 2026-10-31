@@ -267,7 +267,7 @@ void moduleNameFromPath(const Modules *modules, const char *path, char *folder, 
 
     const char *start = slash ? (slash + 1) : path;
 
-    const char *dot = strrchr(path, '.');
+    const char *dot = strrchr(start, '.');
     const char *stop = dot ? dot : (path + strlen(path));
 
     if (stop <= start)

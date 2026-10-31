@@ -1,4 +1,4 @@
-// Negative tests: programs that must fail to compile, fail at run time, or compile with warnings
+// Negative tests: programs that must fail to compile, fail at run time, or compile with warnings, and borderline programs that must not
 // Usage: umka negative.um <Umka executable>
 
 import "std.um"
@@ -8,6 +8,7 @@ type Kind = enum {
     runtimeError
     warning
     noWarning
+    noError
 }
 
 type Case = struct {
@@ -20,6 +21,7 @@ const (
     sourceFile = "negative.tmp.um"
     outFile = "negative.tmp.out"
     errFile = "negative.tmp.err"
+    escape = "Pointer to a local variable escapes from the function"
 )
 
 cases := []Case{
@@ -84,12 +86,97 @@ fn main() {
     var i: I = 5
 }`},
 
+    {.compileError, "Function must return a value", `
+fn f(c: bool): int {
+    if c {
+        return 1
+    }
+}
+fn main() {}`},
+
+    {.compileError, "Too many expressions in list", `
+fn main() {
+    var a: [17]int
+    a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7], a[8], a[9], a[10], a[11], a[12], a[13], a[14], a[15], a[16] = 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17
+}`},
+
+    {.noWarning, "", `
+fn main() {
+    var a: [16]int
+    a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7], a[8], a[9], a[10], a[11], a[12], a[13], a[14], a[15] = 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
+    printf("%v", a)
+}`},
+
+    {.compileError, "atan2() domain error", `
+const c = atan2(0.0, 0.0)
+fn main() {}`},
+
+    {.noWarning, "", `
+const c = atan2(0.0, 1.0)
+fn main() {
+    printf("%v", c)
+}`},
+
+    // Struct embedding
+
+    {.compileError, ": expected but } found", `
+type Base = struct {x: int}
+type D = struct {y: int; Base}
+fn main() {}`},
+
+    {.compileError, "Unresolved forward type declaration for field Base", `
+type (
+    P = ^Base
+    D = struct {Base}
+    Base = struct {x: int}
+)
+fn main() {}`},
+
+    {.compileError, "Incompatible types ^Base and ^D", `
+type Base = struct {x: int}
+type D = struct {Base}
+fn main() {
+    var d: D
+    var p: ^Base = &d
+}`},
+
+    {.compileError, "Incompatible types Base and D", `
+type Base = struct {x: int}
+type D = struct {Base}
+fn main() {
+    var d: D
+    var b: Base = d
+}`},
+
+    {.compileError, "Incompatible types struct and struct", `
+type Base = struct {x: int}
+fn main() {
+    var a: struct {Base; y: int}
+    var b: struct {Base: Base; y: int} = a
+}`},
+
+    {.compileError, "Cannot convert ^D to I: method get is not implemented", `
+type Base = struct {x: int}
+fn (b: ^Base) get(): int {return b.x}
+type I = interface {get(): int}
+type D = struct {Base; get: int}
+fn main() {
+    var d: D
+    var i: I = d
+}`},
+
+    // Module paths
+
     {.compileError, "Cannot open file", `
 import "  path with spaces/b.um     "
 fn main() {}`},
 
     {.compileError, "Cannot open file", `
 import "        "
+fn main() {}`},
+
+    {.compileError, "Cannot open file", `
+import "dotted.folder/module"
 fn main() {}`},
 
     {.compileError, "Module name cannot contain spaces or tabs", `
@@ -117,6 +204,19 @@ fn main() {
     printf("%v", p^)
 }`},
 
+    {.runtimeError, "Pointer is null", `
+fn main() {
+    var p: ^int
+    p^++
+}`},
+
+    {.runtimeError, "Array or structure is null", `
+type S = struct {x: int}
+fn main() {
+    var s: ^S
+    s.x++
+}`},
+
     {.runtimeError, "Map is null", `
 fn main() {
     var m: map[int]int
@@ -129,7 +229,13 @@ fn main() {
     printf("%v", int8(x))
 }`},
 
-    {.runtimeError, "Pointer to a local variable escapes from the function", `
+    {.runtimeError, "Overflow of int8", `
+fn main() {
+    var x: int8 = 120
+    x += 10
+}`},
+
+    {.runtimeError, escape, `
 var g: ^int
 fn f() {
     x := 1
@@ -147,6 +253,13 @@ fn main() {
     f()
 }`},
 
+    {.runtimeError, "Stack overflow", `
+type Big = [1100000]int
+fn main() {
+    a := make([]Big, 1)
+    sort(a, fn (x, y: ^Big): int {return 0})
+}`},
+
     {.runtimeError, "Assertion failed: Oops", `
 import "std.um"
 fn main() {
@@ -156,6 +269,275 @@ fn main() {
     {.runtimeError, "Bye", `
 fn main() {
     exit(3, "Bye")
+}`},
+
+    // Pointers to local variables returned, or stored in globals, on the heap or in older stack frames
+
+    {.runtimeError, escape, `
+fn f(): ^int {
+    x := 1
+    return &x
+}
+fn main() {
+    f()
+}`},
+
+    {.runtimeError, escape, `
+fn f(x: int): ^int {
+    return &x
+}
+fn main() {
+    f(1)
+}`},
+
+    {.runtimeError, escape, `
+fn f(): any {
+    x := 1
+    return &x
+}
+fn main() {
+    f()
+}`},
+
+    {.runtimeError, escape, `
+type S = struct {p: ^int}
+fn f(): S {
+    x := 1
+    return {&x}
+}
+fn main() {
+    f()
+}`},
+
+    {.runtimeError, escape, `
+fn main() {
+    x := 1
+    p := new(^int)
+    p^ = &x
+}`},
+
+    {.runtimeError, escape, `
+type H = struct {p: ^int}
+fn f(h: ^H) {
+    x := 1
+    h.p = &x
+    h.p = null
+}
+fn main() {
+    f(new(H))
+}`},
+
+    {.runtimeError, escape, `
+fn main() {
+    x := 1
+    a := []^int{&x}
+    printf("%v", a[0]^)
+}`},
+
+    {.runtimeError, escape, `
+fn main() {
+    x := 1
+    a := [2]^int{null, &x}
+    b := []^int(a)
+}`},
+
+    {.runtimeError, escape, `
+fn main() {
+    x := 1
+    m := map[^int]bool{}
+    m[&x] = true
+}`},
+
+    {.runtimeError, escape, `
+type S = struct {p: ^int}
+fn main() {
+    x := 1
+    s := S{&x}
+    var a: any = s
+}`},
+
+    {.runtimeError, escape, `
+fn main() {
+    x := 1
+    p := &x
+    f := fn () |p| {p^++}
+    f()
+}`},
+
+    {.runtimeError, escape, `
+type S = struct {n: int; p: [2]^int}
+fn main() {
+    x := 1
+    s := S{p: {null, &x}}
+    a := []S{}
+    a = append(a, s)
+}`},
+
+    {.runtimeError, escape, `
+type S = struct {n: int; p: ^int}
+fn main() {
+    x := 1
+    s := S{p: &x}
+    a := make([]S, 2)
+    a = insert(a, 1, s)
+}`},
+
+    {.runtimeError, escape, `
+type S = struct {n: int; a: any}
+var g: [2]S
+fn main() {
+    x := 1
+    var s: [2]S
+    s[1].a = &x
+    g = s
+}`},
+
+    {.runtimeError, escape, `
+var g: ^int
+fn f(p: ^int) {
+    g = p
+}
+fn main() {
+    x := 1
+    f(&x)
+}`},
+
+    {.runtimeError, escape, `
+type S = struct {a: any}
+fn f(s: ^S) {
+    x := 1
+    s.a = &x
+}
+fn main() {
+    var s: S
+    f(&s)
+}`},
+
+    {.noError, "", `
+fn set(pp: ^^int, p: ^int) {
+    pp^ = p
+}
+fn main() {
+    x := 1
+    var p: ^int
+    set(&p, &x)
+    p^ = 2
+}`},
+
+    {.runtimeError, escape, `
+var g: ^int
+fn main() {
+    f := make(fiber, {
+        x := 1
+        g = &x
+        resume()
+    })
+    resume(f)
+}`},
+
+    {.runtimeError, escape, `
+fn f(ps: [][]^int = {{null}}) {
+    x := 1
+    ps[0][0] = &x
+}
+fn main() {
+    f()
+}`},
+
+    // Variadic parameter lists stored on the caller's stack
+
+    {.runtimeError, escape, `
+var g: []int
+fn f(xs: ..int) {
+    g = xs
+}
+fn main() {
+    f(1, 2)
+}`},
+
+    {.runtimeError, escape, `
+fn id(ps: ..^int): []^int {
+    return ps
+}
+fn f(): []^int {
+    x := 1
+    return id(&x)
+}
+fn main() {
+    f()
+}`},
+
+    {.runtimeError, escape, `
+var g: []^int
+fn f(ps: ..^int) {
+    g = slice(ps, 1)
+}
+fn main() {
+    x := 1
+    f(null, &x)
+}`},
+
+    {.runtimeError, escape, `
+fn f(ps: ..^int) {
+    qs := copy(ps)
+}
+fn main() {
+    x := 1
+    f(&x)
+}`},
+
+    {.runtimeError, escape, `
+fn f(ps: ..^int) {
+    qs := append(ps, new(int))
+}
+fn main() {
+    x := 1
+    f(&x)
+}`},
+
+    {.runtimeError, escape, `
+fn f(ps: ..^int) {
+    x := 1
+    ps[0] = &x
+}
+fn main() {
+    y := 1
+    f(&y)
+}`},
+
+    {.noError, "", `
+fn sum(ps: ..^int): int {
+    s := 0
+    for _, p in ps {
+        s += p^
+    }
+    return s
+}
+fn twice(ps: ..^int): int {
+    return 2 * sum(ps)
+}
+fn main() {
+    a, b := 1, 2
+    printf("%v", twice(&a, &b))
+}`},
+
+    {.noError, "", `
+fn id(ps: ..^int): []^int {
+    return ps
+}
+fn main() {
+    x := 1
+    ps := id(&x)
+    ps[0]^ = 2
+}`},
+
+    {.noError, "", `
+var g: []^int
+fn f(ps: ..^int) {
+    g = copy(ps)
+}
+fn main() {
+    f(new(int), new(int))
 }`},
 
     // Warnings
@@ -237,9 +619,9 @@ fn run(umka: str, c: Case): bool {
 
     options := ""
     switch c.kind {
-        case .compileError:         options = "-check"
-        case .runtimeError:         options = ""
-        case .warning, .noWarning:  options = "-warn -check"
+        case .compileError:             options = "-check"
+        case .runtimeError, .noError:   options = ""
+        case .warning, .noWarning:      options = "-warn -check"
     }
 
     // Shell redirections that work both on Windows and on Linux
@@ -247,22 +629,24 @@ fn run(umka: str, c: Case): bool {
 
     prefix := ""
     switch c.kind {
-        case .compileError:         prefix = "Error "
-        case .runtimeError:         prefix = "Runtime error "
-        case .warning, .noWarning:  prefix = "Warning "
+        case .compileError:             prefix = "Error "
+        case .runtimeError, .noError:   prefix = "Runtime error "
+        case .warning, .noWarning:      prefix = "Warning "
     }
+
+    positive := c.kind == .noWarning || c.kind == .noError
 
     diagnostics := readLines(errFile)
     found := false
     for _, line in diagnostics {
-        if startsWith(line, prefix) && (c.kind == .noWarning || contains(line, "): " + c.message)) {
+        if startsWith(line, prefix) && (positive || contains(line, "): " + c.message)) {
             found = true
         }
     }
 
-    ok := (c.kind == .noWarning ? !found : found) && ((code == 0) == (c.kind == .warning || c.kind == .noWarning))
+    ok := (positive ? !found : found) && ((code == 0) == (positive || c.kind == .warning))
     if !ok {
-        kindNames := [4]str{"compile error", "runtime error", "warning", "no warning"}
+        kindNames := [5]str{"compile error", "runtime error", "warning", "no warning", "no error"}
         printf("FAILED: expected %s '%s', exit code %v, source:%s\n", kindNames[int(c.kind)], c.message, code, c.source)
         for _, line in diagnostics {
             printf("    %s\n", line)
