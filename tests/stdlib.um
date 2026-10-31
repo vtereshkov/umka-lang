@@ -1,0 +1,92 @@
+import "std.um"
+
+fn testFiles() {
+    name := "stdlib.tmp"
+
+    f, err := std::fopen(name, "wb")
+    std::exitif(err)
+    std::fprintln(f, "Hello")
+    std::fprintln(f, "World")
+    std::exitif(std::fflush(f))
+    written, err := std::ftell(f)
+    std::exitif(err)
+    std::fclose(f)
+
+    f, err = std::fopen(name, "rb")
+    std::exitif(err)
+
+    std::exitif(std::fseek(f, 0, .end))
+    size, _ := std::ftell(f)
+
+    var word: [5]char
+    std::exitif(std::fseek(f, 6, .begin))
+    std::fread(f, &word)
+    pos, _ := std::ftell(f)
+
+    var c: char
+    std::exitif(std::fseek(f, -10, .cur))
+    std::fread(f, &c)
+    atEnd := std::feof(f)
+
+    std::exitif(std::fseek(f, 0, .end))
+    std::fread(f, &c)
+
+    printf("%v %v %v %v %v %v %v\n", written, size, word, pos, c, atEnd, std::feof(f))
+
+    std::fclose(f)
+    std::remove(name)
+
+    std::fprintln(std::stdout(), "Written to stdout")
+    std::assert(std::stderr() != null)
+}
+
+fn testConversions() {
+    printf("%v %v %v %v\n", std::atoi("42"), std::atoi("-17 apples"), std::atoi("apples"), std::atoi(""))
+    printf("%v %v %v\n", std::atof("3.25"), std::atof("-1e3"), std::atof("pi"))
+    printf("%s %s %s\n", std::itoa(-12345), std::ftoa(2.0 / 3, 4), std::ftoa(-2.71828, 2))
+}
+
+fn testRandom() {
+    std::srand(12345)
+    a := [5]int{std::rand(), std::rand(), std::rand(), std::rand(), std::rand()}
+
+    std::srand(12345)
+    b := [5]int{std::rand(), std::rand(), std::rand(), std::rand(), std::rand()}
+
+    std::assert(a == b)
+    printf("%v\n", a)
+
+    for i := 0; i < 1000; i++ {
+        r := std::rand()
+        std::assert(r >= 0 && r <= std::randMax)
+        x := std::frand()
+        std::assert(x >= 0 && x <= 1)
+    }
+}
+
+fn testTime() {
+    start := std::clock()
+    std::assert(start >= 0 && std::clock() >= start)
+
+    for _, t in []int{0, 1700000000} {
+        d := std::gmtime(t)
+        printf("%s %v %v\n", std::timestr(d), d.dayOfWeek, d.dayOfYear)
+    }
+}
+
+fn testEnvironment() {
+    std::assert(std::getenv("UMKA_SURELY_UNDEFINED_VARIABLE") == "")
+    std::assert(std::getenv("PATH") != "")
+}
+
+fn test*() {
+    testFiles()
+    testConversions()
+    testRandom()
+    testTime()
+    testEnvironment()
+}
+
+fn main() {
+    test()
+}

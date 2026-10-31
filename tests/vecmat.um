@@ -1,0 +1,88 @@
+import (
+    "std.um"
+    "mat.um"
+)
+
+fn near(a, b: real): bool {
+    return fabs(a - b) < 1e-9
+}
+
+fn nearVec(u, v: mat::Vec): bool {
+    for i in u {
+        if !near(u[i], v[i]) {
+            return false
+        }
+    }
+    return true
+}
+
+fn nearMat(m, n: mat::Mat): bool {
+    for i in m {
+        if !nearVec(m[i], n[i]) {
+            return false
+        }
+    }
+    return true
+}
+
+fn testVectors() {
+    u := mat::Vec{1, 2, 3}
+    v := mat::Vec{4, -5, 6}
+
+    printf("%v %v %v %v\n", u.add(v), u.sub(v), u.mul(2), u.div(2))
+    printf("%v %v %v %.6f\n", u.dot(v), u.cross(v), u.elementwise(v), u.norm())
+
+    // The cross product is orthogonal to both vectors
+    w := u.cross(v)
+    std::assert(near(w.dot(u), 0) && near(w.dot(v), 0))
+
+    w = u.normalize()
+    std::assert(near(w.norm(), 1))
+}
+
+fn testMatrices() {
+    u := mat::Vec{1, 2, 3}
+    m := mat::Mat{{1, 2, 0}, {0, 1, 3}, {4, 0, 1}}
+    id := mat::identity()
+
+    printf("%v %v\n", m.transpose(), m.mulv(u))
+    printf("%v %v\n", m.add(id).sub(m.mul(2)), m.mulm(m).div(2))
+
+    std::assert(nearMat(m.mulm(id), m) && nearMat(id.mulm(m), m))
+}
+
+fn testRotations() {
+    id := mat::identity()
+
+    // Angles -> rotation matrix -> angles, and rotation matrices are orthogonal
+    angles := mat::Vec{0.1, -0.2, 0.3}
+    r := angles.toAttMat()
+    std::assert(nearVec(r.toAttAngles(), angles))
+    std::assert(nearMat(r.mulm(r.transpose()), id))
+
+    // A slightly distorted rotation matrix becomes nearly orthogonal again
+    distorted := r.add(mat::Mat{{1e-4, 0, 0}, {0, 0, 0}, {0, 0, 0}})
+    before := distorted.mulm(distorted.transpose()).sub(id)
+    restored := distorted.normalize()
+    after := restored.mulm(restored.transpose()).sub(id)
+    std::assert(fabs(after[0][0]) < fabs(before[0][0]) / 100)
+
+    // Multiplication by the rate matrix is the cross product
+    w := mat::Vec{0.5, -1, 2}
+    u := mat::Vec{1, 2, 3}
+    std::assert(nearVec(w.toRateMat().mulv(u), w.cross(u)))
+    printf("%v\n", w.toRateMat())
+
+    std::assert(near(4 * atan(1), std::pi))
+    printf("%.6f\n", atan(1))
+}
+
+fn test*() {
+    testVectors()
+    testMatrices()
+    testRotations()
+}
+
+fn main() {
+    test()
+}
