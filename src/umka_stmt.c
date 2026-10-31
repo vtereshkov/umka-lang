@@ -150,6 +150,18 @@ static bool doForPostIncDecStmtLookahead(Umka *umka)
 }
 
 
+static bool doFnDeclLookahead(Umka *umka)
+{
+    // "fn" ident
+    Lexer lookaheadLex = umka->lex;
+    if (lookaheadLex.tok.kind != TOK_FN)
+        return false;
+
+    lexNext(&lookaheadLex);
+    return lookaheadLex.tok.kind == TOK_IDENT;
+}
+
+
 // singleAssignmentStmt = designator "=" expr.
 static void parseSingleAssignmentStmt(Umka *umka, const Type *type, Const *varPtrConst)
 {
@@ -1144,6 +1156,9 @@ static void parseReturnStmt(Umka *umka)
 // stmt = decl | block | simpleStmt | ifStmt | switchStmt | forStmt | breakStmt | continueStmt | returnStmt.
 static void parseStmt(Umka *umka)
 {
+    if (doFnDeclLookahead(umka))
+        umka->error.handler(umka->error.context, "Nested functions should be declared as variables");
+
     switch (umka->lex.tok.kind)
     {
         case TOK_TYPE:

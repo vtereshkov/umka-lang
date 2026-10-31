@@ -316,7 +316,7 @@ static void pageInit(HeapPages *pages, Storage *storage, Error *error)
 {
     pages->first = pages->firstRecycled = pages->lastAccessed = NULL;
     pages->lowest = pages->highest = NULL;
-    pages->totalSize = pages->occupiedSize = 0;
+    pages->occupiedSize = 0;
     pages->occupiedSizeThreshold = MEM_MIN_GC_THRESHOLD;
     pages->gcRequested = false;
     gcCandidateInit(&pages->reachables, storage);
@@ -400,8 +400,6 @@ static FORCE_INLINE HeapPage *pageFindRecycled(HeapPages *pages, int size)
             return page;
 
         free(page);
-
-        pages->totalSize -= recycledSize;
     }
 
     return NULL;
@@ -419,8 +417,6 @@ static FORCE_INLINE HeapPage *pageAdd(HeapPages *pages, int numChunks, int chunk
         page = malloc(sizeof(HeapPage) + size);
         if (UNLIKELY(!page))
             pages->error->runtimeHandler(pages->error->context, ERR_RUNTIME, "Out of memory");
-
-        pages->totalSize += size;
     }
 
     page->numChunks = numChunks;
@@ -662,7 +658,7 @@ FORCE_INLINE char *qsortPartition(char *first, char *last, int itemSize, QSortCo
 }
 
 
-void qsortEx(char *first, char *last, int itemSize, QSortCompareFn compare, void *context, void *temp)
+static void qsortEx(char *first, char *last, int itemSize, QSortCompareFn compare, void *context, void *temp)
 {
     if (first >= last)
         return;

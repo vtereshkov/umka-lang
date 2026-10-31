@@ -255,7 +255,7 @@ static void doDynArrayToDynArrayConv(Umka *umka, const Type *dest, const Type **
     genDeref(&umka->gen, (*src)->base->kind);
 
     const Type *castType = (*src)->base;
-    doExplicitTypeConv(umka, dest->base, &castType, constant);
+    doExplicitTypeConv(umka, dest->base, &castType, NULL);
 
     if (!typeEquivalent(dest->base, castType))
     {
@@ -406,7 +406,7 @@ static void doValueToInterfaceConv(Umka *umka, const Type *dest, const Type **sr
 
     *src = typeAddPtrTo(&umka->types, &umka->blocks, *src);
     doEscapeToHeap(umka, *src);
-    doPtrToInterfaceConv(umka, dest, src, constant);
+    doPtrToInterfaceConv(umka, dest, src, NULL);
 }
 
 
@@ -465,7 +465,7 @@ static void doExprListToExprListConv(Umka *umka, const Type *dest, const Type **
         genDeref(&umka->gen, (*src)->field[i]->type->kind);                     // Get src.item value
 
         const Type *srcFieldType = (*src)->field[i]->type;
-        doAssertImplicitTypeConv(umka, dest->field[i]->type, &srcFieldType, constant);
+        doAssertImplicitTypeConv(umka, dest->field[i]->type, &srcFieldType, NULL);
 
         genPushLocalPtr(&umka->gen, destList->offset + dest->field[i]->offset); // Push dest.item pointer
         genSwapAssign(&umka->gen, dest->field[i]->type);                        // Assign to dest.item
@@ -714,7 +714,7 @@ const Ident *parseQualIdent(Umka *umka)
 }
 
 
-static void parseBuiltinIOCall(Umka *umka, const Type **type, Const *constant, BuiltinFunc builtin)
+static void parseBuiltinIOCall(Umka *umka, const Type **type, BuiltinFunc builtin)
 {
     // Parameters: count, stream, format, value
 
@@ -726,8 +726,8 @@ static void parseBuiltinIOCall(Umka *umka, const Type **type, Const *constant, B
     {
         const Type *expectedType = (builtin == BUILTIN_FPRINTF || builtin == BUILTIN_FSCANF) ? umka->types.predecl.fileType : umka->types.predecl.strType;
         *type = expectedType;
-        parseExpr(umka, type, constant);
-        doAssertImplicitTypeConv(umka, expectedType, type, constant);
+        parseExpr(umka, type, NULL);
+        doAssertImplicitTypeConv(umka, expectedType, type, NULL);
         lexEat(&umka->lex, TOK_COMMA);
     }
     else
@@ -744,7 +744,7 @@ static void parseBuiltinIOCall(Umka *umka, const Type **type, Const *constant, B
     }
 
     *type = umka->types.predecl.strType;
-    parseExpr(umka, type, constant);
+    parseExpr(umka, type, NULL);
     typeAssertCompatible(&umka->types, umka->types.predecl.strType, *type);
 
     // Values, if any
@@ -756,7 +756,7 @@ static void parseBuiltinIOCall(Umka *umka, const Type **type, Const *constant, B
     {     
         lexNext(&umka->lex);
         *type = NULL;
-        parseExpr(umka, type, constant);
+        parseExpr(umka, type, NULL);
 
         if (formatLiteral)
         {
@@ -845,7 +845,7 @@ static void parseBuiltinMathCall(Umka *umka, const Type **type, Const *constant,
 
 
 // fn new(type: Type [, expr: type]): ^type
-static void parseBuiltinNewCall(Umka *umka, const Type **type, Const *constant)
+static void parseBuiltinNewCall(Umka *umka, const Type **type)
 {
     // Type
     *type = parseType(umka);
@@ -873,7 +873,7 @@ static void parseBuiltinNewCall(Umka *umka, const Type **type, Const *constant)
 // fn make(type: Type, len: int): type
 // fn make(type: Type): type
 // fn make(type: Type, childFunc: fn()): type
-static void parseBuiltinMakeCall(Umka *umka, const Type **type, Const *constant)
+static void parseBuiltinMakeCall(Umka *umka, const Type **type)
 {
     *type = parseType(umka);
     typeAssertCompatibleBuiltin(&umka->types, *type, BUILTIN_MAKE, (*type)->kind == TYPE_DYNARRAY || (*type)->kind == TYPE_MAP || (*type)->kind == TYPE_FIBER);
@@ -903,7 +903,7 @@ static void parseBuiltinMakeCall(Umka *umka, const Type **type, Const *constant)
 
         // Child fiber closure
         const Type *fiberClosureType = umka->types.predecl.fiberType->base;
-        parseExpr(umka, &fiberClosureType, constant);
+        parseExpr(umka, &fiberClosureType, NULL);
         doAssertImplicitTypeConv(umka, umka->types.predecl.fiberType->base, &fiberClosureType, NULL);
     }
     else
@@ -916,7 +916,7 @@ static void parseBuiltinMakeCall(Umka *umka, const Type **type, Const *constant)
 // fn copy(s: str): str
 // fn copy(array: [] type): [] type
 // fn copy(m: map [keyType] type): map [keyType] type
-static void parseBuiltinCopyCall(Umka *umka, const Type **type, Const *constant)
+static void parseBuiltinCopyCall(Umka *umka, const Type **type)
 {
     *type = NULL;
     parseExpr(umka, type, NULL);
@@ -934,7 +934,7 @@ static void parseBuiltinCopyCall(Umka *umka, const Type **type, Const *constant)
 
 
 // fn append(array: [] type, item: (^type | [] type), single: bool, type: Type): [] type
-static void parseBuiltinAppendCall(Umka *umka, const Type **type, Const *constant)
+static void parseBuiltinAppendCall(Umka *umka, const Type **type)
 {
     // Dynamic array
     *type = NULL;
@@ -982,7 +982,7 @@ static void parseBuiltinAppendCall(Umka *umka, const Type **type, Const *constan
 
 
 // fn insert(array: [] type, index: int, item: type, type: Type): [] type
-static void parseBuiltinInsertCall(Umka *umka, const Type **type, Const *constant)
+static void parseBuiltinInsertCall(Umka *umka, const Type **type)
 {
     // Dynamic array
     *type = NULL;
@@ -1022,7 +1022,7 @@ static void parseBuiltinInsertCall(Umka *umka, const Type **type, Const *constan
 
 // fn delete(array: [] type, index: int): [] type
 // fn delete(m: map [keyType] type, key: keyType): map [keyType] type
-static void parseBuiltinDeleteCall(Umka *umka, const Type **type, Const *constant)
+static void parseBuiltinDeleteCall(Umka *umka, const Type **type)
 {
     // Dynamic array or map
     *type = NULL;
@@ -1047,7 +1047,7 @@ static void parseBuiltinDeleteCall(Umka *umka, const Type **type, Const *constan
 
 
 // fn slice(array: [] type | str, startIndex [, endIndex]: int, type: Type): [] type | str
-static void parseBuiltinSliceCall(Umka *umka, const Type **type, Const *constant)
+static void parseBuiltinSliceCall(Umka *umka, const Type **type)
 {
     // Dynamic array or string
     *type = NULL;
@@ -1087,7 +1087,7 @@ static void parseBuiltinSliceCall(Umka *umka, const Type **type, Const *constant
 
 // fn sort(array: [] type, compare: fn (a, b: ^type): int)
 // fn sort(array: [] type, ascending: bool [, ident])
-static void parseBuiltinSortCall(Umka *umka, const Type **type, Const *constant)
+static void parseBuiltinSortCall(Umka *umka, const Type **type)
 {
     // Dynamic array
     *type = NULL;
@@ -1302,10 +1302,10 @@ static void parseBuiltinTypePtrCall(Umka *umka, const Type **type, Const *consta
 }
 
 
-static void parseBuiltinValidCall(Umka *umka, const Type **type, Const *constant)
+static void parseBuiltinValidCall(Umka *umka, const Type **type)
 {
     *type = NULL;
-    parseExpr(umka, type, constant);
+    parseExpr(umka, type, NULL);
     typeAssertCompatibleBuiltin(&umka->types, *type, BUILTIN_VALID, (*type)->kind == TYPE_DYNARRAY || (*type)->kind == TYPE_MAP || (*type)->kind == TYPE_INTERFACE || (*type)->kind == TYPE_FN || (*type)->kind == TYPE_CLOSURE || (*type)->kind == TYPE_FIBER);
 
     genCallBuiltin(&umka->gen, (*type)->kind, BUILTIN_VALID);
@@ -1314,18 +1314,18 @@ static void parseBuiltinValidCall(Umka *umka, const Type **type, Const *constant
 
 
 // fn validkey(m: map [keyType] type, key: keyType): bool
-static void parseBuiltinValidKeyCall(Umka *umka, const Type **type, Const *constant)
+static void parseBuiltinValidKeyCall(Umka *umka, const Type **type)
 {
     // Map
     *type = NULL;
-    parseExpr(umka, type, constant);
+    parseExpr(umka, type, NULL);
     typeAssertCompatibleBuiltin(&umka->types, *type, BUILTIN_VALIDKEY, (*type)->kind == TYPE_MAP);
 
     lexEat(&umka->lex, TOK_COMMA);
 
     // Map key
     const Type *keyType = typeMapKey(*type);
-    parseExpr(umka, &keyType, constant);
+    parseExpr(umka, &keyType, NULL);
     doAssertImplicitTypeConv(umka, typeMapKey(*type), &keyType, NULL);
 
     genCallBuiltin(&umka->gen, (*type)->kind, BUILTIN_VALIDKEY);
@@ -1334,10 +1334,10 @@ static void parseBuiltinValidKeyCall(Umka *umka, const Type **type, Const *const
 
 
 // fn keys(m: map [keyType] type): []keyType
-static void parseBuiltinKeysCall(Umka *umka, const Type **type, Const *constant)
+static void parseBuiltinKeysCall(Umka *umka, const Type **type)
 {
     // Map
-    parseExpr(umka, type, constant);
+    parseExpr(umka, type, NULL);
     typeAssertCompatibleBuiltin(&umka->types, *type, BUILTIN_KEYS, (*type)->kind == TYPE_MAP);
 
     // Result type (hidden parameter)
@@ -1354,13 +1354,13 @@ static void parseBuiltinKeysCall(Umka *umka, const Type **type, Const *constant)
 
 
 // fn resume([child: fiber])
-static void parseBuiltinResumeCall(Umka *umka, const Type **type, Const *constant)
+static void parseBuiltinResumeCall(Umka *umka, const Type **type)
 {
     if (umka->lex.tok.kind != TOK_RPAR)
     {
         // Child fiber
-        parseExpr(umka, type, constant);
-        doAssertImplicitTypeConv(umka, umka->types.predecl.fiberType, type, constant);
+        parseExpr(umka, type, NULL);
+        doAssertImplicitTypeConv(umka, umka->types.predecl.fiberType, type, NULL);
     }
     else
     {
@@ -1374,7 +1374,7 @@ static void parseBuiltinResumeCall(Umka *umka, const Type **type, Const *constan
 
 
 // fn gc()
-static void parseBuiltinGcCall(Umka *umka, const Type **type, Const *constant)
+static void parseBuiltinGcCall(Umka *umka, const Type **type)
 {
     genCallBuiltin(&umka->gen, TYPE_VOID, BUILTIN_GC);
     *type = umka->types.predecl.voidType;
@@ -1382,7 +1382,7 @@ static void parseBuiltinGcCall(Umka *umka, const Type **type, Const *constant)
 
 
 // fn memusage(): int
-static void parseBuiltinMemUsageCall(Umka *umka, const Type **type, Const *constant)
+static void parseBuiltinMemUsageCall(Umka *umka, const Type **type)
 {
     genCallBuiltin(&umka->gen, TYPE_INT, BUILTIN_MEMUSAGE);
     *type = umka->types.predecl.intType;
@@ -1390,11 +1390,11 @@ static void parseBuiltinMemUsageCall(Umka *umka, const Type **type, Const *const
 
 
 // fn exit(code: int, msg: str = "")
-static void parseBuiltinExitCall(Umka *umka, const Type **type, Const *constant)
+static void parseBuiltinExitCall(Umka *umka, const Type **type)
 {
     *type = umka->types.predecl.intType;
-    parseExpr(umka, type, constant);
-    doAssertImplicitTypeConv(umka, umka->types.predecl.intType, type, constant);
+    parseExpr(umka, type, NULL);
+    doAssertImplicitTypeConv(umka, umka->types.predecl.intType, type, NULL);
 
     if (umka->lex.tok.kind == TOK_RPAR)
     {
@@ -1404,8 +1404,8 @@ static void parseBuiltinExitCall(Umka *umka, const Type **type, Const *constant)
     {
         lexEat(&umka->lex, TOK_COMMA);
 
-        parseExpr(umka, type, constant);
-        doAssertImplicitTypeConv(umka, umka->types.predecl.strType, type, constant);
+        parseExpr(umka, type, NULL);
+        doAssertImplicitTypeConv(umka, umka->types.predecl.strType, type, NULL);
     }
 
     genCallBuiltin(&umka->gen, TYPE_VOID, BUILTIN_EXIT);
@@ -1453,7 +1453,7 @@ static void parseBuiltinCall(Umka *umka, const Type **type, Const *constant, Bui
         case BUILTIN_SPRINTF:
         case BUILTIN_SCANF:
         case BUILTIN_FSCANF:
-        case BUILTIN_SSCANF:        parseBuiltinIOCall(umka, type, constant, builtin);      break;
+        case BUILTIN_SSCANF:        parseBuiltinIOCall(umka, type, builtin);                break;
 
         // Math
         case BUILTIN_ROUND:
@@ -1471,31 +1471,31 @@ static void parseBuiltinCall(Umka *umka, const Type **type, Const *constant, Bui
         case BUILTIN_LOG:           parseBuiltinMathCall(umka, type, constant, builtin);    break;
 
         // Memory
-        case BUILTIN_NEW:           parseBuiltinNewCall(umka, type, constant);              break;
-        case BUILTIN_MAKE:          parseBuiltinMakeCall(umka, type, constant);             break;
-        case BUILTIN_COPY:          parseBuiltinCopyCall(umka, type, constant);             break;
-        case BUILTIN_APPEND:        parseBuiltinAppendCall(umka, type, constant);           break;
-        case BUILTIN_INSERT:        parseBuiltinInsertCall(umka, type, constant);           break;
-        case BUILTIN_DELETE:        parseBuiltinDeleteCall(umka, type, constant);           break;
-        case BUILTIN_SLICE:         parseBuiltinSliceCall(umka, type, constant);            break;
-        case BUILTIN_SORT:          parseBuiltinSortCall(umka, type, constant);             break;
+        case BUILTIN_NEW:           parseBuiltinNewCall(umka, type);                        break;
+        case BUILTIN_MAKE:          parseBuiltinMakeCall(umka, type);                       break;
+        case BUILTIN_COPY:          parseBuiltinCopyCall(umka, type);                       break;
+        case BUILTIN_APPEND:        parseBuiltinAppendCall(umka, type);                     break;
+        case BUILTIN_INSERT:        parseBuiltinInsertCall(umka, type);                     break;
+        case BUILTIN_DELETE:        parseBuiltinDeleteCall(umka, type);                     break;
+        case BUILTIN_SLICE:         parseBuiltinSliceCall(umka, type);                      break;
+        case BUILTIN_SORT:          parseBuiltinSortCall(umka, type);                       break;
         case BUILTIN_LEN:           parseBuiltinLenCall(umka, type, constant);              break;
         case BUILTIN_CAP:           parseBuiltinCapCall(umka, type, constant);              break;
         case BUILTIN_SIZEOF:        parseBuiltinSizeOfCall(umka, type, constant);           break;
         case BUILTIN_TYPEPTR:       parseBuiltinTypePtrCall(umka, type, constant);          break;
-        case BUILTIN_VALID:         parseBuiltinValidCall(umka, type, constant);            break;
+        case BUILTIN_VALID:         parseBuiltinValidCall(umka, type);                      break;
 
         // Maps
-        case BUILTIN_VALIDKEY:      parseBuiltinValidKeyCall(umka, type, constant);         break;
-        case BUILTIN_KEYS:          parseBuiltinKeysCall(umka, type, constant);             break;
+        case BUILTIN_VALIDKEY:      parseBuiltinValidKeyCall(umka, type);                   break;
+        case BUILTIN_KEYS:          parseBuiltinKeysCall(umka, type);                       break;
 
         // Fibers
-        case BUILTIN_RESUME:        parseBuiltinResumeCall(umka, type, constant);           break;
+        case BUILTIN_RESUME:        parseBuiltinResumeCall(umka, type);                     break;
 
         // Misc
-        case BUILTIN_GC:            parseBuiltinGcCall(umka, type, constant);               break;
-        case BUILTIN_MEMUSAGE:      parseBuiltinMemUsageCall(umka, type, constant);         break;
-        case BUILTIN_EXIT:          parseBuiltinExitCall(umka, type, constant);             break;
+        case BUILTIN_GC:            parseBuiltinGcCall(umka, type);                         break;
+        case BUILTIN_MEMUSAGE:      parseBuiltinMemUsageCall(umka, type);                   break;
+        case BUILTIN_EXIT:          parseBuiltinExitCall(umka, type);                       break;
 
         default: umka->error.handler(umka->error.context, "Illegal built-in function");
     }
@@ -2731,7 +2731,7 @@ static void parseFactor(Umka *umka, const Type **type, Const *constant, const in
             lexNext(&umka->lex);
 
             bool isVar, isCall, isCompLit;
-            parseDesignator(umka, type, constant, &isVar, &isCall, &isCompLit, NULL);
+            parseDesignator(umka, type, NULL, &isVar, &isCall, &isCompLit, NULL);
 
             if (!isVar)
                 umka->error.handler(umka->error.context, "Cannot take address");

@@ -10,11 +10,9 @@
 #endif
 
 #include "umka_compiler.h"
+#include "umka_decl.h"
 #include "umka_runtime.h"
 #include "umka_runtime_src.h"
-
-
-void parseProgram(Umka *umka);
 
 
 static void compilerSetAPI(Umka *umka)

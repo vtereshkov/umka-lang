@@ -754,9 +754,6 @@ void parseShortVarDecl(Umka *umka)
 // fnDecl = "fn" [rcvSignature] ident exportMark signature [block].
 static void parseFnDecl(Umka *umka)
 {
-    if (umka->blocks.top != 0)
-        umka->error.handler(umka->error.context, "Nested functions should be declared as variables");
-
     lexEat(&umka->lex, TOK_FN);
     Type *fnType = typeAdd(&umka->types, &umka->blocks, TYPE_FN);
 

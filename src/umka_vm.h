@@ -169,7 +169,7 @@ typedef struct
 {
     HeapPage *first, *firstRecycled, *lastAccessed;
     char *lowest, *highest;
-    int64_t totalSize, occupiedSize, occupiedSizeThreshold;
+    int64_t occupiedSize, occupiedSizeThreshold;
     bool gcRequested;
     GCCandidates reachables;
     GCCandidates roots, externalRoots;

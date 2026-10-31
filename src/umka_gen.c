@@ -162,23 +162,6 @@ static bool optimizePopReg(CodeGen *gen, RegisterIndex regIndex)
 }
 
 
-static bool optimizeSwapAssign(CodeGen *gen, const Type *type)
-{
-    Instruction *prev = getPrevInstr(gen, 1);
-
-    // Optimization: SWAP + SWAP_ASSIGN -> ASSIGN
-    if (prev && prev->opcode == OP_SWAP)
-    {
-        genRemoveInstr(gen);
-        const Instruction instr = {.opcode = OP_ASSIGN, .type = type};
-        genAddInstr(gen, &instr);
-        return true;
-    }
-
-    return false;
-}
-
-
 static bool optimizeDeref(CodeGen *gen, TypeKind typeKind)
 {
     Instruction *prev = getPrevInstr(gen, 1);
@@ -619,11 +602,8 @@ void genAssign(CodeGen *gen, const Type *type)
 
 void genSwapAssign(CodeGen *gen, const Type *type)
 {
-    if (!optimizeSwapAssign(gen, type))
-    {
-        const Instruction instr = {.opcode = OP_SWAP_ASSIGN, .type = type};
-        genAddInstr(gen, &instr);
-    }
+    const Instruction instr = {.opcode = OP_SWAP_ASSIGN, .type = type};
+    genAddInstr(gen, &instr);
 }
 
 
@@ -825,7 +805,7 @@ void genGoFromTo(CodeGen *gen, int start, int dest)
 }
 
 
-void genGoFromToIf(CodeGen *gen, int start, int dest)
+static void genGoFromToIf(CodeGen *gen, int start, int dest)
 {
     int next = gen->ip;
     gen->ip = start;
@@ -834,7 +814,7 @@ void genGoFromToIf(CodeGen *gen, int start, int dest)
 }
 
 
-void genGoFromToIfNot(CodeGen *gen, int start, int dest)
+static void genGoFromToIfNot(CodeGen *gen, int start, int dest)
 {
     int next = gen->ip;
     gen->ip = start;
