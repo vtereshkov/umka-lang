@@ -42,12 +42,36 @@ fn modify(items: []int = {1, 2, 3}) {
     items = append(items, 4)
 }
 
+type Guest = struct {
+    names: []str
+}
+
+// The dynamic arrays nested in a default value are shared by all calls, and anything stored in them stays alive
+fn greet(guest: Guest = {names: {"nobody"}}, nobody: Guest = {}) {
+    printf("%v %v\n", guest, nobody)
+    guest.names[0] = sprintf("visitor #%d", len(guest.names[0]))
+}
+
+fn churn(): str {
+    s := ""
+    for i := 0; i < 1000; i++ {
+        s = sprintf("garbage %d", i)
+    }
+    return s
+}
+
 fn test*() {
     s := S{}
     check(foo, s)
 
     for i := 0; i < 3; i++ {
         modify()
+    }
+
+    for i := 0; i < 3; i++ {
+        greet()
+        gc()
+        churn()
     }
 }
 

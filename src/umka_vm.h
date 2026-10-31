@@ -223,6 +223,7 @@ void *vmGetMapNodeData          (VM *vm, Map *map, void *key);
 void vmGetMapKeys               (VM *vm, Map *map, const Type *keysType, DynArray *keys);
 char *vmMakeStr                 (VM *vm, const char *str);
 void vmMakeDynArray             (VM *vm, DynArray *array, const Type *type, int len);
+DynArray *vmMakeConstDynArray   (VM *vm, const Type *type, int64_t len);
 void *vmMakeStruct              (VM *vm, const Type *type);
 int64_t vmGetMemUsage           (VM *vm);
 const char *vmBuiltinSpelling   (BuiltinFunc builtin);

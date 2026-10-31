@@ -197,7 +197,6 @@ void  storageInit               (Storage *storage, Error *error);
 void  storageFree               (Storage *storage);
 void *storageAdd                (Storage *storage, int64_t size);
 char *storageAddStr             (Storage *storage, int64_t len);
-DynArray *storageAddDynArray    (Storage *storage, const struct tagType *type, int64_t len);
 void storageRemove              (Storage *storage, void *data);
 void *storageRealloc            (Storage *storage, void *data, int64_t size);
 

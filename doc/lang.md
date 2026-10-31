@@ -361,7 +361,7 @@ Interface assignment copies the pointer, but not the contents of the variable th
 
 A constant that stores an entry point of a function has a function type. A function is characterized by its *signature* that consists of a set of parameter names, types and optional default values, and an optional set of returned value types. 
 
-For a parameter to have a default value, it must be of a comparable type. As a special case, a parameter of type `any` can have the default value `null`.
+For a parameter to have a default value, it must be of a comparable type. As a special case, a parameter of type `any` can have the default value `null`. Any dynamic arrays nested in a default value are shared by all calls.
 
 The type of the last parameter in the function signature may be prefixed with `..`. The type `..T` is equivalent to `[]T` within the function. Such a function is called *variadic*.
 

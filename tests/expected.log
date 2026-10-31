@@ -1082,6 +1082,9 @@ foo: World
 [1 2 3]
 [1 2 3]
 [1 2 3]
+{names: ["nobody"]} {names: []}
+{names: ["visitor #6"]} {names: []}
+{names: ["visitor #10"]} {names: []}
 
 
 >>> Date/time

@@ -102,24 +102,6 @@ char *storageAddStr(Storage *storage, int64_t len)
 }
 
 
-DynArray *storageAddDynArray(Storage *storage, const struct tagType *type, int64_t len)
-{
-    DynArray *array = storageAdd(storage, sizeof(DynArray));
-
-    array->type     = type;
-    array->itemSize = array->type->base->size;
-
-    // Constant arrays can be shared, so they have no spare capacity, and appending to them always makes a copy
-    DynArrayDimensions dims = {.len = len, .capacity = len};
-
-    char *dimsAndData = storageAdd(storage, sizeof(DynArrayDimensions) + dims.capacity * array->itemSize);
-    *(DynArrayDimensions *)dimsAndData = dims;
-
-    array->data = dimsAndData + sizeof(DynArrayDimensions);
-    return array;
-}
-
-
 void storageRemove(Storage *storage, void *data)
 {
     StorageChunk *chunk = (StorageChunk *)((char *)data - sizeof(StorageChunk));

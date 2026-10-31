@@ -4071,6 +4071,17 @@ void vmMakeDynArray(VM *vm, DynArray *array, const Type *type, int len)
 }
 
 
+DynArray *vmMakeConstDynArray(VM *vm, const Type *type, int64_t len)
+{
+    DynArray *array = storageAdd(vm->storage, sizeof(DynArray));
+
+    doAllocDynArray(&vm->pages, array, type, len, false, vm->error);
+    vmIncRef(vm, array->data);
+
+    return array;
+}
+
+
 void *vmMakeStruct(VM *vm, const Type *type)
 {
     return chunkAlloc(&vm->pages, type->size, type, NULL, vm->error);

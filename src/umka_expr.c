@@ -154,7 +154,7 @@ static void doStrToDynArrayConv(Umka *umka, const Type *dest, const Type **src, 
     if (constant)
     {
         const int len = getStrDims((char *)constant->ptrVal)->len;
-        DynArray *array = storageAddDynArray(&umka->storage, dest, len);
+        DynArray *array = vmMakeConstDynArray(&umka->vm, dest, len);
         memcpy(array->data, constant->ptrVal, len);
         constant->ptrVal = array;
     }
@@ -192,7 +192,7 @@ static void doArrayToDynArrayConv(Umka *umka, const Type *dest, const Type **src
 {
     if (constant)
     {
-        DynArray *array = storageAddDynArray(&umka->storage, dest, (*src)->numItems);
+        DynArray *array = vmMakeConstDynArray(&umka->vm, dest, (*src)->numItems);
         memcpy(array->data, constant->ptrVal, (*src)->numItems * array->itemSize);
         constant->ptrVal = array;
     }
@@ -1693,7 +1693,7 @@ static void parseActualParamsAndCall(Umka *umka, const Type **type)
         if ((*type)->sig->numDefaultParams > 0)
             paramVal = (*type)->sig->param[i]->defaultVal;                                 // Default parameter
         else
-            paramVal.ptrVal = storageAddDynArray(&umka->storage, formalParamType, 0);     // Variadic parameter (empty dynamic array)
+            paramVal.ptrVal = vmMakeConstDynArray(&umka->vm, formalParamType, 0);     // Variadic parameter (empty dynamic array)
 
         doPushConst(umka, formalParamType, &paramVal);
         doPassParam(umka, formalParamType);
@@ -2020,7 +2020,7 @@ static void parseDynArrayLiteral(Umka *umka, const Type **type, Const *constant,
     {
         if (constant)
         {
-            constant->ptrVal = storageAddDynArray(&umka->storage, *type, 0);
+            constant->ptrVal = vmMakeConstDynArray(&umka->vm, *type, 0);
         }
         else
         {
