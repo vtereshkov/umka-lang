@@ -1,0 +1,69 @@
+// Fannkuch-redux benchmark - Umka version
+
+import "std.um"
+
+fn test*(n: int) {
+    perm := make([]int, n)
+    perm1 := make([]int, n)
+    count := make([]int, n)
+
+    for i in perm1 {
+        perm1[i] = i
+    }
+
+    maxFlips, checksum, permIndex := 0, 0, 0
+    r := n
+
+    for true {
+        for r != 1 {
+            count[r - 1] = r
+            r--
+        }
+
+        // Count the flips
+        for i, p in perm1 {
+            perm[i] = p
+        }
+
+        flips := 0
+        for k := perm[0]; k != 0; k = perm[0] {
+            for i, j := 0, k; i < j; i++ {
+                perm[i], perm[j] = perm[j], perm[i]
+                j--
+            }
+            flips++
+        }
+
+        if flips > maxFlips {
+            maxFlips = flips
+        }
+        checksum += permIndex % 2 == 0 ? flips : -flips
+
+        // Go to the next permutation
+        for true {
+            if r == n {
+                printf("%v\nPfannkuchen(%v) = %v\n", checksum, n, maxFlips)
+                return
+            }
+
+            perm0 := perm1[0]
+            for i := 0; i < r; i++ {
+                perm1[i] = perm1[i + 1]
+            }
+            perm1[r] = perm0
+
+            count[r]--
+            if count[r] > 0 {
+                break
+            }
+            r++
+        }
+        permIndex++
+    }
+}
+
+fn main() {
+    if std::argc() == 2 {
+        test(std::atoi(std::argv(1)))
+    }
+}

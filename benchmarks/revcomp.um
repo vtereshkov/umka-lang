@@ -1,0 +1,71 @@
+// Reverse-complement benchmark - Umka version
+// Reads the output of the fasta benchmark from a string, prints the hash of the output instead of the output itself
+
+import (
+    "std.um"
+    "fasta.um"
+)
+
+const lineWidth = 60
+
+fn makeComplements(): [256]char {
+    const (
+        codes       = "ACGTUMRWSYKVHDBN"
+        complements = "TGCAAKYWSRMBDHVN"
+    )
+
+    var table: [256]char
+    for i in table {
+        table[i] = char(i)
+    }
+    for i, c in codes {
+        table[int(c)] = complements[i]
+        table[int(c) - int('A') + int('a')] = complements[i]
+    }
+    return table
+}
+
+fn writeReverseComplement(out: ^str, seq: []char, complements: [256]char) {
+    for i, j := 0, len(seq) - 1; i <= j; i++ {
+        seq[i], seq[j] = complements[int(seq[j])], complements[int(seq[i])]
+        j--
+    }
+
+    for i := 0; i < len(seq); i += lineWidth {
+        end := i + lineWidth < len(seq) ? i + lineWidth : len(seq)
+        out^ += str(slice(seq, i, end)) + "\n"
+    }
+}
+
+fn test*(input: str) {
+    complements := makeComplements()
+    out := ""
+    seq := make([]char, 0)
+    start := 0
+
+    for i, ch in input {
+        if ch != '\n' {
+            continue
+        }
+
+        line := slice(input, start, i)
+        start = i + 1
+
+        if line[0] == '>' {
+            writeReverseComplement(&out, seq, complements)
+            seq = make([]char, 0)
+            out += line + "\n"
+        } else {
+            seq = append(seq, []char(line))
+        }
+    }
+    writeReverseComplement(&out, seq, complements)
+
+    printf("length %v, hash %v\n", len(out), fasta::hash(out))
+}
+
+fn main() {
+    if std::argc() == 2 {
+        test(fasta::generate(std::atoi(std::argv(1))))
+    }
+}

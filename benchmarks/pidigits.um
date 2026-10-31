@@ -1,0 +1,180 @@
+// Pidigits benchmark - Umka version
+// Prints the last line of the output
+
+import "std.um"
+
+// Arbitrary-precision integer: sign and magnitude, the magnitude being stored as base 10^9 digits, the least significant first.
+// The operations never modify the digits in place, so Integer variables can be copied like values
+type Integer = struct {
+    neg: bool
+    digits: []int
+}
+
+const base = 1000000000
+
+fn trim(digits: []int): []int {
+    n := len(digits)
+    for n > 1 && digits[n - 1] == 0 {
+        n--
+    }
+    return n < len(digits) ? slice(digits, 0, n) : digits
+}
+
+fn compareMagnitudes(a, b: []int): int {
+    if len(a) != len(b) {
+        return len(a) - len(b)
+    }
+    for i := len(a) - 1; i >= 0; i-- {
+        if a[i] != b[i] {
+            return a[i] - b[i]
+        }
+    }
+    return 0
+}
+
+fn addMagnitudes(a, b: []int): []int {
+    if len(a) < len(b) {
+        a, b = b, a
+    }
+    sum := make([]int, len(a))
+    carry := 0
+    for i, x in a {
+        s := x + carry + (i < len(b) ? b[i] : 0)
+        carry = s >= base ? 1 : 0
+        sum[i] = s - carry * base
+    }
+    if carry > 0 {
+        sum = append(sum, carry)
+    }
+    return sum
+}
+
+// Assumes a >= b
+fn subMagnitudes(a, b: []int): []int {
+    diff := make([]int, len(a))
+    borrow := 0
+    for i, x in a {
+        d := x - borrow - (i < len(b) ? b[i] : 0)
+        borrow = d < 0 ? 1 : 0
+        diff[i] = d + borrow * base
+    }
+    return trim(diff)
+}
+
+fn (a: ^Integer) add(b: Integer) {
+    if a.neg == b.neg {
+        a.digits = addMagnitudes(a.digits, b.digits)
+    } else if compareMagnitudes(a.digits, b.digits) >= 0 {
+        a.digits = subMagnitudes(a.digits, b.digits)
+    } else {
+        a.digits = subMagnitudes(b.digits, a.digits)
+        a.neg = b.neg
+    }
+
+    if len(a.digits) == 1 && a.digits[0] == 0 {
+        a.neg = false
+    }
+}
+
+fn (a: ^Integer) sub(b: Integer) {
+    b.neg = !b.neg
+    a.add(b)
+}
+
+// Assumes k >= 0
+fn (a: ^Integer) mul(k: int) {
+    product := make([]int, len(a.digits))
+    carry := 0
+    for i, x in a.digits {
+        p := x * k + carry
+        product[i] = p % base
+        carry = p / base
+    }
+    for carry > 0 {
+        product = append(product, carry % base)
+        carry /= base
+    }
+    a.digits = trim(product)
+}
+
+fn compare(a, b: Integer): int {
+    if a.neg != b.neg {
+        return a.neg ? -1 : 1
+    }
+    c := compareMagnitudes(a.digits, b.digits)
+    return a.neg ? -c : c
+}
+
+// Gibbons' unbounded spigot algorithm
+type Spigot = struct {
+    numer, accum, denom: Integer
+    k: int
+}
+
+fn (s: ^Spigot) nextTerm() {
+    s.k++
+    k2 := 2 * s.k + 1
+
+    t := s.numer
+    t.mul(2)
+    s.accum.add(t)
+    s.accum.mul(k2)
+    s.denom.mul(k2)
+    s.numer.mul(s.k)
+}
+
+fn (s: ^Spigot) extract(nth: int): int {
+    t := s.numer
+    t.mul(nth)
+    t.add(s.accum)
+
+    d := 0
+    for compare(t, s.denom) >= 0 {
+        t.sub(s.denom)
+        d++
+    }
+    return d
+}
+
+fn (s: ^Spigot) eliminate(d: int) {
+    t := s.denom
+    t.mul(d)
+    s.accum.sub(t)
+    s.accum.mul(10)
+    s.numer.mul(10)
+}
+
+fn test*(n: int) {
+    s := Spigot{numer: {digits: {1}}, accum: {digits: {0}}, denom: {digits: {1}}}
+    line := ""
+    i := 0
+
+    for i < n {
+        s.nextTerm()
+        if compare(s.numer, s.accum) > 0 {
+            continue
+        }
+
+        d := s.extract(3)
+        if d != s.extract(4) {
+            continue
+        }
+
+        line += std::itoa(d)
+        i++
+
+        if i == n {
+            printf("%-10s\t:%v\n", line, i)
+        } else if i % 10 == 0 {
+            line = ""
+        }
+
+        s.eliminate(d)
+    }
+}
+
+fn main() {
+    if std::argc() == 2 {
+        test(std::atoi(std::argv(1)))
+    }
+}

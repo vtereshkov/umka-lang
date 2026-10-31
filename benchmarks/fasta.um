@@ -1,0 +1,109 @@
+// Fasta benchmark - Umka version
+// Prints the hash of the output instead of the output itself
+
+import "std.um"
+
+type Nucleotide = struct {
+    code: char
+    prob: real
+}
+
+const (
+    lineWidth = 60
+
+    alu = "GGCCGGGCGCGGTGGCTCACGCCTGTAATCCCAGCACTTTGG" +
+          "GAGGCCGAGGCGGGCGGATCACCTGAGGTCAGGAGTTCGAGA" +
+          "CCAGCCTGGCCAACATGGTGAAACCCCGTCTCTACTAAAAAT" +
+          "ACAAAAATTAGCCGGGCGTGGTGGCGCGCGCCTGTAATCCCA" +
+          "GCTACTCGGGAGGCTGAGGCAGGAGAATCGCTTGAACCCGGG" +
+          "AGGCGGAGGTTGCAGTGAGCCGAGATCGCGCCACTGCACTCC" +
+          "AGCCTGGGCGACAGAGCGAGACTCCGTCTCAAAAA"
+)
+
+iub := []Nucleotide{
+    {'a', 0.27}, {'c', 0.12}, {'g', 0.12}, {'t', 0.27},
+    {'B', 0.02}, {'D', 0.02}, {'H', 0.02}, {'K', 0.02},
+    {'M', 0.02}, {'N', 0.02}, {'R', 0.02}, {'S', 0.02},
+    {'V', 0.02}, {'W', 0.02}, {'Y', 0.02}}
+
+homoSapiens := []Nucleotide{
+    {'a', 0.3029549426680}, {'c', 0.1979883004921},
+    {'g', 0.1975473066391}, {'t', 0.3015094502008}}
+
+var seed: int
+
+fn random(max: real): real {
+    const (im = 139968; ia = 3877; ic = 29573)
+    seed = (seed * ia + ic) % im
+    return max * seed / im
+}
+
+fn repeatFasta(out: ^str, header: str, s: str, n: int) {
+    out^ += header
+    ss := s + slice(s, 0, lineWidth)
+    k := 0
+    for n > 0 {
+        m := n < lineWidth ? n : lineWidth
+        out^ += slice(ss, k, k + m) + "\n"
+        k += m
+        if k >= len(s) {
+            k -= len(s)
+        }
+        n -= m
+    }
+}
+
+fn randomFasta(out: ^str, header: str, table: []Nucleotide, n: int) {
+    out^ += header
+
+    // Cumulative probabilities
+    cum := copy(table)
+    for i := 1; i < len(cum); i++ {
+        cum[i].prob += cum[i - 1].prob
+    }
+
+    line := make([]char, lineWidth + 1)
+    for n > 0 {
+        m := n < lineWidth ? n : lineWidth
+        for i := 0; i < m; i++ {
+            r := random(1.0)
+            j := 0
+            for j < len(cum) - 1 && r >= cum[j].prob {
+                j++
+            }
+            line[i] = cum[j].code
+        }
+        line[m] = '\n'
+        out^ += str(slice(line, 0, m + 1))
+        n -= m
+    }
+}
+
+fn generate*(n: int): str {
+    seed = 42
+    out := ""
+    repeatFasta(&out, ">ONE Homo sapiens alu\n", alu, 2 * n)
+    randomFasta(&out, ">TWO IUB ambiguity codes\n", iub, 3 * n)
+    randomFasta(&out, ">THREE Homo sapiens frequency\n", homoSapiens, 5 * n)
+    return out
+}
+
+// FNV-1a
+fn hash*(s: str): uint {
+    h := uint(14695981039346656037)
+    for _, c in s {
+        h = (h ~ uint(c)) * 1099511628211
+    }
+    return h
+}
+
+fn test*(n: int) {
+    out := generate(n)
+    printf("length %v, hash %v\n", len(out), hash(out))
+}
+
+fn main() {
+    if std::argc() == 2 {
+        test(std::atoi(std::argv(1)))
+    }
+}

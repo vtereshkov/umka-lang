@@ -1,0 +1,98 @@
+// K-nucleotide benchmark - Umka version
+// Reads the output of the fasta benchmark from a string
+
+import (
+    "std.um"
+    "fasta.um"
+)
+
+type Frequency = struct {
+    key: str
+    count: int
+}
+
+// Concatenates the lines of the given sequence and converts them to upper case
+fn readSequence(input: str, id: str): str {
+    seq := make([]char, 0)
+    found := false
+    start := 0
+
+    for i, ch in input {
+        if ch != '\n' {
+            continue
+        }
+
+        line := slice(input, start, i)
+        start = i + 1
+
+        if line[0] == '>' {
+            if found {
+                break
+            }
+            found = len(line) >= len(id) && slice(line, 0, len(id)) == id
+        } else if found {
+            for _, c in line {
+                seq = append(seq, c >= 'a' ? char(int(c) - int('a') + int('A')) : c)
+            }
+        }
+    }
+
+    return str(seq)
+}
+
+fn update(counts: map[str]int, seq: str, k, frame: int) {
+    for i := frame; i + k <= len(seq); i += k {
+        counts[slice(seq, i, i + k)]++
+    }
+}
+
+fn count(seq: str, k: int): map[str]int {
+    counts := map[str]int{}
+    for frame := 0; frame < k; frame++ {
+        update(counts, seq, k, frame)
+    }
+    return counts
+}
+
+fn writeFrequencies(seq: str, k: int) {
+    freqs := []Frequency{}
+    total := 0
+
+    for key, n in count(seq, k) {
+        freqs = append(freqs, Frequency{key, n})
+        total += n
+    }
+
+    sort(freqs, fn (a, b: ^Frequency): int {
+        if a.count != b.count {
+            return b.count - a.count
+        }
+        return a.key < b.key ? -1 : 1
+    })
+
+    for _, f in freqs {
+        printf("%s %.3f\n", f.key, 100.0 * f.count / total)
+    }
+    printf("\n")
+}
+
+fn writeCount(seq: str, fragment: str) {
+    printf("%v\t%s\n", count(seq, len(fragment))[fragment], fragment)
+}
+
+fn test*(input: str) {
+    seq := readSequence(input, ">THREE")
+
+    writeFrequencies(seq, 1)
+    writeFrequencies(seq, 2)
+
+    for _, fragment in []str{"GGT", "GGTA", "GGTATT", "GGTATTTTAATT", "GGTATTTTAATTTATAGT"} {
+        writeCount(seq, fragment)
+    }
+}
+
+fn main() {
+    if std::argc() == 2 {
+        test(fasta::generate(std::atoi(std::argv(1))))
+    }
+}
