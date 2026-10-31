@@ -45,3 +45,65 @@ OK
 >>> Sparse pointers
 
 OK
+
+
+>>> Fannkuch-redux
+
+8629
+Pfannkuchen(9) = 30
+
+
+>>> Fasta
+
+length 2541745, hash 15713965992811201269
+
+
+>>> Mandelbrot set
+
+length 80011, hash 16668548763608330318
+
+
+>>> Spectral norm
+
+1.274224116
+
+
+>>> Pi digits
+
+9689258923	:700
+
+
+>>> K-nucleotide
+
+A 30.331
+T 30.090
+C 19.831
+G 19.747
+
+AA 9.198
+TA 9.120
+AT 9.115
+TT 9.060
+CA 6.026
+AC 6.019
+AG 5.999
+GA 5.987
+CT 5.971
+TC 5.966
+GT 5.944
+TG 5.944
+GC 3.923
+CC 3.922
+CG 3.912
+GG 3.893
+
+5871	GGT
+1769	GGTA
+185	GGTATT
+4	GGTATTTTAATT
+4	GGTATTTTAATTTATAGT
+
+
+>>> Reverse complement
+
+length 5083411, hash 14476265516589911113

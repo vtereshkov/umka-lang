@@ -7,6 +7,13 @@ import (
     "maps.um"
     "literals.um"
     "padding.um"
+    "fannkuch.um"
+    "fasta.um"
+    "mandelbrot.um"
+    "spectralnorm.um"
+    "pidigits.um"
+    "knucleotide.um"
+    "revcomp.um"
 )
 
 fn benchmark(f: fn ()) {
@@ -25,4 +32,16 @@ fn main() {
     printf("\n\n>>> Maps (randomized keys)\n\n");   benchmark({maps::test(1000000, .Random)})
     printf("\n\n>>> Composite literals\n\n");       benchmark({literals::test()})
     printf("\n\n>>> Sparse pointers\n\n");          benchmark({padding::test(50000)})
+    printf("\n\n>>> Fannkuch-redux\n\n");           benchmark({fannkuch::test(9)})
+    printf("\n\n>>> Fasta\n\n");                    benchmark({fasta::test(250000)})
+    printf("\n\n>>> Mandelbrot set\n\n");           benchmark({mandelbrot::test(800)})
+    printf("\n\n>>> Spectral norm\n\n");            benchmark({spectralnorm::test(500)})
+    printf("\n\n>>> Pi digits\n\n");                benchmark({pidigits::test(700)})
+
+    // The output of the fasta benchmark is the input for the following ones
+    dna := fasta::generate(100000)
+    printf("\n\n>>> K-nucleotide\n\n");             benchmark(|dna| {knucleotide::test(dna)})
+
+    dna = fasta::generate(500000)
+    printf("\n\n>>> Reverse complement\n\n");       benchmark(|dna| {revcomp::test(dna)})
 }
