@@ -2862,17 +2862,13 @@ static void parseLogicalTerm(Umka *umka, const Type **type, Const *constant, con
 
         if (constant)
         {
-            if (constant->intVal)
-            {
-                Const rightConstantBuf, *rightConstant = &rightConstantBuf;
+            // The right-hand side is parsed even if the left-hand side alone determines the result
+            Const rightConstantBuf, *rightConstant = &rightConstantBuf;
 
-                const Type *rightType = *type;
-                parseRelation(umka, &rightType, rightConstant, NULL);
-                doApplyOperator(umka, type, &rightType, constant, rightConstant, op, false, true);
-                constant->intVal = rightConstant->intVal;
-            }
-            else
-                constant->intVal = false;
+            const Type *rightType = *type;
+            parseRelation(umka, &rightType, rightConstant, NULL);
+            doApplyOperator(umka, type, &rightType, constant, rightConstant, op, false, true);
+            constant->intVal = constant->intVal && rightConstant->intVal;
         }
         else
         {
@@ -2903,17 +2899,13 @@ static void parseLogicalExpr(Umka *umka, const Type **type, Const *constant, con
 
         if (constant)
         {
-            if (!constant->intVal)
-            {
-                Const rightConstantBuf, *rightConstant = &rightConstantBuf;
+            // The right-hand side is parsed even if the left-hand side alone determines the result
+            Const rightConstantBuf, *rightConstant = &rightConstantBuf;
 
-                const Type *rightType = *type;
-                parseLogicalTerm(umka, &rightType, rightConstant, NULL);
-                doApplyOperator(umka, type, &rightType, constant, rightConstant, op, false, true);
-                constant->intVal = rightConstant->intVal;
-            }
-            else
-                constant->intVal = true;
+            const Type *rightType = *type;
+            parseLogicalTerm(umka, &rightType, rightConstant, NULL);
+            doApplyOperator(umka, type, &rightType, constant, rightConstant, op, false, true);
+            constant->intVal = constant->intVal || rightConstant->intVal;
         }
         else
         {

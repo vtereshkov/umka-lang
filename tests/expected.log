@@ -794,6 +794,7 @@ String representation:
 -1.47906 2 true true
 [false true false true]
 [false true false true]
+false false true true true false
 
 
 >>> Item pointers

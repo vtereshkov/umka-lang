@@ -32,9 +32,23 @@ fn test2() {
 	printf("%v\n%v\n", cmp, cmp2)
 }
 
+const (
+	and1 = false && 1 > 2
+	and2 = true && 1 > 2
+	and3 = true && 2 > 1
+	or1 = true || 1 > 2
+	or2 = false || 2 > 1
+	or3 = false || 1 > 2
+)
+
+fn test3() {
+	printf("%v %v %v %v %v %v\n", and1, and2, and3, or1, or2, or3)
+}
+
 fn test*() {
 	test1()
 	test2()
+	test3()
 }
 
 fn main() {
