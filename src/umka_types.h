@@ -55,7 +55,6 @@ typedef enum
     BUILTIN_LEN,
     BUILTIN_CAP,
     BUILTIN_SIZEOF,
-    BUILTIN_TYPEPTR,
     BUILTIN_VALID,
 
     // Maps

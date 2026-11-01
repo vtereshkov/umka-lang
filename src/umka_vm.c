@@ -145,7 +145,6 @@ static const char *builtinSpelling [] =
     "len",
     "cap",
     "sizeof",
-    "typeptr",
     "valid",
     "validkey",
     "keys",
@@ -3626,7 +3625,6 @@ static FORCE_INLINE void doCallBuiltin(Fiber *fiber, Fiber **newFiber, HeapPages
         case BUILTIN_LEN:           doBuiltinLen(fiber, error); break;
         case BUILTIN_CAP:           doBuiltinCap(fiber, error); break;
         case BUILTIN_SIZEOF:        error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal instruction"); return;       // Done at compile time
-        case BUILTIN_TYPEPTR:       error->runtimeHandler(error->context, ERR_RUNTIME, "Illegal instruction"); return;       // Done at compile time
         case BUILTIN_VALID:         doBuiltinValid(fiber, error); break;
 
         // Maps

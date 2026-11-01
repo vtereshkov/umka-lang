@@ -3252,7 +3252,7 @@ fn section_std_assert() {
 // ----------------------------------------------------------------------------
 // Section X7: reflection-ish built-ins
 //   sizeof / dynamic types / valid /
-//   validkey / keys / typeptr
+//   validkey / keys
 // ----------------------------------------------------------------------------
 
 type RBox = struct {
@@ -3909,27 +3909,6 @@ fn section_default_complex() {
     check(sumDef(10) == 19, "sum one override")
     check(sumDef(10, 20) == 37, "sum two override")
     check(sumDef(10, 20, 30, 40) == 100, "sum all override")
-
-}
-
-// ----------------------------------------------------------------------------
-// Section X19: typeptr round-trip
-// ----------------------------------------------------------------------------
-
-fn section_typeptr() {
-    banner("typeptr")
-
-    t1 := typeptr(int)
-    t2 := typeptr(int)
-    t3 := typeptr(str)
-    check(t1 == t2, "same type same ptr")
-    check(t1 != t3, "different type different ptr")
-    check(t1 != null, "typeptr not null")
-
-    t4 := typeptr([]int)
-    t6 := typeptr([]real)
-    check(t4 != null, "slice typeptr not null")
-    check(t4 != t6, "slice item type differs")
 
 }
 
@@ -5074,7 +5053,6 @@ fn test*() {
     section_null_compare()
     section_type_switch_default()
     section_default_complex()
-    section_typeptr()
     section_any_complex()
 
     // RC stress sections

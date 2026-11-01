@@ -130,7 +130,6 @@ static void compilerDeclareBuiltinIdents(Umka *umka)
     identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "len",        umka->types.predecl.intType,     BUILTIN_LEN);
     identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "cap",        umka->types.predecl.intType,     BUILTIN_CAP);
     identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "sizeof",     umka->types.predecl.intType,     BUILTIN_SIZEOF);
-    identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "typeptr",    umka->types.predecl.ptrVoidType, BUILTIN_TYPEPTR);        // Deprecated
     identAddBuiltinFunc(&umka->idents, &umka->modules, &umka->blocks, "valid",      umka->types.predecl.boolType,    BUILTIN_VALID);
 
     // Maps

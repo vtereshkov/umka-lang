@@ -1287,21 +1287,6 @@ static void parseBuiltinSizeOfCall(Umka *umka, const Type **type, Const *constan
 }
 
 
-// fn typeptr(T): ^void
-static void parseBuiltinTypePtrCall(Umka *umka, const Type **type, Const *constant)
-{
-    *type = parseType(umka);
-    typeAssertCompatibleBuiltin(&umka->types, *type, BUILTIN_TYPEPTR, (*type)->kind != TYPE_VOID && (*type)->kind != TYPE_NULL);
-
-    if (constant)
-        constant->ptrVal = (Type *)(*type);
-    else
-        genPushGlobalPtr(&umka->gen, (Type *)(*type));
-
-    *type = umka->types.predecl.ptrVoidType;
-}
-
-
 static void parseBuiltinValidCall(Umka *umka, const Type **type)
 {
     *type = NULL;
@@ -1438,8 +1423,7 @@ static void parseBuiltinCall(Umka *umka, const Type **type, Const *constant, Bui
             case BUILTIN_LOG:
             case BUILTIN_LEN:
             case BUILTIN_CAP:
-            case BUILTIN_SIZEOF:
-            case BUILTIN_TYPEPTR:   break;
+            case BUILTIN_SIZEOF:    break;
 
             default: umka->error.handler(umka->error.context, "Function is not allowed in constant expressions");
         }
@@ -1482,7 +1466,6 @@ static void parseBuiltinCall(Umka *umka, const Type **type, Const *constant, Bui
         case BUILTIN_LEN:           parseBuiltinLenCall(umka, type, constant);              break;
         case BUILTIN_CAP:           parseBuiltinCapCall(umka, type, constant);              break;
         case BUILTIN_SIZEOF:        parseBuiltinSizeOfCall(umka, type, constant);           break;
-        case BUILTIN_TYPEPTR:       parseBuiltinTypePtrCall(umka, type, constant);          break;
         case BUILTIN_VALID:         parseBuiltinValidCall(umka, type);                      break;
 
         // Maps

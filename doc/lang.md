@@ -821,12 +821,6 @@ fn sizeof(T | a: T): int
 Returns the size of type `T ` in bytes.
 
 ```
-fn typeptr(T): ^void
-```
-
-Returns a representation of type `T` as an opaque pointer. This function is deprecated. Use `umkaGetParamType` or `umkaGetResultType` instead.
-
-```
 fn valid(a: ([]T | map[K]T | interface{...} | fn (...): T | fiber)): bool
 ```
 
