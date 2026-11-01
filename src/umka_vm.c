@@ -561,7 +561,7 @@ static FORCE_INLINE void *chunkAlloc(HeapPages *pages, int64_t size, const Type 
 
 static FORCE_INLINE int fsgetc(FILE *file, char *string, int *len)
 {
-    const int ch = string ? string[*len] : fgetc(file);
+    const int ch = string ? string[*len] : file ? fgetc(file) : EOF;
     (*len)++;
     return ch;
 }
