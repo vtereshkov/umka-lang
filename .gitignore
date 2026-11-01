@@ -3,3 +3,8 @@
 *obj/
 src/umka_runtime_src.h
 box.tar
+.DS_Store
+umka_darwin
+umka_linux
+umka_windows_mingw
+umka_windows_msvc
