@@ -847,14 +847,14 @@ true true
 Sorting by name:
 [
     {
-        "date": "1799"
-        "name": "Alexander"
-        "surname": "Pushkin"
-    }
-    {
         "date": "1688"
         "name": "Alexander"
         "surname": "Pope"
+    }
+    {
+        "date": "1799"
+        "name": "Alexander"
+        "surname": "Pushkin"
     }
     {
         "date": "1860"

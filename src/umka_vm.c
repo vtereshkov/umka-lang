@@ -634,21 +634,29 @@ FORCE_INLINE void qsortSwap(void *a, void *b, void *temp, int itemSize)
 
 FORCE_INLINE char *qsortPartition(char *first, char *last, int itemSize, QSortCompareFn compare, void *context, void *temp)
 {
-    char *i = first;
-    char *j = last;
+    char *middle = first + (last - first) / itemSize / 2 * itemSize;
+    qsortSwap(first, middle, temp, itemSize);
 
     char *pivot = first;
 
-    while (i < j)
+    char *i = first + itemSize;
+    char *j = last;
+
+    while (true)
     {
-        while (compare(i, pivot, context) <= 0 && i < last)
+        while (i < last && compare(i, pivot, context) < 0)
             i += itemSize;
 
-        while (compare(j, pivot, context) > 0 && j > first)
+        while (j > first && compare(j, pivot, context) > 0)
             j -= itemSize;
 
-        if (i < j)
-            qsortSwap(i, j, temp, itemSize);
+        if (i >= j)
+            break;
+
+        qsortSwap(i, j, temp, itemSize);
+
+        i += itemSize;
+        j -= itemSize;
     }
 
     qsortSwap(pivot, j, temp, itemSize);
@@ -659,13 +667,21 @@ FORCE_INLINE char *qsortPartition(char *first, char *last, int itemSize, QSortCo
 
 static void qsortEx(char *first, char *last, int itemSize, QSortCompareFn compare, void *context, void *temp)
 {
-    if (first >= last)
-        return;
+    while (first < last)
+    {
+        char *partition = qsortPartition(first, last, itemSize, compare, context, temp);
 
-    char *partition = qsortPartition(first, last, itemSize, compare, context, temp);
-
-    qsortEx(first, partition - itemSize, itemSize, compare, context, temp);
-    qsortEx(partition + itemSize, last, itemSize, compare, context, temp);
+        if (partition - first < last - partition)
+        {
+            qsortEx(first, partition - itemSize, itemSize, compare, context, temp);
+            first = partition + itemSize;
+        }
+        else
+        {
+            qsortEx(partition + itemSize, last, itemSize, compare, context, temp);
+            last = partition - itemSize;
+        }
+    }
 }
 
 
