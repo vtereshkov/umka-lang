@@ -912,7 +912,6 @@ static void parseForInHeader(Umka *umka, ForPostStmt *postStmt)
         // Declare variable for the map key
         keyIdent = identAllocVar(&umka->idents, &umka->types, &umka->modules, &umka->blocks, indexOrKeyName, typeMapKey(collectionType), false);
         identSetUsed(keyIdent);                            // Do not warn about unused key
-        doZeroVar(umka, keyIdent);
 
         // Declare variable for the map keys, each followed by the item pointer if the item is needed
         Type *keysValsType = typeAdd(&umka->types, &umka->blocks, TYPE_DYNARRAY);
@@ -959,7 +958,6 @@ static void parseForInHeader(Umka *umka, ForPostStmt *postStmt)
             itemType = typeAddPtrTo(&umka->types, &umka->blocks, itemType);
 
         itemIdent = identAllocVar(&umka->idents, &umka->types, &umka->modules, &umka->blocks, itemName, itemType, false);
-        doZeroVar(umka, itemIdent);
     }
 
     genWhileCondProlog(&umka->gen);

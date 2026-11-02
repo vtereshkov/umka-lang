@@ -2108,7 +2108,6 @@ static void parseClosureLiteral(Umka *umka, const Type **type, Const *constant, 
         
         // Allocate closure
         const Ident *closureIdent = identAllocTempVar(&umka->idents, &umka->types, &umka->modules, &umka->blocks, *type);
-        doZeroVar(umka, closureIdent);
 
         Type *upvaluesStructType = NULL;
 
@@ -2172,6 +2171,10 @@ static void parseClosureLiteral(Umka *umka, const Type **type, Const *constant, 
             doAssertImplicitTypeConv(umka, upvalues->type, &upvaluesType, NULL);
 
             genAssign(&umka->gen, upvalues->type);
+        }
+        else
+        {
+            doZeroVar(umka, closureIdent);
         }
 
         // fnBlock
