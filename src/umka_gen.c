@@ -226,6 +226,22 @@ static bool optimizeDeref(CodeGen *gen, TypeKind typeKind)
 }
 
 
+static bool optimizeSwapAssign(CodeGen *gen, const Type *type)
+{
+    Instruction *prev = getPrevInstr(gen, 1);
+
+    // Optimization: PUSH_LOCAL_PTR + SWAP_ASSIGN -> POP_LOCAL
+    if (prev && prev->opcode == OP_PUSH_LOCAL_PTR)
+    {
+        genRemoveInstr(gen);
+        genPopLocal(gen, type, prev->operand.intVal);
+        return true;
+    }
+
+    return false;
+}
+
+
 static bool optimizeGetArrayPtr(CodeGen *gen, int itemSize, int len)
 {
     Instruction *prev = getPrevInstr(gen, 1);
@@ -562,6 +578,13 @@ void genPopReg(CodeGen *gen, RegisterIndex regIndex)
 }
 
 
+void genPopLocal(CodeGen *gen, const Type *type, int offset)
+{
+    const Instruction instr = {.opcode = OP_POP_LOCAL, .type = type, .operand.intVal = offset};
+    genAddInstr(gen, &instr);
+}
+
+
 void genDup(CodeGen *gen)
 {
     const Instruction instr = {.opcode = OP_DUP};
@@ -602,8 +625,11 @@ void genAssign(CodeGen *gen, const Type *type)
 
 void genSwapAssign(CodeGen *gen, const Type *type)
 {
-    const Instruction instr = {.opcode = OP_SWAP_ASSIGN, .type = type};
-    genAddInstr(gen, &instr);
+    if (!optimizeSwapAssign(gen, type))
+    {
+        const Instruction instr = {.opcode = OP_SWAP_ASSIGN, .type = type};
+        genAddInstr(gen, &instr);
+    }
 }
 
 

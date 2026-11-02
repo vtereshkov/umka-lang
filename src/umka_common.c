@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 #include <ctype.h>
 
 #ifdef _WIN32
@@ -15,7 +16,6 @@
 #endif
 
 #include "umka_common.h"
-#include "umka_types.h"
 
 
 // Errors

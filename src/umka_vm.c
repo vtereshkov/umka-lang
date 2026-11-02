@@ -73,6 +73,7 @@ static const char *opcodeSpelling [] =
     "PUSH_UPVALUE",
     "POP",
     "POP_REG",
+    "POP_LOCAL",
     "DUP",
     "SWAP",
     "ZERO",
@@ -3009,6 +3010,21 @@ static FORCE_INLINE void doPopReg(Fiber *fiber)
 }
 
 
+static FORCE_INLINE void doPopLocal(Fiber *fiber, Error *error)
+{
+    void *lhs = (int8_t *)fiber->base + fiber->code[fiber->ip].operand.intVal;
+    const Slot rhs = *fiber->top++;
+    const Type *type = fiber->code[fiber->ip].type;
+
+    doAssignImpl(lhs, rhs, type->kind, type->size, error);
+
+    if (type->mayPointToStack && (lhs < (void *)fiber->top || lhs >= (void *)fiber->base))
+        doCheckEscapes(fiber, lhs, type, error);
+
+    fiber->ip++;
+}
+
+
 static FORCE_INLINE void doDup(Fiber *fiber)
 {
     const Slot val = *fiber->top;
@@ -3777,6 +3793,7 @@ static void vmLoop(VM *vm)
             case OP_PUSH_UPVALUE:                   doPushUpvalue(fiber, error);                  break;
             case OP_POP:                            doPop(fiber);                                 break;
             case OP_POP_REG:                        doPopReg(fiber);                              break;
+            case OP_POP_LOCAL:                      doPopLocal(fiber, error);                     break;
             case OP_DUP:                            doDup(fiber);                                 break;
             case OP_SWAP:                           doSwap(fiber);                                break;
             case OP_ZERO:                           doZero(fiber);                                break;
@@ -3946,6 +3963,7 @@ int vmAsm(int ip, const Instruction *code, const DebugInfo *debugPerInstr, const
         case OP_PUSH_LOCAL_PTR:
         case OP_PUSH_LOCAL:
         case OP_POP:
+        case OP_POP_LOCAL:
         case OP_ZERO:
         case OP_ASSIGN_PARAM:
         case OP_GET_FIELD_PTR:

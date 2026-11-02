@@ -46,11 +46,12 @@ void genPushReg         (CodeGen *gen, RegisterIndex regIndex);
 void genPushUpvalue     (CodeGen *gen);
 void genPushZero        (CodeGen *gen, int slots);
 
-void genPop   (CodeGen *gen);
-void genPopReg(CodeGen *gen, RegisterIndex regIndex);
-void genDup   (CodeGen *gen);
-void genSwap  (CodeGen *gen);
-void genZero  (CodeGen *gen, int size);
+void genPop     (CodeGen *gen);
+void genPopReg  (CodeGen *gen, RegisterIndex regIndex);
+void genPopLocal(CodeGen *gen, const Type *type, int offset);
+void genDup     (CodeGen *gen);
+void genSwap    (CodeGen *gen);
+void genZero    (CodeGen *gen, int size);
 
 void genDeref        (CodeGen *gen, TypeKind typeKind);
 void genAssign       (CodeGen *gen, const Type *type);

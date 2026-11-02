@@ -65,6 +65,7 @@ typedef enum
     OP_PUSH_UPVALUE,
     OP_POP,
     OP_POP_REG,
+    OP_POP_LOCAL,
     OP_DUP,
     OP_SWAP,
     OP_ZERO,
