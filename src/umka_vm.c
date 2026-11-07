@@ -169,44 +169,30 @@ static const char *regSpelling [] =
 
 // Memory management
 
-static FORCE_INLINE UmkaStackSlot *doGetOnFreeParams(void *ptr)
+static FORCE_INLINE void chunkCallOnFree(HeapPages *pages, HeapChunk *chunk)
 {
-    static UmkaStackSlot paramsBuf[STACK_FRAME_HEADER_SLOTS + 1] = {0};
+    UmkaStackSlot layoutBuf[STACK_FRAME_LAYOUT_SIZE_IN_SLOTS(2)];
+    StackFrameLayout *layout = (StackFrameLayout *)layoutBuf;
+
+    layout->numParams = 2;
+    layout->numParamSlots = 1;
+    layout->numResultParams = 0;
+    layout->localVarSlots = 0;
+    layout->resultType = NULL;
+    layout->param[0].firstSlotIndex = 0;     // No upvalues
+    layout->param[0].type = NULL;
+    layout->param[1].firstSlotIndex = 0;     // Pointer to data to deallocate
+    layout->param[1].type = NULL;
+
+    UmkaStackSlot paramsBuf[STACK_FRAME_HEADER_SLOTS + 1] = {0};
     UmkaStackSlot *params = paramsBuf + STACK_FRAME_HEADER_SLOTS;
 
-    // The layout is the same for all calls, so it is built once
-    if (!*vmGetStackFrameLayout(params))
-    {
-        static int64_t layoutBuf[(STACK_FRAME_LAYOUT_SIZE(2) + sizeof(int64_t) - 1) / sizeof(int64_t)];
-        StackFrameLayout *layout = (StackFrameLayout *)&layoutBuf;
+    *vmGetStackFrameLayout(params) = layout;
+    params[0].ptrVal = chunk->data;
 
-        layout->numParams = 2;
-        layout->numParamSlots = 1;
-        layout->numResultParams = 0;
-        layout->localVarSlots = 0;
-        layout->resultType = NULL;
-        layout->param[0].firstSlotIndex = 0;     // No upvalues
-        layout->param[0].type = NULL;
-        layout->param[1].firstSlotIndex = 0;     // Pointer to data to deallocate
-        layout->param[1].type = NULL;
+    UmkaStackSlot result = {.ptrVal = pages->error->context};     // Upon entry, the result slot stores the Umka instance
 
-        *vmGetStackFrameLayout(params) = layout;
-    }
-
-    params[0].ptrVal = ptr;
-
-    return params;
-}
-
-
-static FORCE_INLINE UmkaStackSlot *doGetOnFreeResult(HeapPages *pages)
-{
-    static UmkaStackSlot resultBuf = {0};
-    UmkaStackSlot *result = &resultBuf;
-
-    result->ptrVal = pages->error->context;     // Upon entry, the result slot stores the Umka instance
-
-    return result;
+    chunk->onFree(params, &result);
 }
 
 
@@ -342,7 +328,7 @@ static FORCE_INLINE HeapChunk *chunkGetHeader(void *data)
 static FORCE_INLINE void chunkFree(HeapPages *pages, HeapPage *page, HeapChunk *chunk)
 {
     if (chunk->onFree)
-        chunk->onFree(doGetOnFreeParams(chunk->data), doGetOnFreeResult(pages));
+        chunkCallOnFree(pages, chunk);
 
     chunk->allocated = false;
     chunk->nextFree = page->firstFree;
@@ -364,7 +350,7 @@ static void pageFree(HeapPages *pages)
         {
             HeapChunk *chunk = (HeapChunk *)((char *)page->data + i * page->chunkSize);
             if (chunk->allocated && chunk->onFree)
-                chunk->onFree(doGetOnFreeParams(chunk->data), doGetOnFreeResult(pages));
+                chunkCallOnFree(pages, chunk);
         }
 
         free(page);
@@ -1276,15 +1262,14 @@ static FORCE_INLINE char *doAllocStr(HeapPages *pages, int64_t len, Error *error
 
 static FORCE_INLINE char *doGetEmptyStr(void)
 {
-    StrDimensions dims = {.len = 0, .capacity = 1};
+    typedef struct
+    {
+        StrDimensions dims;
+        char data[1];
+    } EmptyStr;
 
-    static char dimsAndData[sizeof(StrDimensions) + 1];
-    *(StrDimensions *)dimsAndData = dims;
-
-    char *data = dimsAndData + sizeof(StrDimensions);
-    data[0] = 0;
-
-    return data;
+    static EmptyStr emptyStr = {.dims = {.len = 0, .capacity = 1}, .data = ""};
+    return emptyStr.data;
 }
 
 

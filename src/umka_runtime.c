@@ -89,27 +89,10 @@ void rtlmemof(UmkaStackSlot *params, UmkaStackSlot *result)
 }
 
 
-void rtlstdin(UmkaStackSlot *params, UmkaStackSlot *result)
+void rtlstdstream(UmkaStackSlot *params, UmkaStackSlot *result)
 {
-    static File file;
-    file.stream = stdin;
-    umkaGetResult(params, result)->ptrVal = &file;
-}
-
-
-void rtlstdout(UmkaStackSlot *params, UmkaStackSlot *result)
-{
-    static File file;
-    file.stream = stdout;
-    umkaGetResult(params, result)->ptrVal = &file;
-}
-
-
-void rtlstderr(UmkaStackSlot *params, UmkaStackSlot *result)
-{
-    static File file;
-    file.stream = stderr;
-    umkaGetResult(params, result)->ptrVal = &file;
+    File *file = umkaGetUpvalue(params)->self;
+    umkaGetResult(params, result)->ptrVal = file;
 }
 
 

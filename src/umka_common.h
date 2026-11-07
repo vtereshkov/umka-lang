@@ -188,7 +188,8 @@ typedef struct tagStackFrameLayout
 } StackFrameLayout;
 
 
-#define STACK_FRAME_LAYOUT_SIZE(numParams)  (sizeof(StackFrameLayout) + (numParams) * sizeof(ParamLayout))
+#define STACK_FRAME_LAYOUT_SIZE(numParams)           (sizeof(StackFrameLayout) + (numParams) * sizeof(ParamLayout))
+#define STACK_FRAME_LAYOUT_SIZE_IN_SLOTS(numParams)  ((STACK_FRAME_LAYOUT_SIZE(numParams) + sizeof(UmkaStackSlot) - 1) / sizeof(UmkaStackSlot))
 
 
 void errorReportInit(UmkaError *report, Storage *storage, const char *fileName, const char *fnName, int line, int pos, int code, const char *format, va_list args);

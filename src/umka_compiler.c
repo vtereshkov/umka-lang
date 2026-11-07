@@ -146,13 +146,21 @@ static void compilerDeclareBuiltinIdents(Umka *umka)
 }
 
 
+static File *compilerMakeStdFile(Umka *umka, FILE *stream)
+{
+    File *file = storageAdd(&umka->storage, sizeof(File));
+    file->stream = stream;
+    return file;
+}
+
+
 static void compilerDeclareExternalFuncs(Umka *umka, bool fileSystemEnabled)
 {
     externalAdd(&umka->externals, "rtlmemcpy",      &rtlmemcpy,                                           NULL, true);
     externalAdd(&umka->externals, "rtlmemof",       &rtlmemof,                                            NULL, true);
-    externalAdd(&umka->externals, "rtlstdin",       &rtlstdin,                                            NULL, true);
-    externalAdd(&umka->externals, "rtlstdout",      &rtlstdout,                                           NULL, true);
-    externalAdd(&umka->externals, "rtlstderr",      &rtlstderr,                                           NULL, true);
+    externalAdd(&umka->externals, "rtlstdin",       &rtlstdstream,                                        compilerMakeStdFile(umka, stdin),  true);
+    externalAdd(&umka->externals, "rtlstdout",      &rtlstdstream,                                        compilerMakeStdFile(umka, stdout), true);
+    externalAdd(&umka->externals, "rtlstderr",      &rtlstdstream,                                        compilerMakeStdFile(umka, stderr), true);
     externalAdd(&umka->externals, "rtlfopen",       fileSystemEnabled ? &rtlfopen  : &rtlfopenSandbox,    NULL, true);
     externalAdd(&umka->externals, "rtlfclose",      fileSystemEnabled ? &rtlfclose : &rtlfcloseSandbox,   NULL, true);
     externalAdd(&umka->externals, "rtlfread",       fileSystemEnabled ? &rtlfread  : &rtlfreadSandbox,    NULL, true);

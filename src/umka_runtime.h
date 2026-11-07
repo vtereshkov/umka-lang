@@ -30,9 +30,7 @@ typedef struct
 
 void rtlmemcpy          (UmkaStackSlot *params, UmkaStackSlot *result);
 void rtlmemof           (UmkaStackSlot *params, UmkaStackSlot *result);
-void rtlstdin           (UmkaStackSlot *params, UmkaStackSlot *result);
-void rtlstdout          (UmkaStackSlot *params, UmkaStackSlot *result);
-void rtlstderr          (UmkaStackSlot *params, UmkaStackSlot *result);
+void rtlstdstream       (UmkaStackSlot *params, UmkaStackSlot *result);
 void rtlfopen           (UmkaStackSlot *params, UmkaStackSlot *result);
 void rtlfopenSandbox    (UmkaStackSlot *params, UmkaStackSlot *result);
 void rtlfclose          (UmkaStackSlot *params, UmkaStackSlot *result);
