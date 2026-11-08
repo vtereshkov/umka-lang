@@ -145,8 +145,12 @@ Type *typeAdd(Types *types, const Blocks *blocks, TypeKind kind)
 
 void typeDeepCopy(Storage *storage, Type *dest, const Type *src)
 {
+    const int block = dest->block;
     const Type *next = dest->next;
+
     *dest = *src;
+
+    dest->block = block;
     dest->next = next;
 
     if ((dest->kind == TYPE_STRUCT || dest->kind == TYPE_INTERFACE || dest->kind == TYPE_CLOSURE) && dest->numItems > 0)
