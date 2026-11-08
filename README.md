@@ -92,7 +92,11 @@ _400 x 400 matrix multiplication (AMD A4-3300M @ 1.9 GHz, Windows 7)_
 
 * [Hover! maze demo](https://github.com/vtereshkov/hover-maze): A 3D demo program that loads the original assets of the game Hover! and uses a software renderer similar to that of SpaceSim
 
-![](resources/hover.png) 
+![](resources/hover.png)
+
+* [WMS/WFS viewer](https://github.com/vtereshkov/wms-wfs-viewer): A Web Map Service and Web Feature Service demo app
+
+![](resources/wmswfs.png) 
 
 * [Umka OS](https://github.com/skejeton/umka-os): A proof of concept operating system written in C and Umka
 
