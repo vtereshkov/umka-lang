@@ -196,32 +196,59 @@ static FORCE_INLINE void chunkCallOnFree(HeapPages *pages, HeapChunk *chunk)
 }
 
 
-static FORCE_INLINE void gcCandidateInit(GCCandidates *candidates, Storage *storage)
+static FORCE_INLINE void flexArrayInit(AnyFlexArray *array, int64_t itemSize, Storage *storage)
 {
-    candidates->storage = storage;
-    candidates->capacity = 100;
-    candidates->stack = storageAdd(candidates->storage, candidates->capacity * sizeof(GCCandidate));
-    candidates->top = -1;
+    array->len = 0;
+    array->capacity = 16;
+    array->itemSize = itemSize;
+    array->storage = storage;
+    array->data = storageAdd(storage, array->capacity * itemSize);
 }
 
 
-static FORCE_INLINE void gcCandidateReset(GCCandidates *candidates)
+static FORCE_INLINE void *flexArrayGet(const AnyFlexArray *array, int64_t index)
 {
-    candidates->top = -1;
+    return (char *)array->data + index * array->itemSize;
+}
+
+
+static FORCE_INLINE void *flexArrayPush(AnyFlexArray *array)
+{
+    if (UNLIKELY(array->len == array->capacity))
+    {
+        array->capacity *= 2;
+        array->data = storageRealloc(array->storage, array->data, array->capacity * array->itemSize);
+    }
+    return flexArrayGet(array, array->len++);
+}
+
+
+static FORCE_INLINE void *flexArrayPop(AnyFlexArray *array)
+{
+    return flexArrayGet(array, --array->len);
+}
+
+
+static FORCE_INLINE void *flexArrayInsert(AnyFlexArray *array, int64_t index)
+{
+    flexArrayPush(array);
+    char *item = flexArrayGet(array, index);
+    memmove(item + array->itemSize, item, (array->len - 1 - index) * array->itemSize);
+    return item;
+}
+
+
+static FORCE_INLINE void flexArrayDelete(AnyFlexArray *array, int64_t index)
+{
+    char *item = flexArrayGet(array, index);
+    memmove(item, item + array->itemSize, (array->len - 1 - index) * array->itemSize);
+    array->len--;
 }
 
 
 static FORCE_INLINE void gcCandidatePush(GCCandidates *candidates, void *ptr, const Type *type)
 {
-    if (candidates->top >= candidates->capacity - 1)
-    {
-        candidates->capacity *= 2;
-        candidates->stack = storageRealloc(candidates->storage, candidates->stack, candidates->capacity * sizeof(GCCandidate));
-    }
-
-    GCCandidate *candidate = &candidates->stack[++candidates->top];
-    candidate->ptr = ptr;
-    candidate->type = type;
+    *(GCCandidate *)flexArrayPush((AnyFlexArray *)candidates) = (GCCandidate){.ptr = ptr, .type = type};
 }
 
 
@@ -258,7 +285,7 @@ static FORCE_INLINE void gcCandidatePushStructFields(GCCandidates *candidates, v
 
 static FORCE_INLINE void gcCandidatePop(GCCandidates *candidates, void **ptr, const Type **type)
 {
-    const GCCandidate *candidate = &candidates->stack[candidates->top--];
+    const GCCandidate *candidate = flexArrayPop((AnyFlexArray *)candidates);
     *ptr = candidate->ptr;
     *type = candidate->type;
 }
@@ -305,9 +332,10 @@ static void pageInit(HeapPages *pages, Storage *storage, Error *error)
     pages->occupiedSize = 0;
     pages->occupiedSizeThreshold = MEM_MIN_GC_THRESHOLD;
     pages->gcRequested = false;
-    gcCandidateInit(&pages->reachables, storage);
-    gcCandidateInit(&pages->roots, storage);
-    gcCandidateInit(&pages->externalRoots, storage);
+    flexArrayInit((AnyFlexArray *)&pages->sorted,     sizeof(HeapPage *),  storage);
+    flexArrayInit((AnyFlexArray *)&pages->reachables, sizeof(GCCandidate), storage);
+    flexArrayInit((AnyFlexArray *)&pages->roots,      sizeof(GCCandidate), storage);
+    flexArrayInit((AnyFlexArray *)&pages->hostRoots,  sizeof(GCCandidate), storage);
     pages->error = error;
 }
 
@@ -392,7 +420,26 @@ static FORCE_INLINE HeapPage *pageFindRecycled(HeapPages *pages, int size)
 }
 
 
-static FORCE_INLINE HeapPage *pageAdd(HeapPages *pages, int numChunks, int chunkSize)
+static FORCE_INLINE int pageFindSortedIndex(const HeapPages *pages, const void *ptr)
+{
+    HeapPage *const *sorted = pages->sorted.data;
+
+    int low = 0;
+    int high = pages->sorted.len;
+    
+    while (low < high)
+    {
+        const int mid = (low + high) / 2;
+        if ((const void *)sorted[mid]->data <= ptr)
+            low = mid + 1;
+        else
+            high = mid;
+    }
+    return low;
+}
+
+
+static HeapPage *pageAdd(HeapPages *pages, int numChunks, int chunkSize)
 {
     const int size = numChunks * chunkSize;
 
@@ -418,6 +465,9 @@ static FORCE_INLINE HeapPage *pageAdd(HeapPages *pages, int numChunks, int chunk
         pages->first->prev = page;
     pages->first = page;
 
+    const int index = pageFindSortedIndex(pages, page->data);
+    *(HeapPage **)flexArrayInsert((AnyFlexArray *)&pages->sorted, index) = page;
+
     if (!pages->lowest || pages->lowest > (char *)page->data)
         pages->lowest = (char *)page->data;
 
@@ -430,7 +480,7 @@ static FORCE_INLINE HeapPage *pageAdd(HeapPages *pages, int numChunks, int chunk
 }
 
 
-static FORCE_INLINE void pageRemove(HeapPages *pages, HeapPage *page)
+static void pageRemove(HeapPages *pages, HeapPage *page)
 {
     if (page == pages->first)
         pages->first = page->next;
@@ -443,6 +493,9 @@ static FORCE_INLINE void pageRemove(HeapPages *pages, HeapPage *page)
 
     if (page == pages->lastAccessed)
         pages->lastAccessed = pages->first;
+
+    const int index = pageFindSortedIndex(pages, page->data) - 1;
+    flexArrayDelete((AnyFlexArray *)&pages->sorted, index);
 
     pageMoveToRecycled(pages, page);
 }
@@ -462,13 +515,12 @@ static FORCE_INLINE HeapPage *pageFind(HeapPages *pages, void *ptr)
     if (pages->lastAccessed && pageContainsPtr(pages->lastAccessed, ptr))
         return pages->lastAccessed;
 
-    for (HeapPage *page = pages->first; page; page = page->next)
+    HeapPage *const *sorted = pages->sorted.data;
+    const int index = pageFindSortedIndex(pages, ptr) - 1;
+    if (index >= 0 && pageContainsPtr(sorted[index], ptr))
     {
-        if (pageContainsPtr(page, ptr))
-        {
-            pages->lastAccessed = page;
-            return page;
-        }
+        pages->lastAccessed = sorted[index];
+        return sorted[index];
     }
 
     return NULL;
@@ -1025,7 +1077,7 @@ static int64_t doCompare(Slot lhs, Slot rhs, const Type *type, Error *error)
 
 static void gcResetRoots(HeapPages *pages, const Idents *idents)
 {
-    gcCandidateReset(&pages->roots);
+    pages->roots.len = 0;
 
     for (const Ident *ident = idents->first; ident; ident = ident->next)
         if (ident->isGloballyAllocated && ident->type->isGarbageCollected)
@@ -1102,7 +1154,7 @@ static void gcMarkFiberData(HeapPages *pages, const Fiber *fiber)
 
 static void gcMark(Fiber *fiber, HeapPages *pages)
 {
-    gcCandidateReset(&pages->reachables);
+    pages->reachables.len = 0;
 
     // Roots: all the fibers being executed
     for (const Fiber *parentFiber = fiber; parentFiber; parentFiber = parentFiber->parent)
@@ -1118,14 +1170,16 @@ static void gcMark(Fiber *fiber, HeapPages *pages)
     }
 
     // Roots: global variables
-    for (int i = 0; i <= pages->roots.top; i++)
-        gcCandidatePushDeref(&pages->reachables, pages->roots.stack[i].ptr, pages->roots.stack[i].type);
+    const GCCandidate *roots = pages->roots.data;
+    for (int i = 0; i < pages->roots.len; i++)
+        gcCandidatePushDeref(&pages->reachables, roots[i].ptr, roots[i].type);
 
     // Roots: chunks referenced by the host
-    for (int i = 0; i <= pages->externalRoots.top; i++)
-        gcMarkPtr(pages, pages->externalRoots.stack[i].ptr, NULL);
+    const GCCandidate *hostRoots = pages->hostRoots.data;
+    for (int i = 0; i < pages->hostRoots.len; i++)
+        gcMarkPtr(pages, hostRoots[i].ptr, hostRoots[i].type);
 
-    while (pages->reachables.top >= 0)
+    while (pages->reachables.len > 0)
     {
         void *ptr = NULL;
         const Type *type = NULL;
@@ -4020,8 +4074,12 @@ void *vmAllocData(VM *vm, int size, UmkaExternFunc onFree)
 void vmIncRef(VM *vm, void *ptr)
 {
     HeapPage *page = pageFind(&vm->pages, ptr);
-    if (page)
-        gcCandidatePush(&vm->pages.externalRoots, pageGetChunk(page, ptr)->data, NULL);
+    if (!page)
+        return;
+
+    void *data = pageGetChunk(page, ptr)->data;
+
+    *(GCCandidate *)flexArrayPush((AnyFlexArray *)&vm->pages.hostRoots) = (GCCandidate){.ptr = data, .type = NULL};
 }
 
 
@@ -4031,15 +4089,16 @@ void vmDecRef(VM *vm, void *ptr)
     if (!page)
         return;
 
-    GCCandidates *externalRoots = &vm->pages.externalRoots;
-    const void *data = pageGetChunk(page, ptr)->data;
+    void *data = pageGetChunk(page, ptr)->data;
 
-    for (int i = externalRoots->top; i >= 0; i--)
-        if (externalRoots->stack[i].ptr == data)
+    for (int i = vm->pages.hostRoots.len - 1; i >= 0; i--)
+    {
+        if (vm->pages.hostRoots.data[i].ptr == data)
         {
-            externalRoots->stack[i] = externalRoots->stack[externalRoots->top--];
+            flexArrayDelete((AnyFlexArray *)&vm->pages.hostRoots, i);
             return;
         }
+    }
 }
 
 

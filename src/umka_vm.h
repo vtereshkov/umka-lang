@@ -124,16 +124,22 @@ typedef struct
 typedef struct
 {
     void *ptr;
-    const Type *type;           // Not used for host references
+    const Type *type;
 } GCCandidate;
 
 
-typedef struct
-{
-    GCCandidate *stack;
-    int top, capacity;
-    Storage *storage;
-} GCCandidates;
+#define FlexArray(T) struct \
+{ \
+    Storage *storage; \
+    int64_t len, capacity; \
+    int64_t itemSize; \
+    T *data; \
+}
+
+
+typedef FlexArray(void) AnyFlexArray;
+typedef FlexArray(struct tagHeapPage *) SortedHeapPages;
+typedef FlexArray(GCCandidate) GCCandidates;
 
 
 typedef enum
@@ -169,11 +175,11 @@ typedef struct tagHeapPage
 typedef struct
 {
     HeapPage *first, *firstRecycled, *lastAccessed;
+    SortedHeapPages sorted;
     char *lowest, *highest;
     int64_t occupiedSize, occupiedSizeThreshold;
     bool gcRequested;
-    GCCandidates reachables;
-    GCCandidates roots, externalRoots;
+    GCCandidates reachables, roots, hostRoots;
     Error *error;
 } HeapPages;
 
