@@ -6,6 +6,7 @@
 
 void doZeroVar(Umka *umka, const Ident *ident);
 void doResolveExtern(Umka *umka);
+bool doShortVarDeclLookahead(Umka *umka);
 
 void parseAssignmentStmt(Umka *umka, const Type *type, Const *varPtrConstList);
 void parseDeclAssignmentStmt(Umka *umka, IdentName *names, const bool *exported, int num, bool constExpr);
