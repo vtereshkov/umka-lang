@@ -93,7 +93,7 @@ void doResolveExtern(Umka *umka)
 }
 
 
-static bool doShortVarDeclLookahead(Umka *umka)
+bool doShortVarDeclLookahead(Umka *umka)
 {
     // ident {"," ident} ":="
     Lexer lookaheadLex = umka->lex;
@@ -409,6 +409,9 @@ static void parseSimpleStmt(Umka *umka)
         parseDesignatorList(umka, &type, NULL, &isVar, &isCall, &isCompLit);
 
         TokenKind op = umka->lex.tok.kind;
+
+        if (op == TOK_COLONEQ)
+            umka->error.handler(umka->error.context, "Identifier expected on the left side of :=");
 
         if (typeExprListStruct(type) && !isCall && op != TOK_EQ)
             umka->error.handler(umka->error.context, "List assignment expected");

@@ -63,6 +63,19 @@ fn main() {
     s[0] = 'x'
 }`},
 
+    {.compileError, "Identifier expected on the left side of :=", `
+fn f(): (int, bool) {return 42, true}
+fn main() {
+    a := [2]int{5, 7}
+    a[0], ok := f()
+}`},
+
+    {.compileError, "Identifier expected on the left side of :=", `
+fn main() {
+    a := [2]int{5, 7}
+    a[0] := 1
+}`},
+
     {.compileError, "Constant must be ordinal, or real, or string, or closure", `
 const c = []int{1}
 fn main() {}`},
