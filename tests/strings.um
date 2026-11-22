@@ -51,9 +51,19 @@ World\n
 `)    
 }
 
+fn test3() {
+	printf("\nTest 3\n\n")
+
+	s := "<a><!-- b --></a>"
+	printf("%v %v %v %v %v %v\n", std::find(s, "<"), std::find(s, "<", 1), std::find(s, "-->", 4), std::find(s, "x"), std::find(s, "", len(s)), std::find("", ""))
+	printf("%v %v %v %v %v\n", std::startswith(s, "<a>"), std::startswith(s, "<!--", 3), std::startswith(s, "<!--", 4), std::startswith(s, "</a>!", 13), std::startswith(s, "", len(s)))
+	printf("%v %v %v %v\n", std::find(s, "<", -1), std::find(s, "", len(s) + 1), std::startswith(s, "", -1), std::startswith(s, "", len(s) + 1))
+}
+
 fn test*() {
 	test1()
 	test2()
+	test3()
 }
 
 fn main() {

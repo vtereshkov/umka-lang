@@ -43,6 +43,8 @@ fn testFiles() {
 fn testConversions() {
     printf("%v %v %v %v\n", std::atoi("42"), std::atoi("-17 apples"), std::atoi("apples"), std::atoi(""))
     printf("%v %v %v\n", std::atof("3.25"), std::atof("-1e3"), std::atof("pi"))
+    printf("%v %v %v %v\n", std::atoi("x=42", 2), std::atof("x=-1.5, y=2", 2), std::atof("x=-1.5, y=2", 10), std::atof("-x"))
+    printf("%v %v %v %v\n", std::atoi("42", -1), std::atoi("42", 3), std::atof("1.5", -1), std::atof("1.5", 4))
     printf("%s %s %s\n", std::itoa(-12345), std::ftoa(2.0 / 3, 4), std::ftoa(-2.71828, 2))
 }
 

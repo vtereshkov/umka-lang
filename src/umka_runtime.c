@@ -48,6 +48,14 @@ static void rtlConvFromDateTime(struct tm *dest, const RTLDateTime *src)
 }
 
 
+static const char *rtlStrAt(const char *str, int64_t pos)
+{
+    if (pos < 0 || pos > umkaGetStrLen(str))
+        return NULL;
+    return str ? str + pos : "";
+}
+
+
 void rtlmemcpy(UmkaStackSlot *params, UmkaStackSlot *result)
 {
     void *dest = umkaGetParam(params, 0)->ptrVal;
@@ -263,6 +271,64 @@ void rtlfflush(UmkaStackSlot *params, UmkaStackSlot *result)
         res = fflush(file->stream); 
 
     umkaGetResult(params, result)->intVal = res;
+}
+
+
+void rtlfind(UmkaStackSlot *params, UmkaStackSlot *result)
+{
+    const char *s     = (const char *)umkaGetParam(params, 0)->ptrVal;
+    const char *sub   = (const char *)umkaGetParam(params, 1)->ptrVal;
+    const int64_t pos = umkaGetParam(params, 2)->intVal;
+
+    const char *start = rtlStrAt(s, pos);
+    const char *found = start ? strstr(start, sub ? sub : "") : NULL;
+
+    umkaGetResult(params, result)->intVal = found ? pos + (found - start) : -1;
+}
+
+
+void rtlstartswith(UmkaStackSlot *params, UmkaStackSlot *result)
+{
+    const char *s      = (const char *)umkaGetParam(params, 0)->ptrVal;
+    const char *prefix = (const char *)umkaGetParam(params, 1)->ptrVal;
+    const int64_t pos  = umkaGetParam(params, 2)->intVal;
+
+    const char *start = rtlStrAt(s, pos);
+    if (!prefix)
+        prefix = "";
+
+    umkaGetResult(params, result)->intVal = start && strncmp(start, prefix, strlen(prefix)) == 0;
+}
+
+
+void rtlatoi(UmkaStackSlot *params, UmkaStackSlot *result)
+{
+    const char *s     = (const char *)umkaGetParam(params, 0)->ptrVal;
+    const int64_t pos = umkaGetParam(params, 1)->intVal;
+
+    const char *start = rtlStrAt(s, pos);
+
+    umkaGetResult(params, result)->intVal = start ? strtoll(start, NULL, 10) : 0;
+}
+
+
+void rtlatof(UmkaStackSlot *params, UmkaStackSlot *result)
+{
+    const char *s     = (const char *)umkaGetParam(params, 0)->ptrVal;
+    const int64_t pos = umkaGetParam(params, 1)->intVal;
+
+    const char *start = rtlStrAt(s, pos);
+
+    double x = 0;
+    if (start)
+    {
+        char *end;
+        x = strtod(start, &end);
+        if (end == start)
+            x = 0;      // strtod() may return -0 if nothing is parsed
+    }
+
+    umkaGetResult(params, result)->realVal = x;
 }
 
 

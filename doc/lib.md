@@ -212,13 +212,26 @@ fn trim*(s: str): str                   // Trim leading and trailing spaces and 
 
 Trim all leading and/or trailing spaces and tabs from string `s`. Return a new string. 
 
-### Conversions
+```
+fn find*(s, sub: str, pos: int = 0): int
+```
 
-#### Functions
+Returns the index of the first occurrence of `sub` in `s` at or after the index `pos`, or -1 if there is none. If `pos` is outside `0...len(s)`, returns -1.
 
 ```
-fn atoi*(s: str): int                   // String to integer
-fn atof*(s: str): real                  // String to real
+fn startswith*(s, prefix: str, pos: int = 0): bool
+```
+
+Returns `true` if `s` contains `prefix` at the index `pos`. If `pos` is outside `0...len(s)`, returns `false`.
+
+```
+fn atoi*(s: str, pos: int = 0): int     // String starting at `pos` to integer
+fn atof*(s: str, pos: int = 0): real    // String starting at `pos` to real
+```
+
+Convert the substring starting at the index `pos` in `s` to a number, skipping leading whitespace. Return 0 if there is no number or if `pos` is outside `0...len(s)`.
+
+```
 fn itoa*(x: int): str                   // Integer to string
 fn ftoa*(x: real, decimals: int): str   // Real to string with `decimals` decimal places 
 ```

@@ -170,6 +170,10 @@ static void compilerDeclareExternalFuncs(Umka *umka, bool fileSystemEnabled)
     externalAdd(&umka->externals, "rtlremove",      fileSystemEnabled ? &rtlremove : &rtlremoveSandbox,   NULL, true);
     externalAdd(&umka->externals, "rtlfeof",        fileSystemEnabled ? &rtlfeof   : &rtlfeofSandbox,     NULL, true);
     externalAdd(&umka->externals, "rtlfflush",      &rtlfflush,                                           NULL, true);
+    externalAdd(&umka->externals, "rtlfind",        &rtlfind,                                             NULL, true);
+    externalAdd(&umka->externals, "rtlstartswith",  &rtlstartswith,                                       NULL, true);
+    externalAdd(&umka->externals, "rtlatoi",        &rtlatoi,                                             NULL, true);
+    externalAdd(&umka->externals, "rtlatof",        &rtlatof,                                             NULL, true);
     externalAdd(&umka->externals, "rtltime",        &rtltime,                                             NULL, true);
     externalAdd(&umka->externals, "rtlclock",       &rtlclock,                                            NULL, true);
     externalAdd(&umka->externals, "rtllocaltime",   &rtllocaltime,                                        NULL, true);

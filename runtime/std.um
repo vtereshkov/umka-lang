@@ -305,21 +305,40 @@ fn rtrim*(s: str): str {
 }
 
 fn trim*(s: str): str {
-    return ltrim(rtrim(s))
+    start, stop := 0, len(s)
+    for start < stop && s[start] <= ' ' {
+        start++
+    }
+    for stop > start && s[stop - 1] <= ' ' {
+        stop--
+    }
+    return slice(s, start, stop)
+}
+
+fn rtlfind(s, sub: str, pos: int): int
+
+fn find*(s, sub: str, pos: int = 0): int {
+    return rtlfind(s, sub, pos)
+}
+
+fn rtlstartswith(s, prefix: str, pos: int): bool
+
+fn startswith*(s, prefix: str, pos: int = 0): bool {
+    return rtlstartswith(s, prefix, pos)
 }
 
 // Conversions
 
-fn atoi*(s: str): int {
-    var x: int
-    sscanf(s, "%lld", &x)
-    return x
+fn rtlatoi(s: str, pos: int): int
+
+fn atoi*(s: str, pos: int = 0): int {
+    return rtlatoi(s, pos)
 }
 
-fn atof*(s: str): real {
-    var x: real
-    sscanf(s, "%lf", &x)
-    return x
+fn rtlatof(s: str, pos: int): real
+
+fn atof*(s: str, pos: int = 0): real {
+    return rtlatof(s, pos)
 }
 
 fn itoa*(x: int): str {
