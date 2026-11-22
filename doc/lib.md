@@ -236,6 +236,8 @@ fn itoa*(x: int): str                   // Integer to string
 fn ftoa*(x: real, decimals: int): str   // Real to string with `decimals` decimal places 
 ```
 
+Convert the number `x` to a string.
+
 ### Math
 
 #### Constants
