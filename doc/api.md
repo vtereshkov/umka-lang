@@ -50,8 +50,8 @@ Adds an Umka module contained in a string buffer.
 Parameters:
 
 * `umka`: Interpreter instance handle
-* `sourceString`: String buffer
 * `fileName`: A fake file name assigned to the module
+* `sourceString`: String buffer
 
 Returned value: `true` if the module has been successfully added.
 
@@ -188,8 +188,8 @@ Finds an Umka function that can be called from C/C++ using `umkaCall`.
 Parameters:
 
 * `umka`: Interpreter instance handle
-* `moduleName`: Module name where the function is defined
-* `funcName`: Function name
+* `moduleName`: Path to the module where the function is defined, relative to the current folder, or `NULL` for the main module
+* `fnName`: Function name
 * `fn`: Function context to be filled in
 
 Returned value: `true` if the function was found and its context filled.
@@ -582,7 +582,7 @@ Parameters:
 
 * `type`: Array or structure type
 
-Returned value: Number of items; 0 if the type is neither an array nor a structure.
+Returned value: Number of items. For types other than arrays and structures, the value is not meaningful.
 
 ```
 UMKA_API const UmkaType *umkaGetFieldType(const UmkaType *structType, const char *fieldName);
@@ -707,7 +707,7 @@ Parameters:
 
 * `umka`: Interpreter instance handle
 * `array`: Pointer to the dynamic array, actually of type `UmkaDynArray(ItemType)`
-* `type`: Dynamic array type. Can be obtained by calling `UmkaGetParamType`
+* `type`: Dynamic array type. Can be obtained by calling `umkaGetParamType`
 * `len`: Dynamic array length 
 
 ```

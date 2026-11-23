@@ -49,10 +49,10 @@ Underscores can be used to separate digits.
 Syntax:
 
 ```
-intNumber   = decNumber | hexHumber.
+intNumber   = decNumber | hexNumber.
 decNumber   = digit {["_"] digit}. 
-hexNumber   = "0" ("X | "x") ["_"] hexDigit {["_"] hexDigit}.
-realNumber  = decNumber ["." decNumber] [("E" | "e") decNumber].
+hexNumber   = "0" ("X" | "x") ["_"] hexDigit {["_"] hexDigit}.
+realNumber  = (decNumber ["." [decNumber]] | "." decNumber) [("E" | "e") ["+" | "-"] decNumber].
 hexDigit    = digit | "A".."F" | "a".."f".
 ```
 
@@ -70,15 +70,15 @@ Examples:
 
 ### Character literals
 
-A character literal is an ASCII character enclosed in single quotes `''`. The character can be specified "as is" or by an escape sequence. Escape sequence prefixes have the same meaning as in C or other languages.
+A character literal is an ASCII character enclosed in single quotes `''`. The character can be specified "as is" or by an escape sequence. Escape sequence prefixes have the same meaning as in C or other languages. A backslash followed by any other character denotes that character, e.g., `'\\'` or `'\''`.
 
 Syntax:
 
 ```
 charLiteral = "'" (char | escSeq) "'".
 char        = "\x00".."\xFF".
-escSeq      = "\" ("0" | "a" | "b" | "e" | "f" | "n" | "r" | "t" | "v" | "x" hexNumber).
-hexDigit    = digit | "A".."F" | "a".."f"
+escSeq      = "\" ("0" | "a" | "b" | "f" | "n" | "r" | "t" | "v" | "x" hexDigit {hexDigit} | char).
+hexDigit    = digit | "A".."F" | "a".."f".
 ```
 
 Examples:
@@ -93,9 +93,9 @@ Examples:
 
 A string literal is a sequence of UTF-8 characters. 
 
-A single-line string literal is enclosed in double quotes `""`. A character can be specified "as is" or by an escape sequence. A new line character can only be specified by the escape sequence `"\n"`.
+A single-line string literal is enclosed in double quotes `""`. A character can be specified "as is" or by an escape sequence, except for the `"\0"` escape sequence, which is not allowed in string literals. A new line character can only be specified by the escape sequence `"\n"`.
 
-A multi-line string literal is enclosed in back quotes `` ` ` ``. Any character is treated "as is", escape sequences and carriage return characters are ignored.
+A multi-line string literal is enclosed in back quotes `` ` ` ``. Any character is treated "as is", i.e., escape sequences are not processed. Carriage return characters are removed.
 
 Syntax:
 
@@ -127,7 +127,7 @@ Umka has a set of arithmetical, bitwise, logical, relation operators, as well as
 &&   ||   ?    !    ++   --
 ==   <    >    !=   <=   >=
 =    :=   (    )    [    ]    {    }    
-^    ;    :    ::   .    ..
+^    ,    ;    :    ::   .    ..
 ```
 
 #### Implicit semicolons
@@ -171,7 +171,7 @@ type = qualIdent | ptrType | arrayType | dynArrayType | enumType |
 
 Array types, dynamic array types, structure types, interface types, map types and closure types are called *structured* types.
 
-Any data type except the interface type can have a set of functions attached to it, which are called *methods*. A variable of that type is called the *receiver* with respect to any method which is called on it. Methods are not considered a part of the type declaration. 
+Any declared type except interface and pointer types can have a set of functions attached to it, which are called *methods*. A variable of that type is called the *receiver* with respect to any method which is called on it. Methods are not considered a part of the type declaration. 
 
 ### Ordinal types
 
@@ -277,13 +277,13 @@ Examples:
 [][3]uint8
 ```
 
-Dynamic arrays require initialization by assignment from a static array or from a dynamic array literal, or by explicitly calling `make()`. 
+A dynamic array that has not been initialized is empty. A dynamic array can be initialized by assignment from a static array or from a dynamic array literal, or by explicitly calling `make()`. 
 
 Dynamic array assignment copies the pointer, but not the contents of the array. 
 
 ### Map types
 
-A map is an collection of items of a single type indexed by unique values, called *keys*, of another type. The key type must be comparable. A map is ordered by ascending key values. 
+A map is a collection of items of a single type indexed by unique values, called *keys*, of another type. The key type must be comparable. A map is ordered by ascending key values. 
 
 Syntax:
 
@@ -298,9 +298,9 @@ map[str]real
 map[[2]int]str
 ```
 
-Maps require initialization by assignment from a map literal or by explicitly calling `make()`. 
+A map that has not been initialized is empty. Adding an item to it allocates it, but it cannot be passed to `delete()`. A map can be initialized by assignment from a map literal or by explicitly calling `make()`. 
 
-Map assignment copies the pointer, but not the contents of the map
+Map assignment copies the pointer, but not the contents of the map.
 
 ### Structure types
 
@@ -427,7 +427,7 @@ Two types are *equivalent* if
 * They are array types and have equal length and equivalent item types
 * They are dynamic array types and have equivalent item types
 * They are map types and have equivalent key types and equivalent item types
-* They are structure or interface types and have equal number of fields, equal field names and equivalent field types
+* They are structure or interface types and have equal number of fields, equal field names and equivalent field types, and either both or none of them have an embedded structure
 * They are function types, which are both either methods or non-methods, and have equal number of parameters, equivalent parameter types, equal parameter default values (excluding the receiver parameter) and equivalent result type.
 
 Two types are *compatible* if
@@ -585,7 +585,7 @@ Syntax:
 
 ```
 fullVarDecl    = "var" (varDeclItem | "(" {varDeclItem ";"} ")").
-varDeclItem    = typedIdentList "=" exprList.
+varDeclItem    = typedIdentList ["=" exprList].
 typedIdentList = identList ":" type.
 identList      = ident exportMark {"," ident exportMark}.
 ```
@@ -634,7 +634,7 @@ A function or method declaration can be either a complete definition that includ
 
 If the prototype is not resolved, an error is triggered. 
 
-Function and method declarations are only allowed in the module scope. In the block scope, functions should be declared as constants or variables of a function type. Methods cannot be declared in the block scope. 
+Function and method declarations are only allowed in the module scope. In the block scope, functions should be declared as constants or variables of a closure type. Methods cannot be declared in the block scope. 
 
 The method receiver type should be a pointer to any declared type, except interface and pointer types. Methods should be declared in the same module as the method receiver type name.
 
@@ -691,10 +691,11 @@ The `format` string used by the input/output functions may contain format specif
 
 Length:
 
-hh                  Very short
-h                   Short
-l                   Long
-ll                  Very long
+hh                  8-bit integer
+h                   16-bit integer
+(none)              32-bit integer or real32
+l                   32-bit integer or real
+ll                  64-bit integer
 
 Type:
 
@@ -709,7 +710,7 @@ v                   Any
 
 The `v` type specifier prints the hierarchical structure of any value according to its type. It is only allowed in `printf`, `fprintf`, `sprintf`. When combined with the `l` or `ll` length specifier, it also dereferences all pointers contained in the value. The `ll` length specifier also enables multi-line pretty-printing with indentation. 
 
-The number of the format specifiers and the data types encoded by them should match the number and types of `a1`, `a2`... Otherwise, a runtime error is triggered.
+The number of the format specifiers and the data types encoded by them should match the number and types of `a1`, `a2`... Otherwise, a runtime error is triggered. A value that does not fit into the size given by the length specifier also triggers a runtime error, so the values of type `int`, `uint` or `real` may require the `ll` or `l` length specifier, e.g., `%lld`, `%llx`, `%lf`.
 
 
 
@@ -1108,7 +1109,7 @@ The `/` operator performs an integer division (with the remainder discarded) if 
 
 The `&&` and `||` operators don't evaluate the second operand if the first operand is sufficient to evaluate the result.
 
-The `==`, `!=`, `<`, `<=`, `>`, `>=` operators, when applied to strings, compare lexicographically. Wnen applied to arrays or structures, they recursively compare each array item or structure field and stop at the first non-equal item or field.
+The `==`, `!=`, `<`, `<=`, `>`, `>=` operators, when applied to strings, compare lexicographically. When applied to arrays or structures, they recursively compare each array item or structure field and stop at the first non-equal item or field.
 
 ##### Operand type conversions
 
@@ -1162,7 +1163,7 @@ A block is a statement list enclosed in braces. A block scope is associated with
 Syntax:
 
 ```
-block    = "{" StmtList "}".
+block    = "{" stmtList "}".
 stmtList = stmt {";" stmt}.
 ```
 
@@ -1192,7 +1193,7 @@ x[i], x[i + 1] = x[i + 1], x[i]
 
 #### Short assignment
 
-A short assignment combines one of the operators `+`, `-`, `*`, `/`, `%`, `&`, `|`, `~`  with assignment according to the following rule: `a op= b` is equivalent to `a = a op b`.
+A short assignment combines one of the operators `+`, `-`, `*`, `/`, `%`, `&`, `|`, `~`, `<<`, `>>` with assignment according to the following rule: `a op= b` is equivalent to `a = a op b`.
 
 For strings, as a special case, the short assignment `a += b` appends `b` to the existing string `a` if `len(a) + len(b) < cap(a)`. Otherwise, it constructs a new string `a + b` and assigns it to `a` according to the general rule.
 
@@ -1431,7 +1432,7 @@ for i, x in a {
 
 Terminates the execution of the innermost enclosing function and transfers the control to the calling function. For functions with non-`void` return value types, the `return` keyword should be followed by an expression or expression list whose types are compatible with the return value types declared in the function signature.
 
-For functions with non-`void` return value types, the function block should have at least one `return` statement. 
+For functions with non-`void` return value types, the function block should have a `return` statement at its top level. A `return` statement in a nested block, e.g., in a branch of an `if` or `switch` statement, does not satisfy this requirement. 
 
 Syntax:
 
@@ -1502,10 +1503,10 @@ decl                = typeDecl | constDecl | varDecl | fnDecl.
 typeDecl            = "type" (typeDeclItem | "(" {typeDeclItem ";"} ")").
 typeDeclItem        = ident exportMark "=" type.
 constDecl           = "const" (constDeclItem | "(" {constDeclItem ";"} ")").
-constDeclItem       = ident exportMark "=" expr.
+constDeclItem       = ident exportMark ["=" expr].
 varDecl             = fullVarDecl | shortVarDecl.
 fullVarDecl         = "var" (varDeclItem | "(" {varDeclItem ";"} ")").
-varDeclItem         = typedIdentList "=" exprList.
+varDeclItem         = typedIdentList ["=" exprList].
 shortVarDecl        = declAssignmentStmt.
 fnDecl              = "fn" [rcvSignature] ident exportMark signature [block].
 rcvSignature        = "(" ident ":" type ")".
@@ -1526,10 +1527,10 @@ mapType             = "map" "[" type "]" type.
 structType          = "struct" "{" [qualIdent ";"] {typedIdentList ";"} "}".
 interfaceType       = "interface" "{" {(ident signature | qualIdent) ";"} "}".
 closureType         = "fn" signature.
-block               = "{" StmtList "}".
+block               = "{" stmtList "}".
 fnBlock             = block.
 fnPrototype         = .
-stmtList            = Stmt {";" Stmt}.
+stmtList            = stmt {";" stmt}.
 stmt                = decl | block | simpleStmt | ifStmt | switchStmt | forStmt |
                       breakStmt | continueStmt | returnStmt.
 simpleStmt          = assignmentStmt | shortAssignmentStmt | incDecStmt | callStmt.
@@ -1588,16 +1589,17 @@ closureLiteral      = ["|" ident {"," ident} "|"] fnBlock.
 typeCast            = type "(" expr ")".
 enumConst           = [type] "." ident.
 ident               = (letter | "_") {letter | "_" | digit}.
-intNumber           = decNumber | hexHumber.
+intNumber           = decNumber | hexNumber.
 decNumber           = digit {["_"] digit}.
-hexNumber           = "0" ("X | "x") ["_"] hexDigit {["_"] hexDigit}.
-realNumber          = decNumber ["." decNumber] [("E" | "e") decNumber].
+hexNumber           = "0" ("X" | "x") ["_"] hexDigit {["_"] hexDigit}.
+realNumber          = (decNumber ["." [decNumber]] | "." decNumber)
+                      [("E" | "e") ["+" | "-"] decNumber].
 charLiteral         = "'" (char | escSeq) "'".
 stringLiteral       = singleLineLiteral | multiLineLiteral.
 singleLineLiteral   = """ {char | escSeq} """.
 multiLineLiteral    = "`" {char} "`".
-escSeq              = "\" ("0" | "a" | "b" | "e" | "f" | "n" | "r" | "t" | "v" | 
-                           "x" hexNumber).
+escSeq              = "\" ("0" | "a" | "b" | "f" | "n" | "r" | "t" | "v" | 
+                           "x" hexDigit {hexDigit} | char).
 letter              = "A".."Z" | "a".."z".
 digit               = "0".."9".
 hexDigit            = digit | "A".."F" | "a".."f".

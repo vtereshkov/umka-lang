@@ -205,12 +205,12 @@ Returns a character read from the console.
 #### Functions
 
 ```
-fn ltrim*(s: str): str                  // Trim leading spaces and tabs
-fn rtrim*(s: str): str                  // Trim trailing spaces and tabs
-fn trim*(s: str): str                   // Trim leading and trailing spaces and tabs
+fn ltrim*(s: str): str                  // Trim leading whitespace
+fn rtrim*(s: str): str                  // Trim trailing whitespace
+fn trim*(s: str): str                   // Trim leading and trailing whitespace
 ```
 
-Trim all leading and/or trailing spaces and tabs from string `s`. Return a new string. 
+Trim all leading and/or trailing whitespace and control characters, i.e., the characters with codes up to 32, from string `s`. Return a new string. 
 
 ```
 fn find*(s, sub: str, pos: int = 0): int
@@ -244,7 +244,7 @@ Convert the number `x` to a string.
 
 ```
 const pi* = 3.14159265358979323846
-const randMax* = /* Implementation-defined */
+const randMax* = 0x7FFFFFFF
 ```
 
 #### Functions
@@ -253,7 +253,7 @@ const randMax* = /* Implementation-defined */
 fn srand*(seed: int)
 ```
 
-Initializes the pseudo-random number generator with `seed`.
+Initializes the pseudo-random number generator with `seed`. If `seed` is not positive, the generator state is not changed.
 
 ```
 fn rand*(): int
@@ -300,19 +300,19 @@ Returns the number of seconds since the beginning of an implementation-defined e
 fn localtime*(t: int): DateTime
 ```
 
-Converts the time `t` to a date/time structure. `t` is treated as local time.
+Converts the time `t`, i.e., the number of seconds since 00:00, January 1, 1970 UTC, to a date/time structure in local time.
 
 ```
 fn gmtime*(t: int): DateTime
 ```
 
-Converts the time `t` to a date/time structure. `t` is treated as UTC time.
+Converts the time `t`, i.e., the number of seconds since 00:00, January 1, 1970 UTC, to a date/time structure in UTC.
 
 ```
 fn mktime*(d: DateTime): int
 ```
 
-Converts the date/time structure `d` to time.
+Converts the date/time structure `d`, treated as local time, to time.
 
 ```
 fn timestr*(d: DateTime): str
@@ -504,9 +504,9 @@ Returns the rune contained in the array `chars` starting at index `pos`.
 ```
 fn decode*(s: str): []Rune
 ```
-Returns the array of runes corresponding to the string `s` encoded in UTF-8.
+Returns the array of runes corresponding to the string `s` encoded in UTF-8. Decoding stops at the first invalid UTF-8 sequence.
 
 ```
 fn runeCount*(s: str): int
 ```
-Returns the number of runes contained in the string `s` encoded in UTF-8.
+Returns the number of runes contained in the string `s` encoded in UTF-8. Counting stops at the first invalid UTF-8 sequence.
