@@ -2576,6 +2576,10 @@ void parseDesignatorList(Umka *umka, const Type **type, Const *constant, bool *i
 
             lexNext(&umka->lex);
 
+            // Not a designator list, but a short variable declaration with a non-identifier on the left, e.g., a[0], b := f()
+            if (doShortVarDeclLookahead(umka))
+                umka->error.handler(umka->error.context, "Identifier expected on the left side of :=");
+
             bool fieldIsVar, fieldIsCall, fieldIsCompLit;
             parseDesignator(umka, &fieldType, NULL, &fieldIsVar, &fieldIsCall, &fieldIsCompLit, NULL);
 
