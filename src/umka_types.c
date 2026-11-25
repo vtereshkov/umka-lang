@@ -1049,9 +1049,9 @@ bool typeFormatStringValid(const char *format, int *formatLen, int *typeLetterPo
                     {
                         case FORMAT_SIZE_SHORT_SHORT:  *typeKind = TYPE_INT8;      break;
                         case FORMAT_SIZE_SHORT:        *typeKind = TYPE_INT16;     break;
-                        case FORMAT_SIZE_NORMAL:
-                        case FORMAT_SIZE_LONG:         *typeKind = TYPE_INT32;     break;
+                        case FORMAT_SIZE_NORMAL:       *typeKind = TYPE_INT32;     break;
                         case FORMAT_SIZE_LONG_LONG:    *typeKind = TYPE_INT;       break;
+                        default:                       return false;                // C's long may have 32 or 64 bits
                     }
                     break;
                 }
@@ -1063,9 +1063,9 @@ bool typeFormatStringValid(const char *format, int *formatLen, int *typeLetterPo
                     {
                         case FORMAT_SIZE_SHORT_SHORT:  *typeKind = TYPE_UINT8;      break;
                         case FORMAT_SIZE_SHORT:        *typeKind = TYPE_UINT16;     break;
-                        case FORMAT_SIZE_NORMAL:
-                        case FORMAT_SIZE_LONG:         *typeKind = TYPE_UINT32;     break;
+                        case FORMAT_SIZE_NORMAL:       *typeKind = TYPE_UINT32;     break;
                         case FORMAT_SIZE_LONG_LONG:    *typeKind = TYPE_UINT;       break;
+                        default:                       return false;                // C's long may have 32 or 64 bits
                     }
                     break;
                 }

@@ -694,7 +694,7 @@ Length:
 hh                  8-bit integer
 h                   16-bit integer
 (none)              32-bit integer or real32
-l                   32-bit integer or real
+l                   real
 ll                  64-bit integer
 
 Type:

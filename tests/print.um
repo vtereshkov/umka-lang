@@ -24,7 +24,13 @@ fn test*() {
 	}
 
 	a, b := '\xD0', '\xBF'
-    printf("%c%c\n", a, b)	
+    printf("%c%c\n", a, b)
+
+	// Values of other sizes than the format specifiers give
+	var i8: int8 = -5
+	var i32: int32 = -1
+	var u32: uint32 = 4000000000
+	printf("%lld %5lld %llu %d %hhx\n", i8, i32, u32, 7, 255)
 }
 
 fn main() {

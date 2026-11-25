@@ -1948,6 +1948,10 @@ static FORCE_INLINE void doBuiltinPrintf(Fiber *fiber, HeapPages *pages, bool is
     memcpy(curFormat, format, formatLen);
     curFormat[formatLen] = 0;
 
+    // An integer is passed to C as the type given by the format specifier, since it has been checked to fit into that type
+    if (typeKindIntegerOrEnum(expectedTypeKind))
+        typeKind = expectedTypeKind;
+
     // Special case: %v formatter - convert argument of any type to its string representation
     char reprBuf[sizeof(StrDimensions) + DEFAULT_STR_LEN + 1];
     char *dimsAndRepr = reprBuf;

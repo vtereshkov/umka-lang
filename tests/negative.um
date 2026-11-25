@@ -51,6 +51,12 @@ fn main() {
     var x: int = "a"
 }`},
 
+    {.compileError, "Invalid format string", `
+fn main() {
+    var x: int32 = 1
+    printf("%ld", x)
+}`},
+
     {.compileError, "Duplicate identifier a", `
 fn main() {
     a := 1
